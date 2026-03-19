@@ -96,6 +96,61 @@
 | 8.4 | Enterprise: recording/playback engine |
 | 8.5 | Enterprise: visual regression testing |
 
+## Phase 2.5 — Open Source Launch
+
+**Goal**: Go public with maximum impact
+
+**Pre-launch checklist (complete before flipping to public):**
+
+| Step | Deliverable |
+|------|------------|
+| 2.5.1 | Enable GitHub branch protection (require PR + CI) |
+| 2.5.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
+| 2.5.3 | CODE_OF_CONDUCT.md |
+| 2.5.4 | Issue templates (bug report, feature request) |
+| 2.5.5 | PR template |
+| 2.5.6 | README hero GIF — notepad end-to-end automation demo |
+| 2.5.7 | README badges (CI status, PyPI version, license, platform) |
+| 2.5.8 | First PyPI release (`pip install naturo` works) |
+| 2.5.9 | OpenClaw skill published to ClawHub |
+
+**Launch day activities:**
+
+| Step | Deliverable |
+|------|------------|
+| 2.5.10 | Flip repo to public |
+| 2.5.11 | LinkedIn announcement post (Ace's profile) |
+| 2.5.12 | Reddit post (r/opensource, r/Python, r/automation) |
+| 2.5.13 | Twitter/X announcement |
+| 2.5.14 | Hacker News Show HN post |
+| 2.5.15 | OpenClaw community Discord announcement |
+
+**Post-launch growth:**
+
+| Step | Deliverable |
+|------|------------|
+| 2.5.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
+| 2.5.17 | Write "How Naturo works" technical blog post |
+| 2.5.18 | Submit to awesome-python, awesome-automation lists |
+| 2.5.19 | Create demo videos for YouTube/Bilibili |
+| 2.5.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
+
+## Phase 9 — Strategic Outreach
+
+**Goal**: Build relationships with key ecosystem players
+
+**Prerequisites**: Meaningful traction (500+ stars, multiple ClawHub installs, or notable adoption)
+
+| Step | Deliverable |
+|------|------------|
+| 9.1 | Reach out to Peekaboo author (steipete / Peter Steinberger) — propose collaboration or cross-reference |
+| 9.2 | Reach out to OpenClaw team — propose as recommended Windows automation tool |
+| 9.3 | Conference talk proposal (PyCon, EuroPython, or similar) |
+| 9.4 | Partner with RPA/testing tool communities |
+| 9.5 | Explore Peekaboo integration — Naturo as official Windows counterpart |
+
+**Note on steipete outreach**: steipete is also the author of OpenClaw (previously Clawd). The email should be genuine, technically substantive, and sent only after Naturo has demonstrated real value (fast star growth, ClawHub adoption, or a compelling integration story). No cold pitch — show, don't tell.
+
 ---
 
 ## TDD Requirements (All Phases)
