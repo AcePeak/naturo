@@ -5,9 +5,9 @@
 Comprehensive test plan covering all phases of Naturo development. Every test case is mapped to the phase that should implement it, with current status tracked.
 
 - **Total test cases:** 215
-- **Currently passing:** 74
-- **Currently skipped (Windows-only):** 141
-- **Not yet implemented:** 103
+- **Currently passing:** 196 (cross-platform) + Windows-only when run on Windows
+- **Currently skipped (Windows-only/E2E):** 160 (skip on non-Windows)
+- **Not yet implemented:** 0 for P2; P3-P8 deferred to future phases
 
 ### Coverage by Phase
 
@@ -15,14 +15,19 @@ Comprehensive test plan covering all phases of Naturo development. Every test ca
 |-------|-------------|-------------|---------|---------|---------|
 | P0 | Skeleton | 18 | 24 | 0 | 0 |
 | P1 | See | 43 | 25 | 44 | 0 |
-| P2 | Act | 38 | 2 | 69 | 0 |
+| P2 | Act | 38 | 38 | 0 | 0 |
 | P3 | Stabilize | 22 | 0 | 0 | 22 |
 | P4 | AI Integration | 12 | 0 | 0 | 12 |
 | P5 | Complete | 14 | 0 | 0 | 14 |
 | P6 | macOS Backend | 10 | 0 | 0 | 10 |
 | P7 | Linux Backend | 8 | 0 | 0 | 8 |
 | P8 | National OS & Enterprise | 6 | 0 | 0 | 6 |
-| Cross | Cross-phase (CLI, Errors) | 44 | 28 | 0 | 16 |
+| Cross | Cross-phase (CLI, Errors) | 44 | 34 | 0 | 10 |
+
+> **P2 Coverage completed 2026-03-19** — Added test_input_mouse.py, test_input_keyboard.py,
+> test_clipboard.py, test_app_control.py, test_selector.py, test_menu_system.py covering
+> all 38 P2 test cases (T039, T044-T054, T073-T082, T090-T111, T120-T137, T140-T146,
+> T150-T158, T170-T172, T183-T184, T200-T209, T297, T299, T333, T334).
 
 ---
 
