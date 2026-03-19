@@ -52,13 +52,35 @@ naturo find "Edit:filename"
 | Command | Description | Phase |
 |---------|-------------|-------|
 | `version` | Show version info | ✅ 0 |
-| `capture` | Screenshot screen/window | 🔜 1 |
-| `list` | List windows/processes | 🔜 1 |
-| `see` | Inspect UI element tree | 🔜 1 |
+| `capture` | Screenshot screen/window | ✅ 1 |
+| `list` | List windows/processes | ✅ 1 |
+| `see` | Inspect UI element tree | ✅ 1 |
+| `snapshot list` | List stored snapshots | ✅ 1.5 |
+| `snapshot clean` | Remove old snapshots | ✅ 1.5 |
 | `find` | Find UI element | 🔜 2 |
 | `click` | Click element/coordinates | 🔜 2 |
 | `type` | Type text | 🔜 2 |
 | `press` | Press key combination | 🔜 2 |
+
+## Snapshot System
+
+Every `see` and `capture live` call automatically persists a **snapshot** — a
+directory under `~/.naturo/snapshots/` containing the screenshot and full UI
+element map.
+
+```bash
+# List all snapshots
+naturo snapshot list
+
+# Remove snapshots older than 7 days
+naturo snapshot clean --days 7
+
+# Remove all snapshots
+naturo snapshot clean --all --yes
+```
+
+Snapshots expire after **10 minutes** when queried via `get_most_recent_snapshot`,
+mirroring Peekaboo's validity window.
 
 ## Architecture
 
@@ -67,6 +89,8 @@ naturo find "Edit:filename"
 │  AI Agent    │  Python SDK / MCP Server
 ├─────────────┤
 │  CLI (click) │  naturo CLI
+├─────────────┤
+│  Snapshot    │  naturo/snapshot.py + naturo/models/snapshot.py
 ├─────────────┤
 │  Python      │  ctypes bridge
 ├─────────────┤

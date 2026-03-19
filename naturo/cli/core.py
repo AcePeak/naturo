@@ -36,12 +36,14 @@ def capture():
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
 @click.option("--path", "-p", default="capture.bmp", help="Output file path")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="bmp", help="Image format")
+@click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def live(app, window_title, hwnd, screen, path, fmt, json_output):
+def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output):
     """Capture a live screenshot.
 
     Captures the screen or a specific window and saves to a file.
     Use --hwnd to capture a specific window, or --screen to select a monitor.
+    The screenshot is automatically stored in a snapshot (use --no-snapshot to skip).
     """
     if platform.system() != "Windows":
         click.echo("Screen capture requires Windows (naturo_core.dll).")
@@ -54,15 +56,32 @@ def live(app, window_title, hwnd, screen, path, fmt, json_output):
         else:
             result = backend.capture_screen(screen_index=screen, output_path=path)
 
+        snapshot_id = None
+        if store_snapshot:
+            from naturo.snapshot import SnapshotManager
+            mgr = SnapshotManager()
+            snapshot_id = mgr.create_snapshot()
+            metadata = {
+                "window_handle": hwnd,
+                "application_name": app,
+                "window_title": window_title,
+            }
+            mgr.store_screenshot(snapshot_id, result.path, metadata)
+
         if json_output:
-            click.echo(json_module.dumps({
+            out = {
                 "path": result.path,
                 "width": result.width,
                 "height": result.height,
                 "format": result.format,
-            }))
+            }
+            if snapshot_id:
+                out["snapshot_id"] = snapshot_id
+            click.echo(json_module.dumps(out))
         else:
             click.echo(f"Saved: {result.path} ({result.width}x{result.height})")
+            if snapshot_id:
+                click.echo(f"Snapshot: {snapshot_id}")
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -205,13 +224,15 @@ def permissions(json_output):
 @click.option("--depth", "-d", type=int, default=3, help="Maximum tree depth (1-10)")
 @click.option("--path", "-p", help="Save screenshot to path")
 @click.option("--annotate", is_flag=True, help="Annotate screenshot with element labels")
+@click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def see(app, window_title, hwnd, pid, mode, depth, path, annotate, json_output):
+def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, json_output):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
     window identified by --hwnd). Shows the element hierarchy with roles,
-    names, and bounding rectangles.
+    names, and bounding rectangles.  Results are stored in a snapshot so
+    subsequent commands can reference elements by ID.
     """
     if platform.system() != "Windows":
         click.echo("UI inspection requires Windows (naturo_core.dll).")
@@ -224,6 +245,47 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, json_output):
         if tree is None:
             click.echo("No window found or UI tree is empty.")
             return
+
+        snapshot_id = None
+        if store_snapshot:
+            from naturo.snapshot import SnapshotManager
+            from naturo.models.snapshot import UIElement
+
+            mgr = SnapshotManager()
+            snapshot_id = mgr.create_snapshot()
+
+            # Flatten element tree into ui_map
+            ui_map = {}
+
+            def _flatten(el, parent_id=None):
+                child_ids = [c.id for c in el.children]
+                ui_map[el.id] = UIElement(
+                    id=el.id,
+                    element_id=f"element_{el.id}",
+                    role=el.role,
+                    title=el.name,
+                    label=el.name,
+                    value=el.value,
+                    frame=(el.x, el.y, el.width, el.height),
+                    is_actionable=getattr(el, "is_actionable", False),
+                    parent_id=parent_id,
+                    children=child_ids,
+                )
+                for child in el.children:
+                    _flatten(child, parent_id=el.id)
+
+            _flatten(tree)
+            mgr.store_detection_result(snapshot_id, ui_map)
+
+            # Optionally capture screenshot into snapshot
+            if path:
+                result = backend.capture_screen(output_path=path)
+                metadata = {
+                    "window_handle": hwnd,
+                    "application_name": app,
+                    "window_title": window_title,
+                }
+                mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
             def to_dict(el):
@@ -239,7 +301,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, json_output):
                     "height": el.height,
                     "children": [to_dict(c) for c in el.children],
                 }
-            click.echo(json_module.dumps(to_dict(tree), indent=2))
+            out = to_dict(tree)
+            if snapshot_id:
+                out["snapshot_id"] = snapshot_id
+            click.echo(json_module.dumps(out, indent=2))
         else:
             def print_tree(el, indent=0):
                 """Print element tree in a readable indented format."""
@@ -251,9 +316,11 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, json_output):
                     print_tree(child, indent + 1)
 
             print_tree(tree)
+            if snapshot_id:
+                click.echo(f"\nSnapshot: {snapshot_id}")
 
-        # Optionally capture screenshot
-        if path:
+        # Capture screenshot (when not already done above)
+        if path and not store_snapshot:
             result = backend.capture_screen(output_path=path)
             click.echo(f"\nScreenshot saved: {result.path}")
 

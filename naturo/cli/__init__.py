@@ -11,6 +11,7 @@ from naturo.cli.system import (
 )
 from naturo.cli.ai import agent, mcp
 from naturo.cli.extensions import excel, java, sap, registry, service
+from naturo.cli.snapshot import snapshot
 
 
 @click.group()
@@ -76,3 +77,6 @@ main.add_command(java)
 main.add_command(sap)
 main.add_command(registry)
 main.add_command(service)
+
+# ── Snapshot ────────────────────────────────────
+main.add_command(snapshot)
