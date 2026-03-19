@@ -265,8 +265,10 @@ class NaturoCore:
             The output file path.
 
         Raises:
-            NaturoCoreError: On capture failure.
+            NaturoCoreError: On capture failure or invalid arguments.
         """
+        if output_path is None:
+            raise NaturoCoreError(-1, "capture_screen")
         rc = self._lib.naturo_capture_screen(
             screen_index, output_path.encode("utf-8")
         )
@@ -285,8 +287,10 @@ class NaturoCore:
             The output file path.
 
         Raises:
-            NaturoCoreError: On capture failure.
+            NaturoCoreError: On capture failure or invalid arguments.
         """
+        if output_path is None:
+            raise NaturoCoreError(-1, "capture_window")
         rc = self._lib.naturo_capture_window(
             hwnd, output_path.encode("utf-8")
         )
