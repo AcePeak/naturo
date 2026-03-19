@@ -172,6 +172,7 @@ class TestClipboardFunctionalWindows:
             pass
 
     @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
+    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
     def test_clipboard_set_and_get(self, backend):
         """T142/T140 – clipboard set then get returns same text."""
         test_text = "naturo clipboard test 12345"
@@ -192,6 +193,7 @@ class TestClipboardFunctionalWindows:
         assert result == ""
 
     @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
+    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
     def test_clipboard_set_overwrites(self, backend):
         """T143 – clipboard set overwrites previous content."""
         backend.clipboard_set("first content")
@@ -200,6 +202,7 @@ class TestClipboardFunctionalWindows:
         assert result == "second content"
 
     @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
+    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
     def test_clipboard_unicode(self, backend):
         """T146 – clipboard handles unicode and special characters."""
         test_text = "Hello 你好 こんにちは — ™ © ®"
@@ -208,6 +211,7 @@ class TestClipboardFunctionalWindows:
         assert result == test_text
 
     @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
+    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
     def test_clipboard_special_chars(self, backend):
         """T146 – clipboard handles special ASCII characters."""
         test_text = "!@#$%^&*()[]{}|\\\"'<>?/~`"

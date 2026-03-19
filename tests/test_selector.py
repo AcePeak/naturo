@@ -234,6 +234,7 @@ class TestSelectorE2EWindows:
                 pass
 
     @pytest.mark.xfail(reason="ElementInfo does not expose is_enabled yet")
+    @pytest.mark.xfail(reason="ElementInfo does not expose is_enabled yet")
     def test_element_is_enabled_property(self):
         """T081 – Element is_enabled property is accessible."""
         import subprocess
