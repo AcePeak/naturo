@@ -2,7 +2,7 @@
 import click
 from naturo.version import __version__
 
-from naturo.cli.core import capture, list_cmd, see, learn, tools
+from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, learn, tools
 from naturo.cli.interaction import (
     click_cmd, type_cmd, press, hotkey, scroll, drag, move, paste,
 )
@@ -43,6 +43,8 @@ def main(ctx, json_output, verbose, log_level):
 main.add_command(capture)
 main.add_command(list_cmd, "list")
 main.add_command(see)
+main.add_command(find_cmd, "find")
+main.add_command(menu_inspect, "menu-inspect")
 main.add_command(learn)
 main.add_command(tools)
 

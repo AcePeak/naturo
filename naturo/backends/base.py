@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 import platform
 
 
@@ -179,6 +179,14 @@ class Backend(ABC):
     def menu_click(self, path: str, app: str = None) -> None:
         """Click a menu item by path. Not all platforms support this."""
         raise NotImplementedError(f"menu_click not supported on {self.platform_name}")
+
+    def get_menu_items(self, window_title: Optional[str] = None) -> list:
+        """Get structured menu items from the application menu bar.
+
+        Returns:
+            List of MenuItem objects (from naturo.models.menu).
+        """
+        raise NotImplementedError(f"get_menu_items not supported on {self.platform_name}")
 
     # === Open ===
     @abstractmethod

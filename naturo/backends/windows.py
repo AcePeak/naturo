@@ -12,8 +12,9 @@ from naturo.backends.base import (
     ElementInfo as BaseElementInfo,
     CaptureResult,
 )
-from naturo.bridge import NaturoCore, NaturoCoreError
-from typing import Optional
+from naturo.bridge import NaturoCore, NaturoCoreError, populate_hierarchy
+from naturo.models.menu import MenuItem
+from typing import List, Optional
 
 
 class WindowsBackend(Backend):
@@ -227,6 +228,9 @@ class WindowsBackend(Backend):
                          depth: int = 3) -> Optional[BaseElementInfo]:
         """Get the UI element tree for a window.
 
+        Fills parent_id, children IDs, and keyboard_shortcut for all elements
+        via Python-layer post-processing (the C++ DLL does not emit these).
+
         Args:
             window_title: Not yet used (reserved for future).
             depth: Maximum depth to traverse (1-10).
@@ -239,7 +243,10 @@ class WindowsBackend(Backend):
         if result is None:
             return None
 
-        def convert(el: "naturo.bridge.ElementInfo") -> BaseElementInfo:
+        # Post-process: assign sequential IDs and fill parent_id
+        populate_hierarchy(result)
+
+        def convert(el) -> BaseElementInfo:
             """Convert bridge ElementInfo to backend ElementInfo."""
             return BaseElementInfo(
                 id=el.id,
@@ -251,7 +258,12 @@ class WindowsBackend(Backend):
                 width=el.width,
                 height=el.height,
                 children=[convert(c) for c in el.children],
-                properties={},
+                properties={
+                    k: v for k, v in {
+                        "parent_id": el.parent_id,
+                        "keyboard_shortcut": el.keyboard_shortcut,
+                    }.items() if v is not None
+                },
             )
 
         return convert(result)
@@ -555,12 +567,82 @@ class WindowsBackend(Backend):
         subprocess.run(cmd, shell=True, capture_output=True)
 
     def menu_list(self, app: Optional[str] = None) -> list[dict]:
-        """List menu items. Phase 3 feature."""
-        raise NotImplementedError("menu_list coming in Phase 3")
+        """List menu items by traversing the UIA MenuBar element tree.
+
+        Args:
+            app: Optional application name filter (not yet used).
+
+        Returns:
+            List of dicts representing menu items.
+        """
+        items = self.get_menu_items(window_title=app)
+        return [item.to_dict() for item in items]
 
     def menu_click(self, path: str = "", app: Optional[str] = None) -> None:
         """Click a menu item. Phase 3 feature."""
         raise NotImplementedError("menu_click coming in Phase 3")
+
+    def get_menu_items(self, window_title: Optional[str] = None) -> List[MenuItem]:
+        """Get menu bar items by traversing the UI element tree.
+
+        Finds MenuBar elements and recursively extracts MenuItem children,
+        including names, keyboard shortcuts, and submenus.
+
+        Args:
+            window_title: Optional window title filter (uses foreground window if None).
+
+        Returns:
+            List of top-level MenuItem objects with nested submenus.
+        """
+        core = self._ensure_core()
+        # Get a deeper tree to capture menu structure
+        tree = core.get_element_tree(hwnd=0, depth=6)
+        if tree is None:
+            return []
+
+        populate_hierarchy(tree)
+
+        # Find MenuBar elements in the tree
+        menu_bars = []
+        self._find_by_role(tree, "MenuBar", menu_bars)
+
+        if not menu_bars:
+            return []
+
+        result: List[MenuItem] = []
+        for bar in menu_bars:
+            for child in bar.children:
+                item = self._element_to_menu_item(child)
+                if item:
+                    result.append(item)
+        return result
+
+    def _find_by_role(self, el, role: str, results: list) -> None:
+        """Recursively find elements matching a role."""
+        if el.role == role:
+            results.append(el)
+        for child in el.children:
+            self._find_by_role(child, role, results)
+
+    @staticmethod
+    def _element_to_menu_item(el) -> Optional[MenuItem]:
+        """Convert a bridge ElementInfo (MenuItem role) to a MenuItem model."""
+        if not el.name and el.role not in ("MenuItem", "Menu"):
+            return None
+
+        submenu: List[MenuItem] = []
+        for child in el.children:
+            sub = WindowsBackend._element_to_menu_item(child)
+            if sub:
+                submenu.append(sub)
+
+        return MenuItem(
+            name=el.name or "",
+            shortcut=el.keyboard_shortcut,
+            submenu=submenu if submenu else None,
+            enabled=True,  # UIA doesn't easily expose this without caching
+            checked=False,
+        )
 
     def open_uri(self, uri: str = "") -> None:
         """Open a URI with the default handler.

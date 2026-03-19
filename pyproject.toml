@@ -22,6 +22,9 @@ ai = [
     "anthropic>=0.20",
     "openai>=1.0",
 ]
+annotate = [
+    "Pillow>=9.0",
+]
 
 [project.scripts]
 naturo = "naturo.cli:main"

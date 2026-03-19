@@ -57,11 +57,65 @@ One unified API, multiple native backends.
 | **Hardware Keyboard** | ✅ (Phys32) | ❌ | ❌ |
 | **Browser** | ✅ (Chrome CDP) | Via Peekaboo | Basic |
 
+### Deep Capabilities (Phase 1/2 Extensions)
+
+#### Annotated Screenshots
+
+`naturo/annotate.py` generates annotated screenshots with red bounding boxes
+and numbered labels for AI vision models.  Only actionable elements with
+non-trivial bounding rectangles are annotated.
+
+```
+annotate_screenshot(screenshot_path, elements, output_path) → str
+```
+
+- Requires Pillow: `pip install naturo[annotate]`
+- CLI: `naturo see --annotate --path screenshot.png`
+- Colour scheme: red boxes + white-background red-text numbered labels
+
+#### Element Search / Query
+
+`naturo/search.py` provides flexible element finding beyond exact `role:name`
+matching.
+
+```
+search_elements(root, query, role_filter?, actionable_only?, max_results?) → List[SearchResult]
+```
+
+Query syntax:
+- `"Save"` — fuzzy name match (case-insensitive substring)
+- `"role:Button"` — filter by role
+- `"role:Button name:Save"` — combined
+- `"Button:Save"` — shorthand
+- `"Button:*Save*"` — glob wildcard
+- CLI: `naturo find "Save"` — returns all matches with breadcrumb paths
+
+#### UI Hierarchy + Keyboard Shortcuts
+
+`bridge.py` `ElementInfo` extended with `parent_id` and `keyboard_shortcut`.
+`populate_hierarchy(root)` fills `parent_id` and assigns sequential IDs
+(`e0`, `e1`, ...) via depth-first traversal.  Windows backend calls this
+automatically after `get_element_tree`.
+
+#### Menu Bar Traversal
+
+`naturo/models/menu.py` provides the `MenuItem` data model.
+`WindowsBackend.get_menu_items()` traverses UIA MenuBar → MenuItem hierarchy.
+
+```
+MenuItem(name, shortcut?, submenu?, enabled, checked)
+```
+
+- CLI: `naturo menu-inspect [--app "Notepad"] [--flat] [--json]`
+- `MenuItem.flatten()` produces path-based list (e.g., `"File > Save"`)
+
+---
+
 ### CLI ↔ Peekaboo Command Mapping
 
 | Category | Peekaboo (macOS) | Naturo | Notes |
 |----------|-----------------|--------|-------|
-| **Core** | capture, list, see | capture, list, see | Full parity |
+| **Core** | capture, list, see | capture, list, see, find, menu-inspect | Full parity + extensions |
 | **Interaction** | click, type, press, hotkey, scroll, drag, move, paste, swipe | click, type, press, hotkey, scroll, drag, move, paste | swipe → N/A |
 | **System** | app, window, menu, menubar, clipboard, dialog, dock, space, open | app, window, menu, clipboard, dialog, open, taskbar, tray, desktop | Platform equivalents |
 | **AI** | agent | agent | Same concept |

@@ -29,6 +29,12 @@ Comprehensive test plan covering all phases of Naturo development. Every test ca
 > all 38 P2 test cases (T039, T044-T054, T073-T082, T090-T111, T120-T137, T140-T146,
 > T150-T158, T170-T172, T183-T184, T200-T209, T297, T299, T333, T334).
 
+> **Deep Capabilities added 2026-03-19** — 4 new test files:
+> - `test_annotate.py` (6 tests) — annotated screenshot generation, pixel verification
+> - `test_search.py` (20 tests) — element search/query, fuzzy matching, breadcrumbs
+> - `test_hierarchy.py` (9 tests) — parent_id filling, sequential ID assignment, keyboard shortcuts
+> - `test_menu_model.py` (14 tests) — MenuItem model serialisation, flattening, round-trip
+
 ---
 
 ## Test Case Matrix

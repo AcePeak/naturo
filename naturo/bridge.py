@@ -58,6 +58,8 @@ class ElementInfo:
         width: Bounding rectangle width.
         height: Bounding rectangle height.
         children: Child elements.
+        parent_id: Parent element's id (filled by Python-layer traversal).
+        keyboard_shortcut: Keyboard shortcut string (e.g., "Ctrl+S").
     """
     id: str
     role: str
@@ -68,6 +70,8 @@ class ElementInfo:
     width: int
     height: int
     children: list["ElementInfo"] = field(default_factory=list)
+    parent_id: Optional[str] = None
+    keyboard_shortcut: Optional[str] = None
 
 
 def _parse_element(data: dict) -> ElementInfo:
@@ -90,7 +94,32 @@ def _parse_element(data: dict) -> ElementInfo:
         width=data.get("width", 0),
         height=data.get("height", 0),
         children=children,
+        parent_id=data.get("parent_id"),
+        keyboard_shortcut=data.get("keyboard_shortcut"),
     )
+
+
+def populate_hierarchy(root: ElementInfo, parent_id: Optional[str] = None, counter: Optional[list] = None) -> None:
+    """Fill parent_id for all elements in the tree via depth-first traversal.
+
+    If an element has an empty id, assigns a sequential id like "e0", "e1", etc.
+
+    Args:
+        root: Root element of the tree.
+        parent_id: Parent's id (None for the root).
+        counter: Internal counter list for id generation.
+    """
+    if counter is None:
+        counter = [0]
+
+    if not root.id:
+        root.id = f"e{counter[0]}"
+        counter[0] += 1
+
+    root.parent_id = parent_id
+
+    for child in root.children:
+        populate_hierarchy(child, parent_id=root.id, counter=counter)
 
 
 class NaturoCoreError(Exception):

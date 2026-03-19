@@ -8,9 +8,11 @@
 
 - 🖥️ **Screen Capture** — Screenshot any window or monitor
 - 🌳 **UI Tree Inspection** — Walk the accessibility tree (MSAA / UIA)
-- 🔍 **Element Finding** — CSS-like selectors for UI elements
+- 🔍 **Element Finding** — CSS-like selectors + fuzzy search for UI elements
 - 🖱️ **Click & Type** — Hardware-level input simulation
 - ⌨️ **Key Combos** — Send any keystroke or shortcut
+- 📸 **Annotated Screenshots** — AI-ready screenshots with numbered bounding boxes
+- 📋 **Menu Traversal** — Extract app menu structures with shortcuts
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
 ## System Requirements
@@ -68,10 +70,11 @@ naturo find "Edit:filename"
 | `see` | Inspect UI element tree | ✅ 1 |
 | `snapshot list` | List stored snapshots | ✅ 1.5 |
 | `snapshot clean` | Remove old snapshots | ✅ 1.5 |
-| `find` | Find UI element | 🔜 2 |
-| `click` | Click element/coordinates | 🔜 2 |
-| `type` | Type text | 🔜 2 |
-| `press` | Press key combination | 🔜 2 |
+| `find` | Search UI elements (fuzzy) | ✅ 2 |
+| `menu-inspect` | List app menu structure | ✅ 2 |
+| `click` | Click element/coordinates | ✅ 2 |
+| `type` | Type text | ✅ 2 |
+| `press` | Press key combination | ✅ 2 |
 
 ## Snapshot System
 
