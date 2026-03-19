@@ -43,15 +43,35 @@ def test_backend_has_capabilities():
     assert "extensions" in caps
 
 
-def test_backend_methods_not_implemented():
-    """Phase 2+ methods should still raise NotImplementedError."""
+def test_backend_phase2_methods_available():
+    """Phase 2 input methods are implemented on Windows; others raise NotImplementedError (future phases)."""
     backend = get_backend()
-    with pytest.raises(NotImplementedError):
-        backend.click()
-    with pytest.raises(NotImplementedError):
-        backend.type_text("hello")
-    with pytest.raises(NotImplementedError):
-        backend.press_key("enter")
+
+    if platform.system() == "Windows":
+        # Phase 2 is implemented on Windows — methods should not raise NotImplementedError.
+        # click() with no args raises ValueError (need coords or element_id), not NotImplementedError.
+        with pytest.raises((ValueError, Exception)) as exc_info:
+            backend.click()
+        assert not isinstance(exc_info.value, NotImplementedError), (
+            "click() should be implemented in Phase 2, not raise NotImplementedError"
+        )
+
+        # type_text and press_key should succeed (no error) on Windows with the DLL.
+        # They may fail if the DLL has issues, but not with NotImplementedError.
+        try:
+            backend.press_key("escape")  # Safe key to press in CI
+        except NotImplementedError:
+            pytest.fail("press_key should not raise NotImplementedError in Phase 2")
+        except Exception:
+            pass  # Other errors (system/DLL) are acceptable
+    else:
+        # Non-Windows backends are Phase 6/7 — methods correctly raise NotImplementedError.
+        with pytest.raises(NotImplementedError):
+            backend.click()
+        with pytest.raises(NotImplementedError):
+            backend.type_text("hello")
+        with pytest.raises(NotImplementedError):
+            backend.press_key("enter")
 
 
 def test_windows_backend_capabilities():

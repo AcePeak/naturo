@@ -171,6 +171,26 @@ class NaturoCore:
             ctypes.c_char_p, ctypes.c_int
         ]
 
+        # Phase 2 — Mouse input
+        self._lib.naturo_mouse_move.restype = ctypes.c_int
+        self._lib.naturo_mouse_move.argtypes = [ctypes.c_int, ctypes.c_int]
+
+        self._lib.naturo_mouse_click.restype = ctypes.c_int
+        self._lib.naturo_mouse_click.argtypes = [ctypes.c_int, ctypes.c_int]
+
+        self._lib.naturo_mouse_scroll.restype = ctypes.c_int
+        self._lib.naturo_mouse_scroll.argtypes = [ctypes.c_int, ctypes.c_int]
+
+        # Phase 2 — Keyboard input
+        self._lib.naturo_key_type.restype = ctypes.c_int
+        self._lib.naturo_key_type.argtypes = [ctypes.c_char_p, ctypes.c_int]
+
+        self._lib.naturo_key_press.restype = ctypes.c_int
+        self._lib.naturo_key_press.argtypes = [ctypes.c_char_p]
+
+        self._lib.naturo_key_hotkey.restype = ctypes.c_int
+        self._lib.naturo_key_hotkey.argtypes = [ctypes.c_int, ctypes.c_char_p]
+
     def _load(self, lib_path: str | None) -> ctypes.CDLL:
         """Load the native library from the given path or search standard locations.
 
@@ -434,3 +454,113 @@ class NaturoCore:
 
         data = json.loads(buf.value.decode("utf-8"))
         return _parse_element(data)
+
+    # ── Phase 2: Mouse Input ─────────────────────────
+
+    def mouse_move(self, x: int, y: int) -> None:
+        """Move the mouse cursor to absolute screen coordinates.
+
+        Args:
+            x: Target X coordinate (screen pixels, top-left origin).
+            y: Target Y coordinate.
+
+        Raises:
+            NaturoCoreError: On system error.
+        """
+        rc = self._lib.naturo_mouse_move(x, y)
+        if rc != 0:
+            raise NaturoCoreError(rc, "mouse_move")
+
+    def mouse_click(self, button: int = 0, double: bool = False) -> None:
+        """Click the mouse at the current cursor position.
+
+        Args:
+            button: Mouse button (0=left, 1=right, 2=middle).
+            double: True for double-click.
+
+        Raises:
+            NaturoCoreError: On invalid argument or system error.
+        """
+        rc = self._lib.naturo_mouse_click(button, 1 if double else 0)
+        if rc != 0:
+            raise NaturoCoreError(rc, "mouse_click")
+
+    def mouse_scroll(self, delta: int, horizontal: bool = False) -> None:
+        """Scroll the mouse wheel.
+
+        Args:
+            delta: Scroll amount. Positive = up/forward, negative = down/backward.
+                   One standard notch = 120 (Windows WHEEL_DELTA).
+            horizontal: True for horizontal scroll.
+
+        Raises:
+            NaturoCoreError: On system error.
+        """
+        rc = self._lib.naturo_mouse_scroll(delta, 1 if horizontal else 0)
+        if rc != 0:
+            raise NaturoCoreError(rc, "mouse_scroll")
+
+    # ── Phase 2: Keyboard Input ──────────────────────
+
+    def key_type(self, text: str, delay_ms: int = 0) -> None:
+        """Type a string using Unicode SendInput.
+
+        Args:
+            text: UTF-8 string to type.
+            delay_ms: Delay between keystrokes in milliseconds.
+
+        Raises:
+            NaturoCoreError: On invalid argument or system error.
+        """
+        if text is None:
+            raise NaturoCoreError(-1, "key_type")
+        rc = self._lib.naturo_key_type(text.encode("utf-8"), delay_ms)
+        if rc != 0:
+            raise NaturoCoreError(rc, "key_type")
+
+    def key_press(self, key_name: str) -> None:
+        """Press and release a named key.
+
+        Args:
+            key_name: Key name (e.g., "enter", "tab", "f5", "escape").
+
+        Raises:
+            NaturoCoreError: If the key name is unknown or on system error.
+        """
+        if not key_name:
+            raise NaturoCoreError(-1, "key_press")
+        rc = self._lib.naturo_key_press(key_name.encode("utf-8"))
+        if rc != 0:
+            raise NaturoCoreError(rc, f"key_press({key_name!r})")
+
+    def key_hotkey(self, *keys: str) -> None:
+        """Press a hotkey combination.
+
+        Args:
+            *keys: Key names. Modifier keys (ctrl, alt, shift, win) are
+                   detected automatically; one non-modifier key is the base key.
+
+        Example:
+            core.key_hotkey("ctrl", "a")   # Select All
+            core.key_hotkey("ctrl", "shift", "z")  # Redo
+
+        Raises:
+            NaturoCoreError: On invalid argument or system error.
+        """
+        MODIFIER_MAP = {"ctrl": 0, "alt": 1, "shift": 2, "win": 3}
+        modifiers = 0
+        base_key: Optional[str] = None
+
+        for k in keys:
+            k_lower = k.lower()
+            if k_lower in MODIFIER_MAP:
+                modifiers |= (1 << MODIFIER_MAP[k_lower])
+            else:
+                if base_key is not None:
+                    raise NaturoCoreError(-1, f"key_hotkey: multiple base keys ({base_key!r}, {k!r})")
+                base_key = k_lower
+
+        key_bytes = base_key.encode("utf-8") if base_key else None
+        rc = self._lib.naturo_key_hotkey(modifiers, key_bytes)
+        if rc != 0:
+            raise NaturoCoreError(rc, f"key_hotkey({keys!r})")

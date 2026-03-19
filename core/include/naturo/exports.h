@@ -124,6 +124,64 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
                                     const char* name, char* result_json,
                                     int buf_size);
 
+/* ── Input — Mouse ────────────────────────────────── */
+
+/**
+ * @brief Move the mouse cursor to absolute screen coordinates.
+ * @param x Target X coordinate (screen pixels, top-left origin).
+ * @param y Target Y coordinate.
+ * @return 0 on success, -1 on invalid argument.
+ */
+NATURO_API int naturo_mouse_move(int x, int y);
+
+/**
+ * @brief Click the mouse at the current cursor position.
+ * @param button Mouse button: 0 = left, 1 = right, 2 = middle.
+ * @param double_click Non-zero for double-click, 0 for single.
+ * @return 0 on success, -1 on invalid argument, -2 on system error.
+ */
+NATURO_API int naturo_mouse_click(int button, int double_click);
+
+/**
+ * @brief Scroll the mouse wheel.
+ * @param delta Positive = scroll up/forward, negative = scroll down/backward.
+ *              Typically ±120 per notch (Windows WHEEL_DELTA).
+ * @param horizontal Non-zero for horizontal scroll, 0 for vertical.
+ * @return 0 on success, -2 on system error.
+ */
+NATURO_API int naturo_mouse_scroll(int delta, int horizontal);
+
+/* ── Input — Keyboard ─────────────────────────────── */
+
+/**
+ * @brief Type a UTF-8 string using SendInput.
+ * @param text Null-terminated UTF-8 string to type.
+ * @param delay_ms Delay between keystrokes in milliseconds.
+ * @return 0 on success, -1 on invalid argument, -2 on system error.
+ */
+NATURO_API int naturo_key_type(const char* text, int delay_ms);
+
+/**
+ * @brief Press and release a named key.
+ * @param key_name Null-terminated key name string. Supported:
+ *        enter, tab, escape, esc, backspace, delete, del,
+ *        space, home, end, pageup, pagedown,
+ *        left, right, up, down,
+ *        f1..f12, a..z, 0..9.
+ * @return 0 on success, -1 if key name unrecognized, -2 on system error.
+ */
+NATURO_API int naturo_key_press(const char* key_name);
+
+/**
+ * @brief Press a key combination (hotkey) with optional modifiers.
+ * @param modifiers Bitmask: bit 0 = Ctrl, bit 1 = Alt, bit 2 = Shift,
+ *                  bit 3 = Win.
+ * @param key_name The base key name (same set as naturo_key_press).
+ *                 May be NULL to press modifier keys alone.
+ * @return 0 on success, -1 on invalid argument, -2 on system error.
+ */
+NATURO_API int naturo_key_hotkey(int modifiers, const char* key_name);
+
 #ifdef __cplusplus
 }
 #endif

@@ -10,6 +10,7 @@ add_library(naturo_core SHARED
     src/capture.cpp
     src/window.cpp
     src/element.cpp
+    src/input.cpp
 )
 
 target_include_directories(naturo_core PUBLIC
@@ -75,5 +76,13 @@ if(BUILD_TESTS)
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         )
         add_test(NAME test_element COMMAND test_element)
+
+        # Phase 2 input tests
+        add_executable(test_input tests/test_input.cpp)
+        target_link_libraries(test_input PRIVATE naturo_core)
+        set_target_properties(test_input PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        add_test(NAME test_input COMMAND test_input)
     endif()
 endif()

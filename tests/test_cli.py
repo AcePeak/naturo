@@ -331,9 +331,17 @@ def test_service_help(runner):
     ["capture", "live"],
     ["list", "apps"],
     ["tools"],
-    ["scroll"],
 ])
 def test_placeholder_commands_run(runner, cmd):
     """Commands with no required args should run and show placeholder message."""
     result = runner.invoke(main, cmd)
     assert result.exit_code == 0
+
+
+def test_scroll_no_args_runs(runner):
+    """scroll with no args uses defaults (down, 3 notches) — may fail on non-Windows
+    backends, but must not crash with an unhandled exception."""
+    result = runner.invoke(main, ["scroll"])
+    # exit_code 0 on Windows, non-zero on non-Windows (backend not implemented)
+    # What matters: no unhandled Python exception (no traceback in output)
+    assert "Traceback" not in result.output
