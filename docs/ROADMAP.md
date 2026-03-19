@@ -29,6 +29,40 @@
 
 **Checkpoint:** Can automate Notepad (open, type, save, close).
 
+## Phase 2.5 — Deep Capabilities (AI Agent 核心基础设施)
+
+**Goal**: Fill the capability gaps that AI agents need to drive real apps.
+These are the "deep water" features that Phase 1/2 left as data structures
+without real implementations. Without them, Phase 4 MCP is an empty shell.
+
+**Prerequisites**: Phase 1 (See) + Phase 1.5 (Snapshot) + Phase 2 (Act)
+
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 2.5.1 | **Annotated Screenshot** — Draw bounding boxes + numbered labels on screenshot so AI can visually locate elements. Pillow-based renderer. `naturo see --annotate` generates annotated.png stored via SnapshotManager. | 🔜 |
+| 2.5.2 | **Element Search/Query** — Fuzzy name matching (contains, case-insensitive), role filter, actionable filter, combo queries (`Button:*Save*`). `naturo find` returns all matches with breadcrumb paths. | 🔜 |
+| 2.5.3 | **UI Hierarchy** — `get_element_tree` fills `parent_id` and `children` IDs on every element. Python-layer tree walk generates stable IDs + parent linkage even when C++ DLL doesn't return them. | 🔜 |
+| 2.5.4 | **Keyboard Shortcut Discovery** — Read UIA AcceleratorKey / AccessKey properties. Fill `keyboard_shortcut` field on UIElement. Exposed in `naturo see` JSON output. | 🔜 |
+| 2.5.5 | **Menu Bar Traversal** — `get_menu_items()` walks MenuBar → MenuItem hierarchy via UIA. New `MenuItem` dataclass (name, shortcut, submenu, enabled, checked). CLI: `naturo menu [--app "Notepad"]`. | 🔜 |
+
+**Architecture**:
+- `naturo/annotate.py` — Screenshot annotation renderer (Pillow, optional dep `naturo[annotate]`)
+- `naturo/search.py` — Element search engine (fuzzy match, filters, breadcrumb)
+- `naturo/backends/base.py` — Add `get_menu_items()` abstract method + `MenuItem` dataclass
+- `naturo/backends/windows.py` — Fill parent_id/children/keyboard_shortcut in tree walk; UIA MenuBar traversal
+- `naturo/bridge.py` — Extend `ElementInfo` with optional parent_id, keyboard_shortcut fields
+
+**Test coverage**:
+- `tests/test_annotate.py` — Annotation rendering, label placement, edge cases
+- `tests/test_search.py` — Fuzzy match, role filter, combo queries, empty results
+- `tests/test_hierarchy.py` — Parent-child linkage, stable IDs, deep trees
+- `tests/test_shortcuts.py` — Shortcut extraction, fallback when unavailable
+- `tests/test_menu.py` — Menu traversal, nested submenus, disabled items
+
+**CI**: All tests run on Ubuntu/macOS/Windows. Windows-only features use xfail/skip on other platforms.
+
+**Checkpoint:** `naturo see --annotate` produces numbered screenshot. `naturo find "Save"` returns fuzzy matches with paths. `naturo menu` lists app menu structure. Snapshot JSON includes parent_id, children, keyboard_shortcut on every element.
+
 ## Phase 3 — Stabilize
 - Error handling and recovery
 - Element wait/retry strategies
@@ -96,7 +130,7 @@
 | 8.4 | Enterprise: recording/playback engine |
 | 8.5 | Enterprise: visual regression testing |
 
-## Phase 2.5 — Open Source Launch
+## Phase 2.8 — Open Source Launch
 
 **Goal**: Go public with maximum impact
 
@@ -104,39 +138,39 @@
 
 | Step | Deliverable |
 |------|------------|
-| 2.5.1 | Enable GitHub branch protection (require PR + CI) |
-| 2.5.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
-| 2.5.3 | CODE_OF_CONDUCT.md |
-| 2.5.4 | Issue templates (bug report, feature request) |
-| 2.5.5 | PR template |
-| 2.5.6 | README hero GIF — notepad end-to-end automation demo |
-| 2.5.7 | README badges — static badges first (license, platform, Python version), CI/DeepWiki after public |
-| 2.5.8 | First PyPI release (`pip install naturo` works) |
-| 2.5.9 | OpenClaw skill published to ClawHub |
-| 2.5.10a | Nuitka/PyInstaller packaging — `naturo.exe` standalone binary |
-| 2.5.10b | 代码签名证书 — 购买 OV/OSS 证书，CI 集成自动签名，解决杀软误报 |
-| 2.5.10c | npm 包发布 — 平台检测 + 二进制下载，`npx naturo mcp` 一行启动 |
+| 2.8.1 | Enable GitHub branch protection (require PR + CI) |
+| 2.8.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
+| 2.8.3 | CODE_OF_CONDUCT.md |
+| 2.8.4 | Issue templates (bug report, feature request) |
+| 2.8.5 | PR template |
+| 2.8.6 | README hero GIF — notepad end-to-end automation demo |
+| 2.8.7 | README badges — static badges first (license, platform, Python version), CI/DeepWiki after public |
+| 2.8.8 | First PyPI release (`pip install naturo` works) |
+| 2.8.9 | OpenClaw skill published to ClawHub |
+| 2.8.10a | Nuitka/PyInstaller packaging — `naturo.exe` standalone binary |
+| 2.8.10b | 代码签名证书 — 购买 OV/OSS 证书，CI 集成自动签名，解决杀软误报 |
+| 2.8.10c | npm 包发布 — 平台检测 + 二进制下载，`npx naturo mcp` 一行启动 |
 
 **Launch day activities:**
 
 | Step | Deliverable |
 |------|------------|
-| 2.5.10 | Flip repo to public |
-| 2.5.11 | LinkedIn announcement post (Ace's profile) |
-| 2.5.12 | Reddit post (r/opensource, r/Python, r/automation) |
-| 2.5.13 | Twitter/X announcement |
-| 2.5.14 | Hacker News Show HN post |
-| 2.5.15 | OpenClaw community Discord announcement |
+| 2.8.10 | Flip repo to public |
+| 2.8.11 | LinkedIn announcement post (Ace's profile) |
+| 2.8.12 | Reddit post (r/opensource, r/Python, r/automation) |
+| 2.8.13 | Twitter/X announcement |
+| 2.8.14 | Hacker News Show HN post |
+| 2.8.15 | OpenClaw community Discord announcement |
 
 **Post-launch growth:**
 
 | Step | Deliverable |
 |------|------------|
-| 2.5.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
-| 2.5.17 | Write "How Naturo works" technical blog post |
-| 2.5.18 | Submit to awesome-python, awesome-automation lists |
-| 2.5.19 | Create demo videos for YouTube/Bilibili |
-| 2.5.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
+| 2.8.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
+| 2.8.17 | Write "How Naturo works" technical blog post |
+| 2.8.18 | Submit to awesome-python, awesome-automation lists |
+| 2.8.19 | Create demo videos for YouTube/Bilibili |
+| 2.8.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
 
 ## Phase 9 — Strategic Outreach
 
