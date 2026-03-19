@@ -4,6 +4,8 @@ Provides a Pythonic interface to the C++ core DLL, handling type
 conversions, JSON parsing, and error code translation.
 """
 
+from __future__ import annotations
+
 import ctypes
 import json
 import os

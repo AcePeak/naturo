@@ -4,6 +4,8 @@ Implements the Phase 1 "See" capabilities: screen capture, window listing,
 and UI element tree inspection. Later phases will add input and interaction.
 """
 
+from __future__ import annotations
+
 from naturo.backends.base import (
     Backend,
     WindowInfo as BaseWindowInfo,

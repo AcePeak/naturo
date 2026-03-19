@@ -1,4 +1,6 @@
 """Linux backend — AT-SPI2 + xdotool/ydotool."""
+from __future__ import annotations
+
 from naturo.backends.base import Backend, WindowInfo, ElementInfo, CaptureResult
 from typing import Optional
 

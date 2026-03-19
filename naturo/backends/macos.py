@@ -1,4 +1,6 @@
 """macOS backend — wraps Peekaboo CLI, with fallback to pyobjc."""
+from __future__ import annotations
+
 from naturo.backends.base import Backend, WindowInfo, ElementInfo, CaptureResult
 from typing import Optional
 import shutil

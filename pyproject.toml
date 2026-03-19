@@ -36,4 +36,12 @@ naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib"]
 testpaths = ["tests"]
 markers = [
     "ui: marks tests that need a desktop session (deselect with '-m \"not ui\"')",
+    "windows: Windows-only test",
+    "macos: macOS-only test",
+    "linux: Linux-only test",
+    "slow: takes >5s to run",
+    "stress: stress/stability test (>30s)",
+    "e2e: end-to-end workflow test",
+    "acceptance: role-based acceptance test",
+    "performance: performance benchmark",
 ]
