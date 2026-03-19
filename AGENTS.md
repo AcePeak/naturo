@@ -130,6 +130,14 @@ pip install -e ".[dev]"
 pytest -v
 ```
 
+## Test Plan
+
+All test cases are defined in `docs/TEST_PLAN.md`.
+- New features must reference which test IDs they cover
+- PRs must include the test ID coverage in the description
+- No phase is complete until all mapped test cases pass
+- Role-based acceptance tests (R-QA, R-PD, R-SEC, R-DEV) validate real-world scenarios from QA, Product, Security, and DevOps perspectives
+
 ## Key Files
 
 - `core/include/naturo/exports.h` — Public C API (add new functions here)
