@@ -125,9 +125,11 @@ class TestAnnotateScreenshot:
     def test_missing_screenshot_raises(self, sample_elements):
         """Raises FileNotFoundError for nonexistent screenshot."""
         try:
-            from naturo.annotate import annotate_screenshot
+            from PIL import Image  # noqa: F401
         except ImportError:
             pytest.skip("Pillow not installed")
+
+        from naturo.annotate import annotate_screenshot
 
         with pytest.raises(FileNotFoundError):
             annotate_screenshot("/nonexistent/path.png", sample_elements)
