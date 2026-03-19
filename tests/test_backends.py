@@ -44,14 +44,14 @@ def test_backend_has_capabilities():
 
 
 def test_backend_methods_not_implemented():
-    """All methods should raise NotImplementedError at this stage."""
+    """Phase 2+ methods should still raise NotImplementedError."""
     backend = get_backend()
     with pytest.raises(NotImplementedError):
-        backend.capture_screen()
-    with pytest.raises(NotImplementedError):
-        backend.list_windows()
-    with pytest.raises(NotImplementedError):
         backend.click()
+    with pytest.raises(NotImplementedError):
+        backend.type_text("hello")
+    with pytest.raises(NotImplementedError):
+        backend.press_key("enter")
 
 
 def test_windows_backend_capabilities():
