@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <cstdio>
 #include <cstring>
+#include <new>
 
 /**
  * @brief Write pixel data to a BMP file.
