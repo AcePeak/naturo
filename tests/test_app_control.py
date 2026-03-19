@@ -370,14 +370,14 @@ class TestAppLifecycleE2EWindows:
             ]
             assert len(notepad_wins) >= 1, "Notepad not found in window list after launch"
 
-            hwnd = notepad_wins[0].hwnd
-            backend.close_window(hwnd=hwnd)
+            handle = notepad_wins[0].handle
+            backend.close_window(hwnd=handle)
             time.sleep(1.0)
 
             windows_after = backend.list_windows()
             still_open = [
                 w for w in windows_after
-                if w.hwnd == hwnd
+                if w.handle == handle
             ]
             assert len(still_open) == 0, "Notepad window still in list after close"
 
@@ -407,15 +407,15 @@ class TestAppLifecycleE2EWindows:
             assert notepad is not None
 
             # Minimize
-            backend.minimize_window(hwnd=notepad.hwnd)
+            backend.minimize_window(hwnd=notepad.handle)
             time.sleep(0.5)
 
             # Restore / focus
-            backend.focus_window(hwnd=notepad.hwnd)
+            backend.focus_window(hwnd=notepad.handle)
             time.sleep(0.5)
 
             windows_after = backend.list_windows()
-            target = next((w for w in windows_after if w.hwnd == notepad.hwnd), None)
+            target = next((w for w in windows_after if w.handle == notepad.handle), None)
             assert target is not None
 
         finally:

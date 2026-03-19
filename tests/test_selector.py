@@ -223,7 +223,7 @@ class TestSelectorE2EWindows:
         """T081 – Element is_enabled property is accessible."""
         import subprocess
         import time
-        from naturo.backends.base import BaseElementInfo
+        
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
