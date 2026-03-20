@@ -24,6 +24,15 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
+    if interval is not None and interval <= 0:
+        msg = f"--interval must be > 0, got {interval}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        ctx.exit(1)
+        return
+
     if not snapshots and not window_title:
         msg = "Specify two --snapshot IDs or --window"
         if json_output:

@@ -363,3 +363,36 @@ class TestBug037HotkeyHoldDurationValidation:
         # Should not fail validation (may fail on backend since no Windows, but not INVALID_INPUT)
         if result.exit_code != 0:
             assert "--hold-duration must be >= 0" not in (result.output or "")
+
+
+class TestBug045DiffIntervalValidation:
+    """BUG-045: diff --interval should validate > 0."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_diff_interval_negative(self, runner):
+        result = runner.invoke(main, ["diff", "--window", "Notepad", "--interval", "-1"])
+        assert result.exit_code != 0
+        assert "--interval must be > 0" in result.output or "error" in result.output.lower()
+
+    def test_diff_interval_zero(self, runner):
+        result = runner.invoke(main, ["diff", "--window", "Notepad", "--interval", "0"])
+        assert result.exit_code != 0
+        assert "--interval must be > 0" in result.output or "error" in result.output.lower()
+
+    def test_diff_interval_negative_json(self, runner):
+        result = runner.invoke(main, ["diff", "--window", "Notepad", "--interval", "-1", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "--interval must be > 0" in data["error"]["message"]
+
+    def test_diff_interval_zero_json(self, runner):
+        result = runner.invoke(main, ["diff", "--window", "Notepad", "--interval", "0", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
