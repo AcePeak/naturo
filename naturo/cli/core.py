@@ -9,6 +9,8 @@ import platform
 
 import click
 
+from naturo.errors import WindowNotFoundError
+
 
 def _get_backend():
     """Get the platform-appropriate backend.
@@ -96,6 +98,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
             import os
             full_path = os.path.abspath(result.path)
             click.echo(f"Saved: {full_path} ({result.width}x{result.height})")
+    except WindowNotFoundError as e:
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
     except Exception as e:
         if json_output:
             click.echo(json_module.dumps({"success": False, "error": {"code": "CAPTURE_ERROR", "message": str(e)}}))
@@ -430,6 +438,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             result = backend.capture_screen(output_path=path)
             click.echo(f"\nScreenshot saved: {result.path}")
 
+    except WindowNotFoundError as e:
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
     except Exception as e:
         if json_output:
             click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
