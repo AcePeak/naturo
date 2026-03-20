@@ -115,7 +115,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
     """Record video of screen or window."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    msg = "Video recording is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)
 
 
 @capture.command(hidden=True)
@@ -128,7 +133,12 @@ def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def watch(app, window_title, hwnd, interval, timeout, path, json_output):
     """Watch for screen changes and capture on change."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    msg = "Watch mode is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)
 
 
 # ── list ────────────────────────────────────────
@@ -144,7 +154,12 @@ def list_cmd():
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def apps(json_output):
     """List running applications."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    msg = "Application listing is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)
 
 
 @list_cmd.command()
@@ -230,14 +245,24 @@ def windows(app, process_name, pid, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def screens(json_output):
     """List connected screens/monitors."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    msg = "Screen listing is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)
 
 
 @list_cmd.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def permissions(json_output):
     """List automation permissions status (UIAccess, admin, etc.)."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    msg = "Permission listing is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)
 
 
 # ── see ─────────────────────────────────────────
@@ -673,4 +698,9 @@ def tools(json_output):
 
     Shows which native backends are available (UIA, MSAA, Java Bridge, etc.).
     """
-    click.echo("Not implemented yet — coming in Phase 2")
+    msg = "Tools listing is not implemented yet — coming in a future release."
+    if json_output:
+        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+    raise SystemExit(1)

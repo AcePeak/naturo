@@ -62,6 +62,36 @@ def test_no_visible_command_prints_not_implemented():
         )
 
 
+def test_hidden_stubs_return_error_exit_code():
+    """BUG-046: Hidden stub commands must return exit code 1, not 0."""
+    import json
+    hidden_stubs = [
+        ["list", "screens"],
+        ["list", "apps"],
+        ["list", "permissions"],
+        ["capture", "video"],
+        ["capture", "watch"],
+    ]
+    for args in hidden_stubs:
+        # Plain mode: exit code must be non-zero
+        result = runner.invoke(main, args)
+        assert result.exit_code != 0, (
+            f"naturo {' '.join(args)} returned exit code 0 (should be non-zero):\n{result.output}"
+        )
+        # JSON mode: must output valid JSON with success=false
+        result_json = runner.invoke(main, args + ["--json"])
+        assert result_json.exit_code != 0, (
+            f"naturo {' '.join(args)} --json returned exit code 0:\n{result_json.output}"
+        )
+        parsed = json.loads(result_json.output.strip())
+        assert parsed["success"] is False, (
+            f"naturo {' '.join(args)} --json missing success=false:\n{result_json.output}"
+        )
+        assert parsed["error"]["code"] == "NOT_IMPLEMENTED", (
+            f"naturo {' '.join(args)} --json wrong error code:\n{result_json.output}"
+        )
+
+
 def test_hidden_commands_not_in_help():
     """Hidden commands must not appear in any --help output."""
     # Check top level
