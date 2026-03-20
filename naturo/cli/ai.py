@@ -2,44 +2,169 @@
 import click
 import json
 import sys
+from typing import Optional
 
 # ── agent ───────────────────────────────────────
 
 
-@click.command(hidden=True)
+@click.command()
 @click.argument("instruction")
-@click.option("--app", help="Target application")
-@click.option("--window-title", help="Target window")
-@click.option("--model", default="anthropic", help="AI provider (anthropic/openai)")
-@click.option("--max-steps", type=int, default=10, help="Max automation steps")
-@click.option("--dry-run", is_flag=True, help="Plan but don't execute")
+@click.option("--app", help="Target application window")
+@click.option("--window-title", help="Target window title pattern")
+@click.option("--provider", type=click.Choice(["anthropic", "openai"]),
+              default="anthropic", help="AI provider (default: anthropic)")
+@click.option("--model", default=None, help="Model override (e.g., claude-sonnet-4-20250514, gpt-4o)")
+@click.option("--max-steps", type=int, default=10, help="Max automation steps (default: 10)")
+@click.option("--dry-run", is_flag=True, help="Plan actions but don't execute them")
+@click.option("--verbose", "-v", is_flag=True, help="Show step-by-step reasoning")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def agent(instruction, app, window_title, model, max_steps, dry_run, json_output):
+def agent(instruction, app, window_title, provider, model, max_steps, dry_run, verbose, json_output):
     """Execute a natural language automation instruction.
 
-    Uses AI vision + UI automation to complete tasks described in plain language.
+    Uses AI vision + UI automation to complete multi-step tasks described
+    in plain language. The agent captures screenshots, reasons about the
+    UI, and executes actions in a loop until the task is complete.
+
     Requires an AI provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY).
 
-    Example: naturo agent "Open Notepad and type hello world"
+    \b
+    Examples:
+        naturo agent "Open Notepad and type Hello World"
+        naturo agent "Take a screenshot of the calculator" --app calc
+        naturo agent "Save the current document" --max-steps 5
+        naturo agent "Close all Notepad windows" --verbose
+        naturo agent "List all open windows" --dry-run
     """
-    try:
-        from naturo.agent import run_agent
-    except ImportError as e:
-        msg = f"Agent dependencies not available: {e}"
+    # Validate max_steps
+    if max_steps < 1:
+        msg = f"--max-steps must be >= 1, got {max_steps}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
 
-    # For now, agent command requires AI provider integration (Phase 4 ongoing)
-    # The framework is ready, provider implementations are next
-    msg = "Agent command requires AI provider integration (coming soon). Use 'naturo mcp start' for MCP-based AI integration."
+    if max_steps > 50:
+        msg = f"--max-steps must be <= 50, got {max_steps}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Get agent provider
+    try:
+        agent_provider = _get_agent_provider(provider, model)
+    except Exception as e:
+        msg = str(e)
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "AI_PROVIDER_UNAVAILABLE", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Run the agent
+    try:
+        from naturo.agent import run_agent
+
+        result = run_agent(
+            instruction=instruction,
+            provider=agent_provider,
+            max_steps=max_steps,
+            window_title=window_title or app,
+            dry_run=dry_run,
+        )
+    except Exception as e:
+        msg = str(e)
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "AGENT_ERROR", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Output results
     if json_output:
-        click.echo(json.dumps({"success": False, "error": {"code": "NOT_READY", "message": msg}}))
+        output = {
+            "success": result.success,
+            "instruction": result.instruction,
+            "steps": result.step_count,
+            "total_time": round(result.total_time, 2),
+            "summary": result.summary,
+        }
+        if result.error:
+            output["error"] = {"code": "AGENT_INCOMPLETE", "message": result.error}
+        if verbose:
+            output["step_details"] = [
+                {
+                    "step": s.step_number,
+                    "reasoning": s.reasoning,
+                    "tools": [{"name": tc.name, "args": tc.arguments} for tc in s.tool_calls],
+                    "results": [
+                        {"name": tr.name, "success": tr.success, "result": tr.result}
+                        for tr in s.tool_results
+                    ],
+                }
+                for s in result.steps
+            ]
+        click.echo(json.dumps(output, indent=2, ensure_ascii=False))
     else:
-        click.echo(f"Error: {msg}", err=True)
-    sys.exit(1)
+        if verbose:
+            for s in result.steps:
+                click.echo(f"\n── Step {s.step_number} ──")
+                if s.reasoning:
+                    click.echo(f"Reasoning: {s.reasoning}")
+                for tc in s.tool_calls:
+                    args_str = ", ".join(f"{k}={v!r}" for k, v in tc.arguments.items())
+                    click.echo(f"  → {tc.name}({args_str})")
+                for tr in s.tool_results:
+                    status = "✅" if tr.success else "❌"
+                    click.echo(f"  {status} {tr.name}: {tr.result}")
+            click.echo("")
+
+        if result.success:
+            click.echo(f"✅ {result.summary}")
+        else:
+            click.echo(f"❌ {result.error or 'Agent failed'}", err=True)
+
+        click.echo(f"[{result.step_count} steps, {result.total_time:.1f}s]", err=True)
+
+    if not result.success:
+        sys.exit(1)
+
+
+def _get_agent_provider(provider_name: str, model: Optional[str] = None):
+    """Get an agent provider instance.
+
+    Args:
+        provider_name: Provider name ('anthropic' or 'openai').
+        model: Optional model override.
+
+    Returns:
+        Agent provider instance implementing AIProvider protocol.
+
+    Raises:
+        AIProviderUnavailableError: Provider not available.
+    """
+    if provider_name == "anthropic":
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        kwargs = {}
+        if model:
+            kwargs["model"] = model
+        prov = AnthropicAgentProvider(**kwargs)
+        if not prov.is_available:
+            from naturo.errors import AIProviderUnavailableError
+            raise AIProviderUnavailableError(
+                provider="anthropic",
+                suggested_action="Set ANTHROPIC_API_KEY environment variable",
+            )
+        return prov
+    else:
+        # OpenAI agent provider (future)
+        from naturo.errors import AIProviderUnavailableError
+        raise AIProviderUnavailableError(
+            provider=provider_name,
+            suggested_action=f"Agent provider '{provider_name}' not yet implemented. Use --provider anthropic.",
+        )
 
 
 # ── describe ────────────────────────────────────

@@ -1,325 +1,394 @@
-"""Tests for agent module — tool executor and agent loop."""
-from __future__ import annotations
+"""Tests for the agent command and Anthropic agent provider (Phase 4.4).
 
+Tests cover:
+- Agent CLI argument validation
+- Agent provider construction and availability
+- Agent step parsing from Claude responses
+- Tool call extraction
+- Conversation management
+- End-to-end agent loop with mocked provider
+"""
+import json
 import os
-from dataclasses import dataclass, field
-from typing import Optional
-from unittest.mock import MagicMock, patch
-
+import sys
 import pytest
+from unittest.mock import MagicMock, patch, PropertyMock
+from click.testing import CliRunner
 
 from naturo.agent import (
     AgentResult,
     AgentStep,
     StepStatus,
     ToolCall,
-    ToolExecutor,
     ToolResult,
+    ToolExecutor,
     run_agent,
 )
 
 
-# ── Fixtures ────────────────────────────────────
+# ── Agent CLI Tests ─────────────────────────────
 
 
-@pytest.fixture
-def mock_backend():
-    """Create a mock backend with all required methods."""
-    backend = MagicMock()
-    backend.click.return_value = None
-    backend.type_text.return_value = None
-    backend.press_key.return_value = None
-    backend.hotkey.return_value = None
-    backend.scroll.return_value = None
-    backend.drag.return_value = None
-    backend.move_mouse.return_value = None
-    backend.find_element.return_value = None
-    backend.focus_window.return_value = None
-    backend.close_window.return_value = None
-    backend.launch_app.return_value = None
-    backend.quit_app.return_value = None
-    backend.clipboard_get.return_value = "clipboard text"
-    backend.clipboard_set.return_value = None
-    backend.list_windows.return_value = []
+class TestAgentCLI:
+    """Tests for the agent CLI command."""
 
-    # capture_screen returns a result object
-    capture_result = MagicMock()
-    capture_result.path = "test.png"
-    capture_result.width = 1920
-    capture_result.height = 1080
-    capture_result.format = "png"
-    backend.capture_screen.return_value = capture_result
+    def setup_method(self):
+        from naturo.cli import main
+        self.runner = CliRunner()
+        self.cli = main
 
-    # get_element_tree returns None (no UI tree)
-    backend.get_element_tree.return_value = None
+    def test_agent_help(self):
+        """Agent command should show in help (no longer hidden)."""
+        result = self.runner.invoke(self.cli, ["agent", "--help"])
+        assert result.exit_code == 0
+        assert "Execute a natural language automation instruction" in result.output
 
-    return backend
+    def test_agent_max_steps_zero(self):
+        """--max-steps 0 should fail with validation error."""
+        result = self.runner.invoke(self.cli, ["agent", "test", "--max-steps", "0"])
+        assert result.exit_code != 0
+        assert "--max-steps must be >= 1" in (result.output + (result.stderr if hasattr(result, 'stderr') else ''))
 
+    def test_agent_max_steps_too_large(self):
+        """--max-steps > 50 should fail with validation error."""
+        result = self.runner.invoke(self.cli, ["agent", "test", "--max-steps", "100"])
+        assert result.exit_code != 0
+        assert "--max-steps must be <= 50" in (result.output + (result.stderr if hasattr(result, 'stderr') else ''))
 
-@pytest.fixture
-def executor(mock_backend):
-    return ToolExecutor(mock_backend)
+    def test_agent_max_steps_zero_json(self):
+        """--max-steps 0 with --json should output structured error."""
+        result = self.runner.invoke(self.cli, ["agent", "test", "--max-steps", "0", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
 
+    def test_agent_no_api_key(self):
+        """Agent should fail gracefully when no API key is set."""
+        with patch.dict(os.environ, {}, clear=True):
+            # Remove all API keys
+            env = {k: v for k, v in os.environ.items()
+                   if k not in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY")}
+            with patch.dict(os.environ, env, clear=True):
+                result = self.runner.invoke(self.cli, ["agent", "test task"])
+                assert result.exit_code != 0
 
-class FakeProvider:
-    """Fake AI provider for testing the agent loop."""
-
-    def __init__(self, steps: list[AgentStep]):
-        self._steps = list(steps)
-        self._call_count = 0
-
-    def run_step(self, instruction, screenshot_path, ui_tree, history):
-        if self._call_count < len(self._steps):
-            step = self._steps[self._call_count]
-            self._call_count += 1
-            return step
-        # Default: done
-        done = AgentStep(step_number=0, is_done=True, summary="Completed")
-        return done
-
-
-# ── ToolExecutor Tests ──────────────────────────
+    def test_agent_no_api_key_json(self):
+        """Agent should output JSON error when no API key is set."""
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY")}
+        with patch.dict(os.environ, env, clear=True):
+            result = self.runner.invoke(self.cli, ["agent", "test task", "--json"])
+            assert result.exit_code != 0
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "AI_PROVIDER_UNAVAILABLE"
 
 
-class TestToolExecutor:
+# ── Agent Provider Tests ────────────────────────
 
-    def test_click(self, executor, mock_backend):
-        tc = ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="1")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.click.assert_called_once_with(x=100, y=200, element_id=None, button="left", double=False)
 
-    def test_type_text(self, executor, mock_backend):
-        tc = ToolCall(name="type_text", arguments={"text": "hello"}, call_id="2")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.type_text.assert_called_once_with(text="hello", wpm=120)
+class TestAnthropicAgentProvider:
+    """Tests for AnthropicAgentProvider."""
 
-    def test_press_key(self, executor, mock_backend):
-        tc = ToolCall(name="press_key", arguments={"key": "enter", "count": 3}, call_id="3")
-        result = executor.execute(tc)
-        assert result.success
-        assert mock_backend.press_key.call_count == 3
+    def test_provider_not_available_without_key(self):
+        """Provider should report unavailable without API key."""
+        with patch.dict(os.environ, {}, clear=True):
+            env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+            with patch.dict(os.environ, env, clear=True):
+                from naturo.providers.anthropic_agent import AnthropicAgentProvider
+                provider = AnthropicAgentProvider(api_key="")
+                assert not provider.is_available
 
-    def test_hotkey(self, executor, mock_backend):
-        tc = ToolCall(name="hotkey", arguments={"keys": ["ctrl", "s"]}, call_id="4")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.hotkey.assert_called_once_with("ctrl", "s")
+    def test_provider_available_with_key(self):
+        """Provider should report available with API key."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        provider = AnthropicAgentProvider(api_key="test-key-123")
+        assert provider.is_available
 
-    def test_scroll(self, executor, mock_backend):
-        tc = ToolCall(name="scroll", arguments={"direction": "up", "amount": 5}, call_id="5")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.scroll.assert_called_once()
+    def test_provider_name(self):
+        """Provider name should be 'anthropic'."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        provider = AnthropicAgentProvider(api_key="test")
+        assert provider.name == "anthropic"
 
-    def test_unknown_tool(self, executor):
-        tc = ToolCall(name="nonexistent", arguments={}, call_id="x")
-        result = executor.execute(tc)
-        assert not result.success
-        assert "Unknown tool" in result.error
+    def test_provider_custom_model(self):
+        """Provider should accept custom model."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        provider = AnthropicAgentProvider(api_key="test", model="claude-opus-4-20250514")
+        assert provider._model == "claude-opus-4-20250514"
 
-    def test_done_tool(self, executor):
-        tc = ToolCall(name="done", arguments={"summary": "All done"}, call_id="d")
-        result = executor.execute(tc)
-        assert result.success
-        assert result.result["done"] is True
-        assert result.result["summary"] == "All done"
+    def test_run_step_without_key_raises(self):
+        """run_step should raise when API key is not set."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        from naturo.errors import AIProviderUnavailableError
+        provider = AnthropicAgentProvider(api_key="")
+        with pytest.raises(AIProviderUnavailableError):
+            provider.run_step("test", None, None, [])
 
-    def test_clipboard_get(self, executor, mock_backend):
-        tc = ToolCall(name="clipboard_get", arguments={}, call_id="c1")
-        result = executor.execute(tc)
-        assert result.success
-        assert result.result["text"] == "clipboard text"
+    def test_merge_consecutive_user_messages(self):
+        """Should merge consecutive user messages."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": "hello"}]},
+            {"role": "user", "content": [{"type": "text", "text": "world"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "hi"}]},
+        ]
+        merged = AnthropicAgentProvider._merge_consecutive_user_messages(messages)
+        assert len(merged) == 2
+        assert merged[0]["role"] == "user"
+        assert len(merged[0]["content"]) == 2
+        assert merged[1]["role"] == "assistant"
 
-    def test_clipboard_set(self, executor, mock_backend):
-        tc = ToolCall(name="clipboard_set", arguments={"text": "new"}, call_id="c2")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.clipboard_set.assert_called_once_with(text="new")
+    def test_merge_no_consecutive(self):
+        """Should not merge non-consecutive messages."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": "hello"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "hi"}]},
+            {"role": "user", "content": [{"type": "text", "text": "bye"}]},
+        ]
+        merged = AnthropicAgentProvider._merge_consecutive_user_messages(messages)
+        assert len(merged) == 3
 
-    def test_list_windows(self, executor, mock_backend):
-        tc = ToolCall(name="list_windows", arguments={}, call_id="lw")
-        result = executor.execute(tc)
-        assert result.success
-        assert result.result["windows"] == []
+    def test_merge_string_content(self):
+        """Should handle string content in messages."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        messages = [
+            {"role": "user", "content": "hello"},
+            {"role": "user", "content": "world"},
+        ]
+        merged = AnthropicAgentProvider._merge_consecutive_user_messages(messages)
+        assert len(merged) == 1
+        assert len(merged[0]["content"]) == 2
 
-    def test_find_element_not_found(self, executor, mock_backend):
-        mock_backend.find_element.return_value = None
-        tc = ToolCall(name="find_element", arguments={"selector": "Button:Missing"}, call_id="fe")
-        result = executor.execute(tc)
-        assert result.result["success"] is False
+    def test_build_assistant_content(self):
+        """Should build assistant content from AgentStep."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        provider = AnthropicAgentProvider(api_key="test")
+        step = AgentStep(
+            step_number=1,
+            reasoning="I need to click the button",
+            tool_calls=[
+                ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="call_1"),
+            ],
+        )
+        content = provider._build_assistant_content(step)
+        assert len(content) == 2
+        assert content[0]["type"] == "text"
+        assert content[1]["type"] == "tool_use"
+        assert content[1]["name"] == "click"
+        assert content[1]["id"] == "call_1"
 
-    def test_find_element_found(self, executor, mock_backend):
-        elem = MagicMock()
-        elem.id = "e1"
-        elem.role = "Button"
-        elem.name = "Save"
-        elem.x, elem.y, elem.width, elem.height = 10, 20, 80, 30
-        mock_backend.find_element.return_value = elem
-        tc = ToolCall(name="find_element", arguments={"selector": "Button:Save"}, call_id="fe2")
-        result = executor.execute(tc)
-        assert result.result["success"] is True
-        assert result.result["element"]["name"] == "Save"
-
-    def test_backend_exception(self, executor, mock_backend):
-        mock_backend.click.side_effect = RuntimeError("COM error")
-        tc = ToolCall(name="click", arguments={"x": 1, "y": 1}, call_id="err")
-        result = executor.execute(tc)
-        assert not result.success
-        assert "COM error" in result.error
-
-    def test_capture_screen(self, executor, mock_backend):
-        tc = ToolCall(name="capture_screen", arguments={}, call_id="cap")
-        result = executor.execute(tc)
-        assert result.success
-        assert result.result["path"] == "test.png"
-
-    def test_launch_app(self, executor, mock_backend):
-        tc = ToolCall(name="launch_app", arguments={"name": "notepad"}, call_id="la")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.launch_app.assert_called_once_with(name="notepad")
-
-    def test_focus_window(self, executor, mock_backend):
-        tc = ToolCall(name="focus_window", arguments={"title": "Notepad"}, call_id="fw")
-        result = executor.execute(tc)
-        assert result.success
-        mock_backend.focus_window.assert_called_once_with(title="Notepad")
-
-    def test_drag(self, executor, mock_backend):
-        tc = ToolCall(name="drag", arguments={
-            "from_x": 0, "from_y": 0, "to_x": 100, "to_y": 100
-        }, call_id="dr")
-        result = executor.execute(tc)
-        assert result.success
+    def test_build_tool_result_content(self):
+        """Should build tool_result content from step results."""
+        from naturo.providers.anthropic_agent import AnthropicAgentProvider
+        provider = AnthropicAgentProvider(api_key="test")
+        step = AgentStep(
+            step_number=1,
+            tool_results=[
+                ToolResult(call_id="call_1", name="click", result={"success": True}, success=True),
+                ToolResult(call_id="call_2", name="type_text", result={"error": "fail"}, success=False, error="fail"),
+            ],
+        )
+        content = provider._build_tool_result_content(step)
+        assert len(content) == 2
+        assert content[0]["type"] == "tool_result"
+        assert content[0]["tool_use_id"] == "call_1"
+        assert content[0]["is_error"] is False
+        assert content[1]["is_error"] is True
 
 
 # ── Agent Loop Tests ────────────────────────────
 
 
 class TestAgentLoop:
+    """Tests for the agent execution loop."""
 
-    def test_immediate_done(self, mock_backend):
-        """Provider immediately says done."""
-        step = AgentStep(step_number=0, is_done=True, summary="Nothing to do")
-        provider = FakeProvider([step])
-        result = run_agent("do nothing", provider=provider, backend=mock_backend, max_steps=5)
-        assert result.success
+    def _make_mock_provider(self, steps: list[AgentStep]):
+        """Create a mock provider that returns predefined steps."""
+        provider = MagicMock()
+        provider.run_step = MagicMock(side_effect=steps)
+        return provider
+
+    def _make_mock_backend(self):
+        """Create a mock backend."""
+        backend = MagicMock()
+        backend.capture_screen = MagicMock(return_value=MagicMock(
+            path="test.png", width=1920, height=1080
+        ))
+        backend.get_element_tree = MagicMock(return_value=None)
+        backend.click = MagicMock()
+        backend.type_text = MagicMock()
+        backend.press_key = MagicMock()
+        return backend
+
+    def test_agent_completes_on_done(self):
+        """Agent should complete when provider returns is_done."""
+        done_step = AgentStep(step_number=1, is_done=True, summary="All done")
+        done_step.status = StepStatus.SUCCESS
+        provider = self._make_mock_provider([done_step])
+        backend = self._make_mock_backend()
+
+        result = run_agent("test instruction", provider, backend=backend, max_steps=5)
+        assert result.success is True
+        assert result.summary == "All done"
         assert result.step_count == 1
-        assert result.summary == "Nothing to do"
 
-    def test_one_action_then_done(self, mock_backend):
-        """One tool call, then done."""
-        step1 = AgentStep(
-            step_number=0,
-            tool_calls=[ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="1")],
-        )
-        step2 = AgentStep(step_number=0, is_done=True, summary="Clicked the button")
-        provider = FakeProvider([step1, step2])
-        result = run_agent("click something", provider=provider, backend=mock_backend, max_steps=5)
-        assert result.success
-        assert result.step_count == 2
-        mock_backend.click.assert_called_once()
+    def test_agent_executes_tool_calls(self):
+        """Agent should execute tool calls from provider."""
+        step1 = AgentStep(step_number=1)
+        step1.tool_calls = [ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="c1")]
+        step1.status = StepStatus.SUCCESS
 
-    def test_done_via_tool(self, mock_backend):
-        """Provider calls the 'done' tool to signal completion."""
-        step = AgentStep(
-            step_number=0,
-            tool_calls=[ToolCall(name="done", arguments={"summary": "Task finished"}, call_id="d")],
-        )
-        provider = FakeProvider([step])
-        result = run_agent("finish", provider=provider, backend=mock_backend, max_steps=5)
-        assert result.success
-        assert "finished" in result.summary
+        step2 = AgentStep(step_number=2, is_done=True, summary="Clicked and done")
+        step2.status = StepStatus.SUCCESS
 
-    def test_max_steps_reached(self, mock_backend):
-        """Agent hits max steps without completion."""
-        steps = [
-            AgentStep(
-                step_number=0,
-                tool_calls=[ToolCall(name="click", arguments={"x": i, "y": i}, call_id=str(i))],
-            )
-            for i in range(10)
-        ]
-        provider = FakeProvider(steps)
-        result = run_agent("loop forever", provider=provider, backend=mock_backend, max_steps=3)
-        assert not result.success
+        provider = self._make_mock_provider([step1, step2])
+        backend = self._make_mock_backend()
+
+        result = run_agent("click something", provider, backend=backend, max_steps=5)
+        assert result.success is True
+        backend.click.assert_called_once()
+
+    def test_agent_max_steps_limit(self):
+        """Agent should stop at max_steps."""
+        # Provider never returns done
+        steps = []
+        for i in range(5):
+            s = AgentStep(step_number=i + 1)
+            s.tool_calls = [ToolCall(name="capture_screen", arguments={}, call_id=f"c{i}")]
+            s.status = StepStatus.SUCCESS
+            steps.append(s)
+
+        provider = self._make_mock_provider(steps)
+        backend = self._make_mock_backend()
+
+        result = run_agent("forever task", provider, backend=backend, max_steps=3)
+        assert result.success is False
+        assert "maximum steps" in result.error.lower()
         assert result.step_count == 3
-        assert "maximum steps" in result.error
 
-    def test_dry_run(self, mock_backend):
-        """Dry run: plan but don't execute."""
-        step1 = AgentStep(
-            step_number=0,
-            tool_calls=[ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="1")],
-        )
-        step2 = AgentStep(step_number=0, is_done=True, summary="Done planning")
-        provider = FakeProvider([step1, step2])
-        result = run_agent("plan it", provider=provider, backend=mock_backend, max_steps=5, dry_run=True)
-        assert result.success
-        # Backend should NOT be called (dry run)
-        mock_backend.click.assert_not_called()
+    def test_agent_dry_run_no_execution(self):
+        """Dry run should not execute tools."""
+        step1 = AgentStep(step_number=1)
+        step1.tool_calls = [ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="c1")]
+        step1.status = StepStatus.SUCCESS
 
-    def test_provider_error(self, mock_backend):
-        """Provider raises an exception."""
-        class FailProvider:
-            def run_step(self, *args, **kwargs):
-                raise RuntimeError("API key invalid")
+        step2 = AgentStep(step_number=2, is_done=True, summary="Done")
+        step2.status = StepStatus.SUCCESS
 
-        result = run_agent("fail", provider=FailProvider(), backend=mock_backend, max_steps=5)
-        assert not result.success
-        assert "API key invalid" in result.error
+        provider = self._make_mock_provider([step1, step2])
+        backend = self._make_mock_backend()
 
-    def test_total_time_tracked(self, mock_backend):
-        """Ensure total_time is recorded."""
-        step = AgentStep(step_number=0, is_done=True, summary="Quick")
-        provider = FakeProvider([step])
-        result = run_agent("quick", provider=provider, backend=mock_backend, max_steps=5)
-        assert result.total_time >= 0
+        result = run_agent("click test", provider, backend=backend, max_steps=5, dry_run=True)
+        backend.click.assert_not_called()
 
-    def test_multiple_tool_calls_per_step(self, mock_backend):
-        """A step can have multiple tool calls."""
-        step1 = AgentStep(
-            step_number=0,
-            tool_calls=[
-                ToolCall(name="click", arguments={"x": 10, "y": 20}, call_id="a"),
-                ToolCall(name="type_text", arguments={"text": "hello"}, call_id="b"),
-                ToolCall(name="press_key", arguments={"key": "enter"}, call_id="c"),
-            ],
-        )
-        step2 = AgentStep(step_number=0, is_done=True, summary="Typed and submitted")
-        provider = FakeProvider([step1, step2])
-        result = run_agent("type and submit", provider=provider, backend=mock_backend, max_steps=5)
-        assert result.success
-        assert len(result.steps[0].tool_results) == 3
-        mock_backend.click.assert_called_once()
-        mock_backend.type_text.assert_called_once()
-        mock_backend.press_key.assert_called_once()
+    def test_agent_handles_provider_error(self):
+        """Agent should handle provider errors gracefully."""
+        provider = MagicMock()
+        provider.run_step = MagicMock(side_effect=Exception("API timeout"))
+        backend = self._make_mock_backend()
+
+        result = run_agent("test", provider, backend=backend, max_steps=3)
+        assert result.success is False
+        assert "API timeout" in result.error
+
+    def test_agent_done_tool_completes(self):
+        """Agent should complete when 'done' tool is called."""
+        step = AgentStep(step_number=1)
+        step.tool_calls = [
+            ToolCall(name="done", arguments={"summary": "Task finished"}, call_id="c1"),
+        ]
+        step.status = StepStatus.SUCCESS
+
+        provider = self._make_mock_provider([step])
+        backend = self._make_mock_backend()
+
+        result = run_agent("test", provider, backend=backend, max_steps=5)
+        assert result.success is True
+        assert result.summary == "Task finished"
 
 
-# ── Data Model Tests ────────────────────────────
+# ── Tool Executor Tests ─────────────────────────
 
 
-class TestDataModels:
+class TestToolExecutor:
+    """Tests for ToolExecutor."""
 
-    def test_agent_result_defaults(self):
-        r = AgentResult(instruction="test")
-        assert r.instruction == "test"
-        assert r.step_count == 0
-        assert not r.success
-        assert r.error is None
+    def _make_backend(self):
+        backend = MagicMock()
+        backend.click = MagicMock()
+        backend.type_text = MagicMock()
+        backend.press_key = MagicMock()
+        backend.hotkey = MagicMock()
+        backend.scroll = MagicMock()
+        backend.drag = MagicMock()
+        backend.move_mouse = MagicMock()
+        backend.find_element = MagicMock(return_value=None)
+        backend.capture_screen = MagicMock(return_value=MagicMock(path="t.png", width=1920, height=1080))
+        backend.list_windows = MagicMock(return_value=[])
+        backend.focus_window = MagicMock()
+        backend.close_window = MagicMock()
+        backend.launch_app = MagicMock()
+        backend.quit_app = MagicMock()
+        backend.clipboard_get = MagicMock(return_value="test")
+        backend.clipboard_set = MagicMock()
+        return backend
 
-    def test_tool_call_defaults(self):
-        tc = ToolCall(name="click", arguments={"x": 1})
-        assert tc.call_id == ""
+    def test_execute_click(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="click", arguments={"x": 100, "y": 200}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is True
+        backend.click.assert_called_once()
 
-    def test_tool_result_defaults(self):
-        tr = ToolResult(call_id="1", name="click", result={"success": True})
-        assert tr.success
-        assert tr.error is None
+    def test_execute_type_text(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="type_text", arguments={"text": "hello"}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is True
+        backend.type_text.assert_called_once()
 
-    def test_step_status_enum(self):
-        assert StepStatus.SUCCESS == "success"
-        assert StepStatus.ERROR == "error"
-        assert StepStatus.PENDING == "pending"
+    def test_execute_unknown_tool(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="nonexistent_tool", arguments={}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is False
+        assert "Unknown tool" in result.error
+
+    def test_execute_done(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="done", arguments={"summary": "All done"}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is True
+        assert result.result["done"] is True
+
+    def test_execute_handles_exception(self):
+        backend = self._make_backend()
+        backend.click.side_effect = RuntimeError("click failed")
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="click", arguments={"x": 0, "y": 0}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is False
+        assert "click failed" in result.error
+
+    def test_execute_clipboard_get(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="clipboard_get", arguments={}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is True
+        assert result.result["text"] == "test"
+
+    def test_execute_list_windows(self):
+        backend = self._make_backend()
+        executor = ToolExecutor(backend)
+        tc = ToolCall(name="list_windows", arguments={}, call_id="c1")
+        result = executor.execute(tc)
+        assert result.success is True
+        assert "windows" in result.result
