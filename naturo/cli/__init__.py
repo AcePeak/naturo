@@ -12,6 +12,9 @@ from naturo.cli.system import (
 from naturo.cli.ai import agent, mcp
 from naturo.cli.extensions import excel, java, sap, registry, service
 from naturo.cli.snapshot import snapshot
+from naturo.cli.wait_cmd import wait
+from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find
+from naturo.cli.diff_cmd import diff
 
 
 @click.group()
@@ -82,3 +85,14 @@ main.add_command(service)
 
 # ── Snapshot ────────────────────────────────────
 main.add_command(snapshot)
+
+# ── Phase 3: Stabilize ─────────────────────────
+main.add_command(wait)
+main.add_command(diff)
+
+# Replace stub app subcommands with working implementations
+app.add_command(app_launch, "launch")
+app.add_command(app_quit, "quit")
+app.add_command(app_relaunch, "relaunch")
+app.add_command(app_list, "list")
+app.add_command(app_find, "find")
