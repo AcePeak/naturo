@@ -161,6 +161,91 @@ class TestAppRelaunchNonexistent:
             assert data["error"]["code"] == "APP_NOT_FOUND"
 
 
+class TestBUG013TimeoutExpired:
+    """BUG-013: subprocess.TimeoutExpired in launch_app must be caught."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_launch_timeout_expired_becomes_app_not_found(self):
+        """TimeoutExpired from 'start /wait' should raise AppNotFoundError."""
+        import subprocess
+        from unittest.mock import patch, MagicMock
+        from naturo.process import launch_app
+        from naturo.errors import AppNotFoundError
+
+        # Simulate Windows path: where fails (returncode=1), then start /wait times out
+        where_result = MagicMock()
+        where_result.returncode = 1
+
+        def mock_run(cmd, **kwargs):
+            if cmd[0] == "where":
+                return where_result
+            # 'start /wait' raises TimeoutExpired
+            raise subprocess.TimeoutExpired(cmd, 10)
+
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.process.subprocess.run", side_effect=mock_run), \
+             patch("naturo.process.subprocess.Popen") as mock_popen:
+            with pytest.raises(AppNotFoundError) as exc_info:
+                launch_app(name="nonexistent_app_xyz")
+            assert "nonexistent_app_xyz" in str(exc_info.value)
+
+    def test_launch_timeout_expired_json_output(self, runner):
+        """CLI should output clean JSON error, not a traceback."""
+        from unittest.mock import patch
+        from naturo.errors import AppNotFoundError
+        with patch("naturo.process.launch_app",
+                    side_effect=AppNotFoundError("nonexistent_app_xyz",
+                                                 suggested_action="Application not found or failed to launch")):
+            result = runner.invoke(main, ["app", "launch", "nonexistent_app_xyz", "--json"])
+            assert result.exit_code == 1
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "APP_NOT_FOUND"
+            assert "Traceback" not in result.output
+
+
+class TestBUG016SingleJson:
+    """BUG-016: wait --json must output exactly one JSON document."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_wait_timeout_single_json(self, runner):
+        """When wait times out in JSON mode, only one JSON object should be output."""
+        from unittest.mock import patch
+        from naturo.wait import WaitResult
+
+        mock_result = WaitResult(found=False, wait_time=1.0, warnings=[])
+        with patch("naturo.wait.wait_for_element", return_value=mock_result):
+            result = runner.invoke(main, ["wait", "--element", "Button:Save", "--timeout", "1", "--json"])
+            assert result.exit_code != 0
+            # Must be exactly one valid JSON document
+            output = result.output.strip()
+            data = json.loads(output)  # Should not raise
+            assert data["success"] is False
+            assert data["found"] is False
+            # Verify no second JSON object
+            assert output.count('"success"') == 1
+
+    def test_wait_timeout_json_no_error_key(self, runner):
+        """Timeout result JSON should have found=false, not an error wrapper."""
+        from unittest.mock import patch
+        from naturo.wait import WaitResult
+
+        mock_result = WaitResult(found=False, wait_time=1.0, warnings=[])
+        with patch("naturo.wait.wait_for_element", return_value=mock_result):
+            result = runner.invoke(main, ["wait", "--element", "Button:Save", "--timeout", "1", "--json"])
+            output = result.output.strip()
+            data = json.loads(output)
+            # Should be the wait result format, not an error wrapper
+            assert "found" in data
+            assert "wait_time" in data
+
+
 class TestDiffCommand:
     def test_diff_help(self, runner):
         result = runner.invoke(main, ["diff", "--help"])
