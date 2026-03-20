@@ -300,3 +300,66 @@ class TestBUG034WaitIntervalValidation:
         data = json.loads(result.output)
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
+
+
+class TestBug035ClickWaitForHidden:
+    """BUG-035: click --wait-for is declared but not implemented; should be hidden."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_wait_for_not_in_help(self, runner):
+        result = runner.invoke(main, ["click", "--help"])
+        assert "--wait-for" not in result.output
+
+    def test_wait_for_still_accepted(self, runner):
+        """Hidden options should still be accepted (not break existing scripts)."""
+        result = runner.invoke(main, ["click", "--wait-for", "5", "--coords", "100", "100"])
+        # Should not fail due to unknown option
+        assert "No such option" not in (result.output or "")
+
+
+class TestBug036MoveDurationHidden:
+    """BUG-036: move --duration is declared but not passed to backend; should be hidden."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_duration_not_in_help(self, runner):
+        result = runner.invoke(main, ["move", "--help"])
+        assert "--duration" not in result.output
+
+    def test_duration_still_accepted(self, runner):
+        """Hidden options should still be accepted."""
+        result = runner.invoke(main, ["move", "--duration", "2", "--coords", "100", "100"])
+        assert "No such option" not in (result.output or "")
+
+
+class TestBug037HotkeyHoldDurationValidation:
+    """BUG-037: hotkey --hold-duration should reject negative values."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_hold_duration_negative(self, runner):
+        result = runner.invoke(main, ["hotkey", "--hold-duration", "-1", "ctrl+c"])
+        assert result.exit_code != 0
+        assert "--hold-duration must be >= 0" in result.output
+
+    def test_hold_duration_negative_json(self, runner):
+        result = runner.invoke(main, ["hotkey", "--hold-duration", "-1", "ctrl+c", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "--hold-duration must be >= 0" in data["error"]["message"]
+
+    def test_hold_duration_zero_allowed(self, runner):
+        """Zero hold duration should be valid (instant press/release)."""
+        result = runner.invoke(main, ["hotkey", "--hold-duration", "0", "ctrl+c"])
+        # Should not fail validation (may fail on backend since no Windows, but not INVALID_INPUT)
+        if result.exit_code != 0:
+            assert "--hold-duration must be >= 0" not in (result.output or "")

@@ -276,6 +276,10 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
         _json_err("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output, code="INVALID_INPUT")
         return
 
+    if hold_duration is not None and hold_duration < 0:
+        _json_err(f"--hold-duration must be >= 0, got {hold_duration}", json_output, code="INVALID_INPUT")
+        return
+
     try:
         backend.hotkey(*key_list,
                        hold_duration_ms=int(hold_duration) if hold_duration else 50)
