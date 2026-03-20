@@ -56,8 +56,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
 
     try:
         backend = _get_backend()
-        if hwnd:
-            result = backend.capture_window(hwnd=hwnd, output_path=path)
+        if hwnd or app or window_title:
+            # Resolve app/window_title to hwnd if needed
+            target_hwnd = hwnd
+            if not target_hwnd and hasattr(backend, '_resolve_hwnd'):
+                target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title)
+            result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
         else:
             result = backend.capture_screen(screen_index=screen, output_path=path)
 
@@ -84,9 +88,9 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
                 out["snapshot_id"] = snapshot_id
             click.echo(json_module.dumps(out))
         else:
-            click.echo(f"Saved: {result.path} ({result.width}x{result.height})")
-            if snapshot_id:
-                click.echo(f"Snapshot: {snapshot_id}")
+            import os
+            full_path = os.path.abspath(result.path)
+            click.echo(f"Saved: {full_path} ({result.width}x{result.height})")
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -245,7 +249,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
     try:
         backend = _get_backend()
-        tree = backend.get_element_tree(depth=depth)
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, depth=depth,
+        )
 
         if tree is None:
             click.echo("No window found or UI tree is empty.")

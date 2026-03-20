@@ -235,22 +235,56 @@ class WindowsBackend(Backend):
             properties={},
         )
 
+    def _resolve_hwnd(self, app: Optional[str] = None,
+                      window_title: Optional[str] = None,
+                      hwnd: Optional[int] = None) -> int:
+        """Resolve a window handle from app name, window title, or direct hwnd.
+
+        Args:
+            app: Application/process name to search for (case-insensitive, partial match).
+            window_title: Window title pattern (case-insensitive, partial match).
+            hwnd: Direct window handle (takes priority).
+
+        Returns:
+            Window handle (HWND), or 0 for the foreground window.
+        """
+        if hwnd:
+            return hwnd
+
+        search = app or window_title
+        if not search:
+            return 0  # foreground window
+
+        search_lower = search.lower()
+        windows = self.list_windows()
+        for w in windows:
+            if search_lower in w.title.lower() or search_lower in w.process_name.lower():
+                return w.handle
+
+        from naturo.errors import WindowNotFoundError
+        raise WindowNotFoundError(search)
+
     def get_element_tree(self, window_title: Optional[str] = None,
-                         depth: int = 3) -> Optional[BaseElementInfo]:
+                         depth: int = 3,
+                         app: Optional[str] = None,
+                         hwnd: Optional[int] = None) -> Optional[BaseElementInfo]:
         """Get the UI element tree for a window.
 
         Fills parent_id, children IDs, and keyboard_shortcut for all elements
         via Python-layer post-processing (the C++ DLL does not emit these).
 
         Args:
-            window_title: Not yet used (reserved for future).
+            window_title: Window title pattern (partial match, case-insensitive).
             depth: Maximum depth to traverse (1-10).
+            app: Application name to search for (partial match, case-insensitive).
+            hwnd: Direct window handle. Overrides app/window_title.
 
         Returns:
             Root ElementInfo with nested children, or None.
         """
         core = self._ensure_core()
-        result = core.get_element_tree(hwnd=0, depth=depth)
+        handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
+        result = core.get_element_tree(hwnd=handle, depth=depth)
         if result is None:
             return None
 
