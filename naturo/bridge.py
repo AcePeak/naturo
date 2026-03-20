@@ -16,6 +16,19 @@ from pathlib import Path
 from typing import Optional
 
 
+def _decode_native(raw: bytes) -> str:
+    """Decode bytes from native DLL, trying UTF-8 first then system codepage.
+
+    On Chinese Windows the DLL may return GBK/CP936 encoded strings.
+    """
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        import locale
+        encoding = locale.getpreferredencoding(False) or "cp936"
+        return raw.decode(encoding, errors="replace")
+
+
 @dataclass
 class WindowInfo:
     """Information about a top-level window.
@@ -281,7 +294,7 @@ class NaturoCore:
         Returns:
             Version string (e.g., "0.1.0").
         """
-        return self._lib.naturo_version().decode("utf-8")
+        return _decode_native(self._lib.naturo_version())
 
     def init(self) -> int:
         """Initialize the native library.
@@ -371,7 +384,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "list_windows")
 
-        data = json.loads(buf.value.decode("utf-8"))
+        data = json.loads(_decode_native(buf.value))
         return [
             WindowInfo(
                 hwnd=w["hwnd"],
@@ -406,7 +419,7 @@ class NaturoCore:
         if rc != 0:
             raise NaturoCoreError(rc, "get_window_info")
 
-        w = json.loads(buf.value.decode("utf-8"))
+        w = json.loads(_decode_native(buf.value))
         return WindowInfo(
             hwnd=w["hwnd"],
             title=w["title"],
@@ -447,7 +460,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "get_element_tree")
 
-        data = json.loads(buf.value.decode("utf-8"))
+        data = json.loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def find_element(
@@ -481,7 +494,7 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "find_element")
 
-        data = json.loads(buf.value.decode("utf-8"))
+        data = json.loads(_decode_native(buf.value))
         return _parse_element(data)
 
     # ── Phase 2: Mouse Input ─────────────────────────
