@@ -198,6 +198,15 @@ def describe(app, window_title, screenshot, provider, model, prompt, max_tokens,
         naturo describe --screenshot capture.png  # Analyze existing image
         naturo describe --provider openai         # Use OpenAI specifically
     """
+    # Validate max_tokens boundary
+    if max_tokens < 1:
+        msg = f"--max-tokens must be >= 1, got {max_tokens}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
     try:
         from naturo.vision import describe_screen
         from naturo.providers.base import get_vision_provider
