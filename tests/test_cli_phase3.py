@@ -84,6 +84,58 @@ class TestAppCommands:
         assert "--pid" in result.output
 
 
+class TestAppLaunchNonexistent:
+    """BUG-013: app launch nonexistent app should fail."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_launch_nonexistent_app(self, runner):
+        from unittest.mock import patch
+        from naturo.errors import AppNotFoundError
+        with patch("naturo.process.launch_app", side_effect=AppNotFoundError("nonexistent_xyz")):
+            result = runner.invoke(main, ["app", "launch", "nonexistent_xyz"])
+            assert result.exit_code == 1
+            assert "not found" in result.output.lower() or "error" in result.output.lower()
+
+    def test_launch_nonexistent_app_json(self, runner):
+        from unittest.mock import patch
+        from naturo.errors import AppNotFoundError
+        with patch("naturo.process.launch_app", side_effect=AppNotFoundError("nonexistent_xyz")):
+            result = runner.invoke(main, ["app", "launch", "nonexistent_xyz", "--json"])
+            assert result.exit_code == 1
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "APP_NOT_FOUND"
+
+
+class TestAppRelaunchNonexistent:
+    """BUG-018: app relaunch nonexistent app should fail."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_relaunch_nonexistent_app(self, runner):
+        from unittest.mock import patch
+        from naturo.errors import AppNotFoundError
+        with patch("naturo.process.relaunch_app", side_effect=AppNotFoundError("nonexistent_xyz")):
+            result = runner.invoke(main, ["app", "relaunch", "nonexistent_xyz"])
+            assert result.exit_code == 1
+            assert "not found" in result.output.lower() or "error" in result.output.lower()
+
+    def test_relaunch_nonexistent_app_json(self, runner):
+        from unittest.mock import patch
+        from naturo.errors import AppNotFoundError
+        with patch("naturo.process.relaunch_app", side_effect=AppNotFoundError("nonexistent_xyz")):
+            result = runner.invoke(main, ["app", "relaunch", "nonexistent_xyz", "--json"])
+            assert result.exit_code == 1
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "APP_NOT_FOUND"
+
+
 class TestDiffCommand:
     def test_diff_help(self, runner):
         result = runner.invoke(main, ["diff", "--help"])

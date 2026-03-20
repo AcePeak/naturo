@@ -170,6 +170,15 @@ class TestRelaunchApp:
         info = relaunch_app("app", wait_until_ready=False)
         assert info.pid == 888
 
+    @patch("naturo.process.launch_app")
+    @patch("naturo.process.quit_app")
+    def test_relaunch_nonexistent_app_fails(self, mock_quit, mock_launch):
+        """BUG-018: relaunch should fail for apps that don't exist."""
+        mock_quit.side_effect = AppNotFoundError("nonexistent_xyz")
+        mock_launch.side_effect = AppNotFoundError("nonexistent_xyz")
+        with pytest.raises(AppNotFoundError):
+            relaunch_app("nonexistent_xyz", wait_until_ready=False)
+
 
 class TestListApps:
     @patch("naturo.process._list_processes")
