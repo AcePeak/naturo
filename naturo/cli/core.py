@@ -47,8 +47,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
     Output format is PNG by default (matching Peekaboo).
     """
     if platform.system() != "Windows":
-        click.echo("Screen capture requires Windows (naturo_core.dll).")
-        return
+        msg = "Screen capture requires Windows (naturo_core.dll)."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+        else:
+            click.echo(msg)
+        raise SystemExit(1)
 
     # Resolve output path: use --path if given, else capture.<format>
     if path is None:
@@ -92,7 +96,10 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
             full_path = os.path.abspath(result.path)
             click.echo(f"Saved: {full_path} ({result.width}x{result.height})")
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "CAPTURE_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
 
@@ -151,8 +158,12 @@ def windows(app, process_name, pid, json_output):
     process names, and dimensions.
     """
     if platform.system() != "Windows":
-        click.echo("Window listing requires Windows (naturo_core.dll).")
-        return
+        msg = "Window listing requires Windows (naturo_core.dll)."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+        else:
+            click.echo(msg)
+        raise SystemExit(1)
 
     try:
         backend = _get_backend()
@@ -244,8 +255,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     subsequent commands can reference elements by ID.
     """
     if platform.system() != "Windows":
-        click.echo("UI inspection requires Windows (naturo_core.dll).")
-        return
+        msg = "UI inspection requires Windows (naturo_core.dll)."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+        else:
+            click.echo(msg)
+        raise SystemExit(1)
 
     try:
         backend = _get_backend()
@@ -254,8 +269,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         )
 
         if tree is None:
-            click.echo("No window found or UI tree is empty.")
-            return
+            msg = "No window found or UI tree is empty."
+            if json_output:
+                click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": msg}}))
+            else:
+                click.echo(msg)
+            raise SystemExit(1)
 
         snapshot_id = None
         if store_snapshot:
@@ -365,7 +384,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             click.echo(f"\nScreenshot saved: {result.path}")
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
 
@@ -392,15 +414,23 @@ def find_cmd(query, role, actionable, depth, limit, json_output):
         naturo find "*" --actionable    # all actionable elements
     """
     if platform.system() != "Windows":
-        click.echo("UI inspection requires Windows (naturo_core.dll).")
-        return
+        msg = "UI inspection requires Windows (naturo_core.dll)."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+        else:
+            click.echo(msg)
+        raise SystemExit(1)
 
     try:
         backend = _get_backend()
         tree = backend.get_element_tree(depth=depth)
         if tree is None:
-            click.echo("No window found or UI tree is empty.")
-            return
+            msg = "No window found or UI tree is empty."
+            if json_output:
+                click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": msg}}))
+            else:
+                click.echo(msg)
+            raise SystemExit(1)
 
         from naturo.search import search_elements
         # Convert backend ElementInfo tree to bridge ElementInfo for search
@@ -464,7 +494,10 @@ def find_cmd(query, role, actionable, depth, limit, json_output):
             click.echo(f"\n{len(results)} element(s) found.")
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
 
@@ -482,15 +515,23 @@ def menu_inspect(app, flat, json_output):
     all menu items with their keyboard shortcuts.
     """
     if platform.system() != "Windows":
-        click.echo("Menu inspection requires Windows (naturo_core.dll).")
-        return
+        msg = "Menu inspection requires Windows (naturo_core.dll)."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+        else:
+            click.echo(msg)
+        raise SystemExit(1)
 
     try:
         backend = _get_backend()
         items = backend.get_menu_items(window_title=app)
 
         if not items:
-            click.echo("No menu items found.")
+            msg = "No menu items found."
+            if json_output:
+                click.echo(json_module.dumps({"success": False, "error": {"code": "NO_MENU_ITEMS", "message": msg}}))
+            else:
+                click.echo(msg)
             return
 
         if json_output:
@@ -525,9 +566,16 @@ def menu_inspect(app, flat, json_output):
                     print_menu(item)
 
     except NotImplementedError:
-        click.echo("Menu inspection not supported on this platform.")
+        msg = "Menu inspection not supported on this platform."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_SUPPORTED", "message": msg}}))
+        else:
+            click.echo(msg)
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
 

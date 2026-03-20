@@ -1,4 +1,5 @@
 """Test CLI commands — verify all commands are registered with correct params."""
+import platform
 import pytest
 from click.testing import CliRunner
 from naturo.cli import main
@@ -338,15 +339,15 @@ def test_service_help(runner):
 # ── Placeholder execution ──────────────────────
 
 
-@pytest.mark.parametrize("cmd", [
-    ["see"],
-    ["learn"],
-    ["capture", "live"],
+@pytest.mark.parametrize("cmd,expected_exit", [
+    (["see"], 1 if platform.system() != "Windows" else 0),
+    (["learn"], 0),
+    (["capture", "live"], 1 if platform.system() != "Windows" else 0),
 ])
-def test_placeholder_commands_run(runner, cmd):
+def test_placeholder_commands_run(runner, cmd, expected_exit):
     """Commands with no required args should run and show placeholder message."""
     result = runner.invoke(main, cmd)
-    assert result.exit_code == 0
+    assert result.exit_code == expected_exit
 
 
 def test_scroll_no_args_runs(runner):
