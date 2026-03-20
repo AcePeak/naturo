@@ -115,7 +115,7 @@ def snapshot_clean(days: int | None, clean_all: bool, yes: bool, json_output: bo
         count = mgr.clean_older_than(days)  # type: ignore[arg-type]
 
     if json_output:
-        click.echo(json_module.dumps({"deleted": count}))
+        click.echo(json_module.dumps({"success": True, "deleted": count}))
     else:
         click.echo(f"Deleted {count} snapshot(s).")
 
