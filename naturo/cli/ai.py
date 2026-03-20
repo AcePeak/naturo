@@ -84,6 +84,15 @@ def describe(app, window_title, screenshot, provider, model, prompt, max_tokens,
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
 
+    # Validate screenshot path before provider init (avoid misleading errors)
+    if screenshot and not __import__("os").path.exists(screenshot):
+        msg = f"Screenshot file not found: {screenshot}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "FILE_NOT_FOUND", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
     # Build provider kwargs
     provider_kwargs = {}
     if model:
@@ -95,15 +104,6 @@ def describe(app, window_title, screenshot, provider, model, prompt, max_tokens,
         msg = str(e)
         if json_output:
             click.echo(json.dumps({"success": False, "error": {"code": "AI_PROVIDER_UNAVAILABLE", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
-
-    # Validate screenshot path if provided
-    if screenshot and not __import__("os").path.exists(screenshot):
-        msg = f"Screenshot file not found: {screenshot}"
-        if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "FILE_NOT_FOUND", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
