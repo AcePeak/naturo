@@ -5,16 +5,21 @@ capture, inspect, click, type, find elements, manage windows/apps.
 """
 from __future__ import annotations
 
+import functools
 import json
+import logging
 import os
 import sys
 import base64
+import traceback
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
 from naturo.backends.base import get_backend, Backend
 from naturo.errors import NaturoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_server() -> FastMCP:
@@ -37,9 +42,23 @@ def create_server() -> FastMCP:
         except RuntimeError as e:
             raise NaturoError(str(e))
 
+    def _safe_tool(fn):
+        """Decorator: wraps MCP tool handlers with try/except to return structured errors."""
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except NaturoError as e:
+                return {"success": False, "error": {"code": "NATURO_ERROR", "message": str(e)}}
+            except Exception as e:
+                logger.exception("Unhandled error in tool %s", fn.__name__)
+                return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"{type(e).__name__}: {e}"}}
+        return wrapper
+
     # ── Capture ─────────────────────────────────
 
     @server.tool()
+    @_safe_tool
     def capture_screen(
         output_path: str = "capture.png",
         screen_index: int = 0,
@@ -69,6 +88,7 @@ def create_server() -> FastMCP:
         return response
 
     @server.tool()
+    @_safe_tool
     def capture_window(
         window_title: Optional[str] = None,
         output_path: str = "capture.png",
@@ -99,6 +119,7 @@ def create_server() -> FastMCP:
     # ── Window Management ───────────────────────
 
     @server.tool()
+    @_safe_tool
     def list_windows() -> dict:
         """List all visible windows on the desktop.
 
@@ -125,6 +146,7 @@ def create_server() -> FastMCP:
         }
 
     @server.tool()
+    @_safe_tool
     def focus_window(title: str) -> dict:
         """Bring a window to the foreground and give it focus.
 
@@ -136,6 +158,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def close_window(title: str) -> dict:
         """Close a window.
 
@@ -147,6 +170,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def minimize_window(title: str) -> dict:
         """Minimize a window.
 
@@ -158,6 +182,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def maximize_window(title: str) -> dict:
         """Maximize a window.
 
@@ -171,6 +196,7 @@ def create_server() -> FastMCP:
     # ── UI Inspection ───────────────────────────
 
     @server.tool()
+    @_safe_tool
     def see_ui_tree(
         window_title: Optional[str] = None,
         depth: int = 3,
@@ -210,6 +236,7 @@ def create_server() -> FastMCP:
         return {"success": True, "tree": _serialize(tree)}
 
     @server.tool()
+    @_safe_tool
     def find_element(
         selector: str,
         window_title: Optional[str] = None,
@@ -245,6 +272,7 @@ def create_server() -> FastMCP:
     # ── Input Actions ───────────────────────────
 
     @server.tool()
+    @_safe_tool
     def click(
         x: Optional[int] = None,
         y: Optional[int] = None,
@@ -271,6 +299,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def type_text(
         text: str,
         wpm: int = 120,
@@ -293,6 +322,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def press_key(key: str, count: int = 1) -> dict:
         """Press a keyboard key.
 
@@ -311,20 +341,24 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
-    def hotkey(*keys: str) -> dict:
+    @_safe_tool
+    def hotkey(keys: list[str]) -> dict:
         """Press a keyboard shortcut (key combination).
 
         Args:
-            keys: Keys to press simultaneously (e.g. "ctrl", "s" for Ctrl+S).
+            keys: List of keys to press simultaneously (e.g. ["ctrl", "s"] for Ctrl+S).
 
         Returns:
             Dict with success flag.
         """
+        if not keys:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": "keys list must not be empty"}}
         backend = _get_backend()
         backend.hotkey(*keys)
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def scroll(
         direction: str = "down",
         amount: int = 3,
@@ -349,6 +383,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def drag(
         from_x: int,
         from_y: int,
@@ -380,6 +415,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def move_mouse(x: int, y: int) -> dict:
         """Move the mouse cursor to a position.
 
@@ -397,6 +433,7 @@ def create_server() -> FastMCP:
     # ── Clipboard ───────────────────────────────
 
     @server.tool()
+    @_safe_tool
     def clipboard_get() -> dict:
         """Get the current clipboard text content.
 
@@ -408,6 +445,7 @@ def create_server() -> FastMCP:
         return {"success": True, "text": text}
 
     @server.tool()
+    @_safe_tool
     def clipboard_set(text: str) -> dict:
         """Set the clipboard text content.
 
@@ -424,6 +462,7 @@ def create_server() -> FastMCP:
     # ── Application Control ─────────────────────
 
     @server.tool()
+    @_safe_tool
     def list_apps() -> dict:
         """List running applications.
 
@@ -435,6 +474,7 @@ def create_server() -> FastMCP:
         return {"success": True, "apps": apps}
 
     @server.tool()
+    @_safe_tool
     def launch_app(name: str) -> dict:
         """Launch an application by name.
 
@@ -449,6 +489,7 @@ def create_server() -> FastMCP:
         return {"success": True}
 
     @server.tool()
+    @_safe_tool
     def quit_app(name: str, force: bool = False) -> dict:
         """Quit an application.
 
@@ -466,6 +507,7 @@ def create_server() -> FastMCP:
     # ── Menu ────────────────────────────────────
 
     @server.tool()
+    @_safe_tool
     def menu_inspect(app: Optional[str] = None) -> dict:
         """Inspect the menu bar of an application.
 
@@ -500,6 +542,7 @@ def create_server() -> FastMCP:
     # ── Wait ────────────────────────────────────
 
     @server.tool()
+    @_safe_tool
     def wait_for_element(
         selector: str,
         timeout: float = 10.0,
@@ -557,6 +600,7 @@ def create_server() -> FastMCP:
         }
 
     @server.tool()
+    @_safe_tool
     def wait_for_window(
         title: str,
         timeout: float = 10.0,
@@ -601,6 +645,7 @@ def create_server() -> FastMCP:
         }
 
     @server.tool()
+    @_safe_tool
     def wait_until_gone(
         selector: str,
         timeout: float = 10.0,
@@ -651,6 +696,7 @@ def create_server() -> FastMCP:
     # ── Open ────────────────────────────────────
 
     @server.tool()
+    @_safe_tool
     def open_uri(uri: str) -> dict:
         """Open a URL or file with the default application.
 
