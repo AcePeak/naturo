@@ -2,15 +2,11 @@
 import click
 from naturo.version import __version__
 
-from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, learn, tools
+from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, learn
 from naturo.cli.interaction import (
     click_cmd, type_cmd, press, hotkey, scroll, drag, move, paste,
 )
-from naturo.cli.system import (
-    app, window, menu, clipboard, dialog, open_cmd, taskbar, tray, desktop,
-)
-from naturo.cli.ai import agent, mcp
-from naturo.cli.extensions import excel, java, sap, registry, service
+from naturo.cli.system import app
 from naturo.cli.snapshot import snapshot
 from naturo.cli.wait_cmd import wait
 from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find
@@ -49,7 +45,6 @@ main.add_command(see)
 main.add_command(find_cmd, "find")
 main.add_command(menu_inspect, "menu-inspect")
 main.add_command(learn)
-main.add_command(tools)
 
 # ── Interaction ─────────────────────────────────
 main.add_command(click_cmd, "click")
@@ -63,25 +58,6 @@ main.add_command(paste)
 
 # ── System ──────────────────────────────────────
 main.add_command(app)
-main.add_command(window)
-main.add_command(menu)
-main.add_command(clipboard)
-main.add_command(dialog)
-main.add_command(open_cmd, "open")
-main.add_command(taskbar)
-main.add_command(tray)
-main.add_command(desktop)
-
-# ── AI ──────────────────────────────────────────
-main.add_command(agent)
-main.add_command(mcp)
-
-# ── Windows Extensions ─────────────────────────
-main.add_command(excel)
-main.add_command(java)
-main.add_command(sap)
-main.add_command(registry)
-main.add_command(service)
 
 # ── Snapshot ────────────────────────────────────
 main.add_command(snapshot)

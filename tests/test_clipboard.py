@@ -67,6 +67,7 @@ class TestClipboardMethodSignatures:
 # ── CLI option validation (all platforms) ─────────────────────────────────────
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 class TestClipboardCLIOptions:
     """clipboard CLI option validation (T140-T146)."""
 

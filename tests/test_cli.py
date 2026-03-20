@@ -24,16 +24,13 @@ def test_cli_help(runner):
     # All command groups/commands must appear
     expected = [
         # Core
-        "capture", "list", "see", "learn", "tools",
+        "capture", "list", "see", "learn",
         # Interaction
         "click", "type", "press", "hotkey", "scroll", "drag", "move", "paste",
         # System
-        "app", "window", "menu", "clipboard", "dialog", "open",
-        "taskbar", "tray", "desktop",
-        # AI
-        "agent", "mcp",
-        # Extensions
-        "excel", "java", "sap", "registry", "service",
+        "app",
+        # Snapshot & Phase 3
+        "snapshot", "wait", "diff",
     ]
     for cmd in expected:
         assert cmd in result.output, f"Missing command: {cmd}"
@@ -93,6 +90,7 @@ def test_learn_no_args(runner):
     assert "Naturo" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_tools_help(runner):
     result = runner.invoke(main, ["tools", "--help"])
     assert result.exit_code == 0
@@ -192,10 +190,11 @@ def test_paste_help(runner):
 def test_app_help(runner):
     result = runner.invoke(main, ["app", "--help"])
     assert result.exit_code == 0
-    for sub in ["launch", "quit", "relaunch", "hide", "unhide", "switch", "list"]:
+    for sub in ["launch", "quit", "relaunch", "list", "find"]:
         assert sub in result.output, f"Missing app subcommand: {sub}"
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_window_help(runner):
     result = runner.invoke(main, ["window", "--help"])
     assert result.exit_code == 0
@@ -203,6 +202,7 @@ def test_window_help(runner):
         assert sub in result.output, f"Missing window subcommand: {sub}"
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_menu_help(runner):
     result = runner.invoke(main, ["menu", "--help"])
     assert result.exit_code == 0
@@ -210,6 +210,7 @@ def test_menu_help(runner):
     assert "list" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_clipboard_help(runner):
     result = runner.invoke(main, ["clipboard", "--help"])
     assert result.exit_code == 0
@@ -217,6 +218,7 @@ def test_clipboard_help(runner):
     assert "set" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_dialog_help(runner):
     result = runner.invoke(main, ["dialog", "--help"])
     assert result.exit_code == 0
@@ -224,12 +226,14 @@ def test_dialog_help(runner):
     assert "--button" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_open_help(runner):
     result = runner.invoke(main, ["open", "--help"])
     assert result.exit_code == 0
     assert "TARGET" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_taskbar_help(runner):
     result = runner.invoke(main, ["taskbar", "--help"])
     assert result.exit_code == 0
@@ -238,6 +242,7 @@ def test_taskbar_help(runner):
     assert "list" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_tray_help(runner):
     result = runner.invoke(main, ["tray", "--help"])
     assert result.exit_code == 0
@@ -245,6 +250,7 @@ def test_tray_help(runner):
     assert "click" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_desktop_help(runner):
     result = runner.invoke(main, ["desktop", "--help"])
     assert result.exit_code == 0
@@ -257,6 +263,7 @@ def test_desktop_help(runner):
 # ── AI commands ─────────────────────────────────
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_agent_help(runner):
     result = runner.invoke(main, ["agent", "--help"])
     assert result.exit_code == 0
@@ -266,6 +273,7 @@ def test_agent_help(runner):
     assert "--dry-run" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_mcp_help(runner):
     result = runner.invoke(main, ["mcp", "--help"])
     assert result.exit_code == 0
@@ -277,6 +285,7 @@ def test_mcp_help(runner):
 # ── Extension commands ──────────────────────────
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_excel_help(runner):
     result = runner.invoke(main, ["excel", "--help"])
     assert result.exit_code == 0
@@ -286,6 +295,7 @@ def test_excel_help(runner):
     assert "run-macro" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_java_help(runner):
     result = runner.invoke(main, ["java", "--help"])
     assert result.exit_code == 0
@@ -294,6 +304,7 @@ def test_java_help(runner):
     assert "click" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_sap_help(runner):
     result = runner.invoke(main, ["sap", "--help"])
     assert result.exit_code == 0
@@ -303,6 +314,7 @@ def test_sap_help(runner):
     assert "set" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_registry_help(runner):
     result = runner.invoke(main, ["registry", "--help"])
     assert result.exit_code == 0
@@ -312,6 +324,7 @@ def test_registry_help(runner):
     assert "delete" in result.output
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_service_help(runner):
     result = runner.invoke(main, ["service", "--help"])
     assert result.exit_code == 0
@@ -329,8 +342,6 @@ def test_service_help(runner):
     ["see"],
     ["learn"],
     ["capture", "live"],
-    ["list", "apps"],
-    ["tools"],
 ])
 def test_placeholder_commands_run(runner, cmd):
     """Commands with no required args should run and show placeholder message."""

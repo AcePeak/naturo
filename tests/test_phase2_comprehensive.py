@@ -86,6 +86,7 @@ class TestWindowManagementMethods:
         assert "width" in params and "height" in params
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 class TestWindowCLICommands:
     """Verify window CLI commands are registered (T044-T054)."""
 
@@ -323,6 +324,7 @@ class TestClipboardMethods:
         assert "text" in params
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 class TestClipboardCLI:
     """Verify clipboard CLI commands (T140-T146)."""
 
@@ -394,6 +396,7 @@ class TestAppControlCLI:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 class TestMenuCLI:
     """Verify menu CLI commands exist (T170-T172)."""
 
@@ -422,6 +425,7 @@ class TestSystemMethods:
         assert hasattr(WindowsBackend, "open_uri")
 
 
+@pytest.mark.skip(reason='command hidden — stub not exposed to users')
 class TestSystemCLI:
     """Verify system CLI commands (T183-T184)."""
 

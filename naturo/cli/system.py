@@ -10,7 +10,7 @@ def app():
     pass
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--args", multiple=True, help="Launch arguments")
 @click.option("--wait", is_flag=True, help="Wait for app to start")
@@ -20,7 +20,7 @@ def launch(name, args, wait, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--force", is_flag=True, help="Force kill")
@@ -30,7 +30,7 @@ def quit(name, pid, force, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def relaunch(name, json_output):
@@ -38,7 +38,7 @@ def relaunch(name, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -47,7 +47,7 @@ def hide(name, pid, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -56,7 +56,7 @@ def unhide(name, pid, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command()
+@app.command(hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def switch(name, json_output):
@@ -64,7 +64,7 @@ def switch(name, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command(name="list")
+@app.command(name="list", hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def app_list(json_output):
     """List running applications."""
