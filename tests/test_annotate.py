@@ -146,7 +146,7 @@ class TestAnnotateScreenshot:
         annotate_screenshot(sample_screenshot, sample_elements, output)
 
         img = Image.open(output)
-        pixels = list(img.getdata())
+        pixels = list(img.get_flattened_data() if hasattr(img, 'get_flattened_data') else img.getdata())
         # At least some red pixels should exist from the bounding boxes
         red_pixels = [p for p in pixels if p[0] == 255 and p[1] == 0 and p[2] == 0]
         assert len(red_pixels) > 0, "Expected red bounding box pixels in annotated image"
