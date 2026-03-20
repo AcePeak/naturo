@@ -10,7 +10,7 @@ import sys
 @click.argument("instruction")
 @click.option("--app", help="Target application")
 @click.option("--window-title", help="Target window")
-@click.option("--model", help="AI model to use")
+@click.option("--model", default="anthropic", help="AI provider (anthropic/openai)")
 @click.option("--max-steps", type=int, default=10, help="Max automation steps")
 @click.option("--dry-run", is_flag=True, help="Plan but don't execute")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -18,10 +18,27 @@ def agent(instruction, app, window_title, model, max_steps, dry_run, json_output
     """Execute a natural language automation instruction.
 
     Uses AI vision + UI automation to complete tasks described in plain language.
+    Requires an AI provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY).
 
-    Example: naturo agent "Open Chrome and search for weather"
+    Example: naturo agent "Open Notepad and type hello world"
     """
-    click.echo("Not implemented yet — coming in Phase 4", err=True)
+    try:
+        from naturo.agent import run_agent
+    except ImportError as e:
+        msg = f"Agent dependencies not available: {e}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # For now, agent command requires AI provider integration (Phase 4 ongoing)
+    # The framework is ready, provider implementations are next
+    msg = "Agent command requires AI provider integration (coming soon). Use 'naturo mcp start' for MCP-based AI integration."
+    if json_output:
+        click.echo(json.dumps({"success": False, "error": {"code": "NOT_READY", "message": msg}}))
+    else:
+        click.echo(f"Error: {msg}", err=True)
     sys.exit(1)
 
 
