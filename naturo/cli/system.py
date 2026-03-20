@@ -247,8 +247,38 @@ def dialog(action, text, button, app, window_title, hwnd, wait, json_output):
 @click.option("--app", help="Open with specific application")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def open_cmd(target, app, json_output):
-    """Open a URL or file with default or specified application."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    """Open a URL or file with default or specified application.
+
+    Examples:
+        naturo open https://example.com       # Open URL in browser
+        naturo open C:\\readme.txt             # Open file with default app
+        naturo open document.pdf --app acrobat
+    """
+    import json as _json
+    import sys
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        # TODO: --app option for opening with specific application
+        backend.open_uri(uri=target)
+        if json_output:
+            click.echo(_json.dumps({"success": True, "target": target}))
+        else:
+            click.echo(f"Opened: {target}")
+    except NaturoError as e:
+        if json_output:
+            click.echo(_json.dumps({"success": False, "error": {"code": e.code, "message": e.message}}))
+        else:
+            click.echo(f"Error: {e.message}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        if json_output:
+            click.echo(_json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 # ── taskbar (Windows-specific, maps to Peekaboo dock) ──
