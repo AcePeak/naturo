@@ -4,7 +4,13 @@
 > **更新规则**：只更新自己角色对应的状态文件，不要编辑此文件。
 
 ## 🎯 当前目标
-**Phase 3.5 (Window Management) — 补齐窗口操作，对齐 Peekaboo**
+**全速推进，尽快达到并超越 Peekaboo。Ace 休息中，大胆往前做。**
+
+当前优先级：
+1. Phase 3.5 QA 验证 + CI 修绿
+2. Phase 4 AI Integration 继续（vision + agent command + recording）
+3. Phase 4.5 Dialog & System Integration
+4. Phase 5A Multi-Monitor + DPI
 
 ## 📍 进度
 - [x] Phase 0 — Project Skeleton ✅
@@ -13,15 +19,20 @@
 - [x] Phase 2 — Act ✅
 - [x] Phase 2.5 — Deep Capabilities ✅
 - [x] Phase 3 — Stabilize ✅ (43 bugs fixed, 700+ tests)
-- [ ] **Phase 3.5 — Window Management** ← 当前
-- [ ] Phase 4 — AI Integration (MCP server 基础已完成, 29 tools)
+- [x] Phase 3.5 — Window Management ✅ (代码完成，QA 验证中)
+- [ ] **Phase 4 — AI Integration** ← 继续推进
 - [ ] Phase 4.5 — Dialog & System Integration
-- [ ] Phase 5 — Complete (自然机器人引擎差异化)
+- [ ] Phase 5A — Multi-Monitor + DPI
+- [ ] Phase 5B — 自然机器人引擎移植
 - [ ] Phase 5.1 — Open Source Launch
 
 ## 🔄 各角色状态
 - **Dev**: 见 `agents/dev/status.md`
 - **QA**: 见 `agents/qa/status.md`
+
+## ⚠️ 紧急
+- CI Ubuntu 测试失败：test_process.py::TestLaunchApp::test_launch_nonexistent_app_returns_error（跨平台兼容）
+- Dev 优先修 CI，然后继续 Phase 4
 
 ## 📌 设计原则（不可违反）
 1. 未实现的功能不暴露给用户
