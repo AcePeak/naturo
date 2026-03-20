@@ -55,15 +55,17 @@
 
 | Step | Deliverable | Status |
 |------|------------|--------|
-| 3.5.1 | **Window Focus** — `naturo window focus --app "Notepad"` / `--hwnd 12345` / `--window-title "文档"` | 🔜 |
-| 3.5.2 | **Window Close** — `naturo window close --app "Notepad"` 优雅关闭（WM_CLOSE），`--force` 强制终止 | 🔜 |
-| 3.5.3 | **Window Minimize/Maximize** — `naturo window minimize/maximize --app "Notepad"` | 🔜 |
-| 3.5.4 | **Window Move** — `naturo window move --app "Notepad" --x 100 --y 100` | 🔜 |
-| 3.5.5 | **Window Resize** — `naturo window resize --app "Notepad" --width 800 --height 600` | 🔜 |
-| 3.5.6 | **Window Set Bounds** — 一次性设置位置+大小，对齐 Peekaboo `window set-bounds` | 🔜 |
-| 3.5.7 | **App Hide/Unhide** — 最小化/恢复应用所有窗口 | 🔜 |
-| 3.5.8 | **App Switch** — 切换到目标应用（SetForegroundWindow） | 🔜 |
-| 3.5.9 | **MCP Window Tools** — 上述能力暴露到 MCP server | 🔜 |
+| 3.5.1 | **Window Focus** — `naturo window focus --app "Notepad"` / `--hwnd 12345` / `--window-title "文档"` | ✅ Done |
+| 3.5.2 | **Window Close** — `naturo window close --app "Notepad"` 优雅关闭（WM_CLOSE），`--force` 强制终止 | ✅ Done |
+| 3.5.3 | **Window Minimize/Maximize/Restore** — `naturo window minimize/maximize/restore --app "Notepad"` | ✅ Done |
+| 3.5.4 | **Window Move** — `naturo window move --app "Notepad" --x 100 --y 100` | ✅ Done |
+| 3.5.5 | **Window Resize** — `naturo window resize --app "Notepad" --width 800 --height 600` | ✅ Done |
+| 3.5.6 | **Window Set Bounds** — 一次性设置位置+大小，对齐 Peekaboo `window set-bounds` | ✅ Done |
+| 3.5.7 | **App Hide/Unhide** — 最小化/恢复应用所有窗口 | ✅ Done |
+| 3.5.8 | **App Switch** — 切换到目标应用（SetForegroundWindow） | ✅ Done |
+| 3.5.9 | **MCP Window Tools** — 上述能力暴露到 MCP server | ✅ Done |
+| 3.5.10 | **Window List** — `naturo window list` 带过滤器 (--app/--pid/--process-name) | ✅ Done |
+| 3.5.11 | **Tests** — 105 个窗口管理测试 (CLI + backend + MCP + JSON 一致性) | ✅ Done |
 
 **Implementation**: C++ DLL 层用 Win32 API（ShowWindow, MoveWindow, SetWindowPos, SetForegroundWindow）。Python 层通过 bridge.py 调用。
 
