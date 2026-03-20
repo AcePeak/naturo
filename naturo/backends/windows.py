@@ -65,11 +65,40 @@ class WindowsBackend(Backend):
 
     # === Capture (Phase 1) ===
 
+    @staticmethod
+    def _convert_bmp(bmp_path: str, output_path: str) -> tuple[int, int, str]:
+        """Convert a BMP file to the format implied by *output_path* extension.
+
+        Uses Pillow so we always deliver PNG/JPEG/etc. to users, regardless
+        of the native BMP format produced by the C++ DLL (GDI BitBlt).
+
+        Returns:
+            (width, height, format_name) tuple.
+        """
+        import os
+        from PIL import Image
+
+        img = Image.open(bmp_path)
+        width, height = img.size
+        ext = output_path.rsplit(".", 1)[-1].lower() if "." in output_path else "png"
+        fmt = {"jpg": "JPEG", "jpeg": "JPEG", "bmp": "BMP"}.get(ext, "PNG")
+
+        if os.path.abspath(bmp_path) != os.path.abspath(output_path) or fmt != "BMP":
+            img.save(output_path, fmt)
+            # Remove the temp BMP if it differs from the final path
+            if os.path.abspath(bmp_path) != os.path.abspath(output_path):
+                try:
+                    os.remove(bmp_path)
+                except OSError:
+                    pass
+
+        return width, height, ext
+
     def capture_screen(self, screen_index: int = 0, output_path: str = "capture.png") -> CaptureResult:
         """Capture a screenshot of the specified monitor.
 
-        Uses GDI BitBlt. Saves as BMP natively; the output_path extension
-        is used as-is (caller should use .bmp or convert afterward).
+        The C++ DLL captures via GDI BitBlt to a temporary BMP, then Pillow
+        converts to the requested format (PNG by default, matching Peekaboo).
 
         Args:
             screen_index: Zero-based monitor index (0 = primary).
@@ -78,22 +107,13 @@ class WindowsBackend(Backend):
         Returns:
             CaptureResult with the output path and dimensions.
         """
+        import tempfile, os
         core = self._ensure_core()
-        core.capture_screen(screen_index, output_path)
 
-        # Read BMP header to get dimensions (offset 18 = width, 22 = height)
-        width, height = 0, 0
-        try:
-            with open(output_path, "rb") as f:
-                header = f.read(26)
-                if len(header) >= 26:
-                    import struct
-                    width = struct.unpack_from("<i", header, 18)[0]
-                    height = abs(struct.unpack_from("<i", header, 22)[0])
-        except (OSError, struct.error):
-            pass
-
-        fmt = output_path.rsplit(".", 1)[-1] if "." in output_path else "bmp"
+        # DLL writes BMP; use a temp file then convert
+        tmp_bmp = output_path + ".tmp.bmp"
+        core.capture_screen(screen_index, tmp_bmp)
+        width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
         return CaptureResult(path=output_path, width=width, height=height, format=fmt)
 
     def capture_window(self, window_title: Optional[str] = None, hwnd: Optional[int] = None,
@@ -102,6 +122,7 @@ class WindowsBackend(Backend):
 
         Uses PrintWindow for accurate off-screen capture. If neither
         window_title nor hwnd is provided, captures the foreground window.
+        Output is PNG by default (matching Peekaboo).
 
         Args:
             window_title: Window title to search for (not yet implemented — use hwnd).
@@ -113,20 +134,10 @@ class WindowsBackend(Backend):
         """
         core = self._ensure_core()
         handle = hwnd if hwnd else 0
-        core.capture_window(handle, output_path)
 
-        width, height = 0, 0
-        try:
-            with open(output_path, "rb") as f:
-                header = f.read(26)
-                if len(header) >= 26:
-                    import struct
-                    width = struct.unpack_from("<i", header, 18)[0]
-                    height = abs(struct.unpack_from("<i", header, 22)[0])
-        except (OSError, struct.error):
-            pass
-
-        fmt = output_path.rsplit(".", 1)[-1] if "." in output_path else "bmp"
+        tmp_bmp = output_path + ".tmp.bmp"
+        core.capture_window(handle, tmp_bmp)
+        width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
         return CaptureResult(path=output_path, width=width, height=height, format=fmt)
 
     # === Window Management (Phase 1: list only) ===
