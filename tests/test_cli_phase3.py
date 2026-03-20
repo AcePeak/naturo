@@ -109,6 +109,57 @@ class TestDiffCommand:
         # Need exactly 2 snapshots
 
 
+class TestWaitValidation:
+    """BUG-020: --timeout negative values should be rejected."""
+
+    def test_wait_negative_timeout(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "Button:Save", "--timeout", "-1"])
+        assert result.exit_code == 1
+        assert "must be >= 0" in result.output or "error" in result.output.lower()
+
+    def test_wait_negative_timeout_json(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "Button:Save", "--timeout", "-1", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "INVALID_INPUT" in data["error"]["code"]
+
+
+class TestPressValidation:
+    """BUG-019: --count <= 0 should be rejected."""
+
+    def test_press_count_zero(self, runner):
+        result = runner.invoke(main, ["press", "enter", "--count", "0"])
+        assert result.exit_code == 1
+        assert "must be >= 1" in result.output or "error" in result.output.lower()
+
+    def test_press_count_negative(self, runner):
+        result = runner.invoke(main, ["press", "enter", "--count", "-1"])
+        assert result.exit_code == 1
+        assert "must be >= 1" in result.output or "error" in result.output.lower()
+
+    def test_press_count_negative_json(self, runner):
+        result = runner.invoke(main, ["press", "enter", "--count", "-1", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["ok"] is False
+
+
+class TestSnapshotCleanValidation:
+    """BUG-021: --days negative values should be rejected."""
+
+    def test_snapshot_clean_negative_days(self, runner):
+        result = runner.invoke(main, ["snapshot", "clean", "--days", "-1", "-y"])
+        assert result.exit_code == 1
+        assert "must be >= 0" in result.output or "error" in result.output.lower()
+
+    def test_snapshot_clean_negative_days_json(self, runner):
+        result = runner.invoke(main, ["snapshot", "clean", "--days", "-1", "-y", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["success"] is False
+
+
 class TestGlobalJsonFlag:
     def test_json_flag_propagates(self, runner):
         result = runner.invoke(main, ["--json", "wait"])
