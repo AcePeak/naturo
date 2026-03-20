@@ -145,26 +145,44 @@ def _get_agent_provider(provider_name: str, model: Optional[str] = None):
     Raises:
         AIProviderUnavailableError: Provider not available.
     """
-    if provider_name == "anthropic":
-        from naturo.providers.anthropic_agent import AnthropicAgentProvider
-        kwargs = {}
-        if model:
-            kwargs["model"] = model
-        prov = AnthropicAgentProvider(**kwargs)
-        if not prov.is_available:
-            from naturo.errors import AIProviderUnavailableError
-            raise AIProviderUnavailableError(
-                provider="anthropic",
-                suggested_action="Set ANTHROPIC_API_KEY environment variable",
-            )
-        return prov
-    else:
-        # OpenAI agent provider (future)
-        from naturo.errors import AIProviderUnavailableError
+    from naturo.errors import AIProviderUnavailableError
+
+    _AGENT_PROVIDERS = {
+        "anthropic": {
+            "class_path": "naturo.providers.anthropic_agent",
+            "class_name": "AnthropicAgentProvider",
+            "env_key": "ANTHROPIC_API_KEY",
+        },
+        "openai": {
+            "class_path": "naturo.providers.openai_agent",
+            "class_name": "OpenAIAgentProvider",
+            "env_key": "OPENAI_API_KEY",
+        },
+    }
+
+    info = _AGENT_PROVIDERS.get(provider_name)
+    if info is None:
+        available = ", ".join(sorted(_AGENT_PROVIDERS.keys()))
         raise AIProviderUnavailableError(
             provider=provider_name,
-            suggested_action=f"Agent provider '{provider_name}' not yet implemented. Use --provider anthropic.",
+            suggested_action=f"Available agent providers: {available}",
         )
+
+    import importlib
+    mod = importlib.import_module(info["class_path"])
+    cls = getattr(mod, info["class_name"])
+
+    kwargs = {}
+    if model:
+        kwargs["model"] = model
+    prov = cls(**kwargs)
+
+    if not prov.is_available:
+        raise AIProviderUnavailableError(
+            provider=provider_name,
+            suggested_action=f"Set {info['env_key']} environment variable",
+        )
+    return prov
 
 
 # ── describe ────────────────────────────────────
