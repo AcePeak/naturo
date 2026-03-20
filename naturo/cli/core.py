@@ -179,6 +179,18 @@ def windows(app, process_name, pid, json_output):
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
+        # Warn if empty result on Windows (may indicate no desktop session)
+        if not win_list and platform.system() == "Windows":
+            import os
+            session_warning = ""
+            session_id = os.environ.get("SESSIONNAME", "")
+            if not session_id or session_id.lower() == "services":
+                session_warning = " (Warning: no interactive desktop session detected — running via SSH or service?)"
+            click.echo(
+                f"Warning: no windows found{session_warning}",
+                err=True,
+            )
+
         if json_output:
             data = [
                 {
