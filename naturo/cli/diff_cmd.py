@@ -1,5 +1,6 @@
 """CLI diff command — compare UI element trees."""
 import json
+import sys
 import time
 import click
 
@@ -30,7 +31,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if not snapshots and not window_title:
@@ -39,7 +40,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if snapshots and len(snapshots) != 2:
@@ -48,7 +49,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     from naturo.diff import diff_trees, TreeDiff
@@ -88,7 +89,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
                 click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
             else:
                 click.echo(f"Note: {msg}", err=True)
-            ctx.exit(1)
+            sys.exit(1)
             return
 
         _output_diff(result, json_output)
@@ -98,13 +99,13 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
             click.echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
     except Exception as exc:
         if json_output:
             click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
         else:
             click.echo(f"Error: {exc}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 def _output_diff(result, json_output: bool) -> None:

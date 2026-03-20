@@ -61,7 +61,7 @@ def app_launch(ctx, name, path, wait_until_ready, timeout, no_focus, args, json_
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("quit")
@@ -81,7 +81,7 @@ def app_quit(ctx, name, pid, force, timeout, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     from naturo.process import quit_app
@@ -98,7 +98,7 @@ def app_quit(ctx, name, pid, force, timeout, json_output):
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("relaunch")
@@ -134,7 +134,7 @@ def app_relaunch(ctx, name, wait_until_ready, timeout, json_output):
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("list")
@@ -199,7 +199,7 @@ def app_hide(ctx, name, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("unhide")
@@ -236,7 +236,7 @@ def app_unhide(ctx, name, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("switch")
@@ -269,7 +269,7 @@ def app_switch(ctx, name, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @click.command("find")
@@ -288,7 +288,7 @@ def app_find(ctx, name, pid, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     from naturo.process import find_process
@@ -320,4 +320,4 @@ def app_find(ctx, name, pid, json_output):
             }, indent=2))
         else:
             _safe_echo(f"Not found: {name}")
-        ctx.exit(1)
+        sys.exit(1)

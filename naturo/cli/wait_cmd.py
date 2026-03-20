@@ -31,7 +31,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if timeout < 0:
@@ -40,7 +40,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if interval <= 0:
@@ -49,7 +49,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     # Import here to avoid import-time side effects
@@ -71,14 +71,14 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
             click.echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
     except Exception as exc:
         if json_output:
             click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
         else:
             click.echo(f"Error: {exc}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if json_output:

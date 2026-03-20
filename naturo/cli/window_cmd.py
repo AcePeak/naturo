@@ -77,7 +77,7 @@ def focus(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -92,7 +92,7 @@ def focus(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command()
@@ -113,7 +113,7 @@ def close(ctx, app, title, hwnd, force, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -130,7 +130,7 @@ def close(ctx, app, title, hwnd, force, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command()
@@ -150,7 +150,7 @@ def minimize(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -165,7 +165,7 @@ def minimize(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command()
@@ -185,7 +185,7 @@ def maximize(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -200,7 +200,7 @@ def maximize(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command()
@@ -220,7 +220,7 @@ def restore(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -235,7 +235,7 @@ def restore(ctx, app, title, hwnd, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command(name="move")
@@ -265,7 +265,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -281,7 +281,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command()
@@ -311,7 +311,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if width < 1 or height < 1:
@@ -320,7 +320,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -336,7 +336,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command(name="set-bounds")
@@ -377,7 +377,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     if width < 1 or height < 1:
@@ -386,7 +386,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
             click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             _safe_echo(f"Error: {msg}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
         return
 
     try:
@@ -402,7 +402,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
 
 
 @window.command(name="list")
@@ -460,4 +460,4 @@ def window_list(ctx, app, process_name, pid, json_output):
             click.echo(json.dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
-        ctx.exit(1)
+        sys.exit(1)
