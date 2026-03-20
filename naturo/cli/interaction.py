@@ -399,7 +399,7 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
 @click.option("--to", "to_text", help="Target element text")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Target X Y coordinates")
 @click.option("--id", "element_id", help="Target element automation ID")
-@click.option("--duration", type=float, default=0.0, help="Move duration (seconds)")
+@click.option("--duration", type=float, default=0.0, help="Move duration (seconds)", hidden=True)
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
