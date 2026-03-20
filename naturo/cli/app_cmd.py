@@ -174,6 +174,16 @@ def app_find(ctx, name, pid, json_output):
     """Find a running application by name or PID."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
+    # Validate empty name
+    if not name or not name.strip():
+        msg = "Name cannot be empty"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        ctx.exit(1)
+        return
+
     from naturo.process import find_process
 
     proc = find_process(name=name, pid=pid)
