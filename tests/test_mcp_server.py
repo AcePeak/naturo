@@ -58,6 +58,7 @@ class TestServerCreation:
             "clipboard_get", "clipboard_set",
             "list_apps", "launch_app", "quit_app",
             "menu_inspect", "open_uri",
+            "wait_for_element", "wait_for_window", "wait_until_gone",
         ]
         for name in expected:
             assert name in tools, f"Tool '{name}' not registered"
@@ -413,6 +414,132 @@ class TestToolFunctionsWithMockedBackend:
             mock_backend.open_uri.assert_called_once_with(uri="https://example.com")
 
 
+# ── Wait Tool Tests ──────────────────────────────────────────────────────────
+
+
+class TestWaitTools:
+    """Test wait_for_element, wait_for_window, wait_until_gone tools."""
+
+    def _call_tool(self, server, tool_name: str, arguments: dict):
+        import asyncio
+        async def _run():
+            return await server.call_tool(tool_name, arguments)
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_run())
+        finally:
+            loop.close()
+
+    def test_wait_for_element_invalid_timeout(self):
+        """wait_for_element with negative timeout returns error."""
+        mock_backend = MagicMock()
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_element", {
+                "selector": "Button:Save", "timeout": -1,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_wait_for_element_invalid_interval(self):
+        """wait_for_element with interval=0 returns error."""
+        mock_backend = MagicMock()
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_element", {
+                "selector": "Button:Save", "interval": 0,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_wait_for_element_timeout(self):
+        """wait_for_element returns timeout when element not found."""
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = None
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_element", {
+                "selector": "Button:NonExist", "timeout": 0.1, "interval": 0.05,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["found"] is False
+            assert data["error"]["code"] == "TIMEOUT"
+
+    def test_wait_for_element_found(self):
+        """wait_for_element returns element when found."""
+        mock_backend = MagicMock()
+        mock_el = MagicMock()
+        mock_el.id = "el_1"
+        mock_el.role = "Button"
+        mock_el.name = "Save"
+        mock_el.x = 10
+        mock_el.y = 20
+        mock_el.width = 80
+        mock_el.height = 30
+        mock_backend.find_element.return_value = mock_el
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_element", {
+                "selector": "Button:Save", "timeout": 5, "interval": 0.1,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is True
+            assert data["found"] is True
+            assert data["element"]["name"] == "Save"
+            assert "wait_time" in data
+
+    def test_wait_for_window_invalid_timeout(self):
+        """wait_for_window with negative timeout returns error."""
+        mock_backend = MagicMock()
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_window", {
+                "title": "Notepad", "timeout": -1,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+
+    def test_wait_for_window_timeout(self):
+        """wait_for_window returns timeout."""
+        mock_backend = MagicMock()
+        mock_backend.list_windows.return_value = []
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_for_window", {
+                "title": "NonExist", "timeout": 0.1, "interval": 0.05,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "TIMEOUT"
+
+    def test_wait_until_gone_invalid_interval(self):
+        """wait_until_gone with interval=0 returns error."""
+        mock_backend = MagicMock()
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_until_gone", {
+                "selector": "Dialog:Loading", "interval": 0,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+
+    def test_wait_until_gone_success(self):
+        """wait_until_gone returns success when element disappears."""
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = None  # already gone
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "wait_until_gone", {
+                "selector": "Dialog:Loading", "timeout": 1, "interval": 0.1,
+            })
+            data = json.loads(result[0].text)
+            assert data["success"] is True
+            assert data["gone"] is True
+
+
 # ── CLI Integration ──────────────────────────────────────────────────────────
 
 
@@ -448,7 +575,7 @@ class TestMCPCli:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["success"] is True
-        assert len(data["tools"]) >= 20
+        assert len(data["tools"]) >= 23
 
     def test_mcp_start_help(self, runner):
         """naturo mcp start --help shows transport options."""
