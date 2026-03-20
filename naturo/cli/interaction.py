@@ -160,6 +160,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         _json_err("TEXT argument is required", json_output, code="INVALID_INPUT")
         return
 
+    if wpm < 1:
+        _json_err(f"--wpm must be >= 1, got {wpm}", json_output, code="INVALID_INPUT")
+        return
+
     backend = _get_backend()
 
     try:

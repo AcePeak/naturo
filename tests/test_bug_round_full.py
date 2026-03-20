@@ -201,3 +201,34 @@ class TestBUG028DepthValidation:
     def test_see_depth_11(self, runner):
         result = runner.invoke(main, ["see", "--depth", "11"])
         assert result.exit_code != 0
+
+
+class TestBUG032TypeWpmValidation:
+    """BUG-032: type --wpm should validate >= 1."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_type_wpm_zero(self, runner):
+        result = runner.invoke(main, ["type", "--wpm", "0", "hello"])
+        assert result.exit_code != 0
+        assert "--wpm must be >= 1" in result.output or "error" in result.output.lower()
+
+    def test_type_wpm_negative(self, runner):
+        result = runner.invoke(main, ["type", "--wpm", "-1", "hello"])
+        assert result.exit_code != 0
+
+    def test_type_wpm_zero_json(self, runner):
+        result = runner.invoke(main, ["type", "--wpm", "0", "hello", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_type_wpm_negative_json(self, runner):
+        result = runner.invoke(main, ["type", "--wpm", "-1", "hello", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
