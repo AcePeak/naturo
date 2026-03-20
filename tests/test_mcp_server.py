@@ -50,8 +50,10 @@ class TestServerCreation:
     def test_expected_tools_registered(self, tools):
         expected = [
             "capture_screen", "capture_window",
-            "list_windows", "focus_window", "close_window",
-            "minimize_window", "maximize_window",
+            "list_windows", "focus_window",
+            "window_close", "window_minimize", "window_maximize",
+            "window_restore", "window_move", "window_resize", "window_set_bounds",
+            "app_hide", "app_unhide", "app_switch",
             "see_ui_tree", "find_element",
             "click", "type_text", "press_key", "hotkey",
             "scroll", "drag", "move_mouse",
@@ -169,16 +171,16 @@ class TestToolFunctionsWithMockedBackend:
             result = self._call_tool(srv, "focus_window", {"title": "Notepad"})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.focus_window.assert_called_once_with(title="Notepad")
+            mock_backend.focus_window.assert_called_once_with(title="Notepad", hwnd=None)
 
     def test_close_window(self, mock_backend):
-        """close_window calls backend correctly."""
+        """window_close calls backend correctly."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
-            result = self._call_tool(srv, "close_window", {"title": "Notepad"})
+            result = self._call_tool(srv, "window_close", {"title": "Notepad"})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.close_window.assert_called_once_with(title="Notepad")
+            mock_backend.close_window.assert_called_once_with(title="Notepad", hwnd=None, force=False)
 
     def test_click_with_coords(self, mock_backend):
         """click with coordinates."""
@@ -652,7 +654,7 @@ class TestResponseFormat:
             ("launch_app", {"name": "x"}),
             ("quit_app", {"name": "x"}),
             ("focus_window", {"title": "x"}),
-            ("close_window", {"title": "x"}),
+            ("window_close", {"title": "x"}),
             ("type_text", {"text": "x"}),
             ("press_key", {"key": "a"}),
             ("scroll", {}),

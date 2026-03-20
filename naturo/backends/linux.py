@@ -64,6 +64,12 @@ class LinuxBackend(Backend):
     def resize_window(self, width=800, height=600, title=None, hwnd=None) -> None:
         raise NotImplementedError("Linux backend coming in Phase 7")
 
+    def set_bounds(self, x=0, y=0, width=800, height=600, title=None, hwnd=None) -> None:
+        raise NotImplementedError("Linux backend coming in Phase 7")
+
+    def restore_window(self, title=None, hwnd=None) -> None:
+        raise NotImplementedError("Linux backend coming in Phase 7")
+
     def find_element(self, selector="", window_title=None) -> Optional[ElementInfo]:
         raise NotImplementedError("Linux backend coming in Phase 7")
 

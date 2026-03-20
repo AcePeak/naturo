@@ -149,51 +149,269 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
 
     @server.tool()
     @_safe_tool
-    def focus_window(title: str) -> dict:
+    def focus_window(
+        title: Optional[str] = None,
+        app: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
         """Bring a window to the foreground and give it focus.
 
         Args:
             title: Window title (partial match).
+            app: Application/process name (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
         """
         backend = _get_backend()
-        backend.focus_window(title=title)
-        return {"success": True}
+        backend.focus_window(title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "focus"}
 
     @server.tool()
     @_safe_tool
-    def close_window(title: str) -> dict:
-        """Close a window.
+    def window_close(
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+        force: bool = False,
+    ) -> dict:
+        """Close a window (graceful or forced).
 
         Args:
+            app: Application/process name (partial match).
             title: Window title (partial match).
+            hwnd: Direct window handle.
+            force: If True, forcefully terminate the owning process.
+
+        Returns:
+            Dict with success flag.
         """
         backend = _get_backend()
-        backend.close_window(title=title)
-        return {"success": True}
+        backend.close_window(title=app or title, hwnd=hwnd, force=force)
+        return {"success": True, "action": "close"}
 
     @server.tool()
     @_safe_tool
-    def minimize_window(title: str) -> dict:
+    def window_minimize(
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
         """Minimize a window.
 
         Args:
+            app: Application/process name (partial match).
             title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
         """
         backend = _get_backend()
-        backend.minimize_window(title=title)
-        return {"success": True}
+        backend.minimize_window(title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "minimize"}
 
     @server.tool()
     @_safe_tool
-    def maximize_window(title: str) -> dict:
+    def window_maximize(
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
         """Maximize a window.
 
         Args:
+            app: Application/process name (partial match).
             title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
         """
         backend = _get_backend()
-        backend.maximize_window(title=title)
-        return {"success": True}
+        backend.maximize_window(title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "maximize"}
+
+    @server.tool()
+    @_safe_tool
+    def window_restore(
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Restore a minimized or maximized window to normal state.
+
+        Args:
+            app: Application/process name (partial match).
+            title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.restore_window(title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "restore"}
+
+    @server.tool()
+    @_safe_tool
+    def window_move(
+        x: int,
+        y: int,
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Move a window to a position (keeps current size).
+
+        Args:
+            x: Target X coordinate.
+            y: Target Y coordinate.
+            app: Application/process name (partial match).
+            title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.move_window(x=x, y=y, title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "move", "x": x, "y": y}
+
+    @server.tool()
+    @_safe_tool
+    def window_resize(
+        width: int,
+        height: int,
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Resize a window (keeps current position).
+
+        Args:
+            width: Target width in pixels (must be >= 1).
+            height: Target height in pixels (must be >= 1).
+            app: Application/process name (partial match).
+            title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        if width < 1 or height < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"width and height must be >= 1, got {width}x{height}"}}
+        backend = _get_backend()
+        backend.resize_window(width=width, height=height, title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "resize", "width": width, "height": height}
+
+    @server.tool()
+    @_safe_tool
+    def window_set_bounds(
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        app: Optional[str] = None,
+        title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Set window position and size in one call.
+
+        Args:
+            x: Target X coordinate.
+            y: Target Y coordinate.
+            width: Target width in pixels (must be >= 1).
+            height: Target height in pixels (must be >= 1).
+            app: Application/process name (partial match).
+            title: Window title (partial match).
+            hwnd: Direct window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        if width < 1 or height < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"width and height must be >= 1, got {width}x{height}"}}
+        backend = _get_backend()
+        backend.set_bounds(x=x, y=y, width=width, height=height, title=app or title, hwnd=hwnd)
+        return {"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}
+
+    @server.tool()
+    @_safe_tool
+    def app_hide(name: str) -> dict:
+        """Hide (minimize) all windows of an application.
+
+        Args:
+            name: Application/process name (partial match).
+
+        Returns:
+            Dict with success flag and count of minimized windows.
+        """
+        backend = _get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        count = 0
+        for w in matched:
+            try:
+                backend.minimize_window(hwnd=w.handle)
+                count += 1
+            except Exception:
+                pass
+        return {"success": True, "action": "hide", "app": name, "windows_minimized": count}
+
+    @server.tool()
+    @_safe_tool
+    def app_unhide(name: str) -> dict:
+        """Unhide (restore) all windows of an application.
+
+        Args:
+            name: Application/process name (partial match).
+
+        Returns:
+            Dict with success flag and count of restored windows.
+        """
+        backend = _get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        count = 0
+        for w in matched:
+            try:
+                backend.restore_window(hwnd=w.handle)
+                count += 1
+            except Exception:
+                pass
+        return {"success": True, "action": "unhide", "app": name, "windows_restored": count}
+
+    @server.tool()
+    @_safe_tool
+    def app_switch(name: str) -> dict:
+        """Switch to (focus) the most recent window of an application.
+
+        Args:
+            name: Application/process name (partial match).
+
+        Returns:
+            Dict with success flag, window title and handle.
+        """
+        backend = _get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        target = matched[0]
+        backend.focus_window(hwnd=target.handle)
+        return {"success": True, "action": "switch", "app": name, "window_title": target.title, "handle": target.handle}
 
     # ── UI Inspection ───────────────────────────
 

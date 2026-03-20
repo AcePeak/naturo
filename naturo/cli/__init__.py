@@ -28,7 +28,8 @@ from naturo.cli.interaction import (
 from naturo.cli.system import app
 from naturo.cli.snapshot import snapshot
 from naturo.cli.wait_cmd import wait
-from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find
+from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find, app_hide, app_unhide, app_switch
+from naturo.cli.window_cmd import window
 from naturo.cli.diff_cmd import diff
 from naturo.cli.ai import mcp
 
@@ -79,6 +80,9 @@ main.add_command(paste)
 # ── System ──────────────────────────────────────
 main.add_command(app)
 
+# ── Window Management ───────────────────────────
+main.add_command(window)
+
 # ── Snapshot ────────────────────────────────────
 main.add_command(snapshot)
 
@@ -95,3 +99,6 @@ app.add_command(app_quit, "quit")
 app.add_command(app_relaunch, "relaunch")
 app.add_command(app_list, "list")
 app.add_command(app_find, "find")
+app.add_command(app_hide, "hide")
+app.add_command(app_unhide, "unhide")
+app.add_command(app_switch, "switch")

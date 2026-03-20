@@ -165,6 +165,113 @@ def app_list(ctx, json_output):
             click.echo(f"\n{len(apps)} applications")
 
 
+@click.command("hide")
+@click.argument("name")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_hide(ctx, name, json_output):
+    """Hide (minimize) all windows of an application."""
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        count = 0
+        for w in matched:
+            try:
+                backend.minimize_window(hwnd=w.handle)
+                count += 1
+            except Exception:
+                pass
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "hide", "app": name, "windows_minimized": count}))
+        else:
+            _safe_echo(f"Minimized {count} window(s) of {name}")
+    except NaturoError as exc:
+        if json_output:
+            click.echo(json.dumps(exc.to_json_response()))
+        else:
+            _safe_echo(f"Error: {exc.message}", err=True)
+        ctx.exit(1)
+
+
+@click.command("unhide")
+@click.argument("name")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_unhide(ctx, name, json_output):
+    """Unhide (restore) all windows of an application."""
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        count = 0
+        for w in matched:
+            try:
+                backend.restore_window(hwnd=w.handle)
+                count += 1
+            except Exception:
+                pass
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "unhide", "app": name, "windows_restored": count}))
+        else:
+            _safe_echo(f"Restored {count} window(s) of {name}")
+    except NaturoError as exc:
+        if json_output:
+            click.echo(json.dumps(exc.to_json_response()))
+        else:
+            _safe_echo(f"Error: {exc.message}", err=True)
+        ctx.exit(1)
+
+
+@click.command("switch")
+@click.argument("name")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_switch(ctx, name, json_output):
+    """Switch to (focus) the most recent window of an application."""
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        windows = backend.list_windows()
+        name_lower = name.lower()
+        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if not matched:
+            from naturo.errors import AppNotFoundError
+            raise AppNotFoundError(name)
+        # Focus the first (most recent) matching window
+        target = matched[0]
+        backend.focus_window(hwnd=target.handle)
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "switch", "app": name, "window_title": target.title, "handle": target.handle}))
+        else:
+            _safe_echo(f"Switched to {name}: {target.title}")
+    except NaturoError as exc:
+        if json_output:
+            click.echo(json.dumps(exc.to_json_response()))
+        else:
+            _safe_echo(f"Error: {exc.message}", err=True)
+        ctx.exit(1)
+
+
 @click.command("find")
 @click.argument("name")
 @click.option("--pid", type=int, help="Search by PID instead of name")

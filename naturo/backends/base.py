@@ -107,6 +107,31 @@ class Backend(ABC):
     def resize_window(self, width: int, height: int, title: str = None, hwnd: int = None) -> None:
         ...
 
+    @abstractmethod
+    def set_bounds(self, x: int, y: int, width: int, height: int,
+                   title: str = None, hwnd: int = None) -> None:
+        """Set window position and size in one call.
+
+        Args:
+            x: Target X coordinate.
+            y: Target Y coordinate.
+            width: Target width in pixels.
+            height: Target height in pixels.
+            title: Window title pattern (partial, case-insensitive).
+            hwnd: Direct window handle (takes priority over title).
+        """
+        ...
+
+    @abstractmethod
+    def restore_window(self, title: str = None, hwnd: int = None) -> None:
+        """Restore a minimized or maximized window to its normal state.
+
+        Args:
+            title: Window title pattern (partial, case-insensitive).
+            hwnd: Direct window handle (takes priority over title).
+        """
+        ...
+
     # === UI Element Inspection ===
     @abstractmethod
     def find_element(self, selector: str, window_title: str = None) -> Optional[ElementInfo]:

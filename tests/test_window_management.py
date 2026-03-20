@@ -174,7 +174,7 @@ class TestWindowFocusCLI:
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_focus_by_app_success(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -182,7 +182,7 @@ class TestWindowFocusCLI:
         assert result.exit_code == 0
         backend.focus_window.assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_focus_by_hwnd_success(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -190,7 +190,7 @@ class TestWindowFocusCLI:
         assert result.exit_code == 0
         backend.focus_window.assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_focus_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -200,7 +200,7 @@ class TestWindowFocusCLI:
         assert data["success"] is True
         assert data["action"] == "focus"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_focus_window_not_found(self, mock_get, runner):
         from naturo.errors import WindowNotFoundError
         backend = MagicMock()
@@ -209,7 +209,7 @@ class TestWindowFocusCLI:
         result = runner.invoke(main, ["window", "focus", "--app", "Nonexistent"])
         assert result.exit_code != 0
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_focus_window_not_found_json(self, mock_get, runner):
         from naturo.errors import WindowNotFoundError
         backend = MagicMock()
@@ -239,7 +239,7 @@ class TestWindowCloseCLI:
         data = json.loads(result.output)
         assert data["success"] is False
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_close_graceful(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -249,7 +249,7 @@ class TestWindowCloseCLI:
         call_kwargs = backend.close_window.call_args[1]
         assert call_kwargs["force"] is False
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_close_force(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -258,7 +258,7 @@ class TestWindowCloseCLI:
         call_kwargs = backend.close_window.call_args[1]
         assert call_kwargs["force"] is True
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_close_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -268,7 +268,7 @@ class TestWindowCloseCLI:
         assert data["success"] is True
         assert data["action"] == "close"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_close_force_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -298,7 +298,7 @@ class TestWindowMinMaxRestoreCLI:
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     @pytest.mark.parametrize("action,method", [
         ("minimize", "minimize_window"),
         ("maximize", "maximize_window"),
@@ -311,7 +311,7 @@ class TestWindowMinMaxRestoreCLI:
         assert result.exit_code == 0
         getattr(backend, method).assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     @pytest.mark.parametrize("action", ["minimize", "maximize", "restore"])
     def test_action_json_success(self, mock_get, runner, action):
         backend = MagicMock()
@@ -339,7 +339,7 @@ class TestWindowMoveCLI:
         result = runner.invoke(main, ["window", "move", "--app", "Notepad"])
         assert result.exit_code != 0  # missing --x and --y
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_move_success(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -347,7 +347,7 @@ class TestWindowMoveCLI:
         assert result.exit_code == 0
         backend.move_window.assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_move_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -359,7 +359,7 @@ class TestWindowMoveCLI:
         assert data["x"] == 200
         assert data["y"] == 300
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_move_negative_coords_allowed(self, mock_get, runner):
         """Negative coordinates are valid (multi-monitor setups)."""
         backend = MagicMock()
@@ -384,7 +384,7 @@ class TestWindowResizeCLI:
         result = runner.invoke(main, ["window", "resize", "--app", "Notepad"])
         assert result.exit_code != 0
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_resize_success(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -392,7 +392,7 @@ class TestWindowResizeCLI:
         assert result.exit_code == 0
         backend.resize_window.assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_resize_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -434,7 +434,7 @@ class TestWindowSetBoundsCLI:
         result = runner.invoke(main, ["window", "set-bounds", "--app", "Notepad", "--x", "0", "--y", "0"])
         assert result.exit_code != 0  # missing --width and --height
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_set_bounds_success(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -445,7 +445,7 @@ class TestWindowSetBoundsCLI:
         assert result.exit_code == 0
         backend.set_bounds.assert_called_once()
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_set_bounds_json_output(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -486,7 +486,7 @@ class TestWindowSetBoundsCLI:
 class TestWindowListCLI:
     """Tests for `naturo window list`."""
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_empty(self, mock_get, runner):
         backend = MagicMock()
         backend.list_windows.return_value = []
@@ -495,7 +495,7 @@ class TestWindowListCLI:
         assert result.exit_code == 0
         assert "No windows" in result.output
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_with_windows(self, mock_get, runner, mock_window):
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]
@@ -505,7 +505,7 @@ class TestWindowListCLI:
         assert "notepad.exe" in result.output
         assert "1 windows" in result.output
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_json_output(self, mock_get, runner, mock_window):
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]
@@ -521,7 +521,7 @@ class TestWindowListCLI:
         assert w["title"] == "Test Window"
         assert w["process_name"] == "notepad.exe"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_filter_by_app(self, mock_get, runner, mock_window):
         other = WindowInfo(
             handle=99999, title="Other", process_name="chrome.exe",
@@ -536,7 +536,7 @@ class TestWindowListCLI:
         assert data["count"] == 1
         assert data["windows"][0]["process_name"] == "notepad.exe"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_filter_by_pid(self, mock_get, runner, mock_window):
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]
@@ -545,7 +545,7 @@ class TestWindowListCLI:
         data = json.loads(result.output)
         assert data["count"] == 1
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_list_filter_no_match(self, mock_get, runner, mock_window):
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]
@@ -736,7 +736,7 @@ class TestMCPWindowToolsExist:
 class TestWindowJSONConsistency:
     """All window commands follow the JSON schema: {success: bool, ...}."""
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     @pytest.mark.parametrize("cmd,extra_args", [
         (["window", "focus", "--app", "Test"], []),
         (["window", "close", "--app", "Test"], []),
@@ -780,7 +780,7 @@ class TestWindowJSONConsistency:
 class TestWindowTargeting:
     """All window commands accept --app, --title, and --hwnd."""
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_target_by_title(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -789,7 +789,7 @@ class TestWindowTargeting:
         call_kwargs = backend.focus_window.call_args[1]
         assert call_kwargs["title"] == "My Document"
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_target_by_hwnd(self, mock_get, runner):
         backend = MagicMock()
         mock_get.return_value = backend
@@ -798,7 +798,7 @@ class TestWindowTargeting:
         call_kwargs = backend.focus_window.call_args[1]
         assert call_kwargs["hwnd"] == 99999
 
-    @patch("naturo.cli.window_cmd._get_backend")
+    @patch("naturo.cli.window_cmd._get_backend_impl")
     def test_app_maps_to_title(self, mock_get, runner):
         """--app maps to title parameter in backend."""
         backend = MagicMock()

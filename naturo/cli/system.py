@@ -38,31 +38,6 @@ def relaunch(name, json_output):
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@app.command(hidden=True)
-@click.argument("name")
-@click.option("--pid", type=int, help="Process ID")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def hide(name, pid, json_output):
-    """Hide/minimize an application."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@app.command(hidden=True)
-@click.argument("name")
-@click.option("--pid", type=int, help="Process ID")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def unhide(name, pid, json_output):
-    """Unhide/restore an application."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@app.command(hidden=True)
-@click.argument("name")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def switch(name, json_output):
-    """Switch to (focus) an application."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
 
 @app.command(name="list", hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -70,95 +45,6 @@ def app_list(json_output):
     """List running applications."""
     click.echo("Not implemented yet — coming in Phase 2")
 
-
-# ── window ──────────────────────────────────────
-
-
-@click.group()
-def window():
-    """Manage windows: close, minimize, maximize, move, resize, focus."""
-    pass
-
-
-@window.command()
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def close(title, hwnd, json_output):
-    """Close a window."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command()
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def minimize(title, hwnd, json_output):
-    """Minimize a window."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command()
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def maximize(title, hwnd, json_output):
-    """Maximize a window."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command(name="move")
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--x", type=int, required=True, help="Target X position")
-@click.option("--y", type=int, required=True, help="Target Y position")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def window_move(title, hwnd, x, y, json_output):
-    """Move a window to a position."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command()
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--width", type=int, required=True, help="New width")
-@click.option("--height", type=int, required=True, help="New height")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def resize(title, hwnd, width, height, json_output):
-    """Resize a window."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command(name="set-bounds")
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--x", type=int, required=True, help="X position")
-@click.option("--y", type=int, required=True, help="Y position")
-@click.option("--width", type=int, required=True, help="Width")
-@click.option("--height", type=int, required=True, help="Height")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def set_bounds(title, hwnd, x, y, width, height, json_output):
-    """Set window position and size at once."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command()
-@click.option("--title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def focus(title, hwnd, json_output):
-    """Focus a window."""
-    click.echo("Not implemented yet — coming in Phase 2")
-
-
-@window.command(name="list")
-@click.option("--app", help="Filter by application name")
-@click.option("--process-name", help="Filter by process name")
-@click.option("--pid", type=int, help="Filter by process ID")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def window_list(app, process_name, pid, json_output):
-    """List open windows."""
-    click.echo("Not implemented yet — coming in Phase 2")
 
 
 # ── menu ────────────────────────────────────────
