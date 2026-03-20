@@ -4,7 +4,18 @@ Replaces the stub implementations in system.py with working process management.
 These are registered as subcommands of the existing ``app`` group.
 """
 import json
+import sys
 import click
+
+
+def _safe_echo(text: str, **kwargs) -> None:
+    """Echo text safely, replacing unencodable characters on Windows GBK terminals."""
+    try:
+        click.echo(text, **kwargs)
+    except UnicodeEncodeError:
+        # Fallback: encode with replace for terminals that can't handle the chars
+        encoded = text.encode(sys.stdout.encoding or "utf-8", errors="replace")
+        click.echo(encoded.decode(sys.stdout.encoding or "utf-8", errors="replace"), **kwargs)
 
 
 @click.command("launch")
@@ -44,12 +55,12 @@ def app_launch(ctx, name, path, wait_until_ready, timeout, no_focus, args, json_
                 },
             }, indent=2))
         else:
-            click.echo(f"Launched {info.name} (PID: {info.pid})")
+            _safe_echo(f"Launched {info.name} (PID: {info.pid})")
     except NaturoError as exc:
         if json_output:
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
-            click.echo(f"Error: {exc.message}", err=True)
+            _safe_echo(f"Error: {exc.message}", err=True)
         ctx.exit(1)
 
 
@@ -81,12 +92,12 @@ def app_quit(ctx, name, pid, force, timeout, json_output):
         if json_output:
             click.echo(json.dumps({"success": True, "message": f"Quit {name or pid}"}))
         else:
-            click.echo(f"Quit {name or pid}")
+            _safe_echo(f"Quit {name or pid}")
     except NaturoError as exc:
         if json_output:
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
-            click.echo(f"Error: {exc.message}", err=True)
+            _safe_echo(f"Error: {exc.message}", err=True)
         ctx.exit(1)
 
 
@@ -117,12 +128,12 @@ def app_relaunch(ctx, name, wait_until_ready, timeout, json_output):
                 },
             }, indent=2))
         else:
-            click.echo(f"Relaunched {info.name} (PID: {info.pid})")
+            _safe_echo(f"Relaunched {info.name} (PID: {info.pid})")
     except NaturoError as exc:
         if json_output:
             click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
-            click.echo(f"Error: {exc.message}", err=True)
+            _safe_echo(f"Error: {exc.message}", err=True)
         ctx.exit(1)
 
 
@@ -150,7 +161,7 @@ def app_list(ctx, json_output):
             click.echo("No running applications found")
         else:
             for a in apps:
-                click.echo(f"  {a.pid:>8}  {a.name}")
+                _safe_echo(f"  {a.pid:>8}  {a.name}")
             click.echo(f"\n{len(apps)} applications")
 
 
@@ -179,7 +190,7 @@ def app_find(ctx, name, pid, json_output):
                 },
             }, indent=2))
         else:
-            click.echo(f"Found: {proc.name} (PID: {proc.pid})")
+            _safe_echo(f"Found: {proc.name} (PID: {proc.pid})")
     else:
         if json_output:
             click.echo(json.dumps({
@@ -188,4 +199,4 @@ def app_find(ctx, name, pid, json_output):
                 "message": f"No process found matching '{name}'",
             }, indent=2))
         else:
-            click.echo(f"Not found: {name}")
+            _safe_echo(f"Not found: {name}")

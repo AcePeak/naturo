@@ -48,9 +48,11 @@ def _list_processes() -> list[ProcessInfo]:
         try:
             import ctypes
             # Use tasklist /FO CSV for simple parsing
+            # Force UTF-8 encoding to handle Unicode process names (e.g. Chinese)
             result = subprocess.run(
                 ["tasklist", "/FO", "CSV", "/NH"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=10,
             )
             for line in result.stdout.strip().split("\n"):
                 line = line.strip()

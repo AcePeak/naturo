@@ -1,4 +1,23 @@
 """Naturo CLI — Windows desktop automation, aligned with Peekaboo."""
+import os
+import sys
+
+# Ensure UTF-8 mode on Windows to handle Unicode arguments and output correctly.
+# This is equivalent to setting PYTHONUTF8=1 but applies programmatically.
+if sys.platform == "win32" and not os.environ.get("PYTHONUTF8"):
+    os.environ["PYTHONUTF8"] = "1"
+    # Reconfigure stdout/stderr to UTF-8 if they're still using the default encoding
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+    if hasattr(sys.stderr, "reconfigure"):
+        try:
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 import click
 from naturo.version import __version__
 
