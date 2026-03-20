@@ -139,7 +139,7 @@ def get(json_output):
 
 @clipboard.command("set")
 @click.argument("content", required=False)
-@click.option("--file", "file_path", type=click.Path(exists=True), help="Set clipboard from file content")
+@click.option("--file", "file_path", type=click.Path(), help="Set clipboard from file content")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def clipboard_set(content, file_path, json_output):
     """Set clipboard text content.

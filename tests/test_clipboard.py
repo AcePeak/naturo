@@ -129,6 +129,59 @@ class TestClipboardCLIOptions:
         assert result.exit_code != 0
 
 
+class TestBUG044JsonOnClickValidation:
+    """BUG-044: Click parameter validation must respect --json mode."""
+
+    @pytest.fixture()
+    def runner(self):
+        return CliRunner()
+
+    def test_clipboard_set_nonexistent_file_json(self, runner):
+        """clipboard set --file nonexistent.txt --json must return valid JSON."""
+        result = runner.invoke(main, ["clipboard", "set", "--file", "nonexistent_xyz.txt", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_paste_nonexistent_file_json(self, runner):
+        """paste --file nonexistent.txt --json must return valid JSON."""
+        result = runner.invoke(main, ["paste", "--file", "nonexistent_xyz.txt", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_window_move_missing_xy_json(self, runner):
+        """window move --app x --json without --x/--y must return valid JSON."""
+        result = runner.invoke(main, ["window", "move", "--app", "x", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_window_resize_missing_dims_json(self, runner):
+        """window resize --app x --json without --width/--height must return valid JSON."""
+        result = runner.invoke(main, ["window", "resize", "--app", "x", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_window_set_bounds_missing_params_json(self, runner):
+        """window set-bounds --app x --x 0 --y 0 --json without --width/--height must return valid JSON."""
+        result = runner.invoke(main, ["window", "set-bounds", "--app", "x", "--x", "0", "--y", "0", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+
 # ── Windows-only functional tests ─────────────────────────────────────────────
 
 

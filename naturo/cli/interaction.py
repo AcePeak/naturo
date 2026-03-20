@@ -436,7 +436,7 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
 
 @click.command()
 @click.argument("text", required=False)
-@click.option("--file", "file_path", type=click.Path(exists=True), help="File to paste from")
+@click.option("--file", "file_path", type=click.Path(), help="File to paste from")
 @click.option("--restore", is_flag=True, default=True, help="Restore clipboard after paste")
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
@@ -454,8 +454,16 @@ def paste(text, file_path, restore, app, window_title, hwnd, json_output):
     backend = _get_backend()
 
     if file_path:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        import os
+        if not os.path.exists(file_path):
+            _json_err(f"File not found: {file_path}", json_output, code="INVALID_INPUT")
+            return
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as exc:
+            _json_err(str(exc), json_output, code="FILE_ERROR")
+            return
     elif text:
         content = text
     else:

@@ -242,14 +242,22 @@ def restore(ctx, app, title, hwnd, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
-@click.option("--x", type=int, required=True, help="Target X position")
-@click.option("--y", type=int, required=True, help="Target Y position")
+@click.option("--x", type=int, default=None, help="Target X position")
+@click.option("--y", type=int, default=None, help="Target Y position")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def window_move(ctx, app, title, hwnd, x, y, json_output):
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.errors import NaturoError
+
+    if x is None or y is None:
+        msg = "Missing required option: --x and --y are required"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
 
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
@@ -280,14 +288,22 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
-@click.option("--width", type=int, required=True, help="New width in pixels")
-@click.option("--height", type=int, required=True, help="New height in pixels")
+@click.option("--width", type=int, default=None, help="New width in pixels")
+@click.option("--height", type=int, default=None, help="New height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def resize(ctx, app, title, hwnd, width, height, json_output):
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.errors import NaturoError, InvalidInputError
+
+    if width is None or height is None:
+        msg = "Missing required option: --width and --height are required"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
 
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
@@ -327,16 +343,33 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
-@click.option("--x", type=int, required=True, help="X position")
-@click.option("--y", type=int, required=True, help="Y position")
-@click.option("--width", type=int, required=True, help="Width in pixels")
-@click.option("--height", type=int, required=True, help="Height in pixels")
+@click.option("--x", type=int, default=None, help="X position")
+@click.option("--y", type=int, default=None, help="Y position")
+@click.option("--width", type=int, default=None, help="Width in pixels")
+@click.option("--height", type=int, default=None, help="Height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.errors import NaturoError
+
+    missing = []
+    if x is None:
+        missing.append("--x")
+    if y is None:
+        missing.append("--y")
+    if width is None:
+        missing.append("--width")
+    if height is None:
+        missing.append("--height")
+    if missing:
+        msg = f"Missing required option(s): {', '.join(missing)}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
 
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
