@@ -35,10 +35,16 @@
 2. 评估：目标需要我做什么？
 3. 选择：bugs.md 里的任务 or 自己发现的事（选最推进目标的）
 4. 执行
-5. 更新 STATE.md（你在做什么、产出了什么）
+5. 更新自己的状态文件（Dev → agents/dev/status.md, QA → agents/qa/status.md）
 6. 飞书群通知进展
-7. 如果发现其他角色该做的事 → 写入 bugs.md 或群里 @对方
+7. 如果发现其他角色该做的事 → 写入 bugs.md + 触发对方
 ```
+
+### ⚠️ 文件写入规则（防冲突）
+- **STATE.md** — 只读，不要编辑（由闹呢维护）
+- **agents/dev/status.md** — 只有 Dev 写
+- **agents/qa/status.md** — 只有 QA 写
+- **.work/bugs.md** — Dev 和 QA 都可以写（这是唯一的共享写入文件）
 
 ## 协作方式
 
