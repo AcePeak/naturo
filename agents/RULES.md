@@ -42,6 +42,23 @@
 
 ## 协作方式
 
+### 互相触发（实时协作）
+修完 bug 或发现新 bug 后，**立即触发对方**，不要等定时器：
+
+- **Dev 修完 bug → 触发 QA 验证**:
+  ```
+  cron(action=run, jobId="35e89602-1fac-4d36-9dc8-ddd27f4687f1")
+  ```
+- **QA 发现新 bug → 触发 Dev 修复**:
+  ```
+  cron(action=run, jobId="f804f3e7-787c-4723-be7f-333bbb5b729f")
+  ```
+- **QA 全部验证通过且无新 bug → 不触发**（等定时器即可）
+
+Job ID 速查：
+- Dev: `f804f3e7-787c-4723-be7f-333bbb5b729f`
+- QA: `35e89602-1fac-4d36-9dc8-ddd27f4687f1`
+
 ### 飞书群通知
 **群 ID**: `oc_cbd5c30cce5b0eb122de8ef5f6c3b741`（Naturo Dev Team）
 通过 message 工具发到飞书群：`channel=feishu, target=oc_cbd5c30cce5b0eb122de8ef5f6c3b741`

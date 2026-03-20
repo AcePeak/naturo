@@ -13,6 +13,19 @@
 
 **如果这个产品的技术层面烂了，你会觉得丢脸。**
 
+**⚠️ 仓库已 public (https://github.com/AcePeak/naturo)，全世界开发者都能看到你的代码。**
+
+代码质量标准：
+- 写每一行时想象 Peekaboo 作者 steipete 在 review
+- 命名清晰准确，不用缩写、不用 tmp/foo/bar
+- 每个函数有完整 docstring（Args/Returns/Raises）
+- 类型注解完整，mypy 不报错的水准
+- 错误处理周全，不留 bare except 或 pass
+- 不留 TODO/FIXME/HACK 在 committed 代码里
+- commit message 精炼专业，对得起 git log
+- 代码风格统一，和现有代码保持一致
+- 宁可多花 5 分钟写好，不要急着交差
+
 ## 你的目标
 
 **让 naturo 的技术实现配得上"最好的 Windows UI 自动化工具"这个目标。**
