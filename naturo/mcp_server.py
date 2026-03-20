@@ -1,0 +1,522 @@
+"""Naturo MCP Server — expose desktop automation as MCP tools.
+
+Provides AI agents with structured access to Windows desktop automation:
+capture, inspect, click, type, find elements, manage windows/apps.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import base64
+from typing import Optional
+
+from mcp.server.fastmcp import FastMCP
+
+from naturo.backends.base import get_backend, Backend
+from naturo.errors import NaturoError
+
+
+def create_server() -> FastMCP:
+    """Create and configure the Naturo MCP server."""
+    server = FastMCP(
+        name="naturo",
+        instructions=(
+            "Naturo — Windows desktop automation engine. "
+            "Use these tools to see, click, type, and automate Windows applications. "
+            "Start with capture_screen or list_windows to understand the current state, "
+            "then use find_element or see_ui_tree to locate UI elements, "
+            "and interact with click, type_text, press_key, etc."
+        ),
+    )
+
+    def _get_backend() -> Backend:
+        """Get the platform backend, raising clear errors."""
+        try:
+            return get_backend()
+        except RuntimeError as e:
+            raise NaturoError(str(e))
+
+    # ── Capture ─────────────────────────────────
+
+    @server.tool()
+    def capture_screen(
+        output_path: str = "capture.png",
+        screen_index: int = 0,
+    ) -> dict:
+        """Capture a screenshot of the entire screen.
+
+        Args:
+            output_path: Path to save the screenshot (PNG/JPG).
+            screen_index: Monitor index (0 = primary).
+
+        Returns:
+            Dict with path, width, height, format, and base64-encoded image data.
+        """
+        backend = _get_backend()
+        result = backend.capture_screen(screen_index=screen_index, output_path=output_path)
+        response = {
+            "success": True,
+            "path": result.path,
+            "width": result.width,
+            "height": result.height,
+            "format": result.format,
+        }
+        # Include base64 data for AI vision
+        if os.path.exists(result.path):
+            with open(result.path, "rb") as f:
+                response["data_base64"] = base64.b64encode(f.read()).decode("ascii")
+        return response
+
+    @server.tool()
+    def capture_window(
+        window_title: Optional[str] = None,
+        output_path: str = "capture.png",
+    ) -> dict:
+        """Capture a screenshot of a specific window.
+
+        Args:
+            window_title: Window title to capture (partial match).
+            output_path: Path to save the screenshot.
+
+        Returns:
+            Dict with path, width, height, format.
+        """
+        backend = _get_backend()
+        result = backend.capture_window(window_title=window_title, output_path=output_path)
+        response = {
+            "success": True,
+            "path": result.path,
+            "width": result.width,
+            "height": result.height,
+            "format": result.format,
+        }
+        if os.path.exists(result.path):
+            with open(result.path, "rb") as f:
+                response["data_base64"] = base64.b64encode(f.read()).decode("ascii")
+        return response
+
+    # ── Window Management ───────────────────────
+
+    @server.tool()
+    def list_windows() -> dict:
+        """List all visible windows on the desktop.
+
+        Returns:
+            Dict with success flag and list of windows (title, process, pid, bounds).
+        """
+        backend = _get_backend()
+        windows = backend.list_windows()
+        return {
+            "success": True,
+            "windows": [
+                {
+                    "handle": w.handle,
+                    "title": w.title,
+                    "process_name": w.process_name,
+                    "pid": w.pid,
+                    "x": w.x, "y": w.y,
+                    "width": w.width, "height": w.height,
+                    "is_visible": w.is_visible,
+                    "is_minimized": w.is_minimized,
+                }
+                for w in windows
+            ],
+        }
+
+    @server.tool()
+    def focus_window(title: str) -> dict:
+        """Bring a window to the foreground and give it focus.
+
+        Args:
+            title: Window title (partial match).
+        """
+        backend = _get_backend()
+        backend.focus_window(title=title)
+        return {"success": True}
+
+    @server.tool()
+    def close_window(title: str) -> dict:
+        """Close a window.
+
+        Args:
+            title: Window title (partial match).
+        """
+        backend = _get_backend()
+        backend.close_window(title=title)
+        return {"success": True}
+
+    @server.tool()
+    def minimize_window(title: str) -> dict:
+        """Minimize a window.
+
+        Args:
+            title: Window title (partial match).
+        """
+        backend = _get_backend()
+        backend.minimize_window(title=title)
+        return {"success": True}
+
+    @server.tool()
+    def maximize_window(title: str) -> dict:
+        """Maximize a window.
+
+        Args:
+            title: Window title (partial match).
+        """
+        backend = _get_backend()
+        backend.maximize_window(title=title)
+        return {"success": True}
+
+    # ── UI Inspection ───────────────────────────
+
+    @server.tool()
+    def see_ui_tree(
+        window_title: Optional[str] = None,
+        depth: int = 3,
+    ) -> dict:
+        """Inspect the UI accessibility tree of a window.
+
+        Returns the hierarchical tree of UI elements (buttons, text fields, etc.)
+        with their roles, names, bounds, and properties.
+
+        Args:
+            window_title: Target window (partial match). None = foreground window.
+            depth: How deep to traverse the tree (1-10).
+
+        Returns:
+            Dict with the element tree structure.
+        """
+        if depth < 1 or depth > 10:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"depth must be between 1 and 10, got {depth}"}}
+        backend = _get_backend()
+        tree = backend.get_element_tree(window_title=window_title, depth=depth)
+        if tree is None:
+            return {"success": False, "error": {"code": "NO_WINDOW", "message": "No matching window found"}}
+
+        def _serialize(el) -> dict:
+            d = {
+                "id": el.id,
+                "role": el.role,
+                "name": el.name,
+                "value": el.value,
+                "bounds": {"x": el.x, "y": el.y, "width": el.width, "height": el.height},
+                "properties": el.properties,
+            }
+            if el.children:
+                d["children"] = [_serialize(c) for c in el.children]
+            return d
+
+        return {"success": True, "tree": _serialize(tree)}
+
+    @server.tool()
+    def find_element(
+        selector: str,
+        window_title: Optional[str] = None,
+    ) -> dict:
+        """Find a UI element by selector.
+
+        Selector format: "Role:Name" (e.g. "Button:Save", "Edit:*search*").
+        Supports fuzzy matching with wildcards.
+
+        Args:
+            selector: Element selector string.
+            window_title: Target window (partial match).
+
+        Returns:
+            Dict with the found element's info or error.
+        """
+        backend = _get_backend()
+        element = backend.find_element(selector=selector, window_title=window_title)
+        if element is None:
+            return {"success": False, "error": {"code": "ELEMENT_NOT_FOUND", "message": f"No element matching '{selector}'"}}
+        return {
+            "success": True,
+            "element": {
+                "id": element.id,
+                "role": element.role,
+                "name": element.name,
+                "value": element.value,
+                "bounds": {"x": element.x, "y": element.y, "width": element.width, "height": element.height},
+                "properties": element.properties,
+            },
+        }
+
+    # ── Input Actions ───────────────────────────
+
+    @server.tool()
+    def click(
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+        element_id: Optional[str] = None,
+        button: str = "left",
+        double: bool = False,
+    ) -> dict:
+        """Click at coordinates or on a UI element.
+
+        Provide either (x, y) coordinates or an element_id from find_element/see_ui_tree.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            element_id: Element ID to click (from find_element).
+            button: Mouse button — "left", "right", or "middle".
+            double: Double-click if True.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.click(x=x, y=y, element_id=element_id, button=button, double=double)
+        return {"success": True}
+
+    @server.tool()
+    def type_text(
+        text: str,
+        wpm: int = 120,
+    ) -> dict:
+        """Type text using keyboard input.
+
+        Types the given text character by character, simulating human typing.
+
+        Args:
+            text: Text to type.
+            wpm: Words per minute (typing speed).
+
+        Returns:
+            Dict with success flag.
+        """
+        if wpm < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"wpm must be >= 1, got {wpm}"}}
+        backend = _get_backend()
+        backend.type_text(text=text, wpm=wpm)
+        return {"success": True}
+
+    @server.tool()
+    def press_key(key: str, count: int = 1) -> dict:
+        """Press a keyboard key.
+
+        Args:
+            key: Key name (e.g. "enter", "tab", "escape", "f1", "a").
+            count: Number of times to press.
+
+        Returns:
+            Dict with success flag.
+        """
+        if count < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"count must be >= 1, got {count}"}}
+        backend = _get_backend()
+        for _ in range(count):
+            backend.press_key(key=key)
+        return {"success": True}
+
+    @server.tool()
+    def hotkey(*keys: str) -> dict:
+        """Press a keyboard shortcut (key combination).
+
+        Args:
+            keys: Keys to press simultaneously (e.g. "ctrl", "s" for Ctrl+S).
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.hotkey(*keys)
+        return {"success": True}
+
+    @server.tool()
+    def scroll(
+        direction: str = "down",
+        amount: int = 3,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+    ) -> dict:
+        """Scroll the mouse wheel.
+
+        Args:
+            direction: "up" or "down".
+            amount: Number of scroll units.
+            x: X coordinate to scroll at (optional).
+            y: Y coordinate to scroll at (optional).
+
+        Returns:
+            Dict with success flag.
+        """
+        if amount < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"amount must be >= 1, got {amount}"}}
+        backend = _get_backend()
+        backend.scroll(direction=direction, amount=amount, x=x, y=y)
+        return {"success": True}
+
+    @server.tool()
+    def drag(
+        from_x: int,
+        from_y: int,
+        to_x: int,
+        to_y: int,
+        duration_ms: int = 500,
+        steps: int = 10,
+    ) -> dict:
+        """Drag from one point to another.
+
+        Args:
+            from_x: Start X coordinate.
+            from_y: Start Y coordinate.
+            to_x: End X coordinate.
+            to_y: End Y coordinate.
+            duration_ms: Duration in milliseconds.
+            steps: Number of intermediate steps.
+
+        Returns:
+            Dict with success flag.
+        """
+        if steps < 1:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"steps must be >= 1, got {steps}"}}
+        if duration_ms < 0:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"duration_ms must be >= 0, got {duration_ms}"}}
+        backend = _get_backend()
+        backend.drag(from_x=from_x, from_y=from_y, to_x=to_x, to_y=to_y,
+                     duration_ms=duration_ms, steps=steps)
+        return {"success": True}
+
+    @server.tool()
+    def move_mouse(x: int, y: int) -> dict:
+        """Move the mouse cursor to a position.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.move_mouse(x=x, y=y)
+        return {"success": True}
+
+    # ── Clipboard ───────────────────────────────
+
+    @server.tool()
+    def clipboard_get() -> dict:
+        """Get the current clipboard text content.
+
+        Returns:
+            Dict with success flag and clipboard text.
+        """
+        backend = _get_backend()
+        text = backend.clipboard_get()
+        return {"success": True, "text": text}
+
+    @server.tool()
+    def clipboard_set(text: str) -> dict:
+        """Set the clipboard text content.
+
+        Args:
+            text: Text to copy to clipboard.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.clipboard_set(text=text)
+        return {"success": True}
+
+    # ── Application Control ─────────────────────
+
+    @server.tool()
+    def list_apps() -> dict:
+        """List running applications.
+
+        Returns:
+            Dict with success flag and list of running applications.
+        """
+        backend = _get_backend()
+        apps = backend.list_apps()
+        return {"success": True, "apps": apps}
+
+    @server.tool()
+    def launch_app(name: str) -> dict:
+        """Launch an application by name.
+
+        Args:
+            name: Application name or executable path.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.launch_app(name=name)
+        return {"success": True}
+
+    @server.tool()
+    def quit_app(name: str, force: bool = False) -> dict:
+        """Quit an application.
+
+        Args:
+            name: Application name.
+            force: Force quit if True.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.quit_app(name=name, force=force)
+        return {"success": True}
+
+    # ── Menu ────────────────────────────────────
+
+    @server.tool()
+    def menu_inspect(app: Optional[str] = None) -> dict:
+        """Inspect the menu bar of an application.
+
+        Returns the hierarchical menu structure with item names, shortcuts, and states.
+
+        Args:
+            app: Application name (optional, defaults to foreground app).
+
+        Returns:
+            Dict with success flag and menu items.
+        """
+        backend = _get_backend()
+        items = backend.get_menu_items(window_title=app)
+
+        def _serialize_menu(item) -> dict:
+            d = {"name": item.name}
+            if item.shortcut:
+                d["shortcut"] = item.shortcut
+            if hasattr(item, "enabled"):
+                d["enabled"] = item.enabled
+            if hasattr(item, "checked"):
+                d["checked"] = item.checked
+            if hasattr(item, "children") and item.children:
+                d["children"] = [_serialize_menu(c) for c in item.children]
+            return d
+
+        return {
+            "success": True,
+            "menu_items": [_serialize_menu(m) for m in items],
+        }
+
+    # ── Open ────────────────────────────────────
+
+    @server.tool()
+    def open_uri(uri: str) -> dict:
+        """Open a URL or file with the default application.
+
+        Args:
+            uri: URL (https://...) or file path to open.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        backend.open_uri(uri=uri)
+        return {"success": True}
+
+    return server
+
+
+def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
+    """Run the MCP server with the specified transport."""
+    server = create_server()
+    server.run(transport=transport)

@@ -30,6 +30,7 @@ from naturo.cli.snapshot import snapshot
 from naturo.cli.wait_cmd import wait
 from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find
 from naturo.cli.diff_cmd import diff
+from naturo.cli.ai import mcp
 
 
 @click.group()
@@ -84,6 +85,9 @@ main.add_command(snapshot)
 # ── Phase 3: Stabilize ─────────────────────────
 main.add_command(wait)
 main.add_command(diff)
+
+# ── Phase 4: AI Integration ─────────────────────
+main.add_command(mcp)
 
 # Replace stub app subcommands with working implementations
 app.add_command(app_launch, "launch")
