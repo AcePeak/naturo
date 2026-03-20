@@ -9,6 +9,7 @@ import platform
 
 import click
 
+from naturo.cli.error_helpers import json_error as _json_error_str
 from naturo.errors import WindowNotFoundError
 
 
@@ -51,7 +52,7 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
     if platform.system() != "Windows":
         msg = "Screen capture requires Windows (naturo_core.dll)."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+            click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
@@ -100,13 +101,13 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
             click.echo(f"Saved: {full_path} ({result.width}x{result.height})")
     except WindowNotFoundError as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": str(e)}}))
+            click.echo(_json_error_str("WINDOW_NOT_FOUND", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     except Exception as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "CAPTURE_ERROR", "message": str(e)}}))
+            click.echo(_json_error_str("CAPTURE_ERROR", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -125,7 +126,7 @@ def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
     """Record video of screen or window."""
     msg = "Video recording is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)
@@ -143,7 +144,7 @@ def watch(app, window_title, hwnd, interval, timeout, path, json_output):
     """Watch for screen changes and capture on change."""
     msg = "Watch mode is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)
@@ -164,7 +165,7 @@ def apps(json_output):
     """List running applications."""
     msg = "Application listing is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)
@@ -184,7 +185,7 @@ def windows(app, process_name, pid, json_output):
     if platform.system() != "Windows":
         msg = "Window listing requires Windows (naturo_core.dll)."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+            click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
@@ -255,7 +256,7 @@ def screens(json_output):
     """List connected screens/monitors."""
     msg = "Screen listing is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)
@@ -267,7 +268,7 @@ def permissions(json_output):
     """List automation permissions status (UIAccess, admin, etc.)."""
     msg = "Permission listing is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)
@@ -304,7 +305,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     if depth < 1 or depth > 10:
         msg = f"--depth must be between 1 and 10, got {depth}"
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -312,7 +313,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     if platform.system() != "Windows":
         msg = "UI inspection requires Windows (naturo_core.dll)."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+            click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
@@ -326,7 +327,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         if tree is None:
             msg = "No window found or UI tree is empty."
             if json_output:
-                click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": msg}}))
+                click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
             else:
                 click.echo(msg)
             raise SystemExit(1)
@@ -440,13 +441,13 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
     except WindowNotFoundError as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": str(e)}}))
+            click.echo(_json_error_str("WINDOW_NOT_FOUND", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     except Exception as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -492,7 +493,7 @@ def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai
     if depth < 1 or depth > 10:
         msg = f"--depth must be between 1 and 10, got {depth}"
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -500,7 +501,7 @@ def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai
     if platform.system() != "Windows":
         msg = "UI inspection requires Windows (naturo_core.dll)."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+            click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
@@ -511,7 +512,7 @@ def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai
         if tree is None:
             msg = "No window found or UI tree is empty."
             if json_output:
-                click.echo(json_module.dumps({"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": msg}}))
+                click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
             else:
                 click.echo(msg)
             raise SystemExit(1)
@@ -579,7 +580,7 @@ def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai
 
     except Exception as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -600,7 +601,7 @@ def _find_with_ai(query, provider_name, screenshot, app, json_output):
     except ImportError as e:
         msg = f"AI find dependencies not available: {e}"
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+            click.echo(_json_error_str("MISSING_DEPENDENCY", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -609,7 +610,7 @@ def _find_with_ai(query, provider_name, screenshot, app, json_output):
     if screenshot and not __import__("os").path.exists(screenshot):
         msg = f"Screenshot file not found: {screenshot}"
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "FILE_NOT_FOUND", "message": msg}}))
+            click.echo(_json_error_str("FILE_NOT_FOUND", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -696,7 +697,7 @@ def menu_inspect(app, flat, json_output):
     if platform.system() != "Windows":
         msg = "Menu inspection requires Windows (naturo_core.dll)."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "PLATFORM_ERROR", "message": msg}}))
+            click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
@@ -712,7 +713,7 @@ def menu_inspect(app, flat, json_output):
                 if not app_info:
                     msg = f"Application not found: {app}"
                     if json_output:
-                        click.echo(json_module.dumps({"success": False, "error": {"code": "APP_NOT_FOUND", "message": msg}}))
+                        click.echo(_json_error_str("APP_NOT_FOUND", msg))
                     else:
                         click.echo(f"Error: {msg}", err=True)
                     raise SystemExit(1)
@@ -728,7 +729,7 @@ def menu_inspect(app, flat, json_output):
         if not items:
             msg = "No menu items found."
             if json_output:
-                click.echo(json_module.dumps({"success": False, "error": {"code": "NO_MENU_ITEMS", "message": msg}}))
+                click.echo(_json_error_str("NO_MENU_ITEMS", msg))
             else:
                 click.echo(msg)
             raise SystemExit(1)
@@ -767,13 +768,13 @@ def menu_inspect(app, flat, json_output):
     except NotImplementedError:
         msg = "Menu inspection not supported on this platform."
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_SUPPORTED", "message": msg}}))
+            click.echo(_json_error_str("NOT_SUPPORTED", msg))
         else:
             click.echo(msg)
         raise SystemExit(1)
     except Exception as e:
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -823,7 +824,7 @@ def tools(json_output):
     """
     msg = "Tools listing is not implemented yet — coming in a future release."
     if json_output:
-        click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_IMPLEMENTED", "message": msg}}))
+        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     raise SystemExit(1)

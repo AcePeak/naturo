@@ -1,5 +1,7 @@
 """CLI diff command — compare UI element trees."""
 import json
+
+from naturo.cli.error_helpers import json_error as _json_error_str
 import sys
 import time
 import click
@@ -28,7 +30,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     if interval is not None and interval <= 0:
         msg = f"--interval must be > 0, got {interval}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -37,7 +39,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     if not snapshots and not window_title:
         msg = "Specify two --snapshot IDs or --window"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -46,7 +48,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     if snapshots and len(snapshots) != 2:
         msg = "Provide exactly two --snapshot IDs"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -86,7 +88,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             # This is a placeholder — real impl would extract trees from snapshot data
             msg = "Snapshot-based diff requires element trees stored in snapshots (not yet implemented)"
             if json_output:
-                click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+                click.echo(_json_error_str("INVALID_INPUT", msg))
             else:
                 click.echo(f"Note: {msg}", err=True)
             sys.exit(1)
@@ -102,7 +104,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
         sys.exit(1)
     except Exception as exc:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
         else:
             click.echo(f"Error: {exc}", err=True)
         sys.exit(1)

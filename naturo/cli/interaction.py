@@ -28,9 +28,13 @@ def _json_ok(data: dict, json_output: bool) -> None:
 
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
               code: str = "ACTION_ERROR") -> None:
-    """Emit error result as JSON or plain text, then exit."""
+    """Emit error result as JSON or plain text, then exit.
+
+    Includes agent-friendly recovery hints from the error_helpers registry.
+    """
     if json_output:
-        click.echo(json.dumps({"success": False, "error": {"code": code, "message": msg}}))
+        from naturo.cli.error_helpers import json_error
+        click.echo(json_error(code, msg))
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(exit_code)

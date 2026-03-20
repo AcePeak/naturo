@@ -4,6 +4,8 @@ Replaces the stub implementations in system.py with working process management.
 These are registered as subcommands of the existing ``app`` group.
 """
 import json
+
+from naturo.cli.error_helpers import json_error as _json_error_str
 import sys
 import click
 
@@ -78,7 +80,7 @@ def app_quit(ctx, name, pid, force, timeout, json_output):
     if not name and pid is None:
         msg = "Specify --name or --pid"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -285,7 +287,7 @@ def app_find(ctx, name, pid, json_output):
     if not name or not name.strip():
         msg = "Name cannot be empty"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)

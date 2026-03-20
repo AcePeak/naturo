@@ -1,5 +1,7 @@
 """CLI wait command — wait for elements or windows to appear/disappear."""
 import json
+
+from naturo.cli.error_helpers import json_error as _json_error_str
 import sys
 import click
 
@@ -28,7 +30,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     if not element and not window_title and not gone:
         msg = "Specify --element, --window, or --gone"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -37,7 +39,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     if timeout < 0:
         msg = f"--timeout must be >= 0, got {timeout}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -46,7 +48,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     if interval <= 0:
         msg = f"--interval must be > 0, got {interval}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -75,7 +77,7 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
         return
     except Exception as exc:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
         else:
             click.echo(f"Error: {exc}", err=True)
         sys.exit(1)

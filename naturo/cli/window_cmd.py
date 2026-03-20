@@ -11,6 +11,8 @@ from typing import Optional
 
 import click
 
+from naturo.cli.error_helpers import emit_error, emit_exception_error, json_error
+
 
 def _safe_echo(text: str, **kwargs) -> None:
     """Echo text safely, replacing unencodable characters on Windows GBK terminals.
@@ -74,7 +76,7 @@ def focus(ctx, app, title, hwnd, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -110,7 +112,7 @@ def close(ctx, app, title, hwnd, force, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -147,7 +149,7 @@ def minimize(ctx, app, title, hwnd, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -182,7 +184,7 @@ def maximize(ctx, app, title, hwnd, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -217,7 +219,7 @@ def restore(ctx, app, title, hwnd, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -254,7 +256,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
     if x is None or y is None:
         msg = "Missing required option: --x and --y are required"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -262,7 +264,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -300,7 +302,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
     if width is None or height is None:
         msg = "Missing required option: --width and --height are required"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -308,7 +310,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -317,7 +319,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
     if width < 1 or height < 1:
         msg = f"Width and height must be >= 1, got width={width} height={height}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -366,7 +368,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     if missing:
         msg = f"Missing required option(s): {', '.join(missing)}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -374,7 +376,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     if not app and not title and not hwnd:
         msg = "Specify --app, --title, or --hwnd"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -383,7 +385,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     if width < 1 or height < 1:
         msg = f"Width and height must be >= 1, got width={width} height={height}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
         else:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)

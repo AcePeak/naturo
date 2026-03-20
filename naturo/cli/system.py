@@ -274,13 +274,15 @@ def open_cmd(target, app, json_output):
             click.echo(f"Opened: {target}")
     except NaturoError as e:
         if json_output:
-            click.echo(_json.dumps({"success": False, "error": {"code": e.code, "message": e.message}}))
+            from naturo.cli.error_helpers import json_error_from_exception
+            click.echo(json_error_from_exception(e))
         else:
             click.echo(f"Error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         if json_output:
-            click.echo(_json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
+            from naturo.cli.error_helpers import json_error
+            click.echo(json_error("UNKNOWN_ERROR", str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
