@@ -51,7 +51,7 @@ def snapshot_list(json_output: bool) -> None:
             }
             for s in infos
         ]
-        click.echo(json_module.dumps(data, indent=2))
+        click.echo(json_module.dumps({"success": True, "snapshots": data}, indent=2))
     else:
         if not infos:
             click.echo("No snapshots found.")

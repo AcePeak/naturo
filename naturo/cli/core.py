@@ -207,7 +207,7 @@ def windows(app, process_name, pid, json_output):
                 }
                 for w in win_list
             ]
-            click.echo(json_module.dumps(data, indent=2))
+            click.echo(json_module.dumps({"success": True, "windows": data}, indent=2))
         else:
             if not win_list:
                 click.echo("No windows found.")

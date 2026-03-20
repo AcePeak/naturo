@@ -73,7 +73,9 @@ class TestCLIFunctionalWindows:
         result = runner.invoke(main, ["list", "windows", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert isinstance(data, list)
+        assert isinstance(data, dict)
+        assert data["success"] is True
+        assert isinstance(data["windows"], list)
 
     def test_see_runs(self, runner):
         """'naturo see' should run without crashing."""
