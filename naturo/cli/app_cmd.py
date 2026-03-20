@@ -194,9 +194,13 @@ def app_find(ctx, name, pid, json_output):
     else:
         if json_output:
             click.echo(json.dumps({
-                "success": True,
+                "success": False,
                 "process": None,
-                "message": f"No process found matching '{name}'",
+                "error": {
+                    "code": "PROCESS_NOT_FOUND",
+                    "message": f"No process found matching '{name}'",
+                },
             }, indent=2))
         else:
             _safe_echo(f"Not found: {name}")
+        ctx.exit(1)
