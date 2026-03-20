@@ -130,7 +130,7 @@ without real implementations. Without them, Phase 4 MCP is an empty shell.
 | 8.4 | Enterprise: recording/playback engine |
 | 8.5 | Enterprise: visual regression testing |
 
-## Phase 2.8 — Open Source Launch
+## Phase 5.1 — Open Source Launch
 
 **Goal**: Go public with maximum impact
 
@@ -138,39 +138,39 @@ without real implementations. Without them, Phase 4 MCP is an empty shell.
 
 | Step | Deliverable |
 |------|------------|
-| 2.8.1 | Enable GitHub branch protection (require PR + CI) |
-| 2.8.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
-| 2.8.3 | CODE_OF_CONDUCT.md |
-| 2.8.4 | Issue templates (bug report, feature request) |
-| 2.8.5 | PR template |
-| 2.8.6 | README hero GIF — notepad end-to-end automation demo |
-| 2.8.7 | README badges — static badges first (license, platform, Python version), CI/DeepWiki after public |
-| 2.8.8 | First PyPI release (`pip install naturo` works) |
-| 2.8.9 | OpenClaw skill published to ClawHub |
-| 2.8.10a | Nuitka/PyInstaller packaging — `naturo.exe` standalone binary |
-| 2.8.10b | 代码签名证书 — 购买 OV/OSS 证书，CI 集成自动签名，解决杀软误报 |
-| 2.8.10c | npm 包发布 — 平台检测 + 二进制下载，`npx naturo mcp` 一行启动 |
+| 5.1.1 | Enable GitHub branch protection (require PR + CI) |
+| 5.1.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
+| 5.1.3 | CODE_OF_CONDUCT.md |
+| 5.1.4 | Issue templates (bug report, feature request) |
+| 5.1.5 | PR template |
+| 5.1.6 | README hero GIF — notepad end-to-end automation demo |
+| 5.1.7 | README badges — static badges first (license, platform, Python version), CI/DeepWiki after public |
+| 5.1.8 | First PyPI release (`pip install naturo` works) |
+| 5.1.9 | OpenClaw skill published to ClawHub |
+| 5.1.10a | Nuitka/PyInstaller packaging — `naturo.exe` standalone binary |
+| 5.1.10b | 代码签名证书 — 购买 OV/OSS 证书，CI 集成自动签名，解决杀软误报 |
+| 5.1.10c | npm 包发布 — 平台检测 + 二进制下载，`npx naturo mcp` 一行启动 |
 
 **Launch day activities:**
 
 | Step | Deliverable |
 |------|------------|
-| 2.8.10 | Flip repo to public |
-| 2.8.11 | LinkedIn announcement post (Ace's profile) |
-| 2.8.12 | Reddit post (r/opensource, r/Python, r/automation) |
-| 2.8.13 | Twitter/X announcement |
-| 2.8.14 | Hacker News Show HN post |
-| 2.8.15 | OpenClaw community Discord announcement |
+| 5.1.10 | Flip repo to public |
+| 5.1.11 | LinkedIn announcement post (Ace's profile) |
+| 5.1.12 | Reddit post (r/opensource, r/Python, r/automation) |
+| 5.1.13 | Twitter/X announcement |
+| 5.1.14 | Hacker News Show HN post |
+| 5.1.15 | OpenClaw community Discord announcement |
 
 **Post-launch growth:**
 
 | Step | Deliverable |
 |------|------------|
-| 2.8.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
-| 2.8.17 | Write "How Naturo works" technical blog post |
-| 2.8.18 | Submit to awesome-python, awesome-automation lists |
-| 2.8.19 | Create demo videos for YouTube/Bilibili |
-| 2.8.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
+| 5.1.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
+| 5.1.17 | Write "How Naturo works" technical blog post |
+| 5.1.18 | Submit to awesome-python, awesome-automation lists |
+| 5.1.19 | Create demo videos for YouTube/Bilibili |
+| 5.1.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
 
 ## Phase 9 — Strategic Outreach
 
