@@ -1179,6 +1179,65 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         }
         return response
 
+    @server.tool()
+    @_safe_tool
+    def ai_find_element(
+        query: str,
+        window_title: Optional[str] = None,
+        screenshot_path: Optional[str] = None,
+        provider_name: str = "auto",
+        refine_with_uia: bool = True,
+        max_tokens: int = 512,
+    ) -> dict:
+        """Find a UI element using natural language and AI vision.
+
+        Takes a screenshot and uses AI to locate the described element.
+        Optionally refines against the UIA tree for precise element info.
+
+        This is more powerful than find_element for natural language queries
+        like "the submit button" or "the search bar at the top".
+
+        Args:
+            query: Natural language description (e.g., "the Save button").
+            window_title: Target a specific window (optional).
+            screenshot_path: Use an existing screenshot (optional).
+            provider_name: AI provider — 'auto', 'anthropic', 'openai', or 'ollama'.
+            refine_with_uia: Match AI result against UIA tree for precision.
+            max_tokens: Maximum tokens in the AI response.
+
+        Returns:
+            Dict with found status, element info, confidence, and method.
+        """
+        from naturo.ai_find import ai_find_element as _ai_find
+
+        result = _ai_find(
+            query,
+            provider_name=provider_name,
+            window_title=window_title,
+            screenshot_path=screenshot_path,
+            refine_with_uia=refine_with_uia,
+            max_tokens=max_tokens,
+        )
+
+        response: dict = {
+            "success": result.found,
+            "description": result.description,
+            "confidence": result.confidence,
+            "method": result.method,
+            "model": result.model,
+            "tokens_used": result.tokens_used,
+        }
+        if result.ai_bounds:
+            response["ai_bounds"] = result.ai_bounds
+        if result.element:
+            response["element"] = result.element
+        if not result.found:
+            response["error"] = {
+                "code": "ELEMENT_NOT_FOUND",
+                "message": f"AI could not locate: {query}",
+            }
+        return response
+
     return server
 
 

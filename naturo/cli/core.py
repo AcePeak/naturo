@@ -447,19 +447,33 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--actionable", is_flag=True, help="Only show actionable elements")
 @click.option("--depth", "-d", type=int, default=5, help="Maximum tree depth (1-10)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
+@click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
+@click.option("--provider", type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+              default="auto", help="AI provider (for --ai mode)")
+@click.option("--screenshot", type=click.Path(), default=None,
+              help="Use existing screenshot (for --ai mode)")
+@click.option("--app", "ai_app", default=None, help="Target app window (for --ai mode)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def find_cmd(query, role, actionable, depth, limit, json_output):
+def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai_app, json_output):
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
+    Use --ai for natural language element finding powered by AI vision.
 
     \b
     Examples:
-        naturo find "Save"              # fuzzy name search
-        naturo find "Button:Save"       # role + name
-        naturo find "role:Edit"         # by role only
-        naturo find "*" --actionable    # all actionable elements
+        naturo find "Save"                      # fuzzy name search
+        naturo find "Button:Save"               # role + name
+        naturo find "role:Edit"                  # by role only
+        naturo find "*" --actionable             # all actionable elements
+        naturo find "the save button" --ai       # AI vision search
+        naturo find "search field" --ai --app "Chrome"  # AI + specific app
     """
+    # AI vision mode — natural language element finding
+    if ai:
+        _find_with_ai(query, provider, screenshot, ai_app, json_output)
+        return
+
     # BUG-028: Validate --depth range (before platform check — input validation first)
     if depth < 1 or depth > 10:
         msg = f"--depth must be between 1 and 10, got {depth}"
@@ -554,6 +568,101 @@ def find_cmd(query, role, actionable, depth, limit, json_output):
             click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
         else:
             click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+def _find_with_ai(query, provider_name, screenshot, app, json_output):
+    """AI-powered element finding via naturo find --ai.
+
+    Args:
+        query: Natural language description of the element.
+        provider_name: AI provider name.
+        screenshot: Optional screenshot path.
+        app: Optional target application window.
+        json_output: Whether to output JSON.
+    """
+    try:
+        from naturo.ai_find import ai_find_element
+    except ImportError as e:
+        msg = f"AI find dependencies not available: {e}"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    # Validate screenshot path
+    if screenshot and not __import__("os").path.exists(screenshot):
+        msg = f"Screenshot file not found: {screenshot}"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "FILE_NOT_FOUND", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    try:
+        result = ai_find_element(
+            query,
+            provider_name=provider_name,
+            window_title=app,
+            screenshot_path=screenshot,
+        )
+    except Exception as e:
+        msg = str(e)
+        code = "AI_FIND_FAILED"
+        if "unavailable" in msg.lower() or "api key" in msg.lower():
+            code = "AI_PROVIDER_UNAVAILABLE"
+        elif "capture" in msg.lower():
+            code = "CAPTURE_FAILED"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": code, "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    if json_output:
+        output = {
+            "success": result.found,
+            "description": result.description,
+            "confidence": result.confidence,
+            "method": result.method,
+            "model": result.model,
+            "tokens_used": result.tokens_used,
+        }
+        if result.ai_bounds:
+            output["ai_bounds"] = result.ai_bounds
+        if result.element:
+            output["element"] = result.element
+        if not result.found:
+            output["error"] = {
+                "code": "ELEMENT_NOT_FOUND",
+                "message": f"AI could not locate: {query}",
+            }
+        click.echo(json_module.dumps(output, indent=2))
+    else:
+        if not result.found:
+            click.echo(f"Element not found: {query}")
+            if result.description:
+                click.echo(f"  AI says: {result.description}")
+            raise SystemExit(1)
+
+        click.echo(f"Found: {result.description}")
+        click.echo(f"  Confidence: {result.confidence:.0%}")
+        click.echo(f"  Method: {result.method}")
+        if result.ai_bounds:
+            b = result.ai_bounds
+            click.echo(f"  AI bounds: ({b.get('x', '?')}, {b.get('y', '?')}) "
+                        f"{b.get('width', '?')}x{b.get('height', '?')}")
+        if result.element:
+            el = result.element
+            click.echo(f"  UIA match: [{el.get('role', '')}] \"{el.get('name', '')}\"")
+            eb = el.get("bounds", {})
+            click.echo(f"  UIA bounds: ({eb.get('x', '?')}, {eb.get('y', '?')}) "
+                        f"{eb.get('width', '?')}x{eb.get('height', '?')}")
+            click.echo(f"  Match distance: {el.get('match_distance', '?')} px")
+        click.echo(f"  [{result.model}, {result.tokens_used} tokens]", err=True)
+
+    if not result.found:
         raise SystemExit(1)
 
 
