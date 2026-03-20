@@ -232,3 +232,71 @@ class TestBUG032TypeWpmValidation:
         data = json.loads(result.output)
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
+
+
+class TestBUG033DragBoundaryValidation:
+    """BUG-033: drag --steps and --duration should validate boundaries."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_drag_steps_zero(self, runner):
+        result = runner.invoke(main, ["drag", "--from-coords", "100", "100", "--to-coords", "200", "200", "--steps", "0"])
+        assert result.exit_code != 0
+        assert "--steps must be >= 1" in result.output or "error" in result.output.lower()
+
+    def test_drag_steps_negative(self, runner):
+        result = runner.invoke(main, ["drag", "--from-coords", "100", "100", "--to-coords", "200", "200", "--steps", "-1"])
+        assert result.exit_code != 0
+
+    def test_drag_steps_zero_json(self, runner):
+        result = runner.invoke(main, ["drag", "--from-coords", "100", "100", "--to-coords", "200", "200", "--steps", "0", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_drag_duration_negative(self, runner):
+        result = runner.invoke(main, ["drag", "--from-coords", "100", "100", "--to-coords", "200", "200", "--duration", "-1"])
+        assert result.exit_code != 0
+        assert "--duration must be >= 0" in result.output or "error" in result.output.lower()
+
+    def test_drag_duration_negative_json(self, runner):
+        result = runner.invoke(main, ["drag", "--from-coords", "100", "100", "--to-coords", "200", "200", "--duration", "-1", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+
+class TestBUG034WaitIntervalValidation:
+    """BUG-034: wait --interval should validate > 0."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_wait_interval_negative(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "test", "--interval", "-1"])
+        assert result.exit_code != 0
+        assert "--interval must be > 0" in result.output or "error" in result.output.lower()
+
+    def test_wait_interval_zero(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "test", "--interval", "0"])
+        assert result.exit_code != 0
+
+    def test_wait_interval_negative_json(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "test", "--interval", "-1", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "--interval must be > 0" in data["error"]["message"]
+
+    def test_wait_interval_zero_json(self, runner):
+        result = runner.invoke(main, ["wait", "--element", "test", "--interval", "0", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"

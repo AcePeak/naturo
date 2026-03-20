@@ -43,6 +43,15 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
         ctx.exit(1)
         return
 
+    if interval <= 0:
+        msg = f"--interval must be > 0, got {interval}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        ctx.exit(1)
+        return
+
     # Import here to avoid import-time side effects
     from naturo.wait import wait_for_element, wait_until_gone, wait_for_window
 
