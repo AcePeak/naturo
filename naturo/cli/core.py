@@ -266,6 +266,15 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     names, and bounding rectangles.  Results are stored in a snapshot so
     subsequent commands can reference elements by ID.
     """
+    # BUG-028: Validate --depth range (before platform check — input validation first)
+    if depth < 1 or depth > 10:
+        msg = f"--depth must be between 1 and 10, got {depth}"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     if platform.system() != "Windows":
         msg = "UI inspection requires Windows (naturo_core.dll)."
         if json_output:
@@ -425,6 +434,15 @@ def find_cmd(query, role, actionable, depth, limit, json_output):
         naturo find "role:Edit"         # by role only
         naturo find "*" --actionable    # all actionable elements
     """
+    # BUG-028: Validate --depth range (before platform check — input validation first)
+    if depth < 1 or depth > 10:
+        msg = f"--depth must be between 1 and 10, got {depth}"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     if platform.system() != "Windows":
         msg = "UI inspection requires Windows (naturo_core.dll)."
         if json_output:
@@ -536,6 +554,26 @@ def menu_inspect(app, flat, json_output):
 
     try:
         backend = _get_backend()
+
+        # BUG-026: Check if app exists before inspecting menus
+        if app:
+            try:
+                from naturo.process import find_process
+                app_info = find_process(app)
+                if not app_info:
+                    msg = f"Application not found: {app}"
+                    if json_output:
+                        click.echo(json_module.dumps({"success": False, "error": {"code": "APP_NOT_FOUND", "message": msg}}))
+                    else:
+                        click.echo(f"Error: {msg}", err=True)
+                    raise SystemExit(1)
+            except ImportError:
+                pass  # find_process not available, fall through to get_menu_items
+            except SystemExit:
+                raise
+            except Exception:
+                pass  # find_process failed for other reasons, fall through
+
         items = backend.get_menu_items(window_title=app)
 
         if not items:
@@ -544,7 +582,7 @@ def menu_inspect(app, flat, json_output):
                 click.echo(json_module.dumps({"success": False, "error": {"code": "NO_MENU_ITEMS", "message": msg}}))
             else:
                 click.echo(msg)
-            return
+            raise SystemExit(1)
 
         if json_output:
             if flat:
@@ -583,6 +621,7 @@ def menu_inspect(app, flat, json_output):
             click.echo(json_module.dumps({"success": False, "error": {"code": "NOT_SUPPORTED", "message": msg}}))
         else:
             click.echo(msg)
+        raise SystemExit(1)
     except Exception as e:
         if json_output:
             click.echo(json_module.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(e)}}))
@@ -611,6 +650,10 @@ def learn(topic):
     }
     if topic and topic in topics:
         click.echo(f"\n  {topic}: {topics[topic]}\n")
+    elif topic and topic not in topics:
+        click.echo(f"Error: Unknown topic: {topic}", err=True)
+        click.echo(f"Available topics: {', '.join(topics.keys())}", err=True)
+        raise SystemExit(1)
     else:
         click.echo("\nNaturo — Windows desktop automation engine\n")
         click.echo("Available topics:")
