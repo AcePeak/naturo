@@ -34,8 +34,8 @@ def capture():
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
-@click.option("--path", "-p", default="capture.bmp", help="Output file path")
-@click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="bmp", help="Image format")
+@click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
+@click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output):
@@ -44,10 +44,15 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
     Captures the screen or a specific window and saves to a file.
     Use --hwnd to capture a specific window, or --screen to select a monitor.
     The screenshot is automatically stored in a snapshot (use --no-snapshot to skip).
+    Output format is PNG by default (matching Peekaboo).
     """
     if platform.system() != "Windows":
         click.echo("Screen capture requires Windows (naturo_core.dll).")
         return
+
+    # Resolve output path: use --path if given, else capture.<format>
+    if path is None:
+        path = f"capture.{fmt}"
 
     try:
         backend = _get_backend()
@@ -87,7 +92,7 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
         raise SystemExit(1)
 
 
-@capture.command()
+@capture.command(hidden=True)
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
@@ -101,7 +106,7 @@ def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
     click.echo("Not implemented yet — coming in Phase 3")
 
 
-@capture.command()
+@capture.command(hidden=True)
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
@@ -123,7 +128,7 @@ def list_cmd():
     pass
 
 
-@list_cmd.command()
+@list_cmd.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def apps(json_output):
     """List running applications."""
@@ -193,14 +198,14 @@ def windows(app, process_name, pid, json_output):
         raise SystemExit(1)
 
 
-@list_cmd.command()
+@list_cmd.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def screens(json_output):
     """List connected screens/monitors."""
     click.echo("Not implemented yet — coming in Phase 2")
 
 
-@list_cmd.command()
+@list_cmd.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def permissions(json_output):
     """List automation permissions status (UIAccess, admin, etc.)."""
@@ -551,7 +556,7 @@ def learn(topic):
 # ── tools ───────────────────────────────────────
 
 
-@click.command()
+@click.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def tools(json_output):
     """List available automation tools and backends.
