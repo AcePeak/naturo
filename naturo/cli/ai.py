@@ -68,11 +68,28 @@ def start(transport, host, port, json_output):
     """
     try:
         from naturo.mcp_server import run_server
-        run_server(transport=transport, host=host, port=port)
-    except ImportError as e:
-        msg = f"MCP dependencies not installed. Run: pip install naturo[mcp]"
+    except ImportError:
+        msg = "MCP dependencies not installed. Run: pip install naturo[mcp]"
         if json_output:
             click.echo(json.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    try:
+        # Suppress uvicorn/server logs in JSON mode to keep stdout clean
+        if json_output:
+            import logging as _logging
+            for _logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "mcp"):
+                _logging.getLogger(_logger_name).setLevel(_logging.CRITICAL)
+        run_server(transport=transport, host=host, port=port)
+    except OSError as e:
+        # Port already in use or bind failure
+        msg = str(e)
+        if "already in use" in msg.lower() or "address already in use" in msg.lower() or getattr(e, 'errno', 0) in (10048, 98):
+            msg = f"Port {port} already in use"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "SERVER_ERROR", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -95,7 +112,8 @@ def install(json_output):
     """
     import subprocess
     try:
-        click.echo("Installing MCP dependencies...")
+        if not json_output:
+            click.echo("Installing MCP dependencies...")
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "mcp>=1.0"],
             capture_output=True, text=True,
