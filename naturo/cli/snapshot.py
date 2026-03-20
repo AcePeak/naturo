@@ -85,6 +85,14 @@ def snapshot_clean(days: int | None, clean_all: bool, yes: bool, json_output: bo
         click.echo("Specify --days N or --all.  Run with --help for usage.")
         raise SystemExit(0)
 
+    if days is not None and days < 0:
+        msg = f"--days must be >= 0, got {days}"
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     mgr = _get_manager()
 
     if not yes:
