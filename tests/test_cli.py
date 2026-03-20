@@ -110,7 +110,8 @@ def test_click_help(runner):
     assert "--right" in result.output
     assert "--app" in result.output
     assert "--window-title" in result.output
-    assert "--wait-for" in result.output
+    # --wait-for is hidden (BUG-035: declared but not implemented)
+    assert "--wait-for" not in result.output
     assert "--input-mode" in result.output
     assert "normal" in result.output
     assert "hardware" in result.output

@@ -50,7 +50,7 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--window-id", "--hwnd", "window_id", type=int, help="Window handle (HWND)")
-@click.option("--wait-for", type=float, help="Wait for element (seconds)")
+@click.option("--wait-for", type=float, help="Wait for element (seconds)", hidden=True)
 @click.option(
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
