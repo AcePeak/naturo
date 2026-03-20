@@ -213,6 +213,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, json_output):
       naturo press tab --count 3
       naturo press f5
     """
+    if count < 1:
+        _json_err(f"--count must be >= 1, got {count}", json_output)
+        return
+
     import time
     backend = _get_backend()
 
