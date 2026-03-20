@@ -170,16 +170,26 @@ def launch_app(
                 proc = subprocess.Popen([path] + cmd_args)
             else:
                 # Use 'where' to verify command exists, then 'start'
-                where_result = subprocess.run(
-                    ["where", name or ""],
-                    capture_output=True, text=True, timeout=5,
-                )
+                try:
+                    where_result = subprocess.run(
+                        ["where", name or ""],
+                        capture_output=True, text=True, timeout=5,
+                    )
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError):
+                    where_result = type("R", (), {"returncode": 1})()
                 if where_result.returncode != 0:
                     # Also check if it's a known app via start — run synchronously to check
-                    result = subprocess.run(
-                        ["cmd", "/c", "start", "/wait", "", name or ""] + cmd_args,
-                        capture_output=True, text=True, timeout=10,
-                    )
+                    try:
+                        result = subprocess.run(
+                            ["cmd", "/c", "start", "/wait", "", name or ""] + cmd_args,
+                            capture_output=True, text=True, timeout=10,
+                        )
+                    except subprocess.TimeoutExpired:
+                        # Windows shows an error dialog for unknown apps; timeout is expected
+                        raise AppNotFoundError(
+                            launch_target,
+                            suggested_action="Application not found or failed to launch",
+                        )
                     if result.returncode != 0:
                         raise AppNotFoundError(launch_target)
                     # start /wait succeeded but we need to find the PID now
@@ -213,6 +223,12 @@ def launch_app(
             proc = subprocess.Popen([target] + cmd_args)
     except AppNotFoundError:
         raise
+    except subprocess.TimeoutExpired:
+        raise AppNotFoundError(
+            launch_target,
+            suggested_action="Application did not start within the expected time. "
+            "Verify the application name is correct and installed.",
+        )
     except FileNotFoundError:
         raise AppNotFoundError(launch_target)
     except OSError as exc:

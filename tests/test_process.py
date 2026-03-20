@@ -116,6 +116,16 @@ class TestLaunchApp:
             launch_app(name="nonexistent_app_xyz")
 
     @patch("subprocess.Popen")
+    def test_launch_timeout_expired_raises_app_not_found(self, mock_popen):
+        """BUG-013/018: subprocess.TimeoutExpired must be caught, not leaked as traceback."""
+        import subprocess
+        mock_popen.side_effect = subprocess.TimeoutExpired(cmd="start /wait", timeout=10)
+
+        with pytest.raises(AppNotFoundError) as exc_info:
+            launch_app(name="nonexistent_app_xyz")
+        assert "nonexistent_app_xyz" in exc_info.value.message
+
+    @patch("subprocess.Popen")
     def test_launch_wait_until_ready(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
