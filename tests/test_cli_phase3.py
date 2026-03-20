@@ -1,6 +1,7 @@
 """CLI integration tests for Phase 3 commands (wait, app, diff)."""
 import json
 import pytest
+from unittest.mock import patch
 from click.testing import CliRunner
 from naturo.cli import main
 
@@ -31,6 +32,30 @@ class TestWaitCommand:
         data = json.loads(result.output)
         assert data["success"] is False
         assert "INVALID_INPUT" in data["error"]["code"]
+
+    def test_wait_json_timeout_single_json(self, runner):
+        """BUG-016: wait --json timeout must output exactly one JSON document."""
+        from naturo.wait import WaitResult
+        with patch("naturo.wait.wait_for_element") as mock_wait:
+            mock_wait.return_value = WaitResult(found=False, wait_time=1.0, warnings=[])
+            result = runner.invoke(main, ["wait", "--element", "Button:Save", "--timeout", "1", "--json"])
+        assert result.exit_code == 1
+        # Must be valid single JSON — json.loads raises if there are two documents
+        data = json.loads(result.output.strip())
+        assert data["success"] is False
+        assert data["found"] is False
+        # Ensure there's only one JSON object in stdout
+        assert result.output.strip().count("{") == result.output.strip().count("}")
+
+    def test_wait_json_exception_single_json(self, runner):
+        """BUG-016: wait --json exception must output exactly one JSON document."""
+        from naturo.errors import NaturoError
+        with patch("naturo.wait.wait_for_element") as mock_wait:
+            mock_wait.side_effect = NaturoError("test error", code="TEST_ERROR")
+            result = runner.invoke(main, ["wait", "--element", "Button:Save", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output.strip())
+        assert data["success"] is False
 
 
 class TestAppCommands:

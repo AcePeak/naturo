@@ -1,5 +1,6 @@
 """CLI wait command — wait for elements or windows to appear/disappear."""
 import json
+import sys
 import click
 
 
@@ -45,6 +46,8 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     # Import here to avoid import-time side effects
     from naturo.wait import wait_for_element, wait_until_gone, wait_for_window
 
+    from naturo.errors import NaturoError
+
     try:
         if element:
             result = wait_for_element(selector=element, timeout=timeout, poll_interval=interval)
@@ -54,54 +57,54 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
             result = wait_for_window(title=window_title, timeout=timeout, poll_interval=interval)
         else:
             return  # unreachable
-
+    except NaturoError as exc:
         if json_output:
-            output = {
-                "success": result.found,
-                "found": result.found,
-                "wait_time": round(result.wait_time, 3),
-                "warnings": result.warnings,
-            }
-            if result.element:
-                output["element"] = {
-                    "id": result.element.id,
-                    "role": result.element.role,
-                    "name": result.element.name,
-                    "value": result.element.value,
-                    "x": result.element.x,
-                    "y": result.element.y,
-                    "width": result.element.width,
-                    "height": result.element.height,
-                }
-            click.echo(json.dumps(output, indent=2))
-            if not result.found:
-                ctx.exit(1)
+            click.echo(json.dumps(exc.to_json_response(), indent=2))
         else:
-            if result.found:
-                if element:
-                    click.echo(f"Found element '{element}' after {result.wait_time:.1f}s")
-                elif gone:
-                    click.echo(f"Element '{gone}' disappeared after {result.wait_time:.1f}s")
-                elif window_title:
-                    click.echo(f"Window '{window_title}' appeared after {result.wait_time:.1f}s")
-            else:
-                target = element or gone or window_title
-                click.echo(f"Timeout after {result.wait_time:.1f}s waiting for '{target}'", err=True)
-                ctx.exit(1)
-
-            for w in result.warnings:
-                click.echo(f"  Warning: {w}", err=True)
-
-    except Exception as exc:
-        from naturo.errors import NaturoError
-        if isinstance(exc, NaturoError):
-            if json_output:
-                click.echo(json.dumps(exc.to_json_response(), indent=2))
-            else:
-                click.echo(f"Error: {exc.message}", err=True)
-        else:
-            if json_output:
-                click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
-            else:
-                click.echo(f"Error: {exc}", err=True)
+            click.echo(f"Error: {exc.message}", err=True)
         ctx.exit(1)
+        return
+    except Exception as exc:
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        ctx.exit(1)
+        return
+
+    if json_output:
+        output = {
+            "success": result.found,
+            "found": result.found,
+            "wait_time": round(result.wait_time, 3),
+            "warnings": result.warnings,
+        }
+        if result.element:
+            output["element"] = {
+                "id": result.element.id,
+                "role": result.element.role,
+                "name": result.element.name,
+                "value": result.element.value,
+                "x": result.element.x,
+                "y": result.element.y,
+                "width": result.element.width,
+                "height": result.element.height,
+            }
+        click.echo(json.dumps(output, indent=2))
+        if not result.found:
+            sys.exit(1)
+    else:
+        if result.found:
+            if element:
+                click.echo(f"Found element '{element}' after {result.wait_time:.1f}s")
+            elif gone:
+                click.echo(f"Element '{gone}' disappeared after {result.wait_time:.1f}s")
+            elif window_title:
+                click.echo(f"Window '{window_title}' appeared after {result.wait_time:.1f}s")
+        else:
+            target = element or gone or window_title
+            click.echo(f"Timeout after {result.wait_time:.1f}s waiting for '{target}'", err=True)
+            sys.exit(1)
+
+        for w in result.warnings:
+            click.echo(f"  Warning: {w}", err=True)
