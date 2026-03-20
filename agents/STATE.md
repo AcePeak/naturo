@@ -28,7 +28,7 @@
 
 | 角色 | 正在做 | 上次更新 |
 |------|--------|----------|
-| Dev | **Phase 4 启动** — MCP server 基础实现完成 (20+ tools, stdio/sse/streamable-http transport)。CLI: `naturo mcp start/tools`。639 tests pass。下一步: MCP 编译机实测 + agent 命令实现 | 3/20 21:11 |
+| Dev | **Phase 4 推进** — MCP server 25 tools (含 wait_for_element/window/until_gone)，38 个 MCP 单元测试覆盖全部工具+输入验证+响应格式一致性。编译机已部署并验证 `naturo mcp tools` 可用。685 tests pass。下一步: snapshot/annotate 工具 + agent 命令 | 3/20 21:30 |
 | QA | **Round 9** — BUG-029,031,032,034~037 全部验证通过 ✅。0 Open / 0 Fixed / 37 Verified。Phase 3 Bug 全清零 🎉 | 3/20 20:40 |
 
 ## 🐛 Bug 概况
