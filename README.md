@@ -13,7 +13,9 @@
 - ⌨️ **Key Combos** — Send any keystroke or shortcut
 - 📸 **Annotated Screenshots** — AI-ready screenshots with numbered bounding boxes
 - 📋 **Menu Traversal** — Extract app menu structures with shortcuts
-- 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
+- 🪟 **Window Management** — Focus, close, minimize, maximize, move, resize windows
+- 📦 **App Control** — Launch, quit, switch, hide/unhide applications
+- 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server (29 tools)
 
 ## System Requirements
 
@@ -58,6 +60,20 @@ naturo press "ctrl+s"
 
 # Find element
 naturo find "Edit:filename"
+
+# Window management
+naturo window focus --app "Notepad"
+naturo window close --app "Chrome" --force
+naturo window minimize --hwnd 12345
+naturo window move --app "Notepad" --x 0 --y 0
+naturo window resize --app "Notepad" --width 1920 --height 1080
+naturo window set-bounds --app "Chrome" --x 0 --y 0 --width 960 --height 1080
+
+# App control
+naturo app launch "notepad"
+naturo app switch "chrome"
+naturo app hide "notepad"
+naturo app unhide "notepad"
 ```
 
 ## CLI Commands
@@ -75,6 +91,30 @@ naturo find "Edit:filename"
 | `click` | Click element/coordinates | ✅ 2 |
 | `type` | Type text | ✅ 2 |
 | `press` | Press key combination | ✅ 2 |
+| `hotkey` | Press keyboard shortcut | ✅ 2 |
+| `scroll` | Scroll mouse wheel | ✅ 2 |
+| `drag` | Drag from/to coordinates | ✅ 2 |
+| `move` | Move mouse cursor | ✅ 2 |
+| `paste` | Paste from clipboard | ✅ 2 |
+| `wait` | Wait for element/window | ✅ 3 |
+| `app launch` | Launch application | ✅ 3 |
+| `app quit` | Quit application | ✅ 3 |
+| `app list` | List running applications | ✅ 3 |
+| `app find` | Find application by name | ✅ 3 |
+| `app hide` | Minimize all app windows | ✅ 3.5 |
+| `app unhide` | Restore all app windows | ✅ 3.5 |
+| `app switch` | Switch to application | ✅ 3.5 |
+| `window focus` | Focus a window | ✅ 3.5 |
+| `window close` | Close a window | ✅ 3.5 |
+| `window minimize` | Minimize a window | ✅ 3.5 |
+| `window maximize` | Maximize a window | ✅ 3.5 |
+| `window restore` | Restore a window | ✅ 3.5 |
+| `window move` | Move a window | ✅ 3.5 |
+| `window resize` | Resize a window | ✅ 3.5 |
+| `window set-bounds` | Set position + size | ✅ 3.5 |
+| `window list` | List windows with filters | ✅ 3.5 |
+| `open` | Open URL/file with default app | ✅ 4 |
+| `mcp start` | Start MCP server | ✅ 4 |
 
 ## Snapshot System
 
