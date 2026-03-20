@@ -1,23 +1,41 @@
 # Dev Status
 
-> Dev Agent 每次运行后更新此文件。其他角色只读。
+**最后更新**: 2026-03-21 01:45 (Asia/Shanghai)
 
 ## 当前状态
-- **正在做**: Phase 3.5 完善 — 测试覆盖 + README 更新。所有代码实现已就绪。
-- **上次更新**: 3/20 22:45
-- **测试**: 823 passed (含 105 个新增窗口管理测试)
+🚀 Phase 4.8 Multi AI Provider — OpenAI agent provider 完成
 
-## Phase 3.5 进度
-- [x] Backend: focus/close/minimize/maximize/restore/move/resize/set_bounds
-- [x] CLI: `naturo window` 命令组 (9 subcommands)
-- [x] CLI: `naturo app hide/unhide/switch`
-- [x] MCP: 所有窗口工具已暴露 (window_close/minimize/maximize/restore/move/resize/set_bounds + focus_window + app_hide/unhide/switch)
-- [x] 测试: 105 个测试覆盖 CLI、Backend 签名、MCP、JSON 一致性、边界校验
-- [x] README: 更新命令表、特性列表、使用示例
-- [ ] 等 QA 验证 BUG-041~043 + Phase 3.5 E2E 测试
+## 本轮工作
+- **Phase 4.8**: Multi AI Provider
+  - 新建 `naturo/providers/openai_agent.py` — OpenAI tool-use agent provider
+  - 完整的 function-calling 实现（18 个 tool 定义，对齐 Anthropic agent 的能力）
+  - 支持 GPT-4o 及任何 OpenAI 兼容 API（Ollama /v1、vLLM、LM Studio）
+  - 自定义 base_url 支持（`--base-url` 或 `OPENAI_BASE_URL` 环境变量）
+  - 重构 `_get_agent_provider` 为注册表模式，方便扩展新 provider
+  - 27 新测试：provider 构造、消息构建、响应解析、CLI 集成、错误处理
+  - commit 87e76a4
 
-## 最近完成
-- Phase 3 bug 清零 (40 bugs)
-- Phase 4 MCP Server 基础 (29 tools, 3 transports)
-- BUG-038~043 修复
-- Phase 3.5 窗口管理全套实现 + 测试 + 文档
+## Phase 4 进度
+- 4.1 MCP Server ✅
+- 4.2 Vision (describe) ✅
+- 4.3 AI Find ✅
+- 4.4 Agent Command ✅
+- 4.5 Action Recording 🔜
+- 4.6 Action Replay 🔜
+- 4.7 Agent-friendly Errors ✅
+- 4.8 Multi AI Provider ✅ ← 刚完成（vision: anthropic/openai/ollama, agent: anthropic/openai）
+
+## Bug 清单状态
+- 全部 ✅ Verified，无 Open bug
+
+## 技术评估
+- **代码健康度**: 良好
+- **测试覆盖**: 979 passed + 221 skipped
+- **技术债**: 无重大技术债
+- **Provider 矩阵**:
+  - Vision: Anthropic ✅ | OpenAI ✅ | Ollama ✅
+  - Agent: Anthropic ✅ | OpenAI ✅ | Ollama (可通过 OpenAI 兼容 API)
+
+## 下一步
+- Phase 4.5 Action Recording — 录制用户操作序列
+- Phase 4.6 Action Replay — 回放录制的操作序列

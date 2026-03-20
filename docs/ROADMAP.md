@@ -80,11 +80,11 @@
 | 4.1 | **MCP Server** — 29 tools, stdio/sse/streamable-http transport | ✅ Done |
 | 4.2 | **Screenshot → AI Vision** — 截图发给 AI 分析 UI 元素，返回结构化描述 | 🔜 |
 | 4.3 | **Natural Language Element Finding** — `naturo find "the save button"` 用 AI 理解自然语言 | 🔜 |
-| 4.4 | **Agent Command** — `naturo agent "打开记事本，输入Hello World，保存到桌面"` 多步骤自动执行 | 🔜 |
+| 4.4 | **Agent Command** — `naturo agent "打开记事本，输入Hello World，保存到桌面"` 多步骤自动执行 | ✅ Done |
 | 4.5 | **Action Recording** — 录制用户操作序列，生成可回放的脚本 | 🔜 |
 | 4.6 | **Action Replay** — 回放录制的操作序列，支持参数化 | 🔜 |
-| 4.7 | **Agent-friendly Error Messages** — 错误信息包含恢复建议，帮助 AI 自我纠正 | 🔜 |
-| 4.8 | **Multi AI Provider** — Anthropic / OpenAI / Ollama / 自定义，类似 Peekaboo Tachikoma | 🔜 |
+| 4.7 | **Agent-friendly Error Messages** — 错误信息包含恢复建议，帮助 AI 自我纠正 | ✅ Done |
+| 4.8 | **Multi AI Provider** — Anthropic / OpenAI / Ollama / 自定义，类似 Peekaboo Tachikoma | ✅ Done |
 
 **Checkpoint:** `naturo agent "打开计算器，计算 123*456，截图结果"` 可以端到端完成。
 
@@ -96,7 +96,7 @@
 |------|------------|--------|
 | 4.5.1 | **Dialog Detection** — 自动检测文件选择器、消息框、确认框 | 🔜 |
 | 4.5.2 | **Dialog Interaction** — `naturo dialog accept/dismiss/fill` | 🔜 |
-| 4.5.3 | **Clipboard Enhanced** — `naturo clipboard get/set` 命令（已有 backend，需暴露 CLI） | 🔜 |
+| 4.5.3 | **Clipboard Enhanced** — `naturo clipboard get/set` 命令（已有 backend，需暴露 CLI） | ✅ Done |
 | 4.5.4 | **Taskbar Interaction** — 任务栏 pin/unpin/click | 🔜 |
 | 4.5.5 | **System Tray** — 系统托盘图标交互 | 🔜 |
 | 4.5.6 | **Open Command** — `naturo open <url/file>` 用默认应用打开 | ✅ Done |
