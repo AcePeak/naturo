@@ -28,13 +28,13 @@
 
 | 角色 | 正在做 | 上次更新 |
 |------|--------|----------|
-| Dev | **Phase 4 推进** — MCP server 25 tools (含 wait_for_element/window/until_gone)，38 个 MCP 单元测试覆盖全部工具+输入验证+响应格式一致性。编译机已部署并验证 `naturo mcp tools` 可用。685 tests pass。下一步: snapshot/annotate 工具 + agent 命令 | 3/20 21:30 |
-| QA | **Round 9** — BUG-029,031,032,034~037 全部验证通过 ✅。0 Open / 0 Fixed / 37 Verified。Phase 3 Bug 全清零 🎉 | 3/20 20:40 |
+| Dev | **Phase 4 推进** — 修复 Python 3.14 subprocess 兼容问题 (BUG-040)，实现 `open` CLI 命令。MCP server 26 tools 全部带 `@_safe_tool` 异常包装。685 tests pass (macOS)。下一步: 推进 MCP 编译机实测 | 3/20 21:55 |
+| QA | **Round 10** — Phase 4 MCP Server 首轮验收。BUG-038~040 已全部修复验证。 | 3/20 21:50 |
 
 ## 🐛 Bug 概况
 - 🔴 Open: 0 个
 - 🟢 Fixed: 0 个
-- ✅ Verified: 37 个（BUG-007~037 全部验证通过）
+- ✅ Verified: 40 个（BUG-007~040 全部验证通过）
 
 详见 `.work/bugs.md`
 

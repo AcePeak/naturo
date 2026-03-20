@@ -120,7 +120,7 @@
 ## 🆕 Round 6 自发现（E2E 验收前扫描）
 
 ### BUG-029: `list windows --json` 和 `snapshot list --json` 返回裸数组
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `list windows --json` 返回 `{"success": true, "windows": [...]}`，`snapshot list --json` 返回 `{"success": true, "snapshots": [...]}`，格式统一。
 - **严重度**: 中（影响 AI agent 集成 — JSON schema 不一致）
 - **现象**: 其他命令的 `--json` 成功响应都是 `{"success": true, ...}` 对象，但 `list windows --json` 和 `snapshot list --json` 直接返回裸数组 `[...]`
 - **命令**: `naturo list windows --json`, `naturo snapshot list --json`
@@ -136,14 +136,14 @@
 - **文件**: naturo/cli/core.py (capture live 相关)
 
 ### BUG-031: `snapshot clean --json` 成功时缺少 `success` 字段
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `snapshot clean --days 9999 --json --yes` 返回 `{"success": true, "deleted": 0}`，格式正确。
 - **严重度**: 低（JSON schema 不一致）
 - **现象**: 成功删除时输出 `{"deleted": N}`，缺少 `"success": true`
 - **命令**: `naturo snapshot clean --days 30 --json`
 - **文件**: naturo/cli/snapshot.py (snapshot_clean 函数 line 117-118)
 
 ### BUG-032: `type --wpm` 无边界校验
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `--wpm 0` 报 "Error: --wpm must be >= 1, got 0"，`--wpm -1` 报错，均 exit code 非零。
 - **严重度**: 低（同 BUG-019/BUG-025 类型）
 - **现象**: `--wpm 0` 和 `--wpm -1` 不报错，直接传给后端
 - **命令**: `naturo type --wpm 0 hello`, `naturo type --wpm -1 hello`
@@ -165,7 +165,7 @@
 - **文件**: naturo/cli/interaction.py (drag 函数)
 
 ### BUG-034: `wait --interval -1` 泄漏 Python 内部错误
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `--interval -1` 返回 `{"success": false, "error": {"code": "INVALID_INPUT", "message": "--interval must be > 0, got -1.0"}}`，`--interval 0` 同理，均 exit code 1。
 - **严重度**: 中（错误信息面向用户原则违反 + 同类遗漏）
 - **现象**: `naturo wait --interval -1 --element test --json` 返回 `{"success": false, "error": {"code": "UNKNOWN_ERROR", "message": "sleep length must be non-negative"}}`，泄漏 Python sleep 内部错误
 - **命令**: `naturo wait --interval -1 --element test --json`
@@ -179,7 +179,7 @@
 ## 🆕 Round 8 自发现
 
 ### BUG-035: `click --wait-for` 参数声明了但未实现
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `click --help` 不再显示 `--wait-for` 参数，已隐藏。
 - **严重度**: 中（帮助和行为不一致 — 设计原则 #4 违反）
 - **现象**: `click --help` 显示 `--wait-for FLOAT  Wait for element (seconds)`，但函数体中 `wait_for` 参数被接收后从未使用，传任何值都无效
 - **命令**: `naturo click --wait-for 5 --coords 100 100`（不会等待 5 秒）
@@ -187,7 +187,7 @@
 - **文件**: naturo/cli/interaction.py (click 函数)
 
 ### BUG-036: `move --duration` 参数声明了但未传给 backend
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `move --help` 不再显示 `--duration` 参数，已隐藏。
 - **严重度**: 低（帮助和行为不一致 — 设计原则 #4 违反）
 - **现象**: `move --help` 显示 `--duration FLOAT  Move duration (seconds)`，但 `move()` 函数中调用 `backend.move_mouse(x, y)` 时没传 duration 参数，且无边界校验
 - **命令**: `naturo move --duration 2 --coords 100 100`（不会花 2 秒移动）
@@ -195,7 +195,7 @@
 - **文件**: naturo/cli/interaction.py (move 函数)
 
 ### BUG-037: `hotkey --hold-duration` 无边界校验
-- **状态**: 🟢 Fixed
+- **状态**: ✅ Verified (Round 9) — `--hold-duration -1` 报 "Error: --hold-duration must be >= 0, got -1.0"，exit code 非零。`--hold-duration 0` 正常接受。
 - **严重度**: 低（同 BUG-019/025/032/033 类型）
 - **现象**: `--hold-duration -1` 和 `--hold-duration 0` 不校验，负值直接传给 backend（`hold_duration_ms=int(hold_duration)`）
 - **命令**: `naturo hotkey --hold-duration -1 ctrl+c`
@@ -203,4 +203,31 @@
 - **文件**: naturo/cli/interaction.py (hotkey 函数)
 
 *Dev Agent 修复后更新状态为 🟢 Fixed，QA 验证后更新为 ✅ Verified*
-Fixed，QA 验证后更新为 ✅ Verified*
+
+---
+
+## 🆕 Phase 4 (MCP Server) — Round 10
+
+### BUG-038: `hotkey` MCP tool 使用 `*keys` 导致完全无法调用
+- **状态**: ✅ Verified — 已改为 `keys: list[str]`，空列表返回 INVALID_INPUT 错误
+- **严重度**: 🔴 严重（AI Agent 核心功能完全不可用）
+- **现象**: `hotkey` 工具定义为 `def hotkey(*keys: str)`，使用 Python varargs。FastMCP 将其转换为 JSON schema `{"keys": {"type": "string"}}`（单个 string），MCP 客户端传 `keys="ctrl+s"` 时报 `got an unexpected keyword argument 'keys'`
+- **影响**: 所有 AI agent 尝试按快捷键时都会失败。这是 MCP 26 个工具中唯一一个完全无法工作的
+- **修复**: 改为 `def hotkey(keys: list[str])`，空列表返回 INVALID_INPUT
+- **文件**: naturo/mcp_server.py (hotkey 函数)
+
+### BUG-039: MCP tool 缺少统一异常处理，backend 异常泄漏 Python 内部错误
+- **状态**: ✅ Verified — 已添加 `@_safe_tool` 装饰器包装所有 26 个工具
+- **严重度**: 🟡 中等（影响 AI agent 体验和错误恢复）
+- **现象**: MCP 工具没有 try/except 包装 backend 调用。当 backend 抛出异常（如 COM error、NaturoCoreError）时，异常直接冒泡给 MCP 框架，AI agent 收到的是 Python traceback 而非结构化错误
+- **修复**: `_safe_tool` 装饰器捕获所有异常，返回 `{"success": false, "error": {"code": "...", "message": "..."}}`
+- **文件**: naturo/mcp_server.py（所有 tool 函数）
+
+### BUG-040: `test_process.py::TestLaunchApp` 5 个测试因 mock 问题全挂
+- **状态**: ✅ Verified — 已 mock `subprocess.run` alongside `subprocess.Popen`，Windows Python 3.14 全过
+- **严重度**: 🟡 中等（测试基础设施问题，不影响产品功能）
+- **现象**: `@patch("subprocess.Popen")` 同时影响了 `subprocess.run()`（run 内部用 Popen），导致 `where` 命令的 mock 结果格式错误：`ValueError: not enough values to unpack (expected 2, got 0)`
+- **修复**: mock `naturo.process.subprocess.run` 和 `naturo.process.subprocess.Popen`（commit 8c8fb7a）
+- **文件**: tests/test_process.py (TestLaunchApp 类)
+
+---
