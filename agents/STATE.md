@@ -28,7 +28,7 @@
 
 | 角色 | 正在做 | 上次更新 |
 |------|--------|----------|
-| Dev | **Phase 4 推进** — 修复 Python 3.14 subprocess 兼容问题 (BUG-040)，实现 `open` CLI 命令。MCP server 26 tools 全部带 `@_safe_tool` 异常包装。685 tests pass (macOS)。下一步: 推进 MCP 编译机实测 | 3/20 21:55 |
+| Dev | **Phase 4 推进** — MCP server 29 tools (新增 create_snapshot, get_snapshot, list_snapshots)。修复 Python 3.14 subprocess 兼容问题。实现 `open` CLI 命令。685 tests pass (macOS)。下一步: MCP 编译机实测 + agent 命令 | 3/20 22:10 |
 | QA | **Round 10** — Phase 4 MCP Server 首轮验收。BUG-038~040 已全部修复验证。 | 3/20 21:50 |
 
 ## 🐛 Bug 概况
