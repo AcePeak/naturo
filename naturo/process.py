@@ -163,10 +163,31 @@ def launch_app(
 
     try:
         if system == "Windows":
-            # Use start command for name-based launch
             if path:
+                # Verify path exists before launching
+                if not os.path.isfile(path):
+                    raise AppNotFoundError(launch_target, suggested_action="File does not exist")
                 proc = subprocess.Popen([path] + cmd_args)
             else:
+                # Use 'where' to verify command exists, then 'start'
+                where_result = subprocess.run(
+                    ["where", name or ""],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if where_result.returncode != 0:
+                    # Also check if it's a known app via start — run synchronously to check
+                    result = subprocess.run(
+                        ["cmd", "/c", "start", "/wait", "", name or ""] + cmd_args,
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    if result.returncode != 0:
+                        raise AppNotFoundError(launch_target)
+                    # start /wait succeeded but we need to find the PID now
+                    found = find_process(name=name)
+                    if found:
+                        return found
+                    # Launched but already exited — report success with a dummy PID
+                    return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
                 proc = subprocess.Popen(["cmd", "/c", "start", "", name or ""] + cmd_args)
         elif system == "Darwin":
             if path:
@@ -179,10 +200,19 @@ def launch_app(
                     open_args.append("--args")
                     open_args.extend(cmd_args)
                 proc = subprocess.Popen(open_args)
+                # 'open -a' exits quickly; check its return code
+                try:
+                    retcode = proc.wait(timeout=10)
+                    if retcode is not None and retcode != 0:
+                        raise AppNotFoundError(launch_target)
+                except subprocess.TimeoutExpired:
+                    pass  # Still running, treat as success
         else:
             # Linux
             target = path or name or ""
             proc = subprocess.Popen([target] + cmd_args)
+    except AppNotFoundError:
+        raise
     except FileNotFoundError:
         raise AppNotFoundError(launch_target)
     except OSError as exc:

@@ -77,6 +77,7 @@ class TestLaunchApp:
     def test_launch_by_name(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.pid = 5678
+        mock_proc.wait.return_value = 0
         mock_popen.return_value = mock_proc
 
         info = launch_app(name="notepad")
@@ -104,10 +105,22 @@ class TestLaunchApp:
             launch_app(name="nonexistent_app_xyz")
 
     @patch("subprocess.Popen")
+    def test_launch_nonexistent_app_returns_error(self, mock_popen):
+        """BUG-013: launch should fail for apps that don't exist (exit code != 0)."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 31584
+        mock_proc.wait.return_value = 1  # open -a returns 1 for not-found
+        mock_popen.return_value = mock_proc
+
+        with pytest.raises(AppNotFoundError):
+            launch_app(name="nonexistent_app_xyz")
+
+    @patch("subprocess.Popen")
     def test_launch_wait_until_ready(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = None  # still running
+        mock_proc.wait.return_value = 0  # open -a exits successfully
         mock_popen.return_value = mock_proc
 
         info = launch_app(name="app", wait_until_ready=True, timeout=1.0)
@@ -118,6 +131,7 @@ class TestLaunchApp:
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = 1  # exited
+        mock_proc.wait.return_value = 0  # open -a exits successfully (app found)
         mock_popen.return_value = mock_proc
 
         with pytest.raises(AppNotFoundError):
