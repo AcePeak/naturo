@@ -28,7 +28,7 @@
 
 | 角色 | 正在做 | 上次更新 |
 |------|--------|----------|
-| Dev | **Phase 4 推进** — MCP server 29 tools (新增 create_snapshot, get_snapshot, list_snapshots)。修复 Python 3.14 subprocess 兼容问题。实现 `open` CLI 命令。685 tests pass (macOS)。下一步: MCP 编译机实测 + agent 命令 | 3/20 22:10 |
+| Dev | **Phase 4 推进** — MCP server 29 tools (编译机验证 ✅)。`mcp` 命令组公开（含 install/start/tools）。Agent 框架实现（agent.py: AIProvider protocol + ToolExecutor + run_agent loop）。714 tests pass (macOS)。下一步: AI provider 实现 (Anthropic/OpenAI) | 3/20 22:30 |
 | QA | **Round 10** — Phase 4 MCP Server 首轮验收。BUG-038~040 已全部修复验证。 | 3/20 21:50 |
 
 ## 🐛 Bug 概况
