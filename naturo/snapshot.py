@@ -29,7 +29,7 @@ import tempfile
 import threading
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -138,7 +138,7 @@ class SnapshotManager:
                 snapshot.window_bounds = metadata.get("window_bounds", snapshot.window_bounds)
                 snapshot.window_handle = metadata.get("window_handle", snapshot.window_handle)
 
-            snapshot.last_update_time = datetime.utcnow()
+            snapshot.last_update_time = datetime.now(timezone.utc)
             self._write_json_atomic(snap_dir / "snapshot.json", snapshot.to_dict())
 
         logger.debug("Stored screenshot for snapshot %s → %s", snapshot_id, dst)
@@ -161,7 +161,7 @@ class SnapshotManager:
         with self._lock:
             snapshot = self._load_or_create(snapshot_id)
             snapshot.ui_map = ui_elements
-            snapshot.last_update_time = datetime.utcnow()
+            snapshot.last_update_time = datetime.now(timezone.utc)
             self._write_json_atomic(snap_dir / "snapshot.json", snapshot.to_dict())
 
         logger.debug(
@@ -192,7 +192,7 @@ class SnapshotManager:
             dst = snap_dir / "annotated.png"
             shutil.copy2(src, dst)
             snapshot.annotated_path = str(dst)
-            snapshot.last_update_time = datetime.utcnow()
+            snapshot.last_update_time = datetime.now(timezone.utc)
             self._write_json_atomic(snap_dir / "snapshot.json", snapshot.to_dict())
 
         logger.debug("Stored annotated screenshot for snapshot %s → %s", snapshot_id, dst)
@@ -241,7 +241,7 @@ class SnapshotManager:
         str | None
             The snapshot ID, or ``None`` if no valid snapshot exists.
         """
-        cutoff = datetime.utcnow() - timedelta(seconds=self._validity_seconds)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._validity_seconds)
         candidates: List[tuple] = []  # (mtime, snapshot_id)
 
         with self._lock:
@@ -256,7 +256,7 @@ class SnapshotManager:
                     continue
 
                 try:
-                    mtime = datetime.utcfromtimestamp(entry.stat().st_mtime)
+                    mtime = datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc)
                 except OSError:
                     continue
 
@@ -302,7 +302,7 @@ class SnapshotManager:
 
                 try:
                     stat = entry.stat()
-                    created_at = datetime.utcfromtimestamp(stat.st_ctime)
+                    created_at = datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc)
                 except OSError:
                     continue
 
@@ -357,7 +357,7 @@ class SnapshotManager:
         int
             Number of snapshots deleted.
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         cleaned = 0
 
         with self._lock:
@@ -368,7 +368,7 @@ class SnapshotManager:
                 if not entry.is_dir():
                     continue
                 try:
-                    mtime = datetime.utcfromtimestamp(entry.stat().st_mtime)
+                    mtime = datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc)
                 except OSError:
                     continue
 

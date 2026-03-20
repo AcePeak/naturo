@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 
@@ -117,7 +117,7 @@ class Snapshot:
     screenshot_path: Optional[str] = None
     annotated_path: Optional[str] = None
     ui_map: Dict[str, UIElement] = field(default_factory=dict)
-    last_update_time: datetime = field(default_factory=datetime.utcnow)
+    last_update_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     application_name: Optional[str] = None
     application_pid: Optional[int] = None
     window_title: Optional[str] = None
@@ -159,11 +159,12 @@ class Snapshot:
         if last_update_raw:
             # Handle both ISO strings and unix timestamps
             if isinstance(last_update_raw, (int, float)):
-                last_update_time = datetime.utcfromtimestamp(last_update_raw)
+                last_update_time = datetime.fromtimestamp(last_update_raw, tz=timezone.utc)
             else:
-                last_update_time = datetime.fromisoformat(str(last_update_raw).rstrip("Z"))
+                parsed = datetime.fromisoformat(str(last_update_raw).rstrip("Z"))
+                last_update_time = parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
         else:
-            last_update_time = datetime.utcnow()
+            last_update_time = datetime.now(timezone.utc)
 
         return cls(
             snapshot_id=data.get("snapshotId", data.get("snapshot_id", "")),
