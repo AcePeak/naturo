@@ -28,7 +28,7 @@ def agent(instruction, app, window_title, model, max_steps, dry_run, json_output
 # ── mcp ─────────────────────────────────────────
 
 
-@click.group(hidden=True)
+@click.group()
 def mcp():
     """MCP (Model Context Protocol) server for AI agent integration."""
     pass
@@ -62,6 +62,42 @@ def start(transport, host, port, json_output):
     except Exception as e:
         if json_output:
             click.echo(json.dumps({"success": False, "error": {"code": "SERVER_ERROR", "message": str(e)}}))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@mcp.command()
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def install(json_output):
+    """Install MCP server dependencies.
+
+    Installs the required 'mcp' package for running the MCP server.
+
+    Example: naturo mcp install
+    """
+    import subprocess
+    try:
+        click.echo("Installing MCP dependencies...")
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "mcp>=1.0"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            if json_output:
+                click.echo(json.dumps({"success": True, "message": "MCP dependencies installed successfully"}))
+            else:
+                click.echo("✅ MCP dependencies installed. Run 'naturo mcp start' to launch the server.")
+        else:
+            msg = result.stderr.strip() or result.stdout.strip() or "pip install failed"
+            if json_output:
+                click.echo(json.dumps({"success": False, "error": {"code": "INSTALL_FAILED", "message": msg}}))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+    except Exception as e:
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "INSTALL_FAILED", "message": str(e)}}))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)

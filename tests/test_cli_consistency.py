@@ -46,9 +46,13 @@ def test_all_visible_commands_respond():
 
 def test_no_visible_command_prints_not_implemented():
     """Invoking any visible leaf command (with no args) must not print 'Not implemented'."""
+    # Long-running server commands that take over stdio — skip bare invocation
+    SKIP_BARE_INVOKE = {("mcp", "start")}
     for args, cmd in _visible_subcommands(main):
         # Skip groups — they just show help when invoked bare
         if hasattr(cmd, "commands"):
+            continue
+        if tuple(args) in SKIP_BARE_INVOKE:
             continue
         result = runner.invoke(main, args)
         # Some commands legitimately fail due to missing args or Windows-only —
@@ -64,7 +68,7 @@ def test_hidden_commands_not_in_help():
     result = runner.invoke(main, ["--help"])
     # Known hidden top-level groups that were removed entirely
     for name in ["window", "menu", "clipboard", "dialog", "open", "taskbar",
-                 "tray", "desktop", "agent", "mcp", "excel", "java", "sap",
+                 "tray", "desktop", "agent", "excel", "java", "sap",
                  "registry", "service", "tools"]:
         # These should not appear as commands in help
         # (they may appear in description text, so check the Commands section)
