@@ -364,6 +364,13 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         _json_err("Specify --to-coords X Y", json_output, code="INVALID_INPUT")
         return
 
+    if steps < 1:
+        _json_err(f"--steps must be >= 1, got {steps}", json_output, code="INVALID_INPUT")
+        return
+    if duration < 0:
+        _json_err(f"--duration must be >= 0, got {duration}", json_output, code="INVALID_INPUT")
+        return
+
     backend = _get_backend()
 
     fx, fy = from_coords
