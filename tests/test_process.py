@@ -73,76 +73,111 @@ class TestIsRunning:
 
 
 class TestLaunchApp:
-    @patch("subprocess.Popen")
-    def test_launch_by_name(self, mock_popen):
+    """Tests for launch_app.
+
+    On Windows, launch_app calls subprocess.run (for 'where' check) before
+    subprocess.Popen.  We must mock both to prevent subprocess.run from using
+    the mocked Popen internally (which causes ValueError on Python 3.14+
+    because MagicMock.communicate() doesn't return a proper (stdout, stderr)).
+    """
+
+    @staticmethod
+    def _make_run_result(returncode=0, stdout="", stderr=""):
+        """Create a fake subprocess.CompletedProcess."""
+        import subprocess as _sp
+        return _sp.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
+
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_by_name(self, mock_popen, mock_run):
         mock_proc = MagicMock()
         mock_proc.pid = 5678
         mock_proc.wait.return_value = 0
         mock_popen.return_value = mock_proc
+        # 'where' succeeds on Windows; ignored on other platforms
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\notepad.exe")
 
         info = launch_app(name="notepad")
         assert info.pid == 5678
         assert info.name == "notepad"
         assert info.is_running is True
 
-    @patch("subprocess.Popen")
-    def test_launch_by_path(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_by_path(self, mock_popen, mock_run):
         mock_proc = MagicMock()
         mock_proc.pid = 1234
         mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0)
 
-        info = launch_app(path="/usr/bin/ls")
+        if platform.system() == "Windows":
+            # On Windows, path launch checks os.path.isfile first
+            with patch("os.path.isfile", return_value=True):
+                info = launch_app(path="/usr/bin/ls")
+        else:
+            info = launch_app(path="/usr/bin/ls")
         assert info.pid == 1234
 
     def test_launch_no_name_or_path(self):
         with pytest.raises(AppNotFoundError):
             launch_app()
 
-    @patch("subprocess.Popen")
-    def test_launch_file_not_found(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_file_not_found(self, mock_popen, mock_run):
+        mock_run.return_value = self._make_run_result(returncode=1)
         mock_popen.side_effect = FileNotFoundError("not found")
         with pytest.raises(AppNotFoundError):
             launch_app(name="nonexistent_app_xyz")
 
-    @patch("subprocess.Popen")
-    def test_launch_nonexistent_app_returns_error(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_nonexistent_app_returns_error(self, mock_popen, mock_run):
         """BUG-013: launch should fail for apps that don't exist (exit code != 0)."""
         mock_proc = MagicMock()
         mock_proc.pid = 31584
         mock_proc.wait.return_value = 1  # open -a returns 1 for not-found
         mock_popen.return_value = mock_proc
+        # 'where' fails (app not found), then 'start /wait' also fails
+        mock_run.return_value = self._make_run_result(returncode=1)
 
         with pytest.raises(AppNotFoundError):
             launch_app(name="nonexistent_app_xyz")
 
-    @patch("subprocess.Popen")
-    def test_launch_timeout_expired_raises_app_not_found(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_timeout_expired_raises_app_not_found(self, mock_popen, mock_run):
         """BUG-013/018: subprocess.TimeoutExpired must be caught, not leaked as traceback."""
         import subprocess
         mock_popen.side_effect = subprocess.TimeoutExpired(cmd="start /wait", timeout=10)
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="where", timeout=5)
 
         with pytest.raises(AppNotFoundError) as exc_info:
             launch_app(name="nonexistent_app_xyz")
         assert "nonexistent_app_xyz" in exc_info.value.message
 
-    @patch("subprocess.Popen")
-    def test_launch_wait_until_ready(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_wait_until_ready(self, mock_popen, mock_run):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = None  # still running
         mock_proc.wait.return_value = 0  # open -a exits successfully
         mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\app.exe")
 
         info = launch_app(name="app", wait_until_ready=True, timeout=1.0)
         assert info.is_running is True
 
-    @patch("subprocess.Popen")
-    def test_launch_wait_process_exits(self, mock_popen):
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_launch_wait_process_exits(self, mock_popen, mock_run):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = 1  # exited
         mock_proc.wait.return_value = 0  # open -a exits successfully (app found)
         mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\app.exe")
 
         with pytest.raises(AppNotFoundError):
             launch_app(name="app", wait_until_ready=True, timeout=2.0)
