@@ -110,10 +110,27 @@ class WindowsBackend(Backend):
         import tempfile, os
         core = self._ensure_core()
 
-        # DLL writes BMP; use a temp file then convert
-        tmp_bmp = output_path + ".tmp.bmp"
-        core.capture_screen(screen_index, tmp_bmp)
-        width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
+        # DLL writes BMP; use a temp file in a safe directory to avoid
+        # encoding issues with Chinese/Unicode paths on Windows
+        output_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+        try:
+            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp", dir=output_dir)
+            os.close(fd)
+        except OSError:
+            # Fallback to system temp dir if output dir fails
+            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+            os.close(fd)
+
+        try:
+            core.capture_screen(screen_index, tmp_bmp)
+            width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
+        except Exception:
+            # Clean up temp file on failure
+            try:
+                os.remove(tmp_bmp)
+            except OSError:
+                pass
+            raise
         return CaptureResult(path=output_path, width=width, height=height, format=fmt)
 
     def capture_window(self, window_title: Optional[str] = None, hwnd: Optional[int] = None,
@@ -132,12 +149,28 @@ class WindowsBackend(Backend):
         Returns:
             CaptureResult with the output path and dimensions.
         """
+        import tempfile, os
         core = self._ensure_core()
         handle = hwnd if hwnd else 0
 
-        tmp_bmp = output_path + ".tmp.bmp"
-        core.capture_window(handle, tmp_bmp)
-        width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
+        # Use a safe temp file to avoid encoding issues with Unicode paths
+        output_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+        try:
+            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp", dir=output_dir)
+            os.close(fd)
+        except OSError:
+            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+            os.close(fd)
+
+        try:
+            core.capture_window(handle, tmp_bmp)
+            width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
+        except Exception:
+            try:
+                os.remove(tmp_bmp)
+            except OSError:
+                pass
+            raise
         return CaptureResult(path=output_path, width=width, height=height, format=fmt)
 
     # === Window Management (Phase 1: list only) ===
