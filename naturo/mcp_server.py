@@ -1086,6 +1086,99 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             ],
         }
 
+    # ── AI Vision ────────────────────────────────
+
+    @server.tool()
+    @_safe_tool
+    def describe_screen(
+        window_title: Optional[str] = None,
+        screenshot_path: Optional[str] = None,
+        prompt: Optional[str] = None,
+        provider_name: str = "auto",
+        max_tokens: int = 1024,
+    ) -> dict:
+        """Describe the current screen or a window using AI vision.
+
+        Captures a screenshot and sends it to an AI model for analysis.
+        Returns a natural language description of what's visible on screen.
+
+        Args:
+            window_title: Capture a specific window (optional).
+            screenshot_path: Use an existing screenshot instead of capturing (optional).
+            prompt: Custom analysis prompt (optional).
+            provider_name: AI provider — 'auto', 'anthropic', 'openai', or 'ollama'.
+            max_tokens: Maximum tokens in the AI response.
+
+        Returns:
+            Dict with success, description, model, tokens_used, and optional elements.
+        """
+        from naturo.vision import describe_screen as _describe_screen
+
+        backend = _get_backend() if not screenshot_path else None
+        result = _describe_screen(
+            provider_name=provider_name,
+            backend=backend,
+            window_title=window_title,
+            screenshot_path=screenshot_path,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        )
+
+        response = {
+            "success": True,
+            "description": result.description,
+            "model": result.model,
+            "tokens_used": result.tokens_used,
+        }
+        if result.elements:
+            response["elements"] = result.elements
+        return response
+
+    @server.tool()
+    @_safe_tool
+    def identify_element(
+        element_description: str,
+        window_title: Optional[str] = None,
+        screenshot_path: Optional[str] = None,
+        provider_name: str = "auto",
+        max_tokens: int = 512,
+    ) -> dict:
+        """Find a UI element by natural language description using AI vision.
+
+        Captures a screenshot and asks the AI to locate the described element.
+        Returns element bounds (approximate) and confidence.
+
+        Args:
+            element_description: What to find (e.g., "the Save button", "the search field").
+            window_title: Capture a specific window (optional).
+            screenshot_path: Use an existing screenshot (optional).
+            provider_name: AI provider — 'auto', 'anthropic', 'openai', or 'ollama'.
+            max_tokens: Maximum tokens in the AI response.
+
+        Returns:
+            Dict with success, description, elements (with bounds + confidence).
+        """
+        from naturo.vision import identify_element as _identify_element
+
+        backend = _get_backend() if not screenshot_path else None
+        result = _identify_element(
+            element_description,
+            provider_name=provider_name,
+            backend=backend,
+            window_title=window_title,
+            screenshot_path=screenshot_path,
+            max_tokens=max_tokens,
+        )
+
+        response = {
+            "success": True,
+            "description": result.description,
+            "elements": result.elements,
+            "model": result.model,
+            "tokens_used": result.tokens_used,
+        }
+        return response
+
     return server
 
 

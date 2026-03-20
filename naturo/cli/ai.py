@@ -1,4 +1,4 @@
-"""AI commands: agent, mcp."""
+"""AI commands: agent, describe, mcp."""
 import click
 import json
 import sys
@@ -40,6 +40,109 @@ def agent(instruction, app, window_title, model, max_steps, dry_run, json_output
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(1)
+
+
+# ── describe ────────────────────────────────────
+
+
+@click.command()
+@click.option("--app", help="Target application window")
+@click.option("--window-title", help="Target window title pattern")
+@click.option("--screenshot", type=click.Path(), default=None,
+              help="Use an existing screenshot instead of capturing")
+@click.option("--provider", type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+              default="auto", help="AI provider (default: auto-detect)")
+@click.option("--model", default=None, help="Model override (e.g., gpt-4o, claude-sonnet-4-20250514)")
+@click.option("--prompt", default=None, help="Custom analysis prompt")
+@click.option("--max-tokens", type=int, default=1024, help="Max response tokens")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def describe(app, window_title, screenshot, provider, model, prompt, max_tokens, json_output):
+    """Describe the screen or a window using AI vision.
+
+    Captures a screenshot and sends it to an AI model for analysis.
+    Returns a natural language description of what's visible.
+
+    Requires an AI provider API key:
+      - Anthropic: ANTHROPIC_API_KEY
+      - OpenAI: OPENAI_API_KEY
+      - Ollama: local server (no key needed)
+
+    Examples:
+        naturo describe                           # Describe full screen
+        naturo describe --app "Notepad"           # Describe Notepad window
+        naturo describe --screenshot capture.png  # Analyze existing image
+        naturo describe --provider openai         # Use OpenAI specifically
+    """
+    try:
+        from naturo.vision import describe_screen
+        from naturo.providers.base import get_vision_provider
+    except ImportError as e:
+        msg = f"Vision dependencies not available: {e}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Build provider kwargs
+    provider_kwargs = {}
+    if model:
+        provider_kwargs["model"] = model
+
+    try:
+        vision_provider = get_vision_provider(provider, **provider_kwargs)
+    except Exception as e:
+        msg = str(e)
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "AI_PROVIDER_UNAVAILABLE", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Validate screenshot path if provided
+    if screenshot and not __import__("os").path.exists(screenshot):
+        msg = f"Screenshot file not found: {screenshot}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": "FILE_NOT_FOUND", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    try:
+        result = describe_screen(
+            provider=vision_provider,
+            window_title=window_title or app,
+            screenshot_path=screenshot,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        )
+    except Exception as e:
+        msg = str(e)
+        code = "AI_ANALYSIS_FAILED"
+        if "unavailable" in msg.lower() or "api key" in msg.lower():
+            code = "AI_PROVIDER_UNAVAILABLE"
+        elif "capture" in msg.lower():
+            code = "CAPTURE_FAILED"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": {"code": code, "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    if json_output:
+        output = {
+            "success": True,
+            "description": result.description,
+            "model": result.model,
+            "tokens_used": result.tokens_used,
+        }
+        if result.elements:
+            output["elements"] = result.elements
+        click.echo(json.dumps(output, indent=2))
+    else:
+        click.echo(result.description)
+        if result.model:
+            click.echo(f"\n[Model: {result.model}, Tokens: {result.tokens_used}]", err=True)
 
 
 # ── mcp ─────────────────────────────────────────
