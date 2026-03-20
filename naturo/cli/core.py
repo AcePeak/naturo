@@ -83,6 +83,7 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
 
         if json_output:
             out = {
+                "success": True,
                 "path": result.path,
                 "width": result.width,
                 "height": result.height,
