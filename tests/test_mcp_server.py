@@ -67,6 +67,18 @@ class TestServerCreation:
         for name, tool in tools.items():
             assert tool.description, f"Tool '{name}' has no description"
 
+    def test_server_respects_host_port(self):
+        """BUG-041: host/port must be passed to FastMCP constructor."""
+        srv = create_server(host="0.0.0.0", port=9999)
+        assert srv.settings.host == "0.0.0.0"
+        assert srv.settings.port == 9999
+
+    def test_server_default_host_port(self):
+        """Default host/port should be localhost:3100."""
+        srv = create_server()
+        assert srv.settings.host == "localhost"
+        assert srv.settings.port == 3100
+
 
 # ── Input Validation (pure logic, no backend needed) ─────────────────────────
 
@@ -584,6 +596,25 @@ class TestMCPCli:
         assert result.exit_code == 0
         assert "stdio" in result.output
         assert "sse" in result.output
+
+    def test_mcp_install_json_no_text_prefix(self, runner):
+        """BUG-042: mcp install --json must not output text before JSON."""
+        from naturo.cli import main
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = runner.invoke(main, ["mcp", "install", "--json"])
+        output = result.output.strip()
+        assert not output.startswith("Installing"), f"Text prefix leaked into JSON output: {output[:80]}"
+        data = json.loads(output)
+        assert data["success"] is True
+
+    def test_mcp_install_no_json_shows_progress(self, runner):
+        """Non-JSON mcp install should show progress text."""
+        from naturo.cli import main
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = runner.invoke(main, ["mcp", "install"])
+        assert "Installing MCP dependencies" in result.output
 
 
 # ── Response Format Consistency ──────────────────────────────────────────────

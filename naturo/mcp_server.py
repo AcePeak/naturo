@@ -22,10 +22,12 @@ from naturo.errors import NaturoError
 logger = logging.getLogger(__name__)
 
 
-def create_server() -> FastMCP:
+def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     """Create and configure the Naturo MCP server."""
     server = FastMCP(
         name="naturo",
+        host=host,
+        port=port,
         instructions=(
             "Naturo — Windows desktop automation engine. "
             "Use these tools to see, click, type, and automate Windows applications. "
@@ -880,5 +882,5 @@ def _iter_elements(el):
 
 def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
     """Run the MCP server with the specified transport."""
-    server = create_server()
+    server = create_server(host=host, port=port)
     server.run(transport=transport)
