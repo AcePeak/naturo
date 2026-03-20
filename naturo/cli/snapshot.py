@@ -82,8 +82,12 @@ def snapshot_clean(days: int | None, clean_all: bool, yes: bool, json_output: bo
     to wipe everything.  Without either flag the command shows a help message.
     """
     if not clean_all and days is None:
-        click.echo("Specify --days N or --all.  Run with --help for usage.")
-        raise SystemExit(0)
+        msg = "Specify --days N or --all.  Run with --help for usage."
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
 
     if days is not None and days < 0:
         msg = f"--days must be >= 0, got {days}"
