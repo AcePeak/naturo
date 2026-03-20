@@ -9,91 +9,172 @@
 
 **Checkpoint:** CI green, `naturo version` works, backend auto-detection works on all platforms.
 
-## Phase 1 — See
-- Screen capture (DirectX / GDI)
+## Phase 1 — See ✅
+- Screen capture (GDI → Pillow PNG conversion)
 - Window enumeration
-- UI tree inspection (MSAA + UIA)
+- UI tree inspection (UIA)
 - Element attributes (name, role, bounds, state)
 
 **CLI commands:** `capture`, `list`, `see`
 
-**Checkpoint:** Can capture screenshot, list windows, inspect UI tree.
+## Phase 1.5 — Snapshot System ✅
+- Snapshot creation, storage, retrieval
+- Screenshot + UI tree bundling
+- Snapshot listing and cleanup
 
-## Phase 2 — Act
+## Phase 2 — Act ✅
 - Mouse input (click, double-click, right-click, drag)
 - Keyboard input (type text, press keys, combos)
 - Element finding by selector
 - Coordinate-based and element-based actions
 
-**CLI commands:** `click`, `type`, `press`, `find`
+**CLI commands:** `click`, `type`, `press`, `find`, `hotkey`, `scroll`, `drag`, `move`, `paste`
 
-**Checkpoint:** Can automate Notepad (open, type, save, close).
+## Phase 2.5 — Deep Capabilities ✅
+- Annotated screenshots (numbered bounding boxes)
+- Element search/query (fuzzy match, role filter)
+- UI hierarchy (parent_id, children linkage)
+- Keyboard shortcut discovery
+- Menu bar traversal
 
-## Phase 2.5 — Deep Capabilities (AI Agent 核心基础设施)
+## Phase 3 — Stabilize ✅
+- Error handling framework (Peekaboo-aligned error codes)
+- Wait/retry strategies (100ms polling, exponential backoff)
+- Process management (launch/quit/relaunch/find)
+- Element cache (TTL-based, auto-invalidation)
+- UI tree diff
+- CLI consistency test (no stubs exposed)
+- 40 bugs found and fixed through QA/Dev agent loop
+- 700+ tests
 
-**Goal**: Fill the capability gaps that AI agents need to drive real apps.
-These are the "deep water" features that Phase 1/2 left as data structures
-without real implementations. Without them, Phase 4 MCP is an empty shell.
+## Phase 3.5 — Window Management (补齐 Peekaboo 对等能力)
 
-**Prerequisites**: Phase 1 (See) + Phase 1.5 (Snapshot) + Phase 2 (Act)
+**Goal**: 实现完整的窗口操作，对齐 Peekaboo 的 `window` 命令组。
+
+**Prerequisites**: Phase 2 (Act) + Phase 3 (Stabilize)
 
 | Step | Deliverable | Status |
 |------|------------|--------|
-| 2.5.1 | **Annotated Screenshot** — Draw bounding boxes + numbered labels on screenshot so AI can visually locate elements. Pillow-based renderer. `naturo see --annotate` generates annotated.png stored via SnapshotManager. | 🔜 |
-| 2.5.2 | **Element Search/Query** — Fuzzy name matching (contains, case-insensitive), role filter, actionable filter, combo queries (`Button:*Save*`). `naturo find` returns all matches with breadcrumb paths. | 🔜 |
-| 2.5.3 | **UI Hierarchy** — `get_element_tree` fills `parent_id` and `children` IDs on every element. Python-layer tree walk generates stable IDs + parent linkage even when C++ DLL doesn't return them. | 🔜 |
-| 2.5.4 | **Keyboard Shortcut Discovery** — Read UIA AcceleratorKey / AccessKey properties. Fill `keyboard_shortcut` field on UIElement. Exposed in `naturo see` JSON output. | 🔜 |
-| 2.5.5 | **Menu Bar Traversal** — `get_menu_items()` walks MenuBar → MenuItem hierarchy via UIA. New `MenuItem` dataclass (name, shortcut, submenu, enabled, checked). CLI: `naturo menu [--app "Notepad"]`. | 🔜 |
+| 3.5.1 | **Window Focus** — `naturo window focus --app "Notepad"` / `--hwnd 12345` / `--window-title "文档"` | 🔜 |
+| 3.5.2 | **Window Close** — `naturo window close --app "Notepad"` 优雅关闭（WM_CLOSE），`--force` 强制终止 | 🔜 |
+| 3.5.3 | **Window Minimize/Maximize** — `naturo window minimize/maximize --app "Notepad"` | 🔜 |
+| 3.5.4 | **Window Move** — `naturo window move --app "Notepad" --x 100 --y 100` | 🔜 |
+| 3.5.5 | **Window Resize** — `naturo window resize --app "Notepad" --width 800 --height 600` | 🔜 |
+| 3.5.6 | **Window Set Bounds** — 一次性设置位置+大小，对齐 Peekaboo `window set-bounds` | 🔜 |
+| 3.5.7 | **App Hide/Unhide** — 最小化/恢复应用所有窗口 | 🔜 |
+| 3.5.8 | **App Switch** — 切换到目标应用（SetForegroundWindow） | 🔜 |
+| 3.5.9 | **MCP Window Tools** — 上述能力暴露到 MCP server | 🔜 |
 
-**Architecture**:
-- `naturo/annotate.py` — Screenshot annotation renderer (Pillow, optional dep `naturo[annotate]`)
-- `naturo/search.py` — Element search engine (fuzzy match, filters, breadcrumb)
-- `naturo/backends/base.py` — Add `get_menu_items()` abstract method + `MenuItem` dataclass
-- `naturo/backends/windows.py` — Fill parent_id/children/keyboard_shortcut in tree walk; UIA MenuBar traversal
-- `naturo/bridge.py` — Extend `ElementInfo` with optional parent_id, keyboard_shortcut fields
+**Implementation**: C++ DLL 层用 Win32 API（ShowWindow, MoveWindow, SetWindowPos, SetForegroundWindow）。Python 层通过 bridge.py 调用。
 
-**Test coverage**:
-- `tests/test_annotate.py` — Annotation rendering, label placement, edge cases
-- `tests/test_search.py` — Fuzzy match, role filter, combo queries, empty results
-- `tests/test_hierarchy.py` — Parent-child linkage, stable IDs, deep trees
-- `tests/test_shortcuts.py` — Shortcut extraction, fallback when unavailable
-- `tests/test_menu.py` — Menu traversal, nested submenus, disabled items
-
-**CI**: All tests run on Ubuntu/macOS/Windows. Windows-only features use xfail/skip on other platforms.
-
-**Checkpoint:** `naturo see --annotate` produces numbered screenshot. `naturo find "Save"` returns fuzzy matches with paths. `naturo menu` lists app menu structure. Snapshot JSON includes parent_id, children, keyboard_shortcut on every element.
-
-## Phase 3 — Stabilize
-- Error handling and recovery
-- Element wait/retry strategies
-- Process management (launch, attach, monitor)
-- Performance optimization (UIA caching)
-- Accessibility tree diff (detect changes)
-
-**Checkpoint:** Can handle real-world apps reliably.
+**Checkpoint:** `naturo window close --app "Notepad"` 可以关闭记事本。`naturo window move --app "Chrome" --x 0 --y 0 && naturo window resize --app "Chrome" --width 1920 --height 1080` 可以排列窗口。
 
 ## Phase 4 — AI Integration
-- MCP server implementation
-- Screenshot → AI vision pipeline
-- Natural language element finding
-- Action recording and replay
-- Agent-friendly error messages
 
-**Checkpoint:** AI agent can drive Windows apps end-to-end.
+**Goal**: 让 AI agent 能端到端驱动 Windows 应用。
 
-## Phase 5 — Complete
-- Multi-monitor support
-- DPI/scaling awareness
-- Virtual desktop support
-- Java Access Bridge
-- Electron/CEF app support
-- Package as standalone executable
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 4.1 | **MCP Server** — 29 tools, stdio/sse/streamable-http transport | ✅ Done |
+| 4.2 | **Screenshot → AI Vision** — 截图发给 AI 分析 UI 元素，返回结构化描述 | 🔜 |
+| 4.3 | **Natural Language Element Finding** — `naturo find "the save button"` 用 AI 理解自然语言 | 🔜 |
+| 4.4 | **Agent Command** — `naturo agent "打开记事本，输入Hello World，保存到桌面"` 多步骤自动执行 | 🔜 |
+| 4.5 | **Action Recording** — 录制用户操作序列，生成可回放的脚本 | 🔜 |
+| 4.6 | **Action Replay** — 回放录制的操作序列，支持参数化 | 🔜 |
+| 4.7 | **Agent-friendly Error Messages** — 错误信息包含恢复建议，帮助 AI 自我纠正 | 🔜 |
+| 4.8 | **Multi AI Provider** — Anthropic / OpenAI / Ollama / 自定义，类似 Peekaboo Tachikoma | 🔜 |
 
-**Checkpoint:** Production-ready for all common Windows apps.
+**Checkpoint:** `naturo agent "打开计算器，计算 123*456，截图结果"` 可以端到端完成。
+
+## Phase 4.5 — Dialog & System Integration
+
+**Goal**: 处理系统对话框和常见 UI 模式。
+
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 4.5.1 | **Dialog Detection** — 自动检测文件选择器、消息框、确认框 | 🔜 |
+| 4.5.2 | **Dialog Interaction** — `naturo dialog accept/dismiss/fill` | 🔜 |
+| 4.5.3 | **Clipboard Enhanced** — `naturo clipboard get/set` 命令（已有 backend，需暴露 CLI） | 🔜 |
+| 4.5.4 | **Taskbar Interaction** — 任务栏 pin/unpin/click | 🔜 |
+| 4.5.5 | **System Tray** — 系统托盘图标交互 | 🔜 |
+| 4.5.6 | **Open Command** — `naturo open <url/file>` 用默认应用打开 | ✅ Done |
+
+## Phase 5 — Complete (生产级 + 自然机器人差异化引擎)
+
+**Goal**: 实现自然机器人 C++ 引擎的深度能力，这是 Naturo 相比纯 Python 工具的核心竞争力。
+
+### 5A — Multi-Monitor & DPI
+
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 5A.1 | **Multi-Monitor Capture** — `naturo capture --screen 1` 指定显示器 | 🔜 |
+| 5A.2 | **DPI/Scaling Awareness** — 正确处理 125%/150%/200% 缩放下的坐标和截图 | 🔜 |
+| 5A.3 | **Virtual Desktop** — Windows 10/11 虚拟桌面切换和窗口管理 | 🔜 |
+
+### 5B — 自然机器人引擎移植（核心差异化）
+
+| Step | Deliverable | 来源 | Status |
+|------|------------|------|--------|
+| 5B.1 | **MSAA / IAccessible** — 传统可访问性 API，覆盖 UIA 不支持的老应用 | Naturobot_Client_Engine | 🔜 |
+| 5B.2 | **IAccessible2** — Firefox/Thunderbird 等 IA2 应用支持 | Naturobot_Client_Engine | 🔜 |
+| 5B.3 | **Java Access Bridge** — Java/Swing/AWT 应用自动化 | Naturobot_Client_Engine | 🔜 |
+| 5B.4 | **SAP GUI Scripting** — SAP ERP 应用自动化 | Naturobot_Client_Engine | 🔜 |
+| 5B.5 | **硬件级键盘 (Phys32)** — 绕过 SendInput 检测的底层键盘输入，适用于游戏/安全软件 | Naturobot_Client_Engine | 🔜 |
+| 5B.6 | **MinHook 注入** — 函数钩子，拦截/修改 Windows API 调用 | Naturobot_Client_Engine | 🔜 |
+| 5B.7 | **UIA 缓存优化** — 批量获取属性、减少跨进程 COM 调用、CacheRequest 模式 | Naturobot_Client_Engine | 🔜 |
+| 5B.8 | **Chrome Native Host** — 通过 Chrome DevTools Protocol 直接操作浏览器 DOM | Naturobot_Client_Engine | 🔜 |
+
+### 5C — Enterprise Features
+
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 5C.1 | **Excel COM Automation** — 读写单元格、运行宏、创建图表 | 🔜 |
+| 5C.2 | **Windows Registry** — 读写注册表 | 🔜 |
+| 5C.3 | **Windows Service** — 管理 Windows 服务 | 🔜 |
+| 5C.4 | **Electron/CEF App Support** — 识别 Electron 应用并提供 DOM 级操作 | 🔜 |
+
+### 5D — Packaging
+
+| Step | Deliverable | Status |
+|------|------------|--------|
+| 5D.1 | **Embedded Python Runtime** — 内置 Python 3.12 嵌入式包（~40MB），用户脚本运行环境 | 🔜 |
+| 5D.2 | **Standalone Executable** — Nuitka/PyInstaller 打包 naturo.exe | 🔜 |
+| 5D.3 | **User Script Runner** — `naturo run my_script.py` 用内置环境执行用户脚本 | 🔜 |
+
+**Checkpoint:** Java 应用（如 IntelliJ IDEA）可以被自动化。SAP GUI 可以被操作。游戏内输入不被检测。
+
+## Phase 5.1 — Open Source Launch
+
+**Goal**: Go public with maximum impact.
+
+**Pre-launch:**
+
+| Step | Deliverable |
+|------|------------|
+| 5.1.1 | Branch protection (require PR + CI) |
+| 5.1.2 | CONTRIBUTING.md |
+| 5.1.3 | CODE_OF_CONDUCT.md |
+| 5.1.4 | Issue/PR templates |
+| 5.1.5 | README hero GIF (Notepad E2E demo) |
+| 5.1.6 | README badges |
+| 5.1.7 | First PyPI release (`pip install naturo`) |
+| 5.1.8 | OpenClaw skill published to ClawHub |
+| 5.1.9 | 代码签名证书 + CI 集成 |
+| 5.1.10 | npm 包 (`npx naturo mcp`) |
+
+**Launch:**
+
+| Step | Deliverable |
+|------|------------|
+| 5.1.11 | Flip repo to public |
+| 5.1.12 | LinkedIn / Reddit / Twitter / HN / Discord announcements |
+| 5.1.13 | "How Naturo Works" blog post |
+| 5.1.14 | Submit to awesome-python, awesome-automation |
+| 5.1.15 | Demo videos (YouTube + Bilibili) |
 
 ## Phase 6 — macOS Backend
 
-**Goal**: Full macOS support via Peekaboo CLI wrapper
+**Goal**: Full macOS support via Peekaboo CLI wrapper.
 
 | Step | Deliverable |
 |------|------------|
@@ -101,105 +182,55 @@ without real implementations. Without them, Phase 4 MCP is an empty shell.
 | 6.2 | capture/list/see via Peekaboo |
 | 6.3 | click/type/press/hotkey via Peekaboo |
 | 6.4 | app/window/menu via Peekaboo |
-| 6.5 | dock/space mapping to Peekaboo equivalents |
+| 6.5 | dock/space mapping |
 | 6.6 | CI: macOS runner integration tests |
-| 6.7 | Fallback: pyobjc direct calls for Peekaboo-free environments |
+| 6.7 | Fallback: pyobjc for Peekaboo-free environments |
 
 ## Phase 7 — Linux Backend
 
-**Goal**: Linux (X11 + Wayland) support
+**Goal**: Linux (X11 + Wayland) support.
 
 | Step | Deliverable |
 |------|------------|
-| 7.1 | X11 backend: xdotool + python-xlib |
-| 7.2 | AT-SPI2 element inspection (pyatspi2) |
+| 7.1 | X11: xdotool + python-xlib |
+| 7.2 | AT-SPI2 element inspection |
 | 7.3 | Screenshot via Xlib / dbus portal |
-| 7.4 | Wayland backend: ydotool + wlr protocols |
+| 7.4 | Wayland: ydotool + wlr protocols |
 | 7.5 | CI: Ubuntu + xvfb UI tests |
-| 7.6 | GNOME + KDE compatibility testing |
+| 7.6 | GNOME + KDE compatibility |
 
 ## Phase 8 — National OS & Enterprise
 
-**Goal**: UOS, Kylin, openEuler support + enterprise features
+**Goal**: UOS, Kylin, openEuler support.
 
 | Step | Deliverable |
 |------|------------|
-| 8.1 | DDE (Deepin Desktop) compatibility testing |
-| 8.2 | Kylin adapters (if needed beyond Linux backend) |
-| 8.3 | Self-hosted CI runner for national OS |
-| 8.4 | Enterprise: recording/playback engine |
-| 8.5 | Enterprise: visual regression testing |
-
-## Phase 5.1 — Open Source Launch
-
-**Goal**: Go public with maximum impact
-
-**Pre-launch checklist (complete before flipping to public):**
-
-| Step | Deliverable |
-|------|------------|
-| 5.1.1 | Enable GitHub branch protection (require PR + CI) |
-| 5.1.2 | CONTRIBUTING.md — how to contribute, code style, PR process |
-| 5.1.3 | CODE_OF_CONDUCT.md |
-| 5.1.4 | Issue templates (bug report, feature request) |
-| 5.1.5 | PR template |
-| 5.1.6 | README hero GIF — notepad end-to-end automation demo |
-| 5.1.7 | README badges — static badges first (license, platform, Python version), CI/DeepWiki after public |
-| 5.1.8 | First PyPI release (`pip install naturo` works) |
-| 5.1.9 | OpenClaw skill published to ClawHub |
-| 5.1.10a | Nuitka/PyInstaller packaging — `naturo.exe` standalone binary |
-| 5.1.10b | 代码签名证书 — 购买 OV/OSS 证书，CI 集成自动签名，解决杀软误报 |
-| 5.1.10c | npm 包发布 — 平台检测 + 二进制下载，`npx naturo mcp` 一行启动 |
-
-**Launch day activities:**
-
-| Step | Deliverable |
-|------|------------|
-| 5.1.10 | Flip repo to public |
-| 5.1.11 | LinkedIn announcement post (Ace's profile) |
-| 5.1.12 | Reddit post (r/opensource, r/Python, r/automation) |
-| 5.1.13 | Twitter/X announcement |
-| 5.1.14 | Hacker News Show HN post |
-| 5.1.15 | OpenClaw community Discord announcement |
-
-**Post-launch growth:**
-
-| Step | Deliverable |
-|------|------------|
-| 5.1.16 | Monitor GitHub stars, issues, and PRs — respond within 24h |
-| 5.1.17 | Write "How Naturo works" technical blog post |
-| 5.1.18 | Submit to awesome-python, awesome-automation lists |
-| 5.1.19 | Create demo videos for YouTube/Bilibili |
-| 5.1.20 | Engage with OpenClaw/Peekaboo community — offer integrations |
+| 8.1 | DDE (Deepin Desktop) compatibility |
+| 8.2 | Kylin adapters |
+| 8.3 | Self-hosted CI runner |
+| 8.4 | Enterprise recording/playback engine |
+| 8.5 | Enterprise visual regression testing |
 
 ## Phase 9 — Strategic Outreach
 
-**Goal**: Build relationships with key ecosystem players
-
-**Prerequisites**: Meaningful traction (500+ stars, multiple ClawHub installs, or notable adoption)
+**Goal**: Build ecosystem relationships (after 500+ stars).
 
 | Step | Deliverable |
 |------|------------|
-| 9.1 | Reach out to Peekaboo author (steipete / Peter Steinberger) — propose collaboration or cross-reference |
-| 9.2 | Reach out to OpenClaw team — propose as recommended Windows automation tool |
-| 9.3 | Conference talk proposal (PyCon, EuroPython, or similar) |
-| 9.4 | Partner with RPA/testing tool communities |
-| 9.5 | Explore Peekaboo integration — Naturo as official Windows counterpart |
-
-**Note on steipete outreach**: steipete is also the author of OpenClaw (previously Clawd). The email should be genuine, technically substantive, and sent only after Naturo has demonstrated real value (fast star growth, ClawHub adoption, or a compelling integration story). No cold pitch — show, don't tell.
+| 9.1 | Peekaboo author collaboration |
+| 9.2 | OpenClaw team — recommended Windows tool |
+| 9.3 | Conference talk (PyCon/EuroPython) |
+| 9.4 | RPA/testing community partnerships |
+| 9.5 | Peekaboo integration — official Windows counterpart |
 
 ---
 
 ## TDD Requirements (All Phases)
 
-Every feature follows this cycle:
-1. Write failing test
-2. Implement minimum code to pass
-3. Refactor
-4. Review (QA → PD → Security)
+1. Write failing test → 2. Implement → 3. Refactor → 4. QA/PD/Security review
 
-## Review Roles
+## Agent Development Loop
 
-- **QA:** Test coverage, edge cases, error paths
-- **PD:** User experience, CLI design, documentation
-- **Security:** No credential leaks, safe input handling, no privilege escalation
+- **Dev Agent**: 每 15 分钟巡检，修 bug + 实现功能
+- **QA Agent**: 每 30 分钟巡检，验证 + 自发现测试
+- 协同通过 `agents/STATE.md` + `.work/bugs.md` + 飞书群

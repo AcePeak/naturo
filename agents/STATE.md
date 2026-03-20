@@ -3,7 +3,7 @@
 > 每个 Agent 启动时**必读**，执行后**必更新自己的状态**
 
 ## 🎯 当前目标
-**Phase 3 完成 ✅ → 准备推进 Phase 4 (AI Integration)**
+**Phase 3.5 (Window Management) — 补齐窗口操作，对齐 Peekaboo**
 
 ## 📍 进度
 - [x] Phase 0 — Project Skeleton ✅
@@ -11,32 +11,33 @@
 - [x] Phase 1.5 — Snapshot ✅
 - [x] Phase 2 — Act ✅
 - [x] Phase 2.5 — Deep Capabilities ✅
-- [x] **Phase 3 — Stabilize** ✅
-  - [x] 错误处理框架 (errors.py)
-  - [x] Wait/Retry 策略 (retry.py, wait.py)
-  - [x] 进程管理 (process.py)
-  - [x] 缓存优化 (cache.py)
-  - [x] UI Tree Diff (diff.py)
-  - [x] CLI 命令 (wait/app/diff)
-  - [x] Stub 命令隐藏
-  - [x] Bug 修复 — 37/37 Verified ✅
-  - [x] E2E 验收 — QA Round 9 全部通过 ✅
-- [ ] **Phase 4 — AI Integration** ← 下一步
-- [ ] Phase 5 — Complete
+- [x] Phase 3 — Stabilize ✅ (40 bugs fixed, 700+ tests)
+- [ ] **Phase 3.5 — Window Management** ← 当前
+- [ ] Phase 4 — AI Integration (MCP server 基础已完成)
+- [ ] Phase 4.5 — Dialog & System Integration
+- [ ] Phase 5 — Complete (自然机器人引擎差异化)
+- [ ] Phase 5.1 — Open Source Launch
 
 ## 🔄 各角色状态
 
 | 角色 | 正在做 | 上次更新 |
 |------|--------|----------|
-| Dev | **Phase 4 推进** — MCP server 29 tools (编译机验证 ✅)。`mcp` 命令组公开（含 install/start/tools）。Agent 框架实现（agent.py: AIProvider protocol + ToolExecutor + run_agent loop）。714 tests pass (macOS)。下一步: AI provider 实现 (Anthropic/OpenAI) | 3/20 22:30 |
-| QA | **Round 10** — Phase 4 MCP Server 首轮验收。BUG-038~040 已全部修复验证。 | 3/20 21:50 |
+| Dev | Phase 4 MCP 基础完成(29 tools)，待开始 Phase 3.5 窗口管理 | 3/20 22:00 |
+| QA | 40 bugs 全部 verified，等待新功能测试 | 3/20 21:30 |
 
 ## 🐛 Bug 概况
-- 🔴 Open: 0 个
-- 🟢 Fixed: 0 个
-- ✅ Verified: 40 个（BUG-007~040 全部验证通过）
+- 🔴 Open: 0
+- 🟢 Fixed 待验证: 0
+- ✅ Verified: 40
 
-详见 `.work/bugs.md`
+## 📋 当前优先级
+1. **Phase 3.5** — 窗口管理 (focus/close/minimize/maximize/move/resize/set-bounds)
+   - C++ DLL 层：Win32 API (ShowWindow, MoveWindow, SetWindowPos, SetForegroundWindow)
+   - Python bridge 层：新增 bridge 函数
+   - CLI 层：`naturo window` 命令组
+   - MCP 层：暴露为 MCP tools
+2. **Phase 4 继续** — AI vision + agent 命令 + 录制回放
+3. **Phase 4.5** — Dialog 处理 + 系统集成
 
 ## 📌 设计原则（不可违反）
 1. 未实现的功能不暴露给用户
@@ -45,8 +46,5 @@
 4. 帮助和实际行为始终一致
 5. 错误信息面向用户
 6. --json 模式下任何输出必须是合法 JSON
-
-�始终一致
-5. 错误信息面向用户
-6. --json 模式下任何输出必须是合法 JSON
-
+7. 一个 bug = 一个 commit
+8. 只操作 ~/Ace/naturo/，禁止其他项目
