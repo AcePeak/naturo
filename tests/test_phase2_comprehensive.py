@@ -476,7 +476,7 @@ class TestCLIJsonOutput:
             try:
                 data = json.loads(result.output)
                 assert isinstance(data, dict)
-                assert "ok" in data
+                assert "success" in data
             except json.JSONDecodeError:
                 pass  # May not output JSON on error
 
@@ -553,8 +553,8 @@ class TestSecurityInputSanitization:
             try:
                 data = json.loads(result.output)
                 # If it ran, it should report typing the literal string
-                if data.get("ok"):
-                    assert data.get("text") == "$(rm -rf /)"
+                if data.get("success"):
+                    assert data.get("data", {}).get("text") == "$(rm -rf /)"
             except json.JSONDecodeError:
                 pass
 

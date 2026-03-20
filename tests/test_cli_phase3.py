@@ -304,7 +304,7 @@ class TestPressValidation:
         result = runner.invoke(main, ["press", "enter", "--count", "-1", "--json"])
         assert result.exit_code == 1
         data = json.loads(result.output)
-        assert data["ok"] is False
+        assert data["success"] is False
 
 
 class TestSnapshotCleanValidation:

@@ -20,16 +20,17 @@ def _get_backend():
 def _json_ok(data: dict, json_output: bool) -> None:
     """Emit success result as JSON or plain text."""
     if json_output:
-        click.echo(json.dumps({"ok": True, **data}))
+        click.echo(json.dumps({"success": True, "data": data}))
     else:
         for k, v in data.items():
             click.echo(f"{k}: {v}")
 
 
-def _json_err(msg: str, json_output: bool, exit_code: int = 1) -> None:
+def _json_err(msg: str, json_output: bool, exit_code: int = 1,
+              code: str = "ACTION_ERROR") -> None:
     """Emit error result as JSON or plain text, then exit."""
     if json_output:
-        click.echo(json.dumps({"ok": False, "error": msg}))
+        click.echo(json.dumps({"success": False, "error": {"code": code, "message": msg}}))
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(exit_code)
@@ -93,7 +94,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
         target_id = selector
         x, y = None, None
     else:
-        _json_err("Specify --coords X Y, --id, or --on TEXT", json_output)
+        _json_err("Specify --coords X Y, --id, or --on TEXT", json_output, code="INVALID_INPUT")
         return
 
     try:
@@ -156,7 +157,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type "text" --profile human --wpm 60
     """
     if not text:
-        _json_err("TEXT argument is required", json_output)
+        _json_err("TEXT argument is required", json_output, code="INVALID_INPUT")
         return
 
     backend = _get_backend()
@@ -214,7 +215,7 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, json_output):
       naturo press f5
     """
     if count < 1:
-        _json_err(f"--count must be >= 1, got {count}", json_output)
+        _json_err(f"--count must be >= 1, got {count}", json_output, code="INVALID_INPUT")
         return
 
     import time
@@ -268,7 +269,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     elif keys_option:
         key_list = list(keys_option)
     else:
-        _json_err("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output)
+        _json_err("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output, code="INVALID_INPUT")
         return
 
     try:
@@ -309,6 +310,10 @@ def scroll(direction, amount, on_text, smooth, delay, app, window_title,
       naturo scroll --direction down --amount 5
       naturo scroll -d up -a 3
     """
+    if amount < 1:
+        _json_err(f"--amount must be >= 1, got {amount}", json_output, code="INVALID_INPUT")
+        return
+
     backend = _get_backend()
 
     try:
@@ -349,10 +354,10 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
       naturo drag --from-coords 100 100 --to-coords 500 300
     """
     if not from_coords:
-        _json_err("Specify --from-coords X Y (element-based drag coming in Phase 3)", json_output)
+        _json_err("Specify --from-coords X Y (element-based drag coming in Phase 3)", json_output, code="INVALID_INPUT")
         return
     if not to_coords:
-        _json_err("Specify --to-coords X Y", json_output)
+        _json_err("Specify --to-coords X Y", json_output, code="INVALID_INPUT")
         return
 
     backend = _get_backend()
@@ -396,7 +401,7 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
       naturo move --coords 500 300
     """
     if not coords:
-        _json_err("Specify --coords X Y", json_output)
+        _json_err("Specify --coords X Y", json_output, code="INVALID_INPUT")
         return
 
     backend = _get_backend()
@@ -439,7 +444,7 @@ def paste(text, file_path, restore, app, window_title, hwnd, json_output):
     elif text:
         content = text
     else:
-        _json_err("Specify TEXT or --file", json_output)
+        _json_err("Specify TEXT or --file", json_output, code="INVALID_INPUT")
         return
 
     try:

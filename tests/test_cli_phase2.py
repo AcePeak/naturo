@@ -216,7 +216,7 @@ class TestClickValidation:
         assert result.exit_code != 0
         try:
             data = json.loads(result.output)
-            assert data.get("ok") is False
+            assert data.get("success") is False
         except json.JSONDecodeError:
             pass  # Non-JSON error output is also acceptable
 

@@ -174,7 +174,7 @@ class TestClickCLIValidation:
         if output:
             try:
                 data = json.loads(output)
-                assert data.get("ok") is False
+                assert data.get("success") is False
                 assert "error" in data
             except json.JSONDecodeError:
                 pass  # Non-JSON error is also acceptable

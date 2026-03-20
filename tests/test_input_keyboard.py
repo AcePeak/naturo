@@ -464,6 +464,6 @@ class TestKeyboardFunctionalWindows:
         result = runner.invoke(main, ["type", "hello", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data.get("ok") is True
-        assert "text" in data
-        assert "length" in data
+        assert data.get("success") is True
+        assert "text" in data.get("data", {})
+        assert "length" in data.get("data", {})
