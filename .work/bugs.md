@@ -206,7 +206,7 @@
 
 ---
 
-## 🆕 Phase 4 (MCP Server) — Round 10
+## 🆕 Phase 4 (MCP Server) — Round 10 续
 
 ### BUG-038: `hotkey` MCP tool 使用 `*keys` 导致完全无法调用
 - **状态**: ✅ Verified — 已改为 `keys: list[str]`，空列表返回 INVALID_INPUT 错误
@@ -231,3 +231,32 @@
 - **文件**: tests/test_process.py (TestLaunchApp 类)
 
 ---
+
+## 🆕 Round 11 自发现（MCP Server 深度测试）
+
+### BUG-041: `mcp start --port/--host` 参数被忽略，始终绑定 127.0.0.1:8000
+- **状态**: 🟢 Fixed
+- **严重度**: 🔴 严重（MCP server 端口不可配置，多实例/代理场景完全不可用）
+- **现象**: `naturo mcp start --transport sse --port 3100` 实际绑定到 `127.0.0.1:8000`。`--port 9999 --host 0.0.0.0` 同样无效。help 文档声称默认端口 3100，实际是 uvicorn 默认 8000
+- **根因**: `run_server()` 接收了 host/port 参数但 `server.run(transport=transport)` 没传递
+- **命令**: `naturo mcp start --transport sse --port 3100`
+- **预期**: 绑定到 `localhost:3100`
+- **实际**: 绑定到 `127.0.0.1:8000`
+- **文件**: naturo/mcp_server.py (run_server 函数，第 881 行)
+
+### BUG-042: `mcp install --json` 在 JSON 前混入纯文本 "Installing MCP dependencies..."
+- **状态**: 🟢 Fixed
+- **严重度**: 🟡 中等（违反设计原则 #6 — --json 模式下任何输出必须是合法 JSON）
+- **现象**: stdout 输出 `Installing MCP dependencies...\n{"success": true, ...}`，前缀文本导致 JSON 解析失败
+- **命令**: `naturo mcp install --json`
+- **预期**: stdout 只输出 JSON，进度信息走 stderr 或不输出
+- **文件**: naturo/cli/ai.py (install 函数，约第 110 行 `click.echo("Installing MCP dependencies...")`)
+
+### BUG-043: `mcp start` 失败时 `--json` 不输出 JSON（uvicorn 日志泄漏）
+- **状态**: 🟢 Fixed
+- **严重度**: 🟡 中等（违反设计原则 #6 + 错误信息不友好）
+- **现象**: `naturo mcp start --transport sse --json` 端口被占用时，输出 uvicorn 的 INFO/ERROR 日志文本而非 JSON。异常被 uvicorn 内部处理，没到 CLI 的 except 分支
+- **命令**: `naturo mcp start --transport sse --json`（端口被占用时）
+- **预期**: `{"success": false, "error": {"code": "SERVER_ERROR", "message": "Port 8000 already in use"}}`
+- **实际**: `INFO: Started server process...` + `ERROR: [Errno 10048]...`
+- **文件**: naturo/cli/ai.py (start 函数) + naturo/mcp_server.py (run_server)
