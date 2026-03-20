@@ -83,28 +83,147 @@ def menu_list(app, window_title, hwnd, depth, json_output):
 
 @click.group()
 def clipboard():
-    """Get or set clipboard content."""
+    """Get or set clipboard text content.
+
+    Examples:
+        naturo clipboard get                  # Print clipboard text
+        naturo clipboard get --json           # JSON output
+        naturo clipboard set "Hello World"    # Set clipboard text
+        naturo clipboard set --file note.txt  # Set clipboard from file
+    """
     pass
 
 
 @clipboard.command()
-@click.option("--format", "fmt", type=click.Choice(["text", "image", "file", "auto"]),
-              default="auto", help="Content format to retrieve")
-@click.option("--path", "-p", help="Save clipboard image/file to path")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def get(fmt, path, json_output):
-    """Get clipboard content."""
-    click.echo("Not implemented yet — coming in Phase 2")
+def get(json_output):
+    """Get clipboard text content.
+
+    Retrieves the current text content from the system clipboard.
+
+    Examples:
+        naturo clipboard get          # Print clipboard text to stdout
+        naturo clipboard get --json   # {"success": true, "text": "..."}
+    """
+    import json as _json
+    import sys
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        text = backend.clipboard_get()
+        if json_output:
+            click.echo(_json.dumps({"success": True, "text": text}))
+        else:
+            click.echo(text, nl=False)
+    except NaturoError as e:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": e.code, "message": e.message},
+            }))
+        else:
+            click.echo(f"Error: {e.message}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": "UNKNOWN_ERROR", "message": str(e)},
+            }))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
-@clipboard.command()
+@clipboard.command("set")
 @click.argument("content", required=False)
-@click.option("--file", "file_path", type=click.Path(exists=True), help="Set clipboard from file")
-@click.option("--image", "image_path", type=click.Path(exists=True), help="Set clipboard to image")
+@click.option("--file", "file_path", type=click.Path(exists=True), help="Set clipboard from file content")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def set(content, file_path, image_path, json_output):
-    """Set clipboard content (text, file, or image)."""
-    click.echo("Not implemented yet — coming in Phase 2")
+def clipboard_set(content, file_path, json_output):
+    """Set clipboard text content.
+
+    Provide text as an argument, or use --file to read from a file.
+    If neither is given, reads from stdin.
+
+    Args:
+        content: Text to copy to clipboard.
+
+    Examples:
+        naturo clipboard set "Hello World"       # Set from argument
+        naturo clipboard set --file readme.txt   # Set from file
+        echo "piped" | naturo clipboard set      # Set from stdin
+    """
+    import json as _json
+    import sys
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    # Determine text source: argument > --file > stdin
+    if content is not None and file_path is not None:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": "INVALID_INPUT", "message": "Specify text or --file, not both."},
+            }))
+        else:
+            click.echo("Error: Specify text or --file, not both.", err=True)
+        sys.exit(1)
+
+    text: str
+    if content is not None:
+        text = content
+    elif file_path is not None:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except Exception as e:
+            if json_output:
+                click.echo(_json.dumps({
+                    "success": False,
+                    "error": {"code": "FILE_ERROR", "message": str(e)},
+                }))
+            else:
+                click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
+    elif not sys.stdin.isatty():
+        text = sys.stdin.read()
+    else:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": "INVALID_INPUT", "message": "No content provided. Pass text, --file, or pipe stdin."},
+            }))
+        else:
+            click.echo("Error: No content provided. Pass text, --file, or pipe stdin.", err=True)
+        sys.exit(1)
+
+    try:
+        backend = get_backend()
+        backend.clipboard_set(text)
+        if json_output:
+            click.echo(_json.dumps({"success": True, "length": len(text)}))
+        else:
+            click.echo(f"Clipboard set ({len(text)} chars)")
+    except NaturoError as e:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": e.code, "message": e.message},
+            }))
+        else:
+            click.echo(f"Error: {e.message}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        if json_output:
+            click.echo(_json.dumps({
+                "success": False,
+                "error": {"code": "UNKNOWN_ERROR", "message": str(e)},
+            }))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 # ── dialog ──────────────────────────────────────

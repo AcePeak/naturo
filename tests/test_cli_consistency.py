@@ -67,7 +67,7 @@ def test_hidden_commands_not_in_help():
     # Check top level
     result = runner.invoke(main, ["--help"])
     # Known hidden top-level groups that were removed entirely
-    for name in ["menu", "clipboard", "dialog", "open", "taskbar",
+    for name in ["menu", "dialog", "open", "taskbar",
                  "tray", "desktop", "agent", "excel", "java", "sap",
                  "registry", "service", "tools"]:
         # These should not appear as commands in help
