@@ -534,6 +534,22 @@ class MacOSBackend(Backend):
 
     # === UI Element Inspection ===
 
+    def get_element_value(
+        self,
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read element value — not yet supported on macOS.
+
+        Returns:
+            None (macOS does not yet support UIA pattern value reading).
+        """
+        return None
+
     def find_element(
         self,
         selector: str = "",

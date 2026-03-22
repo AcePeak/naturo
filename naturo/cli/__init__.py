@@ -22,6 +22,7 @@ import click
 from naturo.version import __version__
 
 from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect
+from naturo.cli.get_cmd import get_cmd
 from naturo.cli.interaction import (
     click_cmd, type_cmd, press, hotkey, scroll, drag, move,
 )
@@ -69,6 +70,7 @@ main.add_command(capture)
 main.add_command(list_cmd, "list")
 main.add_command(see)
 main.add_command(find_cmd, "find")
+main.add_command(get_cmd, "get")
 main.add_command(menu_inspect, "menu-inspect")
 
 # ── Interaction ─────────────────────────────────

@@ -400,10 +400,10 @@ def permissions(json_output):
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
-    "--backend", "-b",
+    "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "auto"]),
     default="uia",
-    help="Accessibility backend: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
+    help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, json_output, backend):
     """Capture screenshot and analyze UI elements.
@@ -617,10 +617,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--app", "ai_app", default=None, help="Target app window (for --ai mode)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
-    "--backend", "-b",
+    "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "auto"]),
     default="uia",
-    help="Accessibility backend: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
+    help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
 def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai_app, json_output, backend):
     """Search for UI elements matching a query.

@@ -241,6 +241,52 @@ class SnapshotManager:
         cy = ey + eh // 2
         return (cx, cy, recent_id)
 
+    def resolve_ref_element(self, ref: str) -> Optional[tuple]:
+        """Resolve a short element ref (e.g. ``e3``) to full element info.
+
+        Searches the most recent valid snapshot for the ref and returns
+        the complete :class:`UIElement` object along with the snapshot ID.
+
+        Parameters
+        ----------
+        ref:
+            Short ref string (e.g. ``"e3"``).
+
+        Returns
+        -------
+        tuple | None
+            ``(UIElement, snapshot_id)`` or ``None`` if not found.
+        """
+        recent_id = self.get_most_recent_snapshot()
+        if not recent_id:
+            return None
+
+        snap_dir = self._snap_dir(recent_id)
+        ref_path = snap_dir / "refs.json"
+
+        with self._lock:
+            if not ref_path.exists():
+                return None
+            try:
+                ref_map = json.loads(ref_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+
+        element_id = ref_map.get(ref)
+        if not element_id:
+            return None
+
+        try:
+            snapshot = self.get_snapshot(recent_id)
+        except Exception:
+            return None
+
+        element = snapshot.ui_map.get(element_id)
+        if not element:
+            return None
+
+        return (element, recent_id)
+
     def store_annotated(self, snapshot_id: str, annotated_path: str) -> None:
         """Copy an annotated screenshot into the snapshot directory.
 

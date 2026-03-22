@@ -193,6 +193,34 @@ class Backend(ABC):
 
     # === Input ===
     @abstractmethod
+    def get_element_value(
+        self,
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read the current value/text of a UI element.
+
+        Uses UIA patterns (Value, Toggle, Selection, RangeValue, Text) to
+        retrieve the element's current value.
+
+        Args:
+            ref: Element ref from snapshot (e.g. ``"e47"``).
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"Edit"``).
+            name: Element name.
+            window_title: Window title for targeting.
+            hwnd: Window handle.
+
+        Returns:
+            Dict with value, pattern, role, name, automation_id, and bounds;
+            or ``None`` if element not found.
+        """
+        raise NotImplementedError
+
     def click(self, x: int = None, y: int = None, element_id: str = None,
               button: str = "left", double: bool = False, input_mode: str = "normal") -> None:
         ...

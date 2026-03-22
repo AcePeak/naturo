@@ -934,6 +934,90 @@ class WindowsBackend(Backend):
 
         return convert(result)
 
+    def get_element_value(
+        self,
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read the current value/text of a UI element via UIA patterns.
+
+        Supports element refs (e47), AutomationId, or role+name lookup.
+        Queries ValuePattern, TogglePattern, SelectionPattern,
+        RangeValuePattern, and TextPattern.
+
+        Args:
+            ref: Element ref from snapshot (e.g. ``"e47"``).
+            automation_id: UIA AutomationId string.
+            role: Element role (e.g. ``"Edit"``).
+            name: Element name.
+            window_title: Window title for targeting.
+            hwnd: Window handle.
+
+        Returns:
+            Dict with ``value``, ``pattern``, ``role``, ``name``,
+            ``automation_id``, and bounding rect; or ``None`` if not found.
+
+        Raises:
+            NaturoError: If the element cannot be found or queried.
+        """
+        core = self._get_core()
+
+        # Resolve ref to element metadata via snapshot cache
+        resolved_aid = automation_id
+        resolved_role = role
+        resolved_name = name
+        target_hwnd = hwnd or 0
+
+        if ref and not resolved_aid:
+            from naturo.snapshot import SnapshotManager
+            mgr = SnapshotManager()
+            result = mgr.resolve_ref_element(ref)
+            if result:
+                elem, _snap_id = result
+                # Use the element's identifier (AutomationId) if available
+                if elem.identifier:
+                    resolved_aid = elem.identifier
+                elif elem.role and elem.title:
+                    resolved_role = elem.role
+                    resolved_name = elem.title
+                elif elem.role and elem.label:
+                    resolved_role = elem.role
+                    resolved_name = elem.label
+                else:
+                    raise NaturoError(
+                        f"Element {ref} has no AutomationId, role, or name "
+                        f"for value lookup"
+                    )
+            else:
+                raise NaturoError(
+                    f"Element ref '{ref}' not found in snapshot cache. "
+                    f"Run 'naturo see' first to capture elements."
+                )
+
+        if window_title and not target_hwnd:
+            wins = core.list_windows()
+            for w in wins:
+                if window_title.lower() in (w.title or "").lower():
+                    target_hwnd = w.hwnd
+                    break
+
+        if not resolved_aid and not resolved_role and not resolved_name:
+            raise NaturoError(
+                "Must specify ref, automation_id, or role/name to get value"
+            )
+
+        result = core.get_element_value(
+            hwnd=target_hwnd,
+            automation_id=resolved_aid,
+            role=resolved_role,
+            name=resolved_name,
+        )
+        return result
+
     # === Phase 2: Input ===
 
     def click(self, x: Optional[int] = None, y: Optional[int] = None,

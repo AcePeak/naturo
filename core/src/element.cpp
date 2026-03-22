@@ -601,6 +601,357 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
     return 0;
 }
 
+/**
+ * @brief Locate a UIA element by AutomationId, or by role+name fallback.
+ *
+ * @param uia       Initialized IUIAutomation instance.
+ * @param root      Root element to search within.
+ * @param automation_id  AutomationId string (UTF-8), or NULL.
+ * @param role      Role filter (e.g. "Edit"), or NULL.
+ * @param name      Name filter, or NULL.
+ * @return Found element (caller must Release), or NULL.
+ */
+static IUIAutomationElement* find_element_by_id_or_role(
+    IUIAutomation* uia, IUIAutomationElement* root,
+    const char* automation_id, const char* role, const char* name)
+{
+    IUIAutomationElement* found = NULL;
+
+    if (automation_id && automation_id[0]) {
+        // Search by AutomationId
+        int aid_len = MultiByteToWideChar(CP_UTF8, 0, automation_id, -1, NULL, 0);
+        wchar_t* aid_wide = new wchar_t[aid_len];
+        MultiByteToWideChar(CP_UTF8, 0, automation_id, -1, aid_wide, aid_len);
+        BSTR aid_bstr = SysAllocString(aid_wide);
+        delete[] aid_wide;
+
+        VARIANT var;
+        var.vt = VT_BSTR;
+        var.bstrVal = aid_bstr;
+
+        IUIAutomationCondition* cond = NULL;
+        HRESULT hr = uia->CreatePropertyCondition(
+            UIA_AutomationIdPropertyId, var, &cond);
+        SysFreeString(aid_bstr);
+
+        if (SUCCEEDED(hr) && cond) {
+            // Try self first
+            root->FindFirst(TreeScope_Element | TreeScope_Descendants,
+                            cond, &found);
+            cond->Release();
+        }
+    }
+
+    if (!found && (role || name)) {
+        // Fallback: search by role+name (brute-force descendants)
+        IUIAutomationCondition* true_cond = NULL;
+        uia->CreateTrueCondition(&true_cond);
+        if (!true_cond) return NULL;
+
+        IUIAutomationElementArray* all = NULL;
+        HRESULT hr = root->FindAll(TreeScope_Descendants, true_cond, &all);
+        true_cond->Release();
+
+        if (SUCCEEDED(hr) && all) {
+            int length = 0;
+            all->get_Length(&length);
+            for (int i = 0; i < length; ++i) {
+                IUIAutomationElement* elem = NULL;
+                all->GetElement(i, &elem);
+                if (!elem) continue;
+
+                bool match = true;
+
+                if (role) {
+                    CONTROLTYPEID ct = 0;
+                    elem->get_CurrentControlType(&ct);
+                    if (_stricmp(control_type_to_role(ct), role) != 0)
+                        match = false;
+                }
+
+                if (match && name) {
+                    BSTR n = NULL;
+                    elem->get_CurrentName(&n);
+                    if (n) {
+                        int needed = WideCharToMultiByte(
+                            CP_UTF8, 0, n, -1, NULL, 0, NULL, NULL);
+                        char* utf8 = new char[needed];
+                        WideCharToMultiByte(
+                            CP_UTF8, 0, n, -1, utf8, needed, NULL, NULL);
+                        if (_stricmp(utf8, name) != 0) match = false;
+                        delete[] utf8;
+                        SysFreeString(n);
+                    } else {
+                        match = false;
+                    }
+                }
+
+                if (match) {
+                    found = elem;
+                    break;
+                }
+                elem->Release();
+            }
+            all->Release();
+        }
+    }
+
+    return found;
+}
+
+/**
+ * @brief Query UIA patterns on an element and build a value JSON response.
+ *
+ * Tries patterns in priority order: Value, Text, Toggle, Selection, RangeValue.
+ */
+NATURO_API int naturo_get_element_value(uintptr_t hwnd,
+                                         const char* automation_id,
+                                         const char* role_filter,
+                                         const char* name_filter,
+                                         char* result_json, int buf_size) {
+    if (!result_json || buf_size <= 0) return -1;
+    if (!automation_id && !role_filter && !name_filter) return -1;
+
+    HWND target = (HWND)hwnd;
+    if (!target) {
+        target = GetForegroundWindow();
+        if (!target) return -2;
+    }
+
+    IUIAutomation* uia = NULL;
+    HRESULT hr = CoCreateInstance(__uuidof(CUIAutomation), NULL,
+                                  CLSCTX_INPROC_SERVER, __uuidof(IUIAutomation),
+                                  (void**)&uia);
+    if (FAILED(hr) || !uia) return -2;
+
+    IUIAutomationElement* root = NULL;
+    hr = uia->ElementFromHandle(target, &root);
+    if (FAILED(hr) || !root) {
+        uia->Release();
+        return -2;
+    }
+
+    IUIAutomationElement* elem = find_element_by_id_or_role(
+        uia, root, automation_id, role_filter, name_filter);
+
+    if (!elem) {
+        root->Release();
+        uia->Release();
+        return 1;  // Not found
+    }
+
+    // Gather basic info
+    BSTR elem_name_bstr = NULL;
+    elem->get_CurrentName(&elem_name_bstr);
+    std::string elem_name = elem_name_bstr ? json_escape(elem_name_bstr) : "";
+    if (elem_name_bstr) SysFreeString(elem_name_bstr);
+
+    CONTROLTYPEID elem_ct = 0;
+    elem->get_CurrentControlType(&elem_ct);
+    const char* elem_role = control_type_to_role(elem_ct);
+
+    BSTR elem_aid_bstr = NULL;
+    elem->get_CurrentAutomationId(&elem_aid_bstr);
+    std::string elem_aid = elem_aid_bstr ? json_escape(elem_aid_bstr) : "";
+    if (elem_aid_bstr) SysFreeString(elem_aid_bstr);
+
+    RECT elem_rect = {0, 0, 0, 0};
+    elem->get_CurrentBoundingRectangle(&elem_rect);
+
+    // Try UIA patterns to get value
+    std::string value;
+    std::string pattern_name = "null";
+    bool has_value = false;
+
+    // 1) ValuePattern
+    if (!has_value) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_ValuePatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationValuePattern* vp = NULL;
+            hr = pat_unk->QueryInterface(__uuidof(IUIAutomationValuePattern),
+                                          (void**)&vp);
+            if (SUCCEEDED(hr) && vp) {
+                BSTR val = NULL;
+                hr = vp->get_CurrentValue(&val);
+                if (SUCCEEDED(hr) && val) {
+                    value = json_escape(val);
+                    SysFreeString(val);
+                    has_value = true;
+                    pattern_name = "\"ValuePattern\"";
+                }
+                vp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
+    // 2) TogglePattern (checkboxes)
+    if (!has_value) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_TogglePatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationTogglePattern* tp = NULL;
+            hr = pat_unk->QueryInterface(__uuidof(IUIAutomationTogglePattern),
+                                          (void**)&tp);
+            if (SUCCEEDED(hr) && tp) {
+                ToggleState state;
+                hr = tp->get_CurrentToggleState(&state);
+                if (SUCCEEDED(hr)) {
+                    switch (state) {
+                        case ToggleState_Off:
+                            value = "Off";
+                            break;
+                        case ToggleState_On:
+                            value = "On";
+                            break;
+                        case ToggleState_Indeterminate:
+                            value = "Indeterminate";
+                            break;
+                    }
+                    has_value = true;
+                    pattern_name = "\"TogglePattern\"";
+                }
+                tp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
+    // 3) SelectionPattern (lists, combos)
+    if (!has_value) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_SelectionPatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationSelectionPattern* sp = NULL;
+            hr = pat_unk->QueryInterface(
+                __uuidof(IUIAutomationSelectionPattern), (void**)&sp);
+            if (SUCCEEDED(hr) && sp) {
+                IUIAutomationElementArray* sel = NULL;
+                hr = sp->GetCurrentSelection(&sel);
+                if (SUCCEEDED(hr) && sel) {
+                    int count = 0;
+                    sel->get_Length(&count);
+                    std::string items;
+                    for (int i = 0; i < count; ++i) {
+                        IUIAutomationElement* item = NULL;
+                        sel->GetElement(i, &item);
+                        if (item) {
+                            BSTR n = NULL;
+                            item->get_CurrentName(&n);
+                            if (n) {
+                                if (!items.empty()) items += ", ";
+                                items += json_escape(n);
+                                SysFreeString(n);
+                            }
+                            item->Release();
+                        }
+                    }
+                    sel->Release();
+                    if (!items.empty()) {
+                        value = items;
+                        has_value = true;
+                        pattern_name = "\"SelectionPattern\"";
+                    }
+                }
+                sp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
+    // 4) RangeValuePattern (sliders, progress bars)
+    if (!has_value) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_RangeValuePatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationRangeValuePattern* rp = NULL;
+            hr = pat_unk->QueryInterface(
+                __uuidof(IUIAutomationRangeValuePattern), (void**)&rp);
+            if (SUCCEEDED(hr) && rp) {
+                double val = 0.0;
+                hr = rp->get_CurrentValue(&val);
+                if (SUCCEEDED(hr)) {
+                    char num_buf[64];
+                    snprintf(num_buf, sizeof(num_buf), "%.6g", val);
+                    value = num_buf;
+                    has_value = true;
+                    pattern_name = "\"RangeValuePattern\"";
+                }
+                rp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
+    // 5) TextPattern (rich text — last because it's expensive)
+    if (!has_value) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_TextPatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationTextPattern* txp = NULL;
+            hr = pat_unk->QueryInterface(
+                __uuidof(IUIAutomationTextPattern), (void**)&txp);
+            if (SUCCEEDED(hr) && txp) {
+                IUIAutomationTextRange* range = NULL;
+                hr = txp->get_DocumentRange(&range);
+                if (SUCCEEDED(hr) && range) {
+                    BSTR text = NULL;
+                    hr = range->GetText(4096, &text);
+                    if (SUCCEEDED(hr) && text) {
+                        value = json_escape(text);
+                        SysFreeString(text);
+                        has_value = true;
+                        pattern_name = "\"TextPattern\"";
+                    }
+                    range->Release();
+                }
+                txp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
+    // Build JSON response
+    std::string json;
+    json.reserve(1024);
+    json += "{\"value\":";
+    if (has_value) {
+        json += "\"";
+        json += value;
+        json += "\"";
+    } else {
+        json += "null";
+    }
+    json += ",\"pattern\":";
+    json += pattern_name;
+
+    char meta[512];
+    snprintf(meta, sizeof(meta),
+        ",\"role\":\"%s\",\"name\":\"%s\",\"automation_id\":\"%s\""
+        ",\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld}",
+        elem_role, elem_name.c_str(), elem_aid.c_str(),
+        elem_rect.left, elem_rect.top,
+        elem_rect.right - elem_rect.left,
+        elem_rect.bottom - elem_rect.top);
+    json += meta;
+
+    elem->Release();
+    root->Release();
+    uia->Release();
+
+    if ((int)json.size() + 1 > buf_size) {
+        if (buf_size >= 4) {
+            int needed = (int)json.size() + 1;
+            memcpy(result_json, &needed, 4);
+        }
+        return -4;
+    }
+
+    memcpy(result_json, json.c_str(), json.size() + 1);
+    return 0;
+}
+
 } // extern "C"
 
 #else
@@ -624,6 +975,20 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
                                     const char* name, char* result_json,
                                     int buf_size) {
     (void)hwnd;
+    (void)role;
+    (void)name;
+    (void)result_json;
+    (void)buf_size;
+    return -2;  // Not supported on this platform
+}
+
+NATURO_API int naturo_get_element_value(uintptr_t hwnd,
+                                         const char* automation_id,
+                                         const char* role,
+                                         const char* name,
+                                         char* result_json, int buf_size) {
+    (void)hwnd;
+    (void)automation_id;
     (void)role;
     (void)name;
     (void)result_json;

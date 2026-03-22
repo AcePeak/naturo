@@ -273,6 +273,42 @@ NATURO_API int naturo_ia2_find_element(uintptr_t hwnd, const char* role,
  */
 NATURO_API int naturo_ia2_check_support(uintptr_t hwnd);
 
+/* ── Element Value Reading ─────────────────────────── */
+
+/**
+ * @brief Read the current value of a UI element using UIA patterns.
+ *
+ * Queries multiple UIA patterns in priority order to retrieve the
+ * element's current value:
+ *   1. ValuePattern.Value — text fields, dropdowns
+ *   2. TextPattern.DocumentRange.GetText() — rich text controls
+ *   3. TogglePattern.ToggleState — checkboxes (On/Off/Indeterminate)
+ *   4. SelectionPattern — selected items in lists/combos
+ *   5. RangeValuePattern.Value — sliders, progress bars
+ *
+ * The element is located by its AutomationId within the given window.
+ * If automation_id is NULL and role+name are provided, the element is
+ * found by role/name matching (same logic as naturo_find_element).
+ *
+ * @param hwnd Window handle. Pass 0 for the foreground window.
+ * @param automation_id AutomationId of the target element. NULL to use role/name.
+ * @param role Element role filter (used when automation_id is NULL).
+ * @param name Element name filter (used when automation_id is NULL).
+ * @param result_json Buffer to receive a JSON object:
+ *        {"value":"...","pattern":"ValuePattern","role":"Edit","name":"Search",
+ *         "automation_id":"txtSearch","states":["focusable","focused"],
+ *         "x":N,"y":N,"width":N,"height":N}
+ *        If no value pattern is supported: {"value":null,"pattern":null,...}
+ * @param buf_size Size of the buffer in bytes.
+ * @return 0 on success, 1 if element not found, -1 on invalid argument,
+ *         -2 on UIAutomation error, -4 if buffer too small.
+ */
+NATURO_API int naturo_get_element_value(uintptr_t hwnd,
+                                         const char* automation_id,
+                                         const char* role,
+                                         const char* name,
+                                         char* result_json, int buf_size);
+
 /* ── Hardware-level Keyboard (Phys32) ─────────────── */
 
 /**

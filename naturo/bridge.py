@@ -275,6 +275,13 @@ class NaturoCore:
         self._lib.naturo_jab_check_support.restype = ctypes.c_int
         self._lib.naturo_jab_check_support.argtypes = [ctypes.c_size_t]
 
+        # Element value reading
+        self._lib.naturo_get_element_value.restype = ctypes.c_int
+        self._lib.naturo_get_element_value.argtypes = [
+            ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p,
+            ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int
+        ]
+
         # Phase 5B.5 — Hardware-level keyboard (Phys32)
         self._lib.naturo_phys_key_type.restype = ctypes.c_int
         self._lib.naturo_phys_key_type.argtypes = [ctypes.c_char_p, ctypes.c_int]
@@ -560,6 +567,52 @@ class NaturoCore:
 
         data = json.loads(_decode_native(buf.value))
         return _parse_element(data)
+
+    def get_element_value(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Read the current value of a UI element using UIA patterns.
+
+        Queries ValuePattern, TogglePattern, SelectionPattern,
+        RangeValuePattern, and TextPattern to retrieve the element's
+        current value.
+
+        Args:
+            hwnd: Window handle. 0 for the foreground window.
+            automation_id: AutomationId of the target element.
+            role: Element role filter (used when automation_id is None).
+            name: Element name filter (used when automation_id is None).
+
+        Returns:
+            Dict with keys: value, pattern, role, name, automation_id,
+            x, y, width, height.  None if element not found.
+
+        Raises:
+            NaturoCoreError: On error (invalid args, COM failure, etc.).
+        """
+        buf_size = 8192
+        buf = ctypes.create_string_buffer(buf_size)
+
+        aid_bytes = automation_id.encode("utf-8") if automation_id else None
+        role_bytes = role.encode("utf-8") if role else None
+        name_bytes = name.encode("utf-8") if name else None
+
+        rc = self._lib.naturo_get_element_value(
+            hwnd, aid_bytes, role_bytes, name_bytes, buf, buf_size,
+        )
+
+        if rc == 1:
+            return None  # Not found
+        if rc == -2:
+            return None  # No foreground window / COM error
+        if rc < 0:
+            raise NaturoCoreError(rc, "get_element_value")
+
+        return json.loads(_decode_native(buf.value))
 
     # ── Phase 2: Mouse Input ─────────────────────────
 

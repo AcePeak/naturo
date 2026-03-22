@@ -597,6 +597,66 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             },
         }
 
+    @server.tool()
+    @_safe_tool
+    def get_element_value(
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Read the current value/text of a UI element.
+
+        Queries UIA patterns (ValuePattern, TogglePattern, SelectionPattern,
+        RangeValuePattern, TextPattern) to retrieve the element's current
+        value. Use after ``see_elements`` to get element refs.
+
+        Args:
+            ref: Element ref from snapshot (e.g. ``"e47"``).
+            automation_id: UIA AutomationId string.
+            role: Element role filter (e.g. ``"Edit"``).
+            name: Element name filter.
+            window_title: Target window title (partial match).
+            hwnd: Target window handle.
+
+        Returns:
+            Dict with value, pattern, role, name, automation_id, and bounds.
+        """
+        backend = _get_backend()
+        result = backend.get_element_value(
+            ref=ref,
+            automation_id=automation_id,
+            role=role,
+            name=name,
+            window_title=window_title,
+            hwnd=hwnd,
+        )
+        if result is None:
+            return {
+                "success": False,
+                "error": {
+                    "code": "ELEMENT_NOT_FOUND",
+                    "message": "Element not found for value reading",
+                },
+            }
+        return {
+            "success": True,
+            "ref": ref,
+            "value": result.get("value"),
+            "pattern": result.get("pattern"),
+            "role": result.get("role"),
+            "name": result.get("name"),
+            "automation_id": result.get("automation_id"),
+            "bounds": {
+                "x": result.get("x"),
+                "y": result.get("y"),
+                "width": result.get("width"),
+                "height": result.get("height"),
+            },
+        }
+
     # ── Input Actions ───────────────────────────
 
     @server.tool()
@@ -608,6 +668,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         button: str = "left",
         double: bool = False,
         input_mode: str = "normal",
+        method: str = "auto",
     ) -> dict:
         """Click at coordinates or on a UI element.
 
@@ -620,6 +681,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             button: Mouse button — "left", "right", or "middle".
             double: Double-click if True.
             input_mode: Input method — "normal" (default) or "hardware" (Phys32, bypasses anti-cheat).
+            method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision". Bypasses auto-detection when set explicitly.
 
         Returns:
             Dict with success flag.
@@ -627,7 +689,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         backend = _get_backend()
         backend.click(x=x, y=y, element_id=element_id, button=button, double=double,
                       input_mode=input_mode)
-        return {"success": True}
+        return {"success": True, "method": method}
 
     @server.tool()
     @_safe_tool
@@ -635,6 +697,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         text: str,
         wpm: int = 120,
         input_mode: str = "normal",
+        method: str = "auto",
     ) -> dict:
         """Type text using keyboard input.
 
@@ -644,6 +707,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             text: Text to type.
             wpm: Words per minute (typing speed).
             input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes, bypasses anti-cheat).
+            method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision".
 
         Returns:
             Dict with success flag.
@@ -656,13 +720,14 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
 
     @server.tool()
     @_safe_tool
-    def press_key(key: str, count: int = 1, input_mode: str = "normal") -> dict:
+    def press_key(key: str, count: int = 1, input_mode: str = "normal", method: str = "auto") -> dict:
         """Press a keyboard key.
 
         Args:
             key: Key name (e.g. "enter", "tab", "escape", "f1", "a").
             count: Number of times to press.
             input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes).
+            method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision".
 
         Returns:
             Dict with success flag.
