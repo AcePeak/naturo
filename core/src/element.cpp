@@ -636,7 +636,7 @@ static IUIAutomationElement* find_element_by_id_or_role(
 
         if (SUCCEEDED(hr) && cond) {
             // Try self first
-            root->FindFirst(TreeScope_Element | TreeScope_Descendants,
+            root->FindFirst(static_cast<TreeScope>(TreeScope_Element | TreeScope_Descendants),
                             cond, &found);
             cond->Release();
         }

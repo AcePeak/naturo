@@ -50,6 +50,35 @@ def _make_mock_backend(result=None, not_found=False, error=None):
 
 # ── CLI Tests ────────────────────────────────────────────────────────────────
 
+def _patch_get(mock_backend):
+    """Context manager to patch both backend and platform check for get_cmd."""
+    return (
+        patch("naturo.cli.get_cmd._get_backend", return_value=mock_backend),
+        patch("naturo.cli.get_cmd.platform") if platform.system() not in ("Windows",) else None,
+    )
+
+
+def _apply_patches(mock_backend):
+    """Apply both backend and platform patches for get_cmd tests.
+
+    Returns a combined context manager that patches _get_backend and
+    (on non-Windows) fakes platform.system() to return 'Windows'.
+    """
+    import contextlib
+
+    @contextlib.contextmanager
+    def _ctx():
+        with patch("naturo.cli.get_cmd._get_backend", return_value=mock_backend):
+            if platform.system() not in ("Windows",):
+                with patch("naturo.cli.get_cmd.platform") as mock_plat:
+                    mock_plat.system.return_value = "Windows"
+                    yield
+            else:
+                yield
+
+    return _ctx()
+
+
 class TestGetCLI:
     """Tests for the ``naturo get`` CLI command."""
 
@@ -58,7 +87,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e47"])
 
         assert result.exit_code == 0
@@ -79,7 +108,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["--json", "get", "e47"])
 
         assert result.exit_code == 0
@@ -94,7 +123,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "--aid", "txtSearch"])
 
         assert result.exit_code == 0
@@ -112,7 +141,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "--role", "Edit", "--name", "Search"])
 
         assert result.exit_code == 0
@@ -130,7 +159,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e47", "-p", "value"])
 
         assert result.exit_code == 0
@@ -141,7 +170,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e47", "-p", "role"])
 
         assert result.exit_code == 0
@@ -152,7 +181,7 @@ class TestGetCLI:
         mock = _make_mock_backend(not_found=True)
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e99"])
 
         assert result.exit_code != 0
@@ -162,7 +191,7 @@ class TestGetCLI:
         mock = _make_mock_backend(not_found=True)
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["--json", "get", "e99"])
 
         assert result.exit_code != 0
@@ -180,7 +209,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, [
                 "get", "e47", "--title", "Notepad"
             ])
@@ -200,7 +229,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, [
                 "get", "e47", "--hwnd", "12345"
             ])
@@ -220,7 +249,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "txtSearch"])
 
         assert result.exit_code == 0
@@ -238,7 +267,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "m3"])
 
         assert result.exit_code == 0
@@ -259,7 +288,7 @@ class TestGetCLI:
         mock = _make_mock_backend(result=result_dict)
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e47"])
 
         assert result.exit_code == 0
@@ -278,7 +307,7 @@ class TestGetCLI:
         mock = _make_mock_backend(result=result_dict)
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e10"])
 
         assert result.exit_code == 0
@@ -290,7 +319,7 @@ class TestGetCLI:
         mock = _make_mock_backend()
         runner = CliRunner()
 
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock):
+        with _apply_patches(mock):
             result = runner.invoke(main, ["get", "e47", "--json"])
 
         assert result.exit_code == 0
