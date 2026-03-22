@@ -45,6 +45,21 @@
 2. **NEVER close issues for future milestones (v0.3.0+).** You can only close issues in the milestone you are currently working on, and only after your fix is committed and CI passes.
 3. **NEVER use `gh issue close` in your triage/classification phase.** During triage, you may only comment — not close.
 
+## Git Workflow (MANDATORY)
+1. **NEVER push directly to main.** Always use feature branches + PR.
+2. Branch naming: `fix/issue-N-short-desc` or `feat/issue-N-short-desc`
+3. Workflow:
+   ```bash
+   git checkout -b fix/issue-109-get-command
+   # ... make changes, commit ...
+   git push origin fix/issue-109-get-command
+   gh pr create --title "fix: description (fixes #N)" --base main
+   # Wait for CI to pass, then merge:
+   gh pr merge --squash --delete-branch
+   ```
+4. Only merge PR after CI is green
+5. This protects main from broken code
+
 ## General Rules
 1. Only operate within `~/Ace/naturo/`
 2. One bug = one commit, commit message references issue: `fix: description (fixes #N)`
