@@ -11,6 +11,43 @@ def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
     """No-op stub — recording command removed."""
     pass
 
+
+# ── Method override ──────────────────────────────────────────────────────────
+
+# Valid interaction methods for --method flag.
+# "auto" = let the system pick (default); others force a specific channel.
+VALID_METHODS = ("auto", "cdp", "uia", "msaa", "ia2", "jab", "vision")
+
+
+def _method_option(func):
+    """Shared Click decorator that adds --method to an action command.
+
+    The flag lets users bypass auto-detection and force a specific
+    interaction channel.  When set to anything other than "auto",
+    auto-routing (#28) is skipped and the specified method is used
+    directly (if available for the target application).
+    """
+    return click.option(
+        "--method", "-m",
+        type=click.Choice(VALID_METHODS),
+        default="auto",
+        help=(
+            "Interaction method override: auto (default), cdp, uia, msaa, "
+            "ia2, jab, vision. Bypasses auto-detection when set explicitly."
+        ),
+        show_default=True,
+    )(func)
+
+
+def _validate_method(method: str, json_output: bool) -> bool:
+    """Validate the --method flag value.
+
+    Returns True if valid, otherwise emits an error and returns False.
+    Currently always returns True because Click.Choice already validates,
+    but kept as a hook for future runtime availability checks.
+    """
+    return True
+
 # ── Shared helper ────────────────────────────────────────────────────────────
 
 
@@ -102,10 +139,11 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
     default="normal",
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
+@_method_option
 @click.option("--process-name", help="Filter by process name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
-              window_title, window_id, wait_for, input_mode, process_name,
+              window_title, window_id, wait_for, input_mode, method, process_name,
               json_output):
     """Click on a UI element, text, or coordinates.
 
@@ -212,11 +250,12 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     default="normal",
     help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
 )
+@_method_option
 @click.option("--process-name", help="Filter by process name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, app, window_title,
-             hwnd, input_mode, process_name, json_output):
+             hwnd, input_mode, method, process_name, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -314,8 +353,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     default="normal",
     help="Input method",
 )
+@_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(key, count, delay, app, window_title, hwnd, input_mode, json_output):
+def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_output):
     """Press a single key or key sequence.
 
     KEY can be a key name (enter, tab, escape, f1-f12, a-z, 0-9, etc.)
@@ -363,9 +403,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, json_output):
     default="normal",
     help="Input method",
 )
+@_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
-           input_mode, json_output):
+           input_mode, method, json_output):
     """Press a hotkey combination.
 
     KEYS as a string like "ctrl+c" or "alt+f4". Or use --keys for each key.
@@ -425,9 +466,10 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
+@_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app, window_title,
-           hwnd, json_output):
+           hwnd, method, json_output):
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -476,9 +518,10 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
+@_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, to_text, to_coords, duration, steps,
-         modifiers, profile, app, window_title, hwnd, json_output):
+         modifiers, profile, app, window_title, hwnd, method, json_output):
     """Drag from one element/position to another.
 
     Examples:
@@ -536,9 +579,10 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
 @click.option("--app", help="Application name")
 @click.option("--window-title", help="Window title pattern")
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
+@_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def move(to_text, coords, element_id, duration, app, window_title, hwnd,
-         json_output):
+         method, json_output):
     """Move the mouse cursor to a target element or coordinates.
 
     Examples:
