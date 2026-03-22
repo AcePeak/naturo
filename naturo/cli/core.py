@@ -604,7 +604,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
 
 @click.command("find")
-@click.argument("query")
+@click.argument("query", required=False, default=None)
+@click.option("--query", "-q", "query_opt", default=None,
+              help="Search query (alternative to positional arg; survives shell glob expansion)")
 @click.option("--role", help="Filter by element role (e.g., Button, Edit)")
 @click.option("--actionable", is_flag=True, help="Only show actionable elements")
 @click.option("--depth", "-d", type=int, default=5, help="Maximum tree depth (1-10)")
@@ -622,7 +624,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     default="uia",
     help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
-def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai_app, json_output, backend):
+def find_cmd(query, query_opt, role, actionable, depth, limit, ai, provider, screenshot, ai_app, json_output, backend):
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
@@ -636,10 +638,21 @@ def find_cmd(query, role, actionable, depth, limit, ai, provider, screenshot, ai
         naturo find "Button:Save"               # role + name
         naturo find "role:Edit"                  # by role only
         naturo find "*" --actionable             # all actionable elements
+        naturo find --query "*" --actionable     # same, safe from shell glob
         naturo find "the save button" --ai       # AI vision search
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
     """
+    # Resolve query: --query option takes precedence over positional arg
+    query = query_opt if query_opt is not None else query
+    if query is None:
+        msg = "Missing argument 'QUERY'. Provide as positional arg or --query/-q option."
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     # AI vision mode — natural language element finding
     if ai:
         _find_with_ai(query, provider, screenshot, ai_app, json_output)

@@ -54,31 +54,65 @@ def _validate_method(method: str, json_output: bool) -> bool:
 def _check_desktop_session() -> None:
     """Raise NoDesktopSessionError if running without an interactive desktop.
 
-    On Windows, checks the SESSIONNAME environment variable and whether
-    explorer.exe is running (a reliable proxy for a desktop session).
+    On Windows, verifies the *current* session has desktop access — not just
+    that a desktop exists somewhere on the machine.
+
+    Detection logic:
+    1. SESSIONNAME == "Console" or starts with "RDP-Tcp" → interactive desktop, OK.
+    2. SESSIONNAME == "Services" or empty/unset → likely non-interactive.
+       - If empty AND explorer.exe is running, this is the SSH-into-desktop-machine
+         scenario: another session owns the desktop but *this* session cannot
+         interact with it. Raise a clear error instead of letting COM fail.
+    3. Any other SESSIONNAME value → assume interactive (e.g., Citrix, VNC).
+
     No-op on other platforms.
     """
     import platform as _plat
     if _plat.system() != "Windows":
         return
+
     import os
     session = os.environ.get("SESSIONNAME", "")
-    # Services session or empty session name = no desktop
-    if session and session.lower() != "services":
+    session_lower = session.lower()
+
+    # Known interactive session types — allow through
+    if session_lower == "console" or session_lower.startswith("rdp-tcp"):
         return
-    # Double-check: is explorer.exe running? (indicates a desktop shell)
-    import subprocess
-    try:
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq explorer.exe", "/NH", "/FO", "CSV"],
-            capture_output=True, text=True, timeout=5, encoding="utf-8", errors="replace",
-        )
-        if "explorer.exe" in result.stdout.lower():
-            return  # Desktop session exists even if SESSIONNAME is odd
-    except Exception:
-        pass
-    from naturo.errors import NoDesktopSessionError
-    raise NoDesktopSessionError()
+
+    # Known non-interactive session types — reject
+    if session_lower == "services":
+        from naturo.errors import NoDesktopSessionError
+        raise NoDesktopSessionError()
+
+    # Empty/unset SESSIONNAME — SSH or headless service
+    if not session:
+        # Even if explorer.exe is running (from an RDP/Console session),
+        # this SSH session cannot interact with that desktop.
+        # Provide a specific error message for this scenario.
+        import subprocess
+        explorer_running = False
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq explorer.exe", "/NH", "/FO", "CSV"],
+                capture_output=True, text=True, timeout=5,
+                encoding="utf-8", errors="replace",
+            )
+            explorer_running = "explorer.exe" in result.stdout.lower()
+        except Exception:
+            pass
+
+        from naturo.errors import NoDesktopSessionError
+        if explorer_running:
+            raise NoDesktopSessionError(
+                "No interactive desktop in this session. "
+                "A desktop session exists on this machine (explorer.exe running), "
+                "but the current SSH/service session cannot interact with it. "
+                "Connect via RDP or Console instead."
+            )
+        raise NoDesktopSessionError()
+
+    # Any other SESSIONNAME value (Citrix ICA, VNC, etc.) — assume interactive
+    return
 
 
 def _get_backend():

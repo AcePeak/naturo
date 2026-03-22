@@ -402,8 +402,14 @@ class NoDesktopSessionError(NaturoError):
     where no desktop (explorer shell) is available.
     """
 
-    def __init__(self, command: str | None = None, **kwargs: Any) -> None:
-        msg = (
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        command: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        msg = message or (
             "No interactive desktop session detected. "
             "Naturo GUI commands require a logged-in Windows desktop with an active session. "
             "If connecting via SSH, use RDP or a VNC session instead."
