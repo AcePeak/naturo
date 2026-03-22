@@ -219,16 +219,14 @@ def list_cmd():
     pass
 
 
-@list_cmd.command(hidden=True)
+@list_cmd.command()
+@click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def apps(json_output):
-    """List running applications."""
-    msg = "Application listing is not implemented yet — coming in a future release."
-    if json_output:
-        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    raise SystemExit(1)
+@click.pass_context
+def apps(ctx, show_all, json_output):
+    """List running applications (delegates to 'app list')."""
+    from naturo.cli.app_cmd import app_list
+    ctx.invoke(app_list, show_all=show_all, json_output=json_output)
 
 
 @list_cmd.command()

@@ -67,7 +67,7 @@ def test_hidden_stubs_return_error_exit_code():
     import json
     hidden_stubs = [
         # ["list", "screens"],  # Implemented in Phase 5A
-        ["list", "apps"],
+        # ["list", "apps"],  # Now delegates to app list (#114)
         ["list", "permissions"],
         ["capture", "video"],
         ["capture", "watch"],
@@ -90,6 +90,20 @@ def test_hidden_stubs_return_error_exit_code():
         assert parsed["error"]["code"] == "NOT_IMPLEMENTED", (
             f"naturo {' '.join(args)} --json wrong error code:\n{result_json.output}"
         )
+
+
+def test_list_apps_delegates_to_app_list():
+    """list apps should delegate to app list, not return NOT_IMPLEMENTED (#114)."""
+    import json
+    result = runner.invoke(main, ["list", "apps", "--json"])
+    assert result.exit_code == 0, (
+        f"naturo list apps --json returned non-zero exit code:\n{result.output}"
+    )
+    parsed = json.loads(result.output.strip())
+    assert parsed["success"] is True, (
+        f"naturo list apps --json should succeed:\n{result.output}"
+    )
+    assert "apps" in parsed, "Response should contain 'apps' key"
 
 
 def test_hidden_commands_not_in_help():
