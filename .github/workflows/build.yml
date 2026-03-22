@@ -36,6 +36,7 @@ jobs:
     name: Python Tests with DLL (Windows)
     runs-on: windows-latest
     needs: build-dll
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -63,9 +64,10 @@ jobs:
           ls -la naturo/bin/
 
       - name: Install package
+        shell: bash
         run: |
           pip install -e ".[dev,mcp,annotate]" pywin32
-          python -c "import pywin32_postinstall; pywin32_postinstall.install()" || true
+          python -c "import pywin32_postinstall; pywin32_postinstall.install()" 2>/dev/null || true
 
       - name: Run all tests
         run: pytest -v -m "not ui"

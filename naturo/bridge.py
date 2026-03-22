@@ -275,12 +275,15 @@ class NaturoCore:
         self._lib.naturo_jab_check_support.restype = ctypes.c_int
         self._lib.naturo_jab_check_support.argtypes = [ctypes.c_size_t]
 
-        # Element value reading
-        self._lib.naturo_get_element_value.restype = ctypes.c_int
-        self._lib.naturo_get_element_value.argtypes = [
-            ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p,
-            ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int
-        ]
+        # Element value reading (may be absent in older DLL builds)
+        try:
+            self._lib.naturo_get_element_value.restype = ctypes.c_int
+            self._lib.naturo_get_element_value.argtypes = [
+                ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p,
+                ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int
+            ]
+        except AttributeError:
+            pass  # DLL lacks this export; get_element_value() will raise
 
         # Phase 5B.5 — Hardware-level keyboard (Phys32)
         self._lib.naturo_phys_key_type.restype = ctypes.c_int
@@ -601,9 +604,16 @@ class NaturoCore:
         role_bytes = role.encode("utf-8") if role else None
         name_bytes = name.encode("utf-8") if name else None
 
-        rc = self._lib.naturo_get_element_value(
-            hwnd, aid_bytes, role_bytes, name_bytes, buf, buf_size,
-        )
+        try:
+            fn = self._lib.naturo_get_element_value
+        except AttributeError:
+            raise NaturoCoreError(
+                -1,
+                "get_element_value: DLL does not export naturo_get_element_value "
+                "(recompile the DLL with the latest source)",
+            )
+
+        rc = fn(hwnd, aid_bytes, role_bytes, name_bytes, buf, buf_size)
 
         if rc == 1:
             return None  # Not found

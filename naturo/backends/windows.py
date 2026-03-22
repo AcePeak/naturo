@@ -964,7 +964,7 @@ class WindowsBackend(Backend):
         Raises:
             NaturoError: If the element cannot be found or queried.
         """
-        core = self._get_core()
+        core = self._ensure_core()
 
         # Resolve ref to element metadata via snapshot cache
         resolved_aid = automation_id
