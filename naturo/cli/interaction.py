@@ -1,10 +1,15 @@
 """Interaction commands: click, type, press, hotkey, scroll, drag, move."""
+from __future__ import annotations
+
 import json
+import logging
 import platform
 import sys
 import time as _time
 
 import click
+
+logger = logging.getLogger(__name__)
 
 
 def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
@@ -165,6 +170,51 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
     sys.exit(exit_code)
 
 
+# ── Auto-routing helper ──────────────────────────────────────────────────────
+
+
+def _auto_route(
+    app: str | None,
+    pid: int | None,
+    method: str,
+    json_output: bool,
+) -> dict:
+    """Run auto-routing and return routing metadata for output.
+
+    When --method is "auto" and an --app or --pid is specified, runs the
+    detection chain to determine the best interaction method. Returns a
+    dict with routing info to include in JSON output.
+
+    Args:
+        app: Application name from --app flag.
+        pid: Process ID from --pid flag.
+        method: Value of --method flag ("auto" or explicit method).
+        json_output: Whether JSON output mode is active.
+
+    Returns:
+        Dict with routing info (method, source, framework, etc.).
+        Empty dict if no routing was performed.
+    """
+    if method == "auto" and (app is not None or pid is not None):
+        try:
+            from naturo.routing import resolve_method
+
+            result = resolve_method(app=app, pid=pid, explicit_method=method)
+            route_info = result.to_dict()
+            if not json_output:
+                src = f" ({result.framework})" if result.framework != "unknown" else ""
+                logger.info(
+                    "Auto-routed: %s → %s%s",
+                    app or f"PID {pid}",
+                    result.method,
+                    src,
+                )
+            return route_info
+        except Exception as exc:
+            logger.debug("Auto-routing failed: %s", exc)
+    return {}
+
+
 # ── click ────────────────────────────────────────────────────────────────────
 
 
@@ -208,6 +258,9 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
       naturo click --id "button_ok"
     """
     backend = _get_backend(json_output)
+
+    # Auto-routing: detect best interaction method for target app
+    route_info = _auto_route(app, pid, method, json_output)
 
     button = "right" if right else "left"
 
@@ -263,7 +316,10 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 
     action = "double-clicked" if double else "clicked"
     loc = f"({x}, {y})" if coords else (target_id or "element")
-    _json_ok({"action": action, "target": str(loc), "button": button}, json_output)
+    result_data = {"action": action, "target": str(loc), "button": button}
+    if route_info:
+        result_data["routing"] = route_info
+    _json_ok(result_data, json_output)
 
 
 # ── type ─────────────────────────────────────────────────────────────────────
@@ -343,6 +399,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 
     backend = _get_backend(json_output)
 
+    # Auto-routing: detect best interaction method for target app
+    route_info = _auto_route(app, None, method, json_output)
+
     try:
         if clear:
             backend.hotkey("ctrl", "a")
@@ -381,7 +440,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         return
 
     action = "pasted" if paste_mode else "typed"
-    _json_ok({"action": action, "text": text, "length": len(text)}, json_output)
+    result_data = {"action": action, "text": text, "length": len(text)}
+    if route_info:
+        result_data["routing"] = route_info
+    _json_ok(result_data, json_output)
 
 
 # ── press ────────────────────────────────────────────────────────────────────
@@ -424,6 +486,9 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
     import time
     backend = _get_backend(json_output)
 
+    # Auto-routing: detect best interaction method for target app
+    route_info = _auto_route(app, None, method, json_output)
+
     try:
         for i in range(count):
             backend.press_key(key, input_mode=input_mode)
@@ -436,7 +501,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
     # Record the action
     _record_action("press", {"key": key, "count": count})
 
-    _json_ok({"action": "pressed", "key": key, "count": count}, json_output)
+    result_data = {"action": "pressed", "key": key, "count": count}
+    if route_info:
+        result_data["routing"] = route_info
+    _json_ok(result_data, json_output)
 
 
 # ── hotkey ───────────────────────────────────────────────────────────────────
@@ -485,6 +553,9 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 
     backend = _get_backend(json_output)
 
+    # Auto-routing: detect best interaction method for target app
+    route_info = _auto_route(app, None, method, json_output)
+
     try:
         backend.hotkey(*key_list,
                        hold_duration_ms=int(hold_duration) if hold_duration else 50,
@@ -497,7 +568,10 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     _record_action("hotkey", {"keys": key_list, "hold_duration": hold_duration or 0.05})
 
     combo = "+".join(key_list)
-    _json_ok({"action": "hotkey", "combo": combo}, json_output)
+    result_data = {"action": "hotkey", "combo": combo}
+    if route_info:
+        result_data["routing"] = route_info
+    _json_ok(result_data, json_output)
 
 
 # ── scroll ───────────────────────────────────────────────────────────────────
@@ -540,6 +614,9 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
 
     backend = _get_backend(json_output)
 
+    # Auto-routing: detect best interaction method for target app
+    route_info = _auto_route(app, None, method, json_output)
+
     try:
         backend.scroll(direction=direction, amount=amount, smooth=smooth)
     except Exception as exc:
@@ -549,7 +626,10 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
     # Record the action
     _record_action("scroll", {"direction": direction, "amount": amount})
 
-    _json_ok({"action": "scrolled", "direction": direction, "amount": amount}, json_output)
+    result_data = {"action": "scrolled", "direction": direction, "amount": amount}
+    if route_info:
+        result_data["routing"] = route_info
+    _json_ok(result_data, json_output)
 
 
 # ── drag ─────────────────────────────────────────────────────────────────────
