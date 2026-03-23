@@ -41,6 +41,42 @@ from naturo.cli.extensions import excel
 from naturo.cli.electron_cmd import electron, chrome
 
 
+def _patch_json_flag(cmd) -> None:
+    """Patch --json/-j flag on a Click command to inherit from parent ctx.obj['json'].
+
+    Replaces the ``json_output`` flag's callback so that when the flag is not
+    explicitly passed on the command line, it checks ``ctx.obj["json"]``
+    (set by the root ``naturo --json``).
+    """
+    for param in cmd.params:
+        if param.name == "json_output" and isinstance(param, click.Option):
+            original_callback = param.callback
+
+            def _json_callback(ctx, _param, value, _orig=original_callback):
+                # If the user explicitly passed --json on the subcommand, use it
+                if value:
+                    return True if _orig is None else _orig(ctx, _param, True)
+                # Otherwise check parent context chain for global --json
+                check = ctx
+                while check is not None:
+                    obj = getattr(check, "obj", None)
+                    if obj and obj.get("json"):
+                        return True if _orig is None else _orig(ctx, _param, True)
+                    check = check.parent
+                return False if _orig is None else _orig(ctx, _param, False)
+
+            param.callback = _json_callback
+            break
+
+
+def _patch_all_commands(group: click.BaseCommand) -> None:
+    """Recursively patch all commands under a group for --json propagation."""
+    if isinstance(group, click.Group):
+        for cmd in group.commands.values():
+            _patch_all_commands(cmd)
+    _patch_json_flag(group)
+
+
 @click.group()
 @click.version_option(__version__, prog_name="naturo")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -120,3 +156,7 @@ app.add_command(app_hide, "hide")
 app.add_command(app_unhide, "unhide")
 app.add_command(app_switch, "switch")
 app.add_command(app_inspect, "inspect")
+
+
+# ── Patch all commands to propagate global --json to subcommands ─────────────
+_patch_all_commands(main)

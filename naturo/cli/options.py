@@ -84,6 +84,7 @@ def on_option(func):
     )(func)
 
 
+
 def json_option(func):
     """``--json / -j`` — JSON output mode."""
     return click.option(
