@@ -619,7 +619,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
               default="auto", help="AI provider (for --ai mode)")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Use existing screenshot (for --ai mode)")
-@click.option("--app", "ai_app", default=None, help="Target app window (for --ai mode)")
+@click.option("--app", default=None, help="Target app window")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -627,7 +627,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     default="uia",
     help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
-def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, provider, screenshot, ai_app, json_output, backend):
+def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, provider, screenshot, app, json_output, backend):
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
@@ -643,6 +643,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, pro
         naturo find --all --actionable           # all actionable elements (SSH-safe)
         naturo find --all --role Button          # all buttons
         naturo find "the save button" --ai       # AI vision search
+        naturo find "Save" --app "Notepad"              # search in specific app
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
     """
@@ -667,7 +668,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, pro
 
     # AI vision mode — natural language element finding
     if ai:
-        _find_with_ai(query, provider, screenshot, ai_app, json_output)
+        _find_with_ai(query, provider, screenshot, app, json_output)
         return
 
     # BUG-028: Validate --depth range (before platform check — input validation first)
@@ -689,7 +690,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, pro
 
     try:
         be = _get_backend()
-        tree = be.get_element_tree(depth=depth, backend=backend)
+        tree = be.get_element_tree(app=app, depth=depth, backend=backend)
         if tree is None:
             msg = "No window found or UI tree is empty."
             if json_output:
