@@ -23,9 +23,9 @@ def _get_manager() -> SnapshotManager:
     return SnapshotManager()
 
 
-@click.group(cls=FuzzyGroup)
+@click.group(cls=FuzzyGroup, hidden=True)
 def snapshot() -> None:
-    """Manage UI automation snapshots."""
+    """Manage UI automation snapshots (internal/debug command)."""
     pass
 
 

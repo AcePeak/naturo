@@ -30,8 +30,8 @@ def test_cli_help(runner):
         "click", "type", "press", "scroll", "drag", "move",
         # System
         "app",
-        # Snapshot & Phase 3
-        "snapshot", "wait", "diff",
+        # Phase 3
+        "wait", "diff",
     ]
     for cmd in expected:
         assert cmd in result.output, f"Missing command: {cmd}"
