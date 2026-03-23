@@ -445,3 +445,75 @@ class TestAppLifecycleE2EWindows:
                 proc.wait(timeout=3)
             except Exception:
                 pass
+
+
+# ── _match_windows helper tests (fixes #151) ─────────────────────────────────
+
+
+class _FakeWindow:
+    """Minimal window stub for testing _match_windows."""
+
+    def __init__(self, process_name: str, title: str, pid: int):
+        self.process_name = process_name
+        self.title = title
+        self.pid = pid
+        self.handle = 0
+
+
+class TestMatchWindows:
+    """Unit tests for the _match_windows helper that excludes the calling
+    process and prioritizes process-name matches over title-only matches."""
+
+    def test_excludes_own_pid(self):
+        """Windows belonging to the calling process are excluded."""
+        from naturo.cli.app_cmd import _match_windows
+
+        own_pid = os.getpid()
+        windows = [
+            _FakeWindow("feishu", "Feishu Chat", 1000),
+            _FakeWindow("cmd", "naturo app switch feishu", own_pid),
+        ]
+        matched = _match_windows(windows, "feishu")
+        assert len(matched) == 1
+        assert matched[0].process_name == "feishu"
+
+    def test_excludes_parent_pid(self):
+        """Windows belonging to the parent process are also excluded."""
+        from naturo.cli.app_cmd import _match_windows
+
+        parent_pid = os.getppid()
+        windows = [
+            _FakeWindow("feishu", "Feishu Chat", 1000),
+            _FakeWindow("bash", "naturo app switch feishu", parent_pid),
+        ]
+        matched = _match_windows(windows, "feishu")
+        assert len(matched) == 1
+        assert matched[0].process_name == "feishu"
+
+    def test_process_name_match_before_title_match(self):
+        """Process-name matches appear before title-only matches."""
+        from naturo.cli.app_cmd import _match_windows
+
+        windows = [
+            _FakeWindow("explorer", "feishu download folder", 2000),
+            _FakeWindow("feishu", "Feishu Main Window", 3000),
+        ]
+        matched = _match_windows(windows, "feishu")
+        assert len(matched) == 2
+        assert matched[0].process_name == "feishu"
+        assert matched[1].process_name == "explorer"
+
+    def test_no_match_returns_empty(self):
+        """When nothing matches, an empty list is returned."""
+        from naturo.cli.app_cmd import _match_windows
+
+        windows = [_FakeWindow("notepad", "Untitled - Notepad", 4000)]
+        assert _match_windows(windows, "feishu") == []
+
+    def test_case_insensitive_matching(self):
+        """Matching is case-insensitive."""
+        from naturo.cli.app_cmd import _match_windows
+
+        windows = [_FakeWindow("Feishu", "FEISHU Chat", 5000)]
+        matched = _match_windows(windows, "feishu")
+        assert len(matched) == 1

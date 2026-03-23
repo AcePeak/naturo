@@ -4,10 +4,44 @@ Replaces the stub implementations in system.py with working process management.
 These are registered as subcommands of the existing ``app`` group.
 """
 import json
+import os
 
 from naturo.cli.error_helpers import json_error as _json_error_str
 import sys
 import click
+
+
+def _match_windows(windows, name_lower):
+    """Match windows by name, excluding the calling process and prioritizing process name.
+
+    Returns a list of matching windows sorted so that process-name matches
+    come before title-only matches.  The calling process (own PID and its
+    parent, to cover the terminal hosting the command) is excluded so that
+    ``naturo app switch feishu`` doesn't accidentally match the terminal
+    whose title contains the typed command.
+
+    Args:
+        windows: Iterable of window info objects with ``.process_name``,
+            ``.title``, and ``.pid`` attributes.
+        name_lower: Lowercased search term.
+
+    Returns:
+        List of matching windows (process-name matches first, then
+        title-only matches), excluding windows owned by this process.
+    """
+    own_pid = os.getpid()
+    parent_pid = os.getppid()
+
+    process_matches = []
+    title_matches = []
+    for w in windows:
+        if w.pid in (own_pid, parent_pid):
+            continue
+        if name_lower in w.process_name.lower():
+            process_matches.append(w)
+        elif name_lower in w.title.lower():
+            title_matches.append(w)
+    return process_matches + title_matches
 
 
 def _safe_echo(text: str, **kwargs) -> None:
@@ -234,7 +268,7 @@ def app_hide(ctx, name, json_output):
         backend = get_backend()
         windows = backend.list_windows()
         name_lower = name.lower()
-        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        matched = _match_windows(windows, name_lower)
         if not matched:
             from naturo.errors import AppNotFoundError
             raise AppNotFoundError(name)
@@ -271,7 +305,7 @@ def app_unhide(ctx, name, json_output):
         backend = get_backend()
         windows = backend.list_windows()
         name_lower = name.lower()
-        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        matched = _match_windows(windows, name_lower)
         if not matched:
             from naturo.errors import AppNotFoundError
             raise AppNotFoundError(name)
@@ -308,7 +342,7 @@ def app_switch(ctx, name, json_output):
         backend = get_backend()
         windows = backend.list_windows()
         name_lower = name.lower()
-        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        matched = _match_windows(windows, name_lower)
         if not matched:
             from naturo.errors import AppNotFoundError
             raise AppNotFoundError(name)
