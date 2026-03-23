@@ -85,4 +85,5 @@ markers = [
     "e2e: end-to-end workflow test",
     "acceptance: role-based acceptance test",
     "performance: performance benchmark",
+    "integration: real-app integration tests (require Windows desktop + apps)",
 ]
