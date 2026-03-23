@@ -975,13 +975,65 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
 
     \b
     Examples:
+      naturo drag --from e5 --to e12
       naturo drag --from-coords 100 100 --to-coords 500 300
+      naturo drag --from e5 --to-coords 500 300
     """
-    if not from_coords:
-        _json_err("Specify --from-coords X Y (element-based drag coming in Phase 3)", json_output, code="INVALID_INPUT")
+    # Resolve element refs (eN) from snapshot for --from and --to (#154)
+    import re as _re
+    from naturo.snapshot import SnapshotManager
+
+    fx, fy = None, None
+    tx, ty = None, None
+    from_label = None
+    to_label = None
+
+    if from_coords:
+        fx, fy = from_coords
+    elif from_text and _re.fullmatch(r"e\d+", from_text):
+        mgr = SnapshotManager()
+        resolved = mgr.resolve_ref(from_text)
+        if resolved:
+            fx, fy = resolved[0], resolved[1]
+            from_label = from_text
+        else:
+            _json_err(
+                f"Source element ref '{from_text}' not found or has zero-size bounds. "
+                f"Run 'naturo see' first to capture a fresh snapshot.",
+                json_output,
+                code="REF_NOT_FOUND",
+            )
+            return
+    else:
+        _json_err(
+            "Specify source: --from-coords X Y or --from eN (element ref from 'naturo see')",
+            json_output,
+            code="INVALID_INPUT",
+        )
         return
-    if not to_coords:
-        _json_err("Specify --to-coords X Y", json_output, code="INVALID_INPUT")
+
+    if to_coords:
+        tx, ty = to_coords
+    elif to_text and _re.fullmatch(r"e\d+", to_text):
+        mgr = SnapshotManager()
+        resolved = mgr.resolve_ref(to_text)
+        if resolved:
+            tx, ty = resolved[0], resolved[1]
+            to_label = to_text
+        else:
+            _json_err(
+                f"Destination element ref '{to_text}' not found or has zero-size bounds. "
+                f"Run 'naturo see' first to capture a fresh snapshot.",
+                json_output,
+                code="REF_NOT_FOUND",
+            )
+            return
+    else:
+        _json_err(
+            "Specify destination: --to-coords X Y or --to eN (element ref from 'naturo see')",
+            json_output,
+            code="INVALID_INPUT",
+        )
         return
 
     if steps < 1:
@@ -992,9 +1044,6 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         return
 
     backend = _get_backend(json_output)
-
-    fx, fy = from_coords
-    tx, ty = to_coords
     duration_ms = int(duration * 1000)
 
     try:
@@ -1010,12 +1059,19 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         "steps": steps, "duration": duration,
     })
 
-    _json_ok({
+    from_str = f"{from_label} ({fx}, {fy})" if from_label else f"({fx}, {fy})"
+    to_str = f"{to_label} ({tx}, {ty})" if to_label else f"({tx}, {ty})"
+    result = {
         "action": "dragged",
         "from": [fx, fy],
         "to": [tx, ty],
         "duration_ms": duration_ms,
-    }, json_output)
+    }
+    if from_label:
+        result["from_ref"] = from_label
+    if to_label:
+        result["to_ref"] = to_label
+    _json_ok(result, json_output)
 
 
 # ── move ─────────────────────────────────────────────────────────────────────
