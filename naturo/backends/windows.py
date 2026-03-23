@@ -1062,6 +1062,70 @@ class WindowsBackend(Backend):
 
         core.mouse_click(btn, double)
 
+    def invoke_element(self, name: str, role: str) -> bool:
+        """Invoke a UI element by name and role using UIA InvokePattern.
+
+        This is a fallback for elements whose bounding rects are zero-size
+        (e.g. TitleBar buttons after a window state change).  Instead of
+        coordinate-based clicking, it searches the UIA tree for a matching
+        element and calls ``IUIAutomationInvokePattern::Invoke()``.
+
+        Args:
+            name: The element's accessible name (e.g. "Minimize", "Close").
+            role: The element's UIA control type (e.g. "Button").
+
+        Returns:
+            True if the element was found and Invoke succeeded, False otherwise.
+        """
+        try:
+            import comtypes.client  # type: ignore[import-untyped]
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:
+            logger.warning("comtypes not available — cannot use Invoke fallback")
+            return False
+
+        try:
+            uia = comtypes.client.CreateObject(
+                "{ff48dba4-60ef-4201-aa87-54103eef594e}",
+                interface=None,
+            )
+            # IUIAutomation interface
+            from comtypes.gen.UIAutomationClient import (  # type: ignore[import-untyped]
+                IUIAutomation,
+                IUIAutomationElement,
+                TreeScope_Descendants,
+                UIA_NamePropertyId,
+                UIA_InvokePatternId,
+            )
+            uia = uia.QueryInterface(IUIAutomation)
+            root = uia.GetRootElement()
+
+            # Build a condition: Name == name
+            name_cond = uia.CreatePropertyCondition(UIA_NamePropertyId, name)
+            found = root.FindFirst(TreeScope_Descendants, name_cond)
+            if found is None:
+                logger.warning("Invoke fallback: element %r not found in UIA tree", name)
+                return False
+
+            # Try InvokePattern
+            pattern = found.GetCurrentPattern(UIA_InvokePatternId)
+            if pattern is None:
+                logger.warning("Invoke fallback: element %r does not support InvokePattern", name)
+                return False
+
+            from comtypes.gen.UIAutomationClient import IUIAutomationInvokePattern  # type: ignore[import-untyped]
+            invoke = pattern.QueryInterface(IUIAutomationInvokePattern)
+            invoke.Invoke()
+            logger.info("Invoke fallback: successfully invoked %r (%s)", name, role)
+            return True
+
+        except (COMError, OSError, AttributeError) as exc:
+            logger.warning("Invoke fallback failed for %r: %s", name, exc)
+            return False
+        except Exception as exc:
+            logger.warning("Invoke fallback unexpected error for %r: %s", name, exc)
+            return False
+
     def type_text(self, text: str = "", delay_ms: int = 5, profile: str = "linear",
                   wpm: int = 120, input_mode: str = "normal") -> None:
         """Type text using SendInput.

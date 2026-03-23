@@ -237,6 +237,18 @@ class SnapshotManager:
 
         # Calculate center of bounding rectangle
         ex, ey, ew, eh = element.frame
+
+        # Detect zero-bounds elements (e.g. TitleBar buttons after window
+        # state change).  Return None so callers can attempt a fallback
+        # strategy such as UIA Invoke pattern.
+        if ew == 0 and eh == 0:
+            logger.warning(
+                "Element ref %s (%s %r) has zero-size bounds (%d,%d %dx%d) — "
+                "likely stale after window state change",
+                ref, element.role, element.title, ex, ey, ew, eh,
+            )
+            return None
+
         cx = ex + ew // 2
         cy = ey + eh // 2
         return (cx, cy, recent_id)

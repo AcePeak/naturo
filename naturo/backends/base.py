@@ -225,6 +225,22 @@ class Backend(ABC):
               button: str = "left", double: bool = False, input_mode: str = "normal") -> None:
         ...
 
+    def invoke_element(self, name: str, role: str) -> bool:
+        """Invoke a UI element by name and role using a platform-specific pattern.
+
+        This is a fallback for elements whose bounding rects are zero-size
+        (e.g. after window state changes).  The default implementation
+        returns ``False``; platform backends may override.
+
+        Args:
+            name: The element's accessible name.
+            role: The element's control type / role.
+
+        Returns:
+            True if the element was found and invoked, False otherwise.
+        """
+        return False
+
     @abstractmethod
     def type_text(self, text: str, delay_ms: int = 5, profile: str = "human",
                   wpm: int = 120, input_mode: str = "normal") -> None:

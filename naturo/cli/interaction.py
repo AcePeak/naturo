@@ -133,6 +133,9 @@ def _post_action_see(
                 "height": el.height,
                 "children": [_to_dict(c) for c in el.children],
             }
+            # Flag zero-bounds elements (#137) so callers can detect stale refs
+            if el.width == 0 and el.height == 0:
+                d["zero_bounds"] = True
             return d
 
         return {"id": snapshot_id, "elements": _to_dict(tree)}
@@ -146,7 +149,10 @@ def _post_action_see(
             prefix = "  " * indent
             name_str = f' "{el.name}"' if el.name else ""
             pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
-            click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}")
+            # Warn about zero-bounds elements (#137) — these are likely stale
+            # after window state changes and won't respond to coordinate clicks.
+            zero_warn = " ⚠️ zero-bounds" if el.width == 0 and el.height == 0 else ""
+            click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{zero_warn}")
             for child in el.children:
                 _print_tree(child, indent + 1)
 
@@ -430,6 +436,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 
     # BUG-074: Resolve eN refs from the most recent `see` snapshot
     import re as _re
+    _zero_bounds_element = None  # Track element for Invoke fallback (#137)
     if target_id and _re.fullmatch(r"e\d+", target_id):
         from naturo.snapshot import SnapshotManager
         mgr = SnapshotManager()
@@ -438,16 +445,51 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
             x, y = resolved[0], resolved[1]
             target_id = None  # use coordinates instead
         else:
-            _json_err(
-                f"Element ref '{target_id}' not found. Run 'naturo see' first to "
-                f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
-                json_output,
-                code="REF_NOT_FOUND",
-            )
-            return
+            # resolve_ref returns None for both "not found" and "zero-bounds".
+            # Check resolve_ref_element to distinguish: if the element exists
+            # but has zero-bounds, try UIA Invoke pattern (#137/#135).
+            el_result = mgr.resolve_ref_element(target_id)
+            if el_result is not None:
+                element, _snap_id = el_result
+                ex, ey, ew, eh = element.frame
+                if ew == 0 and eh == 0:
+                    _zero_bounds_element = element
+                    target_id = None  # Will use Invoke fallback below
+                else:
+                    # Element found with valid bounds — shouldn't happen, but
+                    # fall through to coordinate click just in case.
+                    x, y = ex + ew // 2, ey + eh // 2
+                    target_id = None
+            else:
+                _json_err(
+                    f"Element ref '{target_id}' not found. Run 'naturo see' first to "
+                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+                    json_output,
+                    code="REF_NOT_FOUND",
+                )
+                return
 
     try:
-        if target_id:
+        if _zero_bounds_element is not None:
+            # Zero-bounds fallback (#137): attempt UIA Invoke pattern for
+            # elements whose bounding rects are (0,0 0x0) after window
+            # state changes.
+            _invoked = False
+            if hasattr(backend, "invoke_element"):
+                _invoked = backend.invoke_element(
+                    name=_zero_bounds_element.title or "",
+                    role=_zero_bounds_element.role,
+                )
+            if not _invoked:
+                _json_err(
+                    f"Element has zero-size bounds (0,0 0x0) — likely stale after "
+                    f"a window state change. UIA Invoke fallback {'not available' if not hasattr(backend, 'invoke_element') else 'failed'}. "
+                    f"Try running 'naturo see' again to refresh the snapshot.",
+                    json_output,
+                    code="ZERO_BOUNDS",
+                )
+                return
+        elif target_id:
             backend.click(element_id=target_id, button=button, double=double,
                           input_mode=input_mode)
         else:
@@ -463,7 +505,10 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     })
 
     action = "double-clicked" if double else "clicked"
-    loc = f"({x}, {y})" if coords else (target_id or "element")
+    if _zero_bounds_element is not None:
+        loc = f"{_zero_bounds_element.title or _zero_bounds_element.role} (via UIA Invoke)"
+    else:
+        loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data = {"action": action, "target": str(loc), "button": button}
     if route_info:
         result_data["routing"] = route_info

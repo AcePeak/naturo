@@ -598,5 +598,96 @@ class TestStoragePath:
         assert Path(mgr.storage_path) == tmp_root
 
 
+# ── resolve_ref zero-bounds detection (#137) ─────────────────────────────────
+
+
+class TestResolveRefZeroBounds:
+    """resolve_ref returns None for elements with zero-size bounding rects."""
+
+    def test_zero_bounds_returns_none(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """Element with (0, 0, 0, 0) frame should not resolve to coordinates."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        zero_el = UIElement(
+            id="e1",
+            element_id="btn_minimize",
+            role="Button",
+            title="Minimize",
+            label="Minimize",
+            value=None,
+            frame=(0, 0, 0, 0),
+            is_actionable=True,
+            parent_id=None,
+            children=[],
+        )
+        ui_map = {"e1": zero_el}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, {"e1": "e1"})
+
+        result = mgr.resolve_ref("e1")
+        assert result is None, "Zero-bounds element should not resolve to coordinates"
+
+    def test_normal_bounds_still_resolves(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """Element with valid frame should still resolve normally."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        normal_el = UIElement(
+            id="e1",
+            element_id="btn_close",
+            role="Button",
+            title="Close",
+            label="Close",
+            value=None,
+            frame=(100, 200, 50, 30),
+            is_actionable=True,
+            parent_id=None,
+            children=[],
+        )
+        ui_map = {"e1": normal_el}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, {"e1": "e1"})
+
+        result = mgr.resolve_ref("e1")
+        assert result is not None
+        x, y, snap_id = result
+        assert x == 125  # 100 + 50//2
+        assert y == 215  # 200 + 30//2
+
+    def test_resolve_ref_element_still_works_for_zero_bounds(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """resolve_ref_element should still return the element even with zero bounds."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        zero_el = UIElement(
+            id="e1",
+            element_id="btn_restore",
+            role="Button",
+            title="Restore",
+            label="Restore",
+            value=None,
+            frame=(0, 0, 0, 0),
+            is_actionable=True,
+            parent_id=None,
+            children=[],
+        )
+        ui_map = {"e1": zero_el}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, {"e1": "e1"})
+
+        result = mgr.resolve_ref_element("e1")
+        assert result is not None
+        element, snap_id = result
+        assert element.title == "Restore"
+        assert element.frame == (0, 0, 0, 0)
+
+
 # ── need os for backdate test ─────────────────────────────────────────────────
 import os  # noqa: E402  (placed here intentionally to keep test-only import)
