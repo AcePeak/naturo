@@ -2190,24 +2190,53 @@ class WindowsBackend(Backend):
         import ctypes
         return ctypes.windll.user32.FindWindowW("Shell_TrayWnd", None) or 0
 
-    def taskbar_list(self) -> list[dict]:
-        """List items on the Windows taskbar.
+    @staticmethod
+    def _find_child_hwnd(parent: int, class_name: str) -> int:
+        """Find a child window by class name using FindWindowExW.
 
-        Finds the taskbar window by its well-known class name
-        (Shell_TrayWnd), inspects its UIA element tree, and collects
-        all Button elements — these correspond to running applications
-        and pinned shortcuts.
+        Args:
+            parent: Parent window handle.
+            class_name: Window class name to search for.
+
+        Returns:
+            HWND of the child window, or 0 if not found.
+        """
+        import ctypes
+        return ctypes.windll.user32.FindWindowExW(parent, 0, class_name, None) or 0
+
+    def taskbar_list(self) -> list[dict]:
+        """List items on the Windows taskbar (running apps and pinned shortcuts).
+
+        Scopes the search to the task list area of the taskbar
+        (MSTaskListWClass / MSTaskSwWClass inside ReBarWindow32) to avoid
+        returning notification-area icons. Falls back to the full taskbar
+        tree if the task list sub-window is not found.
 
         Returns:
             List of dicts with keys: name, hwnd, is_active, is_pinned, x, y,
             width, height.
         """
         core = self._ensure_core()
-        hwnd = self._find_taskbar_hwnd()
-        if hwnd == 0:
+        taskbar_hwnd = self._find_taskbar_hwnd()
+        if taskbar_hwnd == 0:
             return []
 
-        tree = core.get_element_tree(hwnd=hwnd, depth=5)
+        # Locate the task-list area: Shell_TrayWnd → ReBarWindow32 → MSTaskSwWClass → MSTaskListWClass
+        target_hwnd = 0
+        rebar = self._find_child_hwnd(taskbar_hwnd, "ReBarWindow32")
+        if rebar:
+            task_sw = self._find_child_hwnd(rebar, "MSTaskSwWClass")
+            if task_sw:
+                task_list = self._find_child_hwnd(task_sw, "MSTaskListWClass")
+                target_hwnd = task_list or task_sw
+            else:
+                target_hwnd = rebar
+
+        if target_hwnd == 0:
+            # Fallback: use full taskbar tree (Windows 11 may differ)
+            target_hwnd = taskbar_hwnd
+
+        tree = core.get_element_tree(hwnd=target_hwnd, depth=5)
         if tree is None:
             return []
 
@@ -2290,9 +2319,10 @@ class WindowsBackend(Backend):
     def tray_list(self) -> list[dict]:
         """List system tray (notification area) icons.
 
-        Finds the taskbar window (Shell_TrayWnd) and inspects its UIA
-        element tree at depth 6 to locate notification area icons.
-        Also checks the overflow panel (NotifyIconOverflowWindow).
+        Scopes the search to the notification area sub-window
+        (TrayNotifyWnd inside Shell_TrayWnd) instead of walking the entire
+        taskbar tree. Also checks the overflow panel
+        (NotifyIconOverflowWindow) for hidden tray icons.
 
         Returns:
             List of dicts with keys: name, tooltip, is_visible, x, y, width,
@@ -2303,10 +2333,12 @@ class WindowsBackend(Backend):
         core = self._ensure_core()
         icons: list[dict] = []
 
-        # Primary notification area is inside the taskbar
+        # Primary notification area: Shell_TrayWnd → TrayNotifyWnd
         taskbar_hwnd = self._find_taskbar_hwnd()
         if taskbar_hwnd:
-            tree = core.get_element_tree(hwnd=taskbar_hwnd, depth=6)
+            tray_notify = self._find_child_hwnd(taskbar_hwnd, "TrayNotifyWnd")
+            target_hwnd = tray_notify or taskbar_hwnd
+            tree = core.get_element_tree(hwnd=target_hwnd, depth=6)
             if tree is not None:
                 self._collect_tray_icons(tree, icons)
 
