@@ -1,5 +1,6 @@
-"""CLI wait command — wait for elements or windows to appear/disappear."""
+"""CLI wait command — wait for a duration, or for elements/windows to appear/disappear."""
 import json
+import time
 
 from naturo.cli.error_helpers import json_error as _json_error_str
 import sys
@@ -7,6 +8,7 @@ import click
 
 
 @click.command("wait")
+@click.argument("duration", required=False, type=float, default=None)
 @click.option("--element", help="Element selector to wait for")
 @click.option("--window", "window_title", help="Window title to wait for")
 @click.option("--gone", help="Element selector to wait to disappear")
@@ -14,11 +16,15 @@ import click
 @click.option("--interval", type=float, default=0.1, help="Poll interval in seconds (default: 0.1)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def wait(ctx, element, window_title, gone, timeout, interval, json_output):
-    """Wait for a UI element or window to appear or disappear.
+def wait(ctx, duration, element, window_title, gone, timeout, interval, json_output):
+    """Wait for a duration, or for a UI element/window to appear or disappear.
 
     \b
     Examples:
+
+      naturo wait 3                            # Sleep 3 seconds
+
+      naturo wait 0.5                          # Sleep 500ms
 
       naturo wait --element "Button:Save" --timeout 10
 
@@ -28,8 +34,41 @@ def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
-    if not element and not window_title and not gone:
-        msg = "Specify --element, --window, or --gone"
+    has_condition = bool(element or window_title or gone)
+
+    # Simple duration mode: naturo wait 3
+    if duration is not None:
+        if has_condition:
+            msg = "Cannot combine a duration argument with --element/--window/--gone"
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+
+        if duration < 0:
+            msg = f"Duration must be >= 0, got {duration}"
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+
+        time.sleep(duration)
+        if json_output:
+            click.echo(json.dumps({
+                "success": True,
+                "mode": "duration",
+                "wait_time": round(duration, 3),
+            }, indent=2))
+        else:
+            click.echo(f"Waited {duration:.1f}s")
+        return
+
+    if not has_condition:
+        msg = "Specify a duration (e.g. 'naturo wait 3') or a condition (--element, --window, --gone)"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:

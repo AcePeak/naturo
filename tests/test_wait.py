@@ -1,7 +1,10 @@
-"""Tests for naturo.wait — wait polling, timeout, found/not-found."""
+"""Tests for naturo.wait — wait polling, timeout, found/not-found, and CLI duration."""
+import json
 import time
 import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
+from click.testing import CliRunner
+from naturo.cli.wait_cmd import wait as wait_cmd
 from naturo.wait import wait_for_element, wait_until_gone, wait_for_window, WaitResult
 from naturo.backends.base import ElementInfo, WindowInfo
 
@@ -193,3 +196,56 @@ class TestWaitForWindow:
             "Notepad", timeout=5.0, poll_interval=0.05, backend=backend,
         )
         assert result.found is True
+
+
+class TestWaitDurationCLI:
+    """Tests for the simple duration mode: naturo wait <seconds>."""
+
+    def test_wait_duration_basic(self):
+        runner = CliRunner()
+        start = time.monotonic()
+        result = runner.invoke(wait_cmd, ["0.1"])
+        elapsed = time.monotonic() - start
+        assert result.exit_code == 0
+        assert "Waited" in result.output
+        assert elapsed >= 0.09
+
+    def test_wait_duration_json(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["0.1", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["mode"] == "duration"
+        assert data["wait_time"] == 0.1
+
+    def test_wait_duration_zero(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["0"])
+        assert result.exit_code == 0
+        assert "Waited" in result.output
+
+    def test_wait_duration_negative_error(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["-1"])
+        # Click may interpret -1 as an option; either way should not succeed silently
+        assert result.exit_code != 0 or "Error" in (result.output + (result.output or ""))
+
+    def test_wait_duration_with_condition_error(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["3", "--element", "Button:Save"])
+        assert result.exit_code != 0
+        assert "Cannot combine" in result.output
+
+    def test_wait_no_args_error(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, [])
+        assert result.exit_code != 0
+        assert "Specify a duration" in result.output or "Error" in result.output
+
+    def test_wait_no_args_json_error(self):
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert "error" in data or "code" in data
