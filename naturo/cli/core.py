@@ -507,10 +507,15 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
+            # Build reverse map: backend element id → user-facing ref (e.g. "e3")
+            # so JSON output shows refs that match what `click --id` expects.
+            _backend_to_ref = {backend_id: ref_key for ref_key, backend_id in ref_map.items()} if ref_map else {}
+
             def to_dict(el):
                 """Convert ElementInfo tree to a JSON-serializable dict."""
+                display_id = _backend_to_ref.get(el.id, el.id)
                 d = {
-                    "id": el.id,
+                    "id": display_id,
                     "role": el.role,
                     "name": el.name,
                     "value": el.value,

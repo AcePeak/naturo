@@ -123,7 +123,7 @@ def populate_hierarchy(root: ElementInfo, parent_id: Optional[str] = None, count
         counter: Internal counter list for id generation.
     """
     if counter is None:
-        counter = [0]
+        counter = [1]
 
     if not root.id:
         root.id = f"e{counter[0]}"

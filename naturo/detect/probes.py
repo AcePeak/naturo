@@ -342,6 +342,11 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                 capabilities=capabilities,
                 confidence=0.95,
             )
+        else:
+            logger.debug(
+                "UIA probe via native DLL returned empty tree for PID %d (hwnd=%s)",
+                pid, target_hwnd,
+            )
     except Exception as exc:
         logger.debug("UIA probe via native DLL failed for PID %d: %s", pid, exc)
 
@@ -349,9 +354,16 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
     try:
         import comtypes.client  # type: ignore
 
+        # Ensure gen modules are initialized before importing (#200).
+        try:
+            from comtypes.gen.UIAutomationClient import IUIAutomation as _IUIAutomation  # type: ignore
+        except (ImportError, ModuleNotFoundError):
+            comtypes.client.GetModule("UIAutomationCore.dll")
+            from comtypes.gen.UIAutomationClient import IUIAutomation as _IUIAutomation  # type: ignore
+
         uia = comtypes.client.CreateObject(
             "{ff48dba4-60ef-4201-aa87-54103eef594e}",
-            interface=comtypes.gen.UIAutomationClient.IUIAutomation,  # type: ignore
+            interface=_IUIAutomation,
         )
 
         element = uia.ElementFromHandle(target_hwnd)

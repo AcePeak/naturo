@@ -120,10 +120,15 @@ def _post_action_see(
     mgr.store_ref_map(snapshot_id, ref_map)
 
     if json_output:
-        # Build JSON-serializable tree
+        # Build reverse map: backend element id → user-facing ref (e.g. "e3")
+        _backend_to_ref = {backend_id: ref_key for ref_key, backend_id in ref_map.items()}
+
+        # Build JSON-serializable tree using user-facing refs as IDs so that
+        # the "id" values shown in JSON output match what `click --id` expects.
         def _to_dict(el):
+            display_id = _backend_to_ref.get(el.id, el.id)
             d = {
-                "id": el.id,
+                "id": display_id,
                 "role": el.role,
                 "name": el.name,
                 "value": el.value,

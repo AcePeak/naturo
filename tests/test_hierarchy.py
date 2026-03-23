@@ -59,22 +59,22 @@ class TestPopulateHierarchy:
         assert tree_with_ids.children[1].parent_id == "root"
 
     def test_assigns_sequential_ids(self, tree_no_ids):
-        """Empty IDs are filled with sequential e0, e1, etc."""
+        """Empty IDs are filled with sequential e1, e2, etc. (1-based)."""
         populate_hierarchy(tree_no_ids)
-        assert tree_no_ids.id == "e0"
-        assert tree_no_ids.children[0].id == "e1"
+        assert tree_no_ids.id == "e1"
+        assert tree_no_ids.children[0].id == "e2"
         # grandchild of children[0]
-        assert tree_no_ids.children[0].children[0].id == "e2"
-        assert tree_no_ids.children[1].id == "e3"
+        assert tree_no_ids.children[0].children[0].id == "e3"
+        assert tree_no_ids.children[1].id == "e4"
 
     def test_fills_parent_id_with_generated_ids(self, tree_no_ids):
         """Parent IDs reference the generated sequential IDs."""
         populate_hierarchy(tree_no_ids)
         root = tree_no_ids
         assert root.parent_id is None
-        assert root.children[0].parent_id == "e0"
-        assert root.children[0].children[0].parent_id == "e1"
-        assert root.children[1].parent_id == "e0"
+        assert root.children[0].parent_id == "e1"
+        assert root.children[0].children[0].parent_id == "e2"
+        assert root.children[1].parent_id == "e1"
 
     def test_preserves_existing_ids(self, tree_with_ids):
         """Existing non-empty IDs are preserved."""
@@ -90,7 +90,7 @@ class TestPopulateHierarchy:
             x=0, y=0, width=100, height=100,
         )
         populate_hierarchy(root)
-        assert root.id == "e0"
+        assert root.id == "e1"
         assert root.parent_id is None
 
 

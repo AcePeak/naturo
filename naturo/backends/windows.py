@@ -1195,6 +1195,14 @@ class WindowsBackend(Backend):
             return False
 
         try:
+            # Ensure comtypes gen modules are initialized before importing
+            # from comtypes.gen.UIAutomationClient (#200).  GetModule triggers
+            # type-library code generation on first use.
+            try:
+                from comtypes.gen.UIAutomationClient import IUIAutomation  # type: ignore[import-untyped]
+            except (ImportError, ModuleNotFoundError):
+                comtypes.client.GetModule("UIAutomationCore.dll")
+
             uia = comtypes.client.CreateObject(
                 "{ff48dba4-60ef-4201-aa87-54103eef594e}",
                 interface=None,
