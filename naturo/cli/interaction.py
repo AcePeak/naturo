@@ -624,6 +624,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 @click.option("--paste", "paste_mode", is_flag=True, help="Paste via clipboard (Ctrl+V) instead of typing")
 @click.option("--file", "file_path", type=click.Path(), help="Read text from file (use with --paste)")
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste", show_default=True)
+@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
@@ -639,15 +640,18 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
-             delete, clear, paste_mode, file_path, restore, app, window_title,
-             hwnd, input_mode, method, see_after, settle, json_output):
+             delete, clear, paste_mode, file_path, restore, on_element, app,
+             window_title, hwnd, input_mode, method, see_after, settle,
+             json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
     and Windows-specific input modes.
 
     Use --paste to set clipboard and Ctrl+V instead of keystroke typing.
+    Use --paste without TEXT to paste current clipboard content.
     Use --file with --paste to read content from a file.
+    Use --on to target a specific element (click to focus before typing).
 
     \b
     Examples:
@@ -656,6 +660,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type "text" --profile human --wpm 60
       naturo type "large content" --paste
       naturo type --paste --file mytext.txt
+      naturo type --paste                        # paste current clipboard
+      naturo type "hello" --on e42               # click e42 then type
+      naturo type "hello" --on e42 --app feishu  # target app + element
     """
     # Handle --file: read content from file
     if file_path:
@@ -672,8 +679,12 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         # --file implies --paste
         paste_mode = True
 
-    if not text:
-        _json_err("TEXT argument is required", json_output, code="INVALID_INPUT")
+    # --paste without TEXT: paste current clipboard content via Ctrl+V
+    if paste_mode and not text:
+        text = None  # Signal clipboard-only paste (no text to set)
+    elif not text:
+        _json_err("TEXT argument is required (or use --paste to paste clipboard)",
+                  json_output, code="INVALID_INPUT")
         return
 
     if wpm < 1:
@@ -685,6 +696,48 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
+    # --on: resolve element ref and click to focus before typing (#165)
+    if on_element:
+        import re as _re
+        if _re.fullmatch(r"e\d+", on_element):
+            from naturo.snapshot import SnapshotManager
+            mgr = SnapshotManager()
+            resolved = mgr.resolve_ref(on_element)
+            if resolved:
+                click_x, click_y = resolved[0], resolved[1]
+            else:
+                _json_err(
+                    f"Element ref '{on_element}' not found. Run 'naturo see' first to "
+                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+                    json_output,
+                    code="REF_NOT_FOUND",
+                )
+                return
+        else:
+            # Text-based element lookup via backend
+            try:
+                elem = backend.find_element(on_element)
+                if elem:
+                    click_x = elem.x + elem.width // 2
+                    click_y = elem.y + elem.height // 2
+                else:
+                    _json_err(
+                        f"Element '{on_element}' not found",
+                        json_output,
+                        code="ELEMENT_NOT_FOUND",
+                    )
+                    return
+            except Exception as exc:
+                _json_err(str(exc), json_output)
+                return
+        try:
+            backend.click(click_x, click_y, button="left", input_mode=input_mode)
+            import time
+            time.sleep(0.1)  # Brief pause for focus to settle
+        except Exception as exc:
+            _json_err(f"Failed to click target element: {exc}", json_output)
+            return
+
     try:
         if clear:
             backend.hotkey("ctrl", "a")
@@ -693,19 +746,23 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             backend.press_key("delete")
 
         if paste_mode:
-            # Paste via clipboard: save → set → Ctrl+V → restore
-            old_clip = ""
-            if restore:
-                try:
-                    old_clip = backend.clipboard_get()
-                except Exception:
-                    pass
-            backend.clipboard_set(text)
-            backend.hotkey("ctrl", "v")
-            if restore and old_clip:
-                import time
-                time.sleep(0.1)
-                backend.clipboard_set(old_clip)
+            if text is not None:
+                # Text provided: save clipboard → set text → Ctrl+V → restore
+                old_clip = ""
+                if restore:
+                    try:
+                        old_clip = backend.clipboard_get()
+                    except Exception:
+                        pass
+                backend.clipboard_set(text)
+                backend.hotkey("ctrl", "v")
+                if restore and old_clip:
+                    import time
+                    time.sleep(0.1)
+                    backend.clipboard_set(old_clip)
+            else:
+                # No text: paste current clipboard content directly (#165)
+                backend.hotkey("ctrl", "v")
         else:
             backend.type_text(text, delay_ms=int(delay), profile=profile, wpm=wpm,
                               input_mode=input_mode)
@@ -723,7 +780,11 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         return
 
     action = "pasted" if paste_mode else "typed"
-    result_data = {"action": action, "text": text, "length": len(text)}
+    display_text = text if text is not None else "(clipboard)"
+    display_len = len(text) if text is not None else 0
+    result_data = {"action": action, "text": display_text, "length": display_len}
+    if on_element:
+        result_data["target"] = on_element
     if route_info:
         result_data["routing"] = route_info
 
