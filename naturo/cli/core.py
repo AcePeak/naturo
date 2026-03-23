@@ -96,9 +96,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
             click.echo(msg)
         raise SystemExit(1)
 
-    # Resolve output path: use --path if given, else capture.<format>
+    # Resolve output path: use --path if given, else timestamped name
     if path is None:
-        path = f"capture.{fmt}"
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        app_label = (app or "screen").lower().replace(" ", "-")
+        path = f"naturo-{app_label}-{timestamp}.{fmt}"
 
     try:
         backend = _get_backend()
