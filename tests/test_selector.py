@@ -135,10 +135,10 @@ class TestSeeCLISelectorOptions:
         assert result.exit_code == 0
         assert "--app" in result.output
 
-    def test_see_window_title_option(self, runner):
-        """T200 – see --window-title option is documented."""
+    def test_see_window_option(self, runner):
+        """T200 – see --window option is documented (renamed from --window-title)."""
         result = runner.invoke(main, ["see", "--help"])
-        assert "--window-title" in result.output
+        assert "--window" in result.output
 
     def test_see_json_option(self, runner):
         """T297 – see --json option is documented."""

@@ -456,12 +456,12 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
 
 
 @window.command(name="list")
-@click.option("--app", help="Filter by application/process name")
-@click.option("--process-name", help="Filter by process name")
-@click.option("--pid", type=int, help="Filter by process ID")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--process-name", "app", default=None, hidden=True, help="")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_list(ctx, app, process_name, pid, json_output):
+def window_list(ctx, app, pid, json_output):
     """List open windows."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.errors import NaturoError
@@ -474,9 +474,6 @@ def window_list(ctx, app, process_name, pid, json_output):
         if app:
             app_lower = app.lower()
             windows = [w for w in windows if app_lower in w.process_name.lower() or app_lower in w.title.lower()]
-        if process_name:
-            pn_lower = process_name.lower()
-            windows = [w for w in windows if pn_lower in w.process_name.lower()]
         if pid is not None:
             windows = [w for w in windows if w.pid == pid]
 

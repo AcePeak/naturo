@@ -39,7 +39,8 @@ def test_list_windows_has_filters(runner):
     result = runner.invoke(main, ["list", "windows", "--help"])
     assert result.exit_code == 0
     assert "--app" in result.output
-    assert "--process-name" in result.output
+    # --process-name is now a hidden alias for --app
+    assert "--process-name" not in result.output
     assert "--pid" in result.output
 
 

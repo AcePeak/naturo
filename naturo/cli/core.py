@@ -72,9 +72,10 @@ def capture():
 
 
 @capture.command()
-@click.option("--app", help="Application name to capture")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
 @click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
@@ -177,9 +178,10 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
 
 
 @capture.command(hidden=True)
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--screen", "-s", type=int, help="Screen/monitor index")
 @click.option("--duration", "-d", type=float, default=5.0, help="Duration in seconds")
 @click.option("--fps", type=int, default=30, help="Frames per second")
@@ -196,9 +198,10 @@ def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
 
 
 @capture.command(hidden=True)
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--interval", type=float, default=1.0, help="Check interval in seconds")
 @click.option("--timeout", type=float, help="Max watch time in seconds")
 @click.option("--path", "-p", help="Output directory")
@@ -233,11 +236,11 @@ def apps(ctx, show_all, json_output):
 
 
 @list_cmd.command()
-@click.option("--app", help="Filter by application name")
-@click.option("--process-name", help="Filter by process name")
-@click.option("--pid", type=int, help="Filter by process ID")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--process-name", "app", default=None, hidden=True, help="")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def windows(app, process_name, pid, json_output):
+def windows(app, pid, json_output):
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
@@ -258,10 +261,9 @@ def windows(app, process_name, pid, json_output):
         # Apply filters
         if app:
             app_lower = app.lower()
-            win_list = [w for w in win_list if app_lower in w.title.lower()]
-        if process_name:
-            pn_lower = process_name.lower()
-            win_list = [w for w in win_list if pn_lower in w.process_name.lower()]
+            win_list = [w for w in win_list
+                        if app_lower in w.title.lower()
+                        or app_lower in w.process_name.lower()]
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
@@ -385,9 +387,10 @@ def permissions(json_output):
 
 
 @click.command()
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option(
     "--mode",

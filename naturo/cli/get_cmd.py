@@ -39,11 +39,13 @@ def _get_backend():
               help="Element name filter")
 @click.option("--property", "-p", "prop", default=None,
               help="Return only a specific property (value, name, role, pattern)")
-@click.option("--app", default=None, help="Target application name")
-@click.option("--window-title", "--title", default=None,
-              help="Target window title (partial match)")
+@click.option("--app", default=None, help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", default=None, type=int,
-              help="Target window handle")
+              help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, default=None,
               help="JSON output")
 @click.pass_context

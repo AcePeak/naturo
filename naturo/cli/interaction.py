@@ -220,15 +220,17 @@ def _auto_route(
 
 @click.command("click")
 @click.argument("query", required=False)
-@click.option("--on", "on_text", help="Text/element to click on")
+@click.option("--on", "on_text", help="Target element (eN ref or text label)")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
 @click.option("--double", is_flag=True, help="Double-click")
 @click.option("--right", is_flag=True, help="Right-click")
-@click.option("--app", help="Application name")
+@click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--window-id", "--hwnd", "window_id", type=int, help="Window handle (HWND)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--window-id", "hwnd", type=int, default=None, hidden=True, help="")
 @click.option("--wait-for", type=float, help="Wait for element (seconds)", hidden=True)
 @click.option(
     "--input-mode",
@@ -237,10 +239,10 @@ def _auto_route(
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
-@click.option("--process-name", help="Filter by process name")
+@click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
-              window_title, window_id, wait_for, input_mode, method, process_name,
+              window_title, hwnd, wait_for, input_mode, method,
               json_output):
     """Click on a UI element, text, or coordinates.
 
@@ -345,9 +347,10 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 @click.option("--paste", "paste_mode", is_flag=True, help="Paste via clipboard (Ctrl+V) instead of typing")
 @click.option("--file", "file_path", type=click.Path(), help="Read text from file (use with --paste)")
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste", show_default=True)
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option(
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
@@ -355,11 +358,11 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
 )
 @_method_option
-@click.option("--process-name", help="Filter by process name")
+@click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, app, window_title,
-             hwnd, input_mode, method, process_name, json_output):
+             hwnd, input_mode, method, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -455,9 +458,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 @click.argument("key", required=False, default=None)
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option(
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
@@ -517,9 +521,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
 @click.argument("keys", required=False)
 @click.option("--keys", "keys_option", multiple=True, help="Key names (repeatable)")
 @click.option("--hold-duration", type=float, help="Hold duration in ms")
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option(
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
@@ -597,9 +602,10 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Coordinates to scroll at")
 @click.option("--smooth", is_flag=True, help="Smooth scrolling (Phase 3)")
 @click.option("--delay", type=float, help="Delay between scroll steps (ms)")
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
@@ -708,9 +714,10 @@ def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
     default="linear",
     help="Motion profile",
 )
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, to_text, to_coords, duration, steps,
@@ -770,9 +777,10 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Target X Y coordinates")
 @click.option("--id", "element_id", help="Target element automation ID")
 @click.option("--duration", type=float, default=0.0, help="Move duration (seconds)", hidden=True)
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle (HWND)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def move(to_text, coords, element_id, duration, app, window_title, hwnd,

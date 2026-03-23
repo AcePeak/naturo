@@ -60,9 +60,10 @@ def menu():
 
 @menu.command(name="click")
 @click.argument("path")
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def menu_click(path, app, window_title, hwnd, json_output):
     """Click a menu item by path (e.g. 'File > Save As')."""
@@ -70,9 +71,10 @@ def menu_click(path, app, window_title, hwnd, json_output):
 
 
 @menu.command(name="list")
-@click.option("--app", help="Application name")
-@click.option("--window-title", help="Window title pattern")
-@click.option("--hwnd", type=int, help="Window handle")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--depth", type=int, default=3, help="Menu tree depth")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def menu_list(app, window_title, hwnd, depth, json_output):
