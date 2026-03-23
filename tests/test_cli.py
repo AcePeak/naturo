@@ -384,10 +384,11 @@ def _has_desktop_session() -> bool:
 def _expected_see_exit() -> int:
     """Return expected exit code for ``see`` with no args.
 
-    On Windows with a desktop session ``see`` succeeds (0).  On non-Windows
-    or headless/SSH Windows it returns 1 (no display).
+    On Windows ``see`` succeeds (0) — UIA works even in headless/CI
+    sessions (SESSIONNAME='Services').  On non-Windows it returns 1
+    (no Windows backend).
     """
-    return 0 if _has_desktop_session() else 1
+    return 0 if platform.system() == "Windows" else 1
 
 
 @pytest.mark.parametrize("cmd,expected_exit", [
