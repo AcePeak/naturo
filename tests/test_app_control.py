@@ -95,10 +95,16 @@ class TestAppCLIOptions:
         result = runner.invoke(main, ["app", "--help"])
         assert "list" in result.output
 
-    def test_app_switch_subcommand(self, runner):
-        """T157 – app switch subcommand is documented."""
+    def test_app_focus_subcommand(self, runner):
+        """T157 – app focus subcommand is documented (replaced switch)."""
         result = runner.invoke(main, ["app", "--help"])
-        assert "switch" in result.output
+        assert "focus" in result.output
+
+    def test_app_window_commands_in_help(self, runner):
+        """T170 – window operations appear under app group."""
+        result = runner.invoke(main, ["app", "--help"])
+        for cmd in ("focus", "close", "minimize", "maximize", "restore", "move", "windows"):
+            assert cmd in result.output, f"'{cmd}' missing from app --help"
 
     def test_app_launch_args_option(self, runner):
         """T152 – app launch --args option is documented."""

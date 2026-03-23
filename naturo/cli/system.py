@@ -11,7 +11,7 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 
 @click.group(cls=FuzzyGroup)
 def app():
-    """Manage applications: launch, quit, switch, and more."""
+    """Manage applications and windows: launch, quit, focus, close, minimize, maximize, restore, move, and more."""
     pass
 
 

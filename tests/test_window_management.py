@@ -565,17 +565,20 @@ class TestWindowListCLI:
 class TestAppHideUnhideSwitchCLI:
     """Tests for `naturo app hide/unhide/switch`."""
 
-    def test_hide_in_help(self, runner):
-        result = runner.invoke(main, ["app", "--help"])
-        assert "hide" in result.output
+    def test_hide_still_callable(self, runner):
+        """hide is a hidden alias for minimize — still callable."""
+        result = runner.invoke(main, ["app", "hide", "--help"])
+        assert result.exit_code == 0
 
-    def test_unhide_in_help(self, runner):
-        result = runner.invoke(main, ["app", "--help"])
-        assert "unhide" in result.output
+    def test_unhide_still_callable(self, runner):
+        """unhide is a hidden alias for restore — still callable."""
+        result = runner.invoke(main, ["app", "unhide", "--help"])
+        assert result.exit_code == 0
 
-    def test_switch_in_help(self, runner):
-        result = runner.invoke(main, ["app", "--help"])
-        assert "switch" in result.output
+    def test_switch_still_callable(self, runner):
+        """switch is a hidden alias for focus — still callable."""
+        result = runner.invoke(main, ["app", "switch", "--help"])
+        assert result.exit_code == 0
 
     @patch("naturo.backends.base.get_backend")
     def test_hide_success(self, mock_get, runner, mock_window):
@@ -812,3 +815,151 @@ class TestWindowTargeting:
         assert result.exit_code == 0
         call_kwargs = backend.focus_window.call_args[1]
         assert call_kwargs["title"] == "Notepad"
+
+
+# ── Tests for unified app window commands (#170) ────────────────────────────
+
+
+class TestAppWindowCommands:
+    """Tests for window operations under 'naturo app' namespace (#170)."""
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_focus_by_name(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "focus", "notepad"])
+        assert result.exit_code == 0
+        assert "Focused" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_focus_by_hwnd(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "focus", "--hwnd", "12345"])
+        assert result.exit_code == 0
+
+    def test_app_focus_no_target(self, runner):
+        result = runner.invoke(main, ["app", "focus"])
+        assert result.exit_code != 0
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_close_by_name(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "close", "notepad"])
+        assert result.exit_code == 0
+        assert "Closed" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_close_force(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "close", "notepad", "--force"])
+        assert result.exit_code == 0
+        call_kwargs = backend.close_window.call_args[1]
+        assert call_kwargs["force"] is True
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_minimize_by_name(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "minimize", "notepad"])
+        assert result.exit_code == 0
+        assert "Minimized" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_maximize_by_name(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "maximize", "notepad"])
+        assert result.exit_code == 0
+        assert "Maximized" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_restore_by_name(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "restore", "notepad"])
+        assert result.exit_code == 0
+        assert "Restored" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_move_position(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "move", "notepad", "--x", "100", "--y", "200"])
+        assert result.exit_code == 0
+        assert "Moved" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_move_resize(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "move", "notepad", "--width", "800", "--height", "600"])
+        assert result.exit_code == 0
+        assert "Resized" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_move_set_bounds(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "move", "notepad", "--x", "100", "--y", "200", "--width", "800", "--height", "600"])
+        assert result.exit_code == 0
+        assert "Set bounds" in result.output
+
+    def test_app_move_partial_position(self, runner):
+        result = runner.invoke(main, ["app", "move", "notepad", "--x", "100"])
+        assert result.exit_code != 0
+
+    def test_app_move_no_params(self, runner):
+        result = runner.invoke(main, ["app", "move", "notepad"])
+        assert result.exit_code != 0
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_windows_list(self, mock_get, runner, mock_window):
+        backend = MagicMock()
+        backend.list_windows.return_value = [mock_window]
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "windows"])
+        assert result.exit_code == 0
+        assert "1 windows" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_windows_filter_by_name(self, mock_get, runner, mock_window):
+        backend = MagicMock()
+        backend.list_windows.return_value = [mock_window]
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "windows", "notepad"])
+        assert result.exit_code == 0
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_focus_json(self, mock_get, runner):
+        backend = MagicMock()
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "focus", "notepad", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["action"] == "focus"
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_list_windows_flag(self, mock_get, runner, mock_window):
+        """T170 – app list --windows shows detailed window list."""
+        backend = MagicMock()
+        backend.list_windows.return_value = [mock_window]
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "list", "--windows"])
+        assert result.exit_code == 0
+        assert "1 windows" in result.output
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_list_windows_json(self, mock_get, runner, mock_window):
+        """T170 – app list --windows --json returns structured data."""
+        backend = MagicMock()
+        backend.list_windows.return_value = [mock_window]
+        mock_get.return_value = backend
+        result = runner.invoke(main, ["app", "list", "--windows", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert len(data["windows"]) == 1

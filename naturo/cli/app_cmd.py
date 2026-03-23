@@ -1,7 +1,9 @@
-"""CLI app command extensions — launch, quit, relaunch, list, find, inspect.
+"""CLI app command extensions — launch, quit, relaunch, list, find, inspect, and window ops.
 
 Replaces the stub implementations in system.py with working process management.
 These are registered as subcommands of the existing ``app`` group.
+Window operations (focus, close, minimize, maximize, restore, move, resize) are
+also registered here, unifying app + window into a single namespace.
 """
 import json
 import os
@@ -189,15 +191,59 @@ def app_relaunch(ctx, name, wait_until_ready, timeout, json_output):
 
 @click.command("list")
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
+@click.option("--windows", "show_windows", is_flag=True, help="Show all open windows with details")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_list(ctx, show_all, json_output):
+def app_list(ctx, show_all, show_windows, json_output):
     """List running applications with visible windows.
 
     By default, only user-facing applications with visible windows are shown.
     Use --all to include all processes (system services, background tasks).
+    Use --windows to list all open windows with handles and dimensions.
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    if show_windows:
+        # Detailed window listing (replaces `naturo window list`)
+        from naturo.errors import NaturoError
+        try:
+            from naturo.backends.base import get_backend
+            backend = get_backend()
+            windows = backend.list_windows()
+        except Exception as exc:
+            if json_output:
+                click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
+            else:
+                _safe_echo(f"Error: {exc}", err=True)
+            sys.exit(1)
+            return
+
+        if json_output:
+            click.echo(json.dumps({
+                "success": True,
+                "windows": [
+                    {
+                        "handle": w.handle,
+                        "title": w.title,
+                        "process_name": w.process_name,
+                        "pid": w.pid,
+                        "x": w.x, "y": w.y,
+                        "width": w.width, "height": w.height,
+                        "is_visible": w.is_visible,
+                        "is_minimized": w.is_minimized,
+                    }
+                    for w in windows
+                ],
+                "count": len(windows),
+            }, indent=2))
+        else:
+            if not windows:
+                click.echo("No windows found")
+            else:
+                for w in windows:
+                    _safe_echo(f"  {w.handle:>10}  {w.process_name:<20}  {w.title}")
+                click.echo(f"\n{len(windows)} windows")
+        return
 
     if show_all:
         # Legacy behavior: list all processes via tasklist/ps
@@ -254,12 +300,12 @@ def app_list(ctx, show_all, json_output):
             click.echo(f"\n{len(apps_data)} applications")
 
 
-@click.command("hide")
+@click.command("hide", hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def app_hide(ctx, name, json_output):
-    """Hide (minimize) all windows of an application."""
+    """Hide (minimize) all windows of an application. Alias for minimize."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
@@ -291,12 +337,12 @@ def app_hide(ctx, name, json_output):
         sys.exit(1)
 
 
-@click.command("unhide")
+@click.command("unhide", hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def app_unhide(ctx, name, json_output):
-    """Unhide (restore) all windows of an application."""
+    """Unhide (restore) all windows of an application. Alias for restore."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
@@ -328,12 +374,12 @@ def app_unhide(ctx, name, json_output):
         sys.exit(1)
 
 
-@click.command("switch")
+@click.command("switch", hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def app_switch(ctx, name, json_output):
-    """Switch to (focus) the most recent window of an application."""
+    """Switch to (focus) the most recent window of an application. Alias for focus."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
@@ -578,3 +624,394 @@ def _print_inspect_result(result) -> None:
                     _safe_echo(f"             {key}: {val}")
     else:
         _safe_echo("  No interaction methods detected")
+
+
+# ── Window operations (unified under app) ────────────────────────────────────
+
+def _resolve_window_target(name, window_title=None, hwnd=None):
+    """Build keyword arguments for backend window methods.
+
+    Accepts the unified app command style: positional NAME with optional
+    --window title filter and --hwnd.
+
+    Args:
+        name: Application/process name (positional).
+        window_title: Optional title substring to pick a specific window.
+        hwnd: Optional direct window handle.
+
+    Returns:
+        Dict with title and/or hwnd keys for backend calls.
+    """
+    effective_title = name
+    if window_title:
+        effective_title = window_title
+    return {"title": effective_title, "hwnd": hwnd}
+
+
+def _require_target(name, window_title, hwnd, json_output):
+    """Validate that at least one target identifier is provided.
+
+    Returns:
+        True if valid, False if error was emitted.
+    """
+    if not name and not window_title and not hwnd:
+        msg = "Specify an app name, --window, or --hwnd"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return False
+    return True
+
+
+def _handle_naturo_error(exc, json_output):
+    """Emit a NaturoError and exit."""
+    if json_output:
+        click.echo(json.dumps(exc.to_json_response()))
+    else:
+        _safe_echo(f"Error: {exc.message}", err=True)
+    sys.exit(1)
+
+
+def _handle_generic_error(exc, json_output):
+    """Emit a generic exception and exit."""
+    if json_output:
+        click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
+    else:
+        _safe_echo(f"Error: {exc}", err=True)
+    sys.exit(1)
+
+
+@click.command("focus")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_focus(ctx, name, window_title, hwnd, json_output):
+    """Focus an application window (bring to foreground).
+
+    \b
+    Examples:
+      naturo app focus feishu
+      naturo app focus feishu --window "群聊"
+      naturo app focus --hwnd 12345
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        backend.focus_window(**_resolve_window_target(name, window_title, hwnd))
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "focus"}))
+        else:
+            _safe_echo(f"Focused window: {name or window_title or hwnd}")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("close")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--force", is_flag=True, help="Force terminate the process")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_close(ctx, name, window_title, hwnd, force, json_output):
+    """Close an application window (graceful or forced).
+
+    \b
+    Examples:
+      naturo app close notepad
+      naturo app close feishu --window "群聊"
+      naturo app close --hwnd 12345 --force
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        kwargs = _resolve_window_target(name, window_title, hwnd)
+        kwargs["force"] = force
+        backend.close_window(**kwargs)
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "close", "force": force}))
+        else:
+            _safe_echo(f"Closed window: {name or window_title or hwnd}")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("minimize")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_minimize(ctx, name, window_title, hwnd, json_output):
+    """Minimize an application window.
+
+    \b
+    Examples:
+      naturo app minimize feishu
+      naturo app minimize --hwnd 12345
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        backend.minimize_window(**_resolve_window_target(name, window_title, hwnd))
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "minimize"}))
+        else:
+            _safe_echo(f"Minimized window: {name or window_title or hwnd}")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("maximize")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_maximize(ctx, name, window_title, hwnd, json_output):
+    """Maximize an application window.
+
+    \b
+    Examples:
+      naturo app maximize feishu
+      naturo app maximize --hwnd 12345
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        backend.maximize_window(**_resolve_window_target(name, window_title, hwnd))
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "maximize"}))
+        else:
+            _safe_echo(f"Maximized window: {name or window_title or hwnd}")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("restore")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_restore(ctx, name, window_title, hwnd, json_output):
+    """Restore a minimized or maximized window to normal state.
+
+    \b
+    Examples:
+      naturo app restore feishu
+      naturo app restore --hwnd 12345
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        backend.restore_window(**_resolve_window_target(name, window_title, hwnd))
+        if json_output:
+            click.echo(json.dumps({"success": True, "action": "restore"}))
+        else:
+            _safe_echo(f"Restored window: {name or window_title or hwnd}")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("move")
+@click.argument("name", required=False, default=None)
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--x", type=int, default=None, help="Target X position")
+@click.option("--y", type=int, default=None, help="Target Y position")
+@click.option("--width", type=int, default=None, help="New width in pixels (optional)")
+@click.option("--height", type=int, default=None, help="New height in pixels (optional)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output):
+    """Move and/or resize an application window.
+
+    Combines move, resize, and set-bounds into one command.
+    Provide --x/--y for position and/or --width/--height for size.
+
+    \b
+    Examples:
+      naturo app move feishu --x 100 --y 100
+      naturo app move feishu --x 100 --y 100 --width 800 --height 600
+      naturo app move feishu --width 800 --height 600
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    if not _require_target(name, window_title, hwnd, json_output):
+        return
+
+    has_position = x is not None and y is not None
+    has_size = width is not None and height is not None
+    has_partial_position = (x is not None) != (y is not None)
+    has_partial_size = (width is not None) != (height is not None)
+
+    if has_partial_position:
+        msg = "Both --x and --y are required when setting position"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
+
+    if has_partial_size:
+        msg = "Both --width and --height are required when setting size"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
+
+    if not has_position and not has_size:
+        msg = "Provide --x/--y for position and/or --width/--height for size"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
+
+    if has_size and (width < 1 or height < 1):
+        msg = f"Width and height must be >= 1, got width={width} height={height}"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        kwargs = _resolve_window_target(name, window_title, hwnd)
+
+        if has_position and has_size:
+            backend.set_bounds(x=x, y=y, width=width, height=height, **kwargs)
+            action = "set-bounds"
+            result_data = {"success": True, "action": action, "x": x, "y": y, "width": width, "height": height}
+            msg = f"Set bounds: ({x}, {y}) {width}x{height}"
+        elif has_position:
+            backend.move_window(x=x, y=y, **kwargs)
+            action = "move"
+            result_data = {"success": True, "action": action, "x": x, "y": y}
+            msg = f"Moved window to ({x}, {y})"
+        else:
+            backend.resize_window(width=width, height=height, **kwargs)
+            action = "resize"
+            result_data = {"success": True, "action": action, "width": width, "height": height}
+            msg = f"Resized window to {width}x{height}"
+
+        if json_output:
+            click.echo(json.dumps(result_data))
+        else:
+            _safe_echo(msg)
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)
+
+
+@click.command("windows")
+@click.argument("name", required=False, default=None)
+@click.option("--pid", type=int, help="Process ID")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def app_windows(ctx, name, pid, json_output):
+    """List open windows (optionally filtered by app name or PID).
+
+    \b
+    Examples:
+      naturo app windows
+      naturo app windows feishu
+      naturo app windows --pid 1234
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+    from naturo.errors import NaturoError
+
+    try:
+        from naturo.backends.base import get_backend
+        backend = get_backend()
+        windows = backend.list_windows()
+
+        if name:
+            name_lower = name.lower()
+            windows = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
+        if pid is not None:
+            windows = [w for w in windows if w.pid == pid]
+
+        if json_output:
+            click.echo(json.dumps({
+                "success": True,
+                "windows": [
+                    {
+                        "handle": w.handle,
+                        "title": w.title,
+                        "process_name": w.process_name,
+                        "pid": w.pid,
+                        "x": w.x, "y": w.y,
+                        "width": w.width, "height": w.height,
+                        "is_visible": w.is_visible,
+                        "is_minimized": w.is_minimized,
+                    }
+                    for w in windows
+                ],
+                "count": len(windows),
+            }, indent=2))
+        else:
+            if not windows:
+                click.echo("No windows found")
+            else:
+                for w in windows:
+                    _safe_echo(f"  {w.handle:>10}  {w.process_name:<20}  {w.title}")
+                click.echo(f"\n{len(windows)} windows")
+    except NaturoError as exc:
+        _handle_naturo_error(exc, json_output)
+    except Exception as exc:
+        _handle_generic_error(exc, json_output)

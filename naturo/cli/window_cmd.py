@@ -57,9 +57,9 @@ def _resolve_target(app: Optional[str], title: Optional[str], hwnd: Optional[int
     return {"title": effective_title, "hwnd": hwnd}
 
 
-@click.group(cls=FuzzyGroup)
+@click.group(cls=FuzzyGroup, hidden=True)
 def window():
-    """Manage windows: focus, close, minimize, maximize, restore, move, resize."""
+    """Manage windows (deprecated — use 'naturo app' instead)."""
     pass
 
 

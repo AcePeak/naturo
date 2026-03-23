@@ -34,7 +34,10 @@ from naturo.cli.tray_cmd import tray
 from naturo.cli.desktop_cmd import desktop
 from naturo.cli.snapshot import snapshot
 from naturo.cli.wait_cmd import wait
-from naturo.cli.app_cmd import app_launch, app_quit, app_relaunch, app_list, app_find, app_hide, app_unhide, app_switch, app_inspect
+from naturo.cli.app_cmd import (
+    app_launch, app_quit, app_relaunch, app_list, app_find, app_hide, app_unhide, app_switch, app_inspect,
+    app_focus, app_close, app_minimize, app_maximize, app_restore, app_move, app_windows,
+)
 from naturo.cli.window_cmd import window
 from naturo.cli.diff_cmd import diff
 from naturo.cli.ai import mcp
@@ -153,10 +156,21 @@ app.add_command(app_quit, "quit")
 app.add_command(app_relaunch, "relaunch")
 app.add_command(app_list, "list")
 app.add_command(app_find, "find")
-app.add_command(app_hide, "hide")
-app.add_command(app_unhide, "unhide")
-app.add_command(app_switch, "switch")
 app.add_command(app_inspect, "inspect")
+
+# Window operations unified under app (#170)
+app.add_command(app_focus, "focus")
+app.add_command(app_close, "close")
+app.add_command(app_minimize, "minimize")
+app.add_command(app_maximize, "maximize")
+app.add_command(app_restore, "restore")
+app.add_command(app_move, "move")
+app.add_command(app_windows, "windows")
+
+# Legacy aliases (hidden from help but still work)
+app.add_command(app_switch, "switch")  # alias for focus
+app.add_command(app_hide, "hide")      # alias for minimize
+app.add_command(app_unhide, "unhide")  # alias for restore
 
 
 # ── Patch all commands to propagate global --json to subcommands ─────────────
