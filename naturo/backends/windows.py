@@ -6,6 +6,8 @@ and UI element tree inspection. Later phases will add input and interaction.
 
 from __future__ import annotations
 
+import logging
+
 from naturo.backends.base import (
     Backend,
     WindowInfo as BaseWindowInfo,
@@ -17,6 +19,8 @@ from naturo.bridge import NaturoCore, NaturoCoreError, populate_hierarchy
 from naturo.errors import NaturoError
 from naturo.models.menu import MenuItem
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class WindowsBackend(Backend):
