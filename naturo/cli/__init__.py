@@ -38,6 +38,7 @@ from naturo.cli.window_cmd import window
 from naturo.cli.diff_cmd import diff
 from naturo.cli.ai import mcp
 from naturo.cli.extensions import excel
+from naturo.cli.electron_cmd import electron, chrome
 
 
 @click.group()
@@ -104,6 +105,10 @@ main.add_command(mcp)
 
 # ── Phase 5C: Enterprise Features ──────────────
 main.add_command(excel)
+
+# ── Phase 5C: Electron/CDP ──────────────────────
+main.add_command(electron)
+main.add_command(chrome)
 
 # Replace stub app subcommands with working implementations
 app.add_command(app_launch, "launch")
