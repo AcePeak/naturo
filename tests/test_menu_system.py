@@ -53,6 +53,22 @@ class TestMenuMethodSignatures:
         assert "path" in params
         assert "app" in params
 
+    def test_win32_menu_methods_exist(self):
+        """Win32 menu API methods exist on WindowsBackend."""
+        from naturo.backends.windows import WindowsBackend
+        assert hasattr(WindowsBackend, "_get_menu_items_win32")
+        assert hasattr(WindowsBackend, "_walk_win32_menu")
+        assert hasattr(WindowsBackend, "_get_menu_items_uia")
+
+    def test_get_menu_items_uses_resolve_hwnd(self):
+        """get_menu_items resolves app name via _resolve_hwnd (fixes #158)."""
+        import inspect
+        from naturo.backends.windows import WindowsBackend
+        source = inspect.getsource(WindowsBackend.get_menu_items)
+        assert "_resolve_hwnd" in source, (
+            "get_menu_items should use _resolve_hwnd to respect --app flag"
+        )
+
     def test_open_uri_method_exists(self):
         """T183 – open_uri method exists on WindowsBackend."""
         from naturo.backends.windows import WindowsBackend

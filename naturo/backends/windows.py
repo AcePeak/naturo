@@ -1460,10 +1460,13 @@ class WindowsBackend(Backend):
         subprocess.run(cmd, shell=True, capture_output=True)
 
     def menu_list(self, app: Optional[str] = None) -> list[dict]:
-        """List menu items by traversing the UIA MenuBar element tree.
+        """List menu items for an application.
+
+        Uses Win32 Menu API for native menus (reliable, no expansion needed),
+        with UIA tree traversal as fallback for custom/non-native menus.
 
         Args:
-            app: Optional application name filter (not yet used).
+            app: Optional application name filter.
 
         Returns:
             List of dicts representing menu items.
@@ -1476,27 +1479,180 @@ class WindowsBackend(Backend):
         raise NotImplementedError("menu_click coming in Phase 3")
 
     def get_menu_items(self, window_title: Optional[str] = None) -> List[MenuItem]:
-        """Get menu bar items by traversing the UI element tree.
+        """Get menu items using Win32 API with UIA fallback.
 
-        Finds MenuBar elements and recursively extracts MenuItem children,
-        including names, keyboard shortcuts, and submenus.
+        Strategy:
+        1. Resolve the target window via _resolve_hwnd (respects --app flag).
+        2. Try Win32 GetMenu/GetMenuItemInfoW — works for native Win32 menus
+           without needing to visually expand them.
+        3. If Win32 returns nothing (UWP, Electron, custom menus), fall back
+           to UIA MenuBar traversal.
 
         Args:
-            window_title: Optional window title filter (uses foreground window if None).
+            window_title: Optional window title or app name filter.
 
         Returns:
             List of top-level MenuItem objects with nested submenus.
         """
+        handle = self._resolve_hwnd(app=window_title, window_title=window_title)
+
+        # Strategy 1: Win32 Menu API (native menus)
+        items = self._get_menu_items_win32(handle)
+        if items:
+            return items
+
+        # Strategy 2: UIA tree traversal (custom/non-native menus)
+        return self._get_menu_items_uia(handle)
+
+    def _get_menu_items_win32(self, hwnd: int) -> List[MenuItem]:
+        """Enumerate menu items via Win32 GetMenu API.
+
+        Uses GetMenu(hwnd) to get the menu bar handle, then recursively
+        walks submenus with GetMenuItemCount/GetMenuItemInfoW. This reads
+        all items without expanding menus visually.
+
+        Args:
+            hwnd: Window handle (0 for foreground window).
+
+        Returns:
+            List of MenuItem objects, or empty list if no native menu found.
+        """
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+
+        # Resolve foreground window if hwnd is 0
+        if hwnd == 0:
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return []
+
+        menu_handle = user32.GetMenu(hwnd)
+        if not menu_handle:
+            return []
+
+        return self._walk_win32_menu(menu_handle)
+
+    def _walk_win32_menu(self, hmenu: int) -> List[MenuItem]:
+        """Recursively walk a Win32 menu handle and extract items.
+
+        Args:
+            hmenu: Win32 HMENU handle.
+
+        Returns:
+            List of MenuItem objects.
+        """
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+
+        # MENUITEMINFOW structure
+        MIIM_STRING = 0x00000040
+        MIIM_SUBMENU = 0x00000004
+        MIIM_STATE = 0x00000001
+        MIIM_FTYPE = 0x00000100
+        MFT_SEPARATOR = 0x00000800
+        MFS_DISABLED = 0x00000003
+        MFS_CHECKED = 0x00000008
+
+        class MENUITEMINFOW(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.UINT),
+                ("fMask", wintypes.UINT),
+                ("fType", wintypes.UINT),
+                ("fState", wintypes.UINT),
+                ("wID", wintypes.UINT),
+                ("hSubMenu", wintypes.HANDLE),
+                ("hbmpChecked", wintypes.HANDLE),
+                ("hbmpUnchecked", wintypes.HANDLE),
+                ("dwItemData", ctypes.POINTER(ctypes.c_ulong)),
+                ("dwTypeData", ctypes.c_wchar_p),
+                ("cch", wintypes.UINT),
+                ("hbmpItem", wintypes.HANDLE),
+            ]
+
+        count = user32.GetMenuItemCount(hmenu)
+        if count <= 0:
+            return []
+
+        result: List[MenuItem] = []
+
+        for i in range(count):
+            mii = MENUITEMINFOW()
+            mii.cbSize = ctypes.sizeof(MENUITEMINFOW)
+            mii.fMask = MIIM_STRING | MIIM_SUBMENU | MIIM_STATE | MIIM_FTYPE
+
+            # First call: get required buffer size
+            mii.dwTypeData = None
+            mii.cch = 0
+            user32.GetMenuItemInfoW(hmenu, i, True, ctypes.byref(mii))
+
+            if mii.fType & MFT_SEPARATOR:
+                continue  # Skip separators
+
+            # Second call: get the actual string
+            buf_size = mii.cch + 1
+            buf = ctypes.create_unicode_buffer(buf_size)
+            mii.dwTypeData = ctypes.cast(buf, ctypes.c_wchar_p)
+            mii.cch = buf_size
+            mii.fMask = MIIM_STRING | MIIM_SUBMENU | MIIM_STATE | MIIM_FTYPE
+            user32.GetMenuItemInfoW(hmenu, i, True, ctypes.byref(mii))
+
+            raw_name = buf.value
+            if not raw_name:
+                continue
+
+            # Parse accelerator key from name (e.g., "Save\tCtrl+S")
+            name = raw_name
+            shortcut = None
+            if "\t" in raw_name:
+                parts = raw_name.split("\t", 1)
+                name = parts[0]
+                shortcut = parts[1]
+
+            # Strip Win32 ampersand mnemonics (e.g., "&File" -> "File")
+            name = name.replace("&", "")
+
+            enabled = not bool(mii.fState & MFS_DISABLED)
+            checked = bool(mii.fState & MFS_CHECKED)
+
+            # Recurse into submenus
+            submenu = None
+            if mii.hSubMenu:
+                submenu = self._walk_win32_menu(mii.hSubMenu) or None
+
+            result.append(MenuItem(
+                name=name,
+                shortcut=shortcut,
+                submenu=submenu,
+                enabled=enabled,
+                checked=checked,
+            ))
+
+        return result
+
+    def _get_menu_items_uia(self, hwnd: int) -> List[MenuItem]:
+        """Get menu items via UIA MenuBar tree traversal (fallback).
+
+        Used for applications with non-native menus (UWP, Electron, WPF
+        with custom menu controls) where Win32 GetMenu returns NULL.
+
+        Args:
+            hwnd: Window handle (0 for foreground window).
+
+        Returns:
+            List of MenuItem objects from UIA MenuBar elements.
+        """
         core = self._ensure_core()
-        # Get a deeper tree to capture menu structure
-        tree = core.get_element_tree(hwnd=0, depth=6)
+        tree = core.get_element_tree(hwnd=hwnd, depth=6)
         if tree is None:
             return []
 
         populate_hierarchy(tree)
 
-        # Find MenuBar elements in the tree
-        menu_bars = []
+        menu_bars: list = []
         self._find_by_role(tree, "MenuBar", menu_bars)
 
         if not menu_bars:
