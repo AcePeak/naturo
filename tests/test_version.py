@@ -27,7 +27,7 @@ def test_version_matches_cmake():
     if not cmake_file.exists():
         return  # skip in installed package
 
-    text = cmake_file.read_text()
+    text = cmake_file.read_text(encoding="utf-8")
     m = re.search(r'project\(naturo_core\s+VERSION\s+(\S+)', text)
     assert m is not None, "Could not find project VERSION in CMakeLists.txt"
     assert m.group(1) == __version__, (
@@ -44,7 +44,7 @@ def test_version_matches_version_cpp():
     if not version_cpp.exists():
         return  # skip in installed package
 
-    text = version_cpp.read_text()
+    text = version_cpp.read_text(encoding="utf-8")
     m = re.search(r'NATURO_VERSION\s*=\s*"([^"]+)"', text)
     assert m is not None, "Could not find NATURO_VERSION in version.cpp"
     assert m.group(1) == __version__, (
@@ -68,7 +68,7 @@ def test_version_matches_pyproject():
         except ImportError:
             import re
             # Fallback: parse version from pyproject.toml with regex
-            text = pyproject.read_text()
+            text = pyproject.read_text(encoding="utf-8")
             m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
             assert m is not None, "Could not find version in pyproject.toml"
             assert m.group(1) == __version__

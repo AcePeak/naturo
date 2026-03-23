@@ -131,7 +131,7 @@ class TestCreateSnapshot:
         sid = mgr.create_snapshot()
         json_path = tmp_root / sid / "snapshot.json"
         assert json_path.exists()
-        data = json.loads(json_path.read_text())
+        data = json.loads(json_path.read_text(encoding="utf-8"))
         assert data["snapshotId"] == sid
 
     def test_unique_ids(self, mgr: SnapshotManager) -> None:
@@ -261,7 +261,7 @@ class TestGetSnapshot:
     def test_raises_version_mismatch(self, mgr: SnapshotManager, tmp_root: Path) -> None:
         sid = mgr.create_snapshot()
         json_path = tmp_root / sid / "snapshot.json"
-        data = json.loads(json_path.read_text())
+        data = json.loads(json_path.read_text(encoding="utf-8"))
         data["version"] = 999
         json_path.write_text(json.dumps(data))
         with pytest.raises(SnapshotVersionError):
@@ -586,7 +586,7 @@ class TestAtomicWrite:
         """After create_snapshot the JSON must be fully readable."""
         sid = mgr.create_snapshot()
         json_path = tmp_root / sid / "snapshot.json"
-        data = json.loads(json_path.read_text())
+        data = json.loads(json_path.read_text(encoding="utf-8"))
         assert data["snapshotId"] == sid
 
 
