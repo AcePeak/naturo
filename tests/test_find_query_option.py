@@ -71,3 +71,20 @@ class TestFindQueryOption:
         result = runner.invoke(find_cmd, [])
         assert result.exit_code != 0
         assert "QUERY" in (result.output or "") or "Missing" in (result.output or "")
+
+    def test_actionable_without_query_uses_wildcard(self, runner, mock_backend):
+        """--actionable without QUERY should implicitly use '*' wildcard (fixes #124)."""
+        result = runner.invoke(find_cmd, ["--actionable", "--json"])
+        assert "Missing argument" not in (result.output or "")
+        mock_backend.get_element_tree.assert_called()
+
+    def test_role_without_query_uses_wildcard(self, runner, mock_backend):
+        """--role without QUERY should implicitly use '*' wildcard (fixes #124)."""
+        result = runner.invoke(find_cmd, ["--role", "Button", "--json"])
+        assert "Missing argument" not in (result.output or "")
+        mock_backend.get_element_tree.assert_called()
+
+    def test_actionable_with_role_without_query(self, runner, mock_backend):
+        """--actionable --role without QUERY should work (fixes #124)."""
+        result = runner.invoke(find_cmd, ["--actionable", "--role", "Button", "--json"])
+        assert "Missing argument" not in (result.output or "")

@@ -116,6 +116,25 @@ class TestPressCommandRegistration:
         assert "--delay" in result.output
 
 
+class TestPressJsonError:
+    """Press command returns JSON error when KEY is missing (fixes #123)."""
+
+    def test_press_missing_key_json_error(self, runner):
+        """naturo press --json without KEY returns JSON error, not Click usage text."""
+        result = runner.invoke(main, ["press", "--json"])
+        assert result.exit_code != 0
+        import json
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_press_missing_key_plain_error(self, runner):
+        """naturo press without KEY returns readable error."""
+        result = runner.invoke(main, ["press"])
+        assert result.exit_code != 0
+        assert "KEY" in result.output or "Missing" in result.output
+
+
 class TestHotkeyCommandRegistration:
     """Phase 2 hotkey command is registered and documented."""
 

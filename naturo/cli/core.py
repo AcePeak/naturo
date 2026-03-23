@@ -646,12 +646,16 @@ def find_cmd(query, query_opt, role, actionable, depth, limit, ai, provider, scr
     # Resolve query: --query option takes precedence over positional arg
     query = query_opt if query_opt is not None else query
     if query is None:
-        msg = "Missing argument 'QUERY'. Provide as positional arg or --query/-q option."
-        if json_output:
-            click.echo(_json_error_str("INVALID_INPUT", msg))
+        # When --actionable or --role is set, treat missing query as wildcard
+        if actionable or role:
+            query = "*"
         else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+            msg = "Missing argument 'QUERY'. Provide as positional arg or --query/-q option."
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
 
     # AI vision mode — natural language element finding
     if ai:

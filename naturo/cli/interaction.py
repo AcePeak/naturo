@@ -388,7 +388,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 
 
 @click.command()
-@click.argument("key")
+@click.argument("key", required=False, default=None)
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
 @click.option("--app", help="Application name")
@@ -412,6 +412,11 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
       naturo press tab --count 3
       naturo press f5
     """
+    if key is None:
+        _json_err("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, f1).",
+                  json_output, code="INVALID_INPUT")
+        return
+
     if count < 1:
         _json_err(f"--count must be >= 1, got {count}", json_output, code="INVALID_INPUT")
         return
