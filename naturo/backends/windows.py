@@ -834,6 +834,27 @@ class WindowsBackend(Backend):
                 best_window = w
 
         if best_window is not None:
+            # UWP/WinUI apps: the real UI tree lives under
+            # ApplicationFrameHost.exe, not the inner process window
+            # (e.g. CalculatorApp.exe).  When we matched a non-frame
+            # process, check for an ApplicationFrameHost window with the
+            # same title and prefer it — its element tree is complete.
+            best_proc = best_window.process_name.lower()
+            if best_proc.endswith(".exe"):
+                best_proc = best_proc[:-4]
+            if best_proc != "applicationframehost":
+                for w in windows:
+                    frame_proc = w.process_name.lower()
+                    if frame_proc.endswith(".exe"):
+                        frame_proc = frame_proc[:-4]
+                    if (
+                        frame_proc == "applicationframehost"
+                        and w.title == best_window.title
+                        and w.handle != best_window.handle
+                    ):
+                        best_window = w
+                        break
+
             return best_window.handle
 
         # No match — build candidate suggestions (BUG-070)
