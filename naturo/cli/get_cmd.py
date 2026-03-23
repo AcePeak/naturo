@@ -10,7 +10,7 @@ import sys
 
 import click
 
-from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.errors import NaturoError
 
 
@@ -86,20 +86,21 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
                 automation_id = target
 
     if not ref and not automation_id and not role and not name:
-        msg = "Specify a target: element ref (e47), --automation-id, or --role/--name"
-        if json_output:
-            click.echo(json_module.dumps({"error": msg}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_error(
+            "INVALID_INPUT",
+            "Specify a target: element ref (e47), --automation-id, or --role/--name",
+            json_output,
+            suggested_action="Provide a target element using a ref (e47), "
+            "--automation-id, or --role/--name. Run 'naturo see' to inspect "
+            "available elements.",
+        )
 
     if platform.system() not in ("Windows",) and not _has_peekaboo():
-        msg = "naturo get requires Windows (UIA patterns) or macOS (Peekaboo)"
-        if json_output:
-            click.echo(json_module.dumps({"error": msg}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_error(
+            "PLATFORM_ERROR",
+            "naturo get requires Windows (UIA patterns) or macOS (Peekaboo)",
+            json_output,
+        )
 
     try:
         backend = _get_backend()
@@ -113,16 +114,16 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
         )
 
         if result is None:
-            msg = f"Element not found"
+            msg = "Element not found"
             if ref:
                 msg += f" (ref={ref})"
             if automation_id:
                 msg += f" (automation_id={automation_id})"
-            if json_output:
-                click.echo(json_module.dumps({"error": msg, "found": False}))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            sys.exit(1)
+            emit_error(
+                "ELEMENT_NOT_FOUND",
+                msg,
+                json_output,
+            )
 
         if json_output:
             output = {
@@ -169,17 +170,9 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
                 click.echo(f"Pattern: {pattern}")
 
     except NaturoError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        sys.exit(1)
+        emit_exception_error(exc, json_output)
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        sys.exit(1)
+        emit_exception_error(exc, json_output, fallback_code="UNKNOWN_ERROR")
 
 
 def _has_peekaboo() -> bool:

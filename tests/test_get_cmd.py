@@ -326,6 +326,44 @@ class TestGetCLI:
         data = json.loads(result.output)
         assert data["value"] == "Hello World"
 
+    def test_get_no_target_json_error_format(self):
+        """No target in JSON mode returns standard error format with code."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--json", "get"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "message" in data["error"]
+
+    def test_get_not_found_json_error_format(self):
+        """Element not found in JSON mode returns standard error format."""
+        mock = _make_mock_backend(not_found=True)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "get", "e99"])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "ELEMENT_NOT_FOUND"
+        assert "suggested_action" in data["error"]
+
+    def test_get_naturo_error_json_format(self):
+        """NaturoError in JSON mode returns standard error format."""
+        mock = _make_mock_backend(error="backend failure")
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "get", "e1"])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "error" in data
+        assert "code" in data["error"]
+
 
 # ── Bridge Tests (unit-level mock) ───────────────────────────────────────────
 
