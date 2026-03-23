@@ -679,57 +679,57 @@ class TestMCPWindowToolsExist:
     def test_focus_window_function_exists(self):
         from naturo import mcp_server
         # Check the module has the functions
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def focus_window(" in source or "def window_focus(" in source
 
     def test_window_close_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_close(" in source
 
     def test_window_minimize_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_minimize(" in source
 
     def test_window_maximize_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_maximize(" in source
 
     def test_window_restore_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_restore(" in source
 
     def test_window_move_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_move(" in source
 
     def test_window_resize_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_resize(" in source
 
     def test_window_set_bounds_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def window_set_bounds(" in source
 
     def test_app_hide_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def app_hide(" in source
 
     def test_app_unhide_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def app_unhide(" in source
 
     def test_app_switch_function_exists(self):
         from naturo import mcp_server
-        source = open(mcp_server.__file__).read()
+        source = open(mcp_server.__file__, encoding='utf-8').read()
         assert "def app_switch(" in source
 
 

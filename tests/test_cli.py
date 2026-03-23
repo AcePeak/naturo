@@ -361,8 +361,25 @@ def _has_gui_backend() -> bool:
 _GUI = _has_gui_backend()
 
 
+def _expected_see_exit() -> int:
+    """Return expected exit code for ``see`` with no args.
+
+    On Windows with a desktop session ``see`` succeeds (0).  On non-Windows
+    or headless/SSH Windows it returns 1 (no display).
+    """
+    if platform.system() != "Windows":
+        return 1
+    # Headless Windows (SSH / CI without desktop) also returns 1
+    try:
+        import ctypes
+        desktop = ctypes.windll.user32.GetDesktopWindow()
+        return 0 if desktop else 1
+    except Exception:
+        return 1
+
+
 @pytest.mark.parametrize("cmd,expected_exit", [
-    (["see"], 1 if platform.system() != "Windows" else 0),
+    (["see"], _expected_see_exit()),
     pytest.param(["capture", "live"], 0, marks=pytest.mark.skipif(platform.system() != "Windows", reason="capture live needs desktop session")),
 ])
 def test_placeholder_commands_run(runner, cmd, expected_exit):
