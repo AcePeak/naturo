@@ -381,18 +381,19 @@ def _has_desktop_session() -> bool:
     return False
 
 
-def _expected_see_exit() -> int:
+def _expected_see_exit() -> int | None:
     """Return expected exit code for ``see`` with no args.
 
     On Windows with a desktop session (Console or RDP), ``see`` succeeds (0).
-    On Windows without a desktop (SSH/Services session), ``see`` may fail (1)
-    because screen capture and UIA enumeration require an interactive desktop.
+    On Windows without a desktop (SSH/Services/CI session), ``see`` may
+    succeed or fail depending on UIA availability — return None to signal
+    that either 0 or 1 is acceptable.
     On non-Windows it returns 1 (no Windows backend).
     """
     if platform.system() != "Windows":
         return 1
-    # In SSH/headless sessions, see may fail — accept either exit code
-    return 0 if _has_desktop_session() else 1
+    # Desktop sessions always succeed; headless may go either way
+    return 0 if _has_desktop_session() else None
 
 
 @pytest.mark.parametrize("cmd,expected_exit", [
@@ -402,7 +403,11 @@ def _expected_see_exit() -> int:
 def test_placeholder_commands_run(runner, cmd, expected_exit):
     """Commands with no required args should run and show placeholder message."""
     result = runner.invoke(main, cmd)
-    assert result.exit_code == expected_exit
+    if expected_exit is None:
+        # Headless Windows: UIA may or may not work — accept 0 or 1
+        assert result.exit_code in (0, 1)
+    else:
+        assert result.exit_code == expected_exit
 
 
 def test_scroll_no_args_runs(runner):
