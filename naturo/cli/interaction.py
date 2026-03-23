@@ -12,6 +12,150 @@ import click
 logger = logging.getLogger(__name__)
 
 
+# ── --see flag (post-action UI snapshot) ─────────────────────────────────────
+
+
+def _see_options(func):
+    """Shared Click decorator that adds --see and --settle to action commands.
+
+    When ``--see`` is passed, the command re-captures the UI element tree
+    after the action completes (with a configurable settle delay) and
+    appends the snapshot to the output.
+    """
+    func = click.option(
+        "--settle",
+        type=int,
+        default=300,
+        help="Wait time in ms before re-snapshot (used with --see)",
+        show_default=True,
+    )(func)
+    func = click.option(
+        "--see",
+        "see_after",
+        is_flag=True,
+        help="Capture and display updated UI tree after action",
+    )(func)
+    return func
+
+
+def _post_action_see(
+    backend,
+    settle_ms: int,
+    app: str | None,
+    window_title: str | None,
+    hwnd: int | None,
+    json_output: bool,
+    depth: int = 3,
+) -> dict | None:
+    """Run UI inspection after an interaction and return snapshot data.
+
+    Args:
+        backend: The platform backend instance.
+        settle_ms: Milliseconds to wait for UI to settle before capture.
+        app: Application name filter (passed to get_element_tree).
+        window_title: Window title filter.
+        hwnd: Window handle filter.
+        json_output: Whether JSON output mode is active.
+        depth: Maximum tree depth for element inspection.
+
+    Returns:
+        A dict with snapshot data (for JSON embedding) or None on failure.
+        In text mode, also prints the tree to stdout.
+    """
+    import time
+    if settle_ms > 0:
+        time.sleep(settle_ms / 1000.0)
+
+    try:
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, depth=depth,
+            backend="uia",
+        )
+    except Exception as exc:
+        logger.debug("--see: failed to capture UI tree: %s", exc)
+        if not json_output:
+            click.echo(f"\n--- UI snapshot (failed) ---\nError: {exc}", err=True)
+        return None
+
+    if tree is None:
+        if not json_output:
+            click.echo("\n--- UI snapshot (empty) ---\nNo window found or UI tree is empty.")
+        return None
+
+    # Store snapshot with ref mapping
+    from naturo.snapshot import SnapshotManager
+    from naturo.models.snapshot import UIElement
+
+    mgr = SnapshotManager()
+    snapshot_id = mgr.create_snapshot()
+
+    ui_map = {}
+    _ref_seq = [0]
+    ref_map = {}
+
+    def _flatten(el, parent_id=None):
+        _ref_seq[0] += 1
+        ref = f"e{_ref_seq[0]}"
+        child_ids = [c.id for c in el.children]
+        props = getattr(el, "properties", {})
+        ui_map[el.id] = UIElement(
+            id=el.id,
+            element_id=f"element_{el.id}",
+            role=el.role,
+            title=el.name,
+            label=el.name,
+            value=el.value,
+            frame=(el.x, el.y, el.width, el.height),
+            is_actionable=getattr(el, "is_actionable", False),
+            parent_id=props.get("parent_id", parent_id),
+            children=child_ids,
+            keyboard_shortcut=props.get("keyboard_shortcut"),
+        )
+        ref_map[ref] = el.id
+        for child in el.children:
+            _flatten(child, parent_id=el.id)
+
+    _flatten(tree)
+    mgr.store_detection_result(snapshot_id, ui_map)
+    mgr.store_ref_map(snapshot_id, ref_map)
+
+    if json_output:
+        # Build JSON-serializable tree
+        def _to_dict(el):
+            d = {
+                "id": el.id,
+                "role": el.role,
+                "name": el.name,
+                "value": el.value,
+                "x": el.x,
+                "y": el.y,
+                "width": el.width,
+                "height": el.height,
+                "children": [_to_dict(c) for c in el.children],
+            }
+            return d
+
+        return {"id": snapshot_id, "elements": _to_dict(tree)}
+    else:
+        # Print tree with refs
+        _ref_counter = [0]
+
+        def _print_tree(el, indent=0):
+            _ref_counter[0] += 1
+            ref = f"e{_ref_counter[0]}"
+            prefix = "  " * indent
+            name_str = f' "{el.name}"' if el.name else ""
+            pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
+            click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}")
+            for child in el.children:
+                _print_tree(child, indent + 1)
+
+        click.echo(f"\n--- UI snapshot (updated) ---")
+        _print_tree(tree)
+        click.echo(f"Snapshot: {snapshot_id}")
+        return {"id": snapshot_id}
+
+
 def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
     """No-op stub — recording command removed."""
     pass
@@ -239,11 +383,12 @@ def _auto_route(
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
+@_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
               window_title, hwnd, wait_for, input_mode, method,
-              json_output):
+              see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
 
     QUERY is optional text to find and click on. Use --on, --id, or --coords
@@ -322,6 +467,17 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     result_data = {"action": action, "target": str(loc), "button": button}
     if route_info:
         result_data["routing"] = route_info
+
+    # --see: re-capture UI tree after action
+    if see_after:
+        snapshot_data = _post_action_see(
+            backend=backend, settle_ms=settle,
+            app=app, window_title=window_title, hwnd=hwnd,
+            json_output=json_output,
+        )
+        if snapshot_data and json_output:
+            result_data["snapshot"] = snapshot_data
+
     _json_ok(result_data, json_output)
 
 
@@ -358,11 +514,12 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
 )
 @_method_option
+@_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, app, window_title,
-             hwnd, input_mode, method, json_output):
+             hwnd, input_mode, method, see_after, settle, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -448,6 +605,17 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     result_data = {"action": action, "text": text, "length": len(text)}
     if route_info:
         result_data["routing"] = route_info
+
+    # --see: re-capture UI tree after action
+    if see_after:
+        snapshot_data = _post_action_see(
+            backend=backend, settle_ms=settle,
+            app=app, window_title=window_title, hwnd=hwnd,
+            json_output=json_output,
+        )
+        if snapshot_data and json_output:
+            result_data["snapshot"] = snapshot_data
+
     _json_ok(result_data, json_output)
 
 
@@ -469,8 +637,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     help="Input method",
 )
 @_method_option
+@_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_output):
+def press(key, count, delay, app, window_title, hwnd, input_mode, method, see_after, settle, json_output):
     """Press a single key or key sequence.
 
     KEY can be a key name (enter, tab, escape, f1-f12, a-z, 0-9, etc.)
@@ -511,6 +680,17 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
     result_data = {"action": "pressed", "key": key, "count": count}
     if route_info:
         result_data["routing"] = route_info
+
+    # --see: re-capture UI tree after action
+    if see_after:
+        snapshot_data = _post_action_see(
+            backend=backend, settle_ms=settle,
+            app=app, window_title=window_title, hwnd=hwnd,
+            json_output=json_output,
+        )
+        if snapshot_data and json_output:
+            result_data["snapshot"] = snapshot_data
+
     _json_ok(result_data, json_output)
 
 
@@ -532,9 +712,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
     help="Input method",
 )
 @_method_option
+@_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
-           input_mode, method, json_output):
+           input_mode, method, see_after, settle, json_output):
     """Press a hotkey combination.
 
     KEYS as a string like "ctrl+c" or "alt+f4". Or use --keys for each key.
@@ -580,6 +761,17 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     result_data = {"action": "hotkey", "combo": combo}
     if route_info:
         result_data["routing"] = route_info
+
+    # --see: re-capture UI tree after action
+    if see_after:
+        snapshot_data = _post_action_see(
+            backend=backend, settle_ms=settle,
+            app=app, window_title=window_title, hwnd=hwnd,
+            json_output=json_output,
+        )
+        if snapshot_data and json_output:
+            result_data["snapshot"] = snapshot_data
+
     _json_ok(result_data, json_output)
 
 
@@ -607,9 +799,10 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
+@_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
-           smooth, delay, app, window_title, hwnd, method, json_output):
+           smooth, delay, app, window_title, hwnd, method, see_after, settle, json_output):
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -694,6 +887,17 @@ def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
         result_data["target"] = target_label
     if route_info:
         result_data["routing"] = route_info
+
+    # --see: re-capture UI tree after action
+    if see_after:
+        snapshot_data = _post_action_see(
+            backend=backend, settle_ms=settle,
+            app=app, window_title=window_title, hwnd=hwnd,
+            json_output=json_output,
+        )
+        if snapshot_data and json_output:
+            result_data["snapshot"] = snapshot_data
+
     _json_ok(result_data, json_output)
 
 
