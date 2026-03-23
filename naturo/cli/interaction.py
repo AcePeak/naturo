@@ -592,7 +592,9 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     help="Scroll direction",
 )
 @click.option("--amount", "-a", type=int, default=3, help="Scroll amount (notches)", show_default=True)
-@click.option("--on", "on_text", help="Element to scroll on")
+@click.option("--on", "on_text", help="Element text or eN ref to scroll on")
+@click.option("--id", "element_id", help="Element ID to scroll on")
+@click.option("--coords", nargs=2, type=int, metavar="X Y", help="Coordinates to scroll at")
 @click.option("--smooth", is_flag=True, help="Smooth scrolling (Phase 3)")
 @click.option("--delay", type=float, help="Delay between scroll steps (ms)")
 @click.option("--app", help="Application name")
@@ -600,8 +602,8 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--hwnd", type=int, help="Window handle (HWND)")
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app, window_title,
-           hwnd, method, json_output):
+def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
+           smooth, delay, app, window_title, hwnd, method, json_output):
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -610,7 +612,8 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
     Examples:
       naturo scroll down
       naturo scroll up --amount 5
-      naturo scroll --direction down --amount 5
+      naturo scroll --on e3 down --amount 5
+      naturo scroll --coords 500 300 down
     """
     direction = direction_arg or direction_option or "down"
     if amount < 1:
@@ -622,16 +625,67 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
+    # Resolve target coordinates from --on, --id, or --coords
+    x, y = None, None
+    target_label = None
+
+    if coords:
+        x, y = coords
+        target_label = f"({x}, {y})"
+    elif on_text or element_id:
+        target_id = on_text or element_id
+        import re as _re
+        if _re.fullmatch(r"e\d+", target_id):
+            # Resolve eN ref from most recent `see` snapshot
+            from naturo.snapshot import SnapshotManager
+            mgr = SnapshotManager()
+            resolved = mgr.resolve_ref(target_id)
+            if resolved:
+                x, y = resolved[0], resolved[1]
+                target_label = target_id
+            else:
+                _json_err(
+                    f"Element ref '{target_id}' not found. Run 'naturo see' first to "
+                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+                    json_output,
+                    code="REF_NOT_FOUND",
+                )
+                return
+        else:
+            # Text-based element lookup — find element center via backend
+            try:
+                elem = backend.find_element(target_id)
+                if elem:
+                    x = elem.x + elem.width // 2
+                    y = elem.y + elem.height // 2
+                    target_label = target_id
+                else:
+                    _json_err(
+                        f"Element '{target_id}' not found.",
+                        json_output,
+                        code="ELEMENT_NOT_FOUND",
+                    )
+                    return
+            except Exception as exc:
+                _json_err(
+                    f"Failed to find element '{target_id}': {exc}",
+                    json_output,
+                    code="ELEMENT_NOT_FOUND",
+                )
+                return
+
     try:
-        backend.scroll(direction=direction, amount=amount, smooth=smooth)
+        backend.scroll(direction=direction, amount=amount, x=x, y=y, smooth=smooth)
     except Exception as exc:
         _json_err(str(exc), json_output)
         return
 
     # Record the action
-    _record_action("scroll", {"direction": direction, "amount": amount})
+    _record_action("scroll", {"direction": direction, "amount": amount, "x": x, "y": y})
 
     result_data = {"action": "scrolled", "direction": direction, "amount": amount}
+    if target_label:
+        result_data["target"] = target_label
     if route_info:
         result_data["routing"] = route_info
     _json_ok(result_data, json_output)
