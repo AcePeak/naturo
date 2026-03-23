@@ -23,9 +23,16 @@ import sys
 import click as _click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
-@_click.group()
+def _ensure_pyvda() -> None:
+    """Ensure pyvda is available, prompting to install if missing."""
+    from naturo.deps import ensure_package
+    ensure_package("pyvda", feature="Virtual desktop", install_extra="desktop")
+
+
+@_click.group(cls=FuzzyGroup)
 def desktop():
     """Virtual desktop management (Windows 10/11).
 
@@ -62,6 +69,7 @@ def desktop_list(json_output: bool) -> None:
     from naturo.errors import NaturoError
 
     try:
+        _ensure_pyvda()
         backend = get_backend()
         desktops = backend.virtual_desktop_list()
 
@@ -112,6 +120,7 @@ def desktop_switch(index: int, json_output: bool) -> None:
         )
 
     try:
+        _ensure_pyvda()
         backend = get_backend()
         result = backend.virtual_desktop_switch(index)
 
@@ -146,6 +155,7 @@ def desktop_create(name: str | None, json_output: bool) -> None:
     from naturo.errors import NaturoError
 
     try:
+        _ensure_pyvda()
         backend = get_backend()
         result = backend.virtual_desktop_create(name=name)
 
@@ -188,6 +198,7 @@ def desktop_close(index: int | None, json_output: bool) -> None:
         )
 
     try:
+        _ensure_pyvda()
         backend = get_backend()
         result = backend.virtual_desktop_close(index=index)
 
@@ -239,6 +250,7 @@ def desktop_move_window(
         )
 
     try:
+        _ensure_pyvda()
         backend = get_backend()
         result = backend.virtual_desktop_move_window(
             desktop_index=index,
