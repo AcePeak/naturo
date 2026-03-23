@@ -27,7 +27,7 @@ def test_cli_help(runner):
         # Core
         "capture", "list", "see",
         # Interaction
-        "click", "type", "press", "hotkey", "scroll", "drag", "move",
+        "click", "type", "press", "scroll", "drag", "move",
         # System
         "app",
         # Snapshot & Phase 3

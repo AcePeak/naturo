@@ -721,10 +721,13 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     @server.tool()
     @_safe_tool
     def press_key(key: str, count: int = 1, input_mode: str = "normal", method: str = "auto") -> dict:
-        """Press a keyboard key.
+        """Press a key or key combination.
+
+        For single keys pass the key name (e.g. "enter", "tab").
+        For combos use '+' notation (e.g. "ctrl+c", "alt+f4").
 
         Args:
-            key: Key name (e.g. "enter", "tab", "escape", "f1", "a").
+            key: Key name or combo string (e.g. "enter", "ctrl+c", "alt+f4").
             count: Number of times to press.
             input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes).
             method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision".
@@ -735,14 +738,24 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if count < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"count must be >= 1, got {count}"}}
         backend = _get_backend()
+        is_combo = "+" in key
         for _ in range(count):
-            backend.press_key(key=key, input_mode=input_mode)
+            if is_combo:
+                key_list = [k.strip() for k in key.replace("+", " ").split()]
+                backend.hotkey(*key_list, input_mode=input_mode)
+            else:
+                backend.press_key(key=key, input_mode=input_mode)
+        if is_combo:
+            return {"success": True, "action": "hotkey", "combo": key}
         return {"success": True}
 
     @server.tool()
     @_safe_tool
     def hotkey(keys: list[str], input_mode: str = "normal") -> dict:
         """Press a keyboard shortcut (key combination).
+
+        Deprecated: prefer press_key with combo notation (e.g. press_key("ctrl+c")).
+        Kept for backward compatibility.
 
         Args:
             keys: List of keys to press simultaneously (e.g. ["ctrl", "s"] for Ctrl+S).

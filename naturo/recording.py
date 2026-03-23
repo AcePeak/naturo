@@ -401,7 +401,11 @@ def _execute_step(backend, step: ActionStep) -> None:
         key = args.get("key", "")
         count = args.get("count", 1)
         for _ in range(count):
-            backend.press_key(key)
+            if "+" in key:
+                key_list = [k.strip() for k in key.replace("+", " ").split()]
+                backend.hotkey(*key_list)
+            else:
+                backend.press_key(key)
     elif cmd == "hotkey":
         keys = args.get("keys", [])
         hold_duration = args.get("hold_duration", 0.05)

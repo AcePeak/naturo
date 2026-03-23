@@ -1,4 +1,4 @@
-"""Interaction commands: click, type, press, hotkey, scroll, drag, move."""
+"""Interaction commands: click, type, press (includes hotkey), scroll, drag, move."""
 from __future__ import annotations
 
 import json
@@ -809,10 +809,16 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 # ── press ────────────────────────────────────────────────────────────────────
 
 
+def _is_combo(key_str: str) -> bool:
+    """Return True if *key_str* looks like a key combination (e.g. ``ctrl+c``)."""
+    return "+" in key_str
+
+
 @click.command()
-@click.argument("key", required=False, default=None)
+@click.argument("keys", nargs=-1)
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
+@click.option("--hold-duration", type=float, default=None, help="Hold duration for combos (ms)")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
@@ -826,24 +832,31 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 @_method_option
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(key, count, delay, app, window_title, hwnd, input_mode, method, see_after, settle, json_output):
-    """Press a single key or key sequence.
+def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode, method, see_after, settle, json_output):
+    """Press keys — single keys, combos, or sequential key sequences.
 
-    KEY can be a key name (enter, tab, escape, f1-f12, a-z, 0-9, etc.)
+    KEYS can be one or more key specs.  A spec containing ``+`` is treated as
+    a key combination (like ``ctrl+c``); otherwise it is a single key press.
 
     \b
     Examples:
-      naturo press enter
-      naturo press tab --count 3
-      naturo press f5
+      naturo press enter                  # single key
+      naturo press tab --count 3          # repeat
+      naturo press ctrl+c                 # key combination (was: hotkey)
+      naturo press ctrl+a ctrl+c          # sequential combos
+      naturo press alt+f4
     """
-    if key is None:
-        _json_err("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, f1).",
+    if not keys:
+        _json_err("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, ctrl+c).",
                   json_output, code="INVALID_INPUT")
         return
 
     if count < 1:
         _json_err(f"--count must be >= 1, got {count}", json_output, code="INVALID_INPUT")
+        return
+
+    if hold_duration is not None and hold_duration < 0:
+        _json_err(f"--hold-duration must be >= 0, got {hold_duration}", json_output, code="INVALID_INPUT")
         return
 
     import time
@@ -852,19 +865,43 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, see_af
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
+    results: list[dict] = []
     try:
-        for i in range(count):
-            backend.press_key(key, input_mode=input_mode)
-            if i < count - 1 and delay > 0:
+        for idx, key_spec in enumerate(keys):
+            for rep in range(count):
+                if _is_combo(key_spec):
+                    key_list = [k.strip() for k in key_spec.replace("+", " ").split()]
+                    backend.hotkey(
+                        *key_list,
+                        hold_duration_ms=int(hold_duration) if hold_duration else 50,
+                        input_mode=input_mode,
+                    )
+                    _record_action("hotkey", {"keys": key_list, "hold_duration": hold_duration or 0.05})
+                    results.append({"action": "hotkey", "combo": "+".join(key_list)})
+                else:
+                    backend.press_key(key_spec, input_mode=input_mode)
+                    _record_action("press", {"key": key_spec, "count": 1})
+                    results.append({"action": "pressed", "key": key_spec})
+                if rep < count - 1 and delay > 0:
+                    time.sleep(delay / 1000.0)
+            # Inter-key delay for sequential keys
+            if idx < len(keys) - 1 and delay > 0:
                 time.sleep(delay / 1000.0)
     except Exception as exc:
         _json_err(str(exc), json_output)
         return
 
-    # Record the action
-    _record_action("press", {"key": key, "count": count})
+    # Build result — keep backward-compatible shape for single-key usage
+    if len(keys) == 1 and not _is_combo(keys[0]):
+        result_data = {"action": "pressed", "key": keys[0], "count": count}
+    elif len(keys) == 1 and _is_combo(keys[0]):
+        combo_keys = [k.strip() for k in keys[0].replace("+", " ").split()]
+        result_data = {"action": "hotkey", "combo": "+".join(combo_keys)}
+        if count > 1:
+            result_data["count"] = count
+    else:
+        result_data = {"action": "pressed", "sequence": list(keys), "count": count}
 
-    result_data = {"action": "pressed", "key": key, "count": count}
     if route_info:
         result_data["routing"] = route_info
 
@@ -881,10 +918,10 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, see_af
     _json_ok(result_data, json_output)
 
 
-# ── hotkey ───────────────────────────────────────────────────────────────────
+# ── hotkey (hidden alias for press) ──────────────────────────────────────────
 
 
-@click.command()
+@click.command(hidden=True)
 @click.argument("keys", required=False)
 @click.option("--keys", "keys_option", multiple=True, help="Key names (repeatable)")
 @click.option("--hold-duration", type=float, help="Hold duration in ms")
@@ -903,63 +940,38 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, see_af
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
            input_mode, method, see_after, settle, json_output):
-    """Press a hotkey combination.
-
-    KEYS as a string like "ctrl+c" or "alt+f4". Or use --keys for each key.
+    """Press a hotkey combination (alias for 'press').
 
     \b
-    Examples:
-      naturo hotkey ctrl+c
-      naturo hotkey ctrl+z
-      naturo hotkey --keys ctrl --keys shift --keys z
+    Deprecated: use 'naturo press ctrl+c' instead of 'naturo hotkey ctrl+c'.
+    This command is kept for backward compatibility.
     """
-    # Validate parameters BEFORE acquiring backend (which may raise
-    # NoDesktopSessionError on headless CI).
-    # Parse key combo from positional arg (e.g. "ctrl+c") or --keys options
+    # Build a single combo string from positional or --keys options
     if keys:
-        key_list = [k.strip() for k in keys.replace("+", " ").split()]
+        combo = keys
     elif keys_option:
-        key_list = list(keys_option)
+        combo = "+".join(keys_option)
     else:
         _json_err("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output, code="INVALID_INPUT")
         return
 
-    if hold_duration is not None and hold_duration < 0:
-        _json_err(f"--hold-duration must be >= 0, got {hold_duration}", json_output, code="INVALID_INPUT")
-        return
-
-    backend = _get_backend(json_output)
-
-    # Auto-routing: detect best interaction method for target app
-    route_info = _auto_route(app, None, method, json_output)
-
-    try:
-        backend.hotkey(*key_list,
-                       hold_duration_ms=int(hold_duration) if hold_duration else 50,
-                       input_mode=input_mode)
-    except Exception as exc:
-        _json_err(str(exc), json_output)
-        return
-
-    # Record the action
-    _record_action("hotkey", {"keys": key_list, "hold_duration": hold_duration or 0.05})
-
-    combo = "+".join(key_list)
-    result_data = {"action": "hotkey", "combo": combo}
-    if route_info:
-        result_data["routing"] = route_info
-
-    # --see: re-capture UI tree after action
-    if see_after:
-        snapshot_data = _post_action_see(
-            backend=backend, settle_ms=settle,
-            app=app, window_title=window_title, hwnd=hwnd,
-            json_output=json_output,
-        )
-        if snapshot_data and json_output:
-            result_data["snapshot"] = snapshot_data
-
-    _json_ok(result_data, json_output)
+    # Delegate to press via Click context invoke
+    ctx = click.get_current_context()
+    ctx.invoke(
+        press,
+        keys=(combo,),
+        count=1,
+        delay=50.0,
+        hold_duration=hold_duration,
+        app=app,
+        window_title=window_title,
+        hwnd=hwnd,
+        input_mode=input_mode,
+        method=method,
+        see_after=see_after,
+        settle=settle,
+        json_output=json_output,
+    )
 
 
 # ── scroll ───────────────────────────────────────────────────────────────────

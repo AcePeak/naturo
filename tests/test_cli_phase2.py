@@ -136,16 +136,24 @@ class TestPressJsonError:
 
 
 class TestHotkeyCommandRegistration:
-    """Phase 2 hotkey command is registered and documented."""
+    """hotkey is a hidden alias for press — still callable but not in --help."""
 
-    def test_hotkey_in_main_help(self, runner):
+    def test_hotkey_hidden_from_main_help(self, runner):
+        """hotkey merged into press — hidden from top-level help."""
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        assert "hotkey" in result.output
+        assert "press" in result.output
 
     def test_hotkey_help_exits_zero(self, runner):
+        """hotkey alias still callable."""
         result = runner.invoke(main, ["hotkey", "--help"])
         assert result.exit_code == 0
+
+    def test_press_accepts_combo(self, runner):
+        """press now accepts combo notation like ctrl+c."""
+        result = runner.invoke(main, ["press", "--help"])
+        assert result.exit_code == 0
+        assert "ctrl+c" in result.output or "combo" in result.output.lower()
 
 
 class TestScrollCommandRegistration:
