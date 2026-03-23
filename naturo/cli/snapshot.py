@@ -16,13 +16,14 @@ import json as json_module
 import click
 
 from naturo.snapshot import SnapshotManager
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 def _get_manager() -> SnapshotManager:
     return SnapshotManager()
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def snapshot() -> None:
     """Manage UI automation snapshots."""
     pass

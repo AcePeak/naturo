@@ -20,6 +20,7 @@ if sys.platform == "win32" and not os.environ.get("PYTHONUTF8"):
 
 import click
 from naturo.version import __version__
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect
 from naturo.cli.get_cmd import get_cmd
@@ -77,7 +78,7 @@ def _patch_all_commands(group: click.BaseCommand) -> None:
     _patch_json_flag(group)
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 @click.version_option(__version__, prog_name="naturo")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose logging")

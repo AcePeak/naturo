@@ -23,9 +23,10 @@ import sys
 import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def dialog():
     """Detect and interact with system dialogs.
 

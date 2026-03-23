@@ -12,6 +12,7 @@ from typing import Optional
 import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error, json_error, json_error_from_exception
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 def _safe_echo(text: str, **kwargs) -> None:
@@ -56,7 +57,7 @@ def _resolve_target(app: Optional[str], title: Optional[str], hwnd: Optional[int
     return {"title": effective_title, "hwnd": hwnd}
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def window():
     """Manage windows: focus, close, minimize, maximize, restore, move, resize."""
     pass

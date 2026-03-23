@@ -4,11 +4,12 @@ Note: dialog commands moved to naturo/cli/dialog_cmd.py (Phase 4.5).
 Note: clipboard and open commands removed — handled by AI agent directly.
 """
 import click
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 # ── app ─────────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def app():
     """Manage applications: launch, quit, switch, and more."""
     pass
@@ -52,7 +53,7 @@ def app_list(json_output):
 # ── menu ────────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def menu():
     """Interact with application menu bars."""
     pass
@@ -85,7 +86,7 @@ def menu_list(app, window_title, hwnd, depth, json_output):
 # ── taskbar (Windows-specific, maps to Peekaboo dock) ──
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def taskbar():
     """Windows taskbar management (pin, unpin, list).
 
@@ -120,7 +121,7 @@ def taskbar_list(json_output):
 # ── tray (Windows-specific, maps to Peekaboo menubar) ──
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def tray():
     """System tray icon interaction.
 

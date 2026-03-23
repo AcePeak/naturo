@@ -2,12 +2,13 @@
 import click
 import json
 import sys
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 # ── mcp ─────────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def mcp():
     """MCP (Model Context Protocol) server for AI agent integration."""
     pass

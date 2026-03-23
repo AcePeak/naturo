@@ -11,6 +11,7 @@ import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
 from naturo.errors import WindowNotFoundError
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 def _get_backend():
@@ -65,7 +66,7 @@ def _platform_error_msg(feature: str) -> str:
 # ── capture ─────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def capture():
     """Capture screenshots, video, or watch for changes."""
     pass
@@ -219,7 +220,7 @@ def watch(app, window_title, hwnd, interval, timeout, path, json_output):
 # ── list ────────────────────────────────────────
 
 
-@click.group("list")
+@click.group("list", cls=FuzzyGroup)
 def list_cmd():
     """List apps, windows, screens, or permissions."""
     pass

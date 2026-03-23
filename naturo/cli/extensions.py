@@ -3,6 +3,7 @@ import json as json_module
 import sys
 
 import click
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 def _not_implemented(name: str, phase: str, json_output: bool) -> None:
@@ -27,7 +28,7 @@ def _not_implemented(name: str, phase: str, json_output: bool) -> None:
 # ── excel ───────────────────────────────────────
 
 
-@click.group(hidden=True)
+@click.group(hidden=True, cls=FuzzyGroup)
 def excel():
     """Excel COM automation (Windows-specific).
 
@@ -263,7 +264,7 @@ def excel_info(path, sheet, json_output):
 # ── java ────────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def java():
     """Java application automation via Java Access Bridge (Windows-specific).
 
@@ -302,7 +303,7 @@ def java_click(query, pid, title, json_output):
 # ── sap ─────────────────────────────────────────
 
 
-@click.group()
+@click.group(cls=FuzzyGroup)
 def sap():
     """SAP GUI Scripting automation (Windows-specific).
 

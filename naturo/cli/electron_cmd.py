@@ -14,6 +14,7 @@ import sys
 from typing import Optional
 
 import click
+from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 def _json_out(data: dict) -> None:
@@ -30,7 +31,7 @@ def _json_err(message: str, code: str = "ERROR") -> None:
 # ── electron group ───────────────────────────────────────────────────────────
 
 
-@click.group("electron")
+@click.group("electron", cls=FuzzyGroup)
 def electron() -> None:
     """Detect and automate Electron/CEF applications via CDP.
 
@@ -232,7 +233,7 @@ def electron_launch(app_path: str, port: int, json_output: bool) -> None:
 # ── chrome group ─────────────────────────────────────────────────────────────
 
 
-@click.group("chrome")
+@click.group("chrome", cls=FuzzyGroup)
 def chrome() -> None:
     """Chrome DevTools Protocol commands.
 
