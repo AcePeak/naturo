@@ -8,8 +8,47 @@ on:
     branches: [main]
 
 jobs:
+  version-check:
+    name: Version Consistency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all version strings match
+        shell: bash
+        run: |
+          PY_VER=$(grep -oP '__version__\s*=\s*"\K[^"]+' naturo/version.py)
+          CMAKE_VER=$(grep -oP 'project\(naturo_core\s+VERSION\s+\K\S+' core/CMakeLists.txt)
+          CPP_VER=$(grep -oP 'NATURO_VERSION\s*=\s*"\K[^"]+' core/src/version.cpp)
+          PYPROJECT_VER=$(grep -oP '^version\s*=\s*"\K[^"]+' pyproject.toml)
+
+          echo "Python:      $PY_VER"
+          echo "CMakeLists:  $CMAKE_VER"
+          echo "version.cpp: $CPP_VER"
+          echo "pyproject:   $PYPROJECT_VER"
+
+          FAIL=0
+          if [ "$PY_VER" != "$CMAKE_VER" ]; then
+            echo "❌ Python ($PY_VER) != CMakeLists ($CMAKE_VER)"
+            FAIL=1
+          fi
+          if [ "$PY_VER" != "$CPP_VER" ]; then
+            echo "❌ Python ($PY_VER) != version.cpp ($CPP_VER)"
+            FAIL=1
+          fi
+          if [ "$PY_VER" != "$PYPROJECT_VER" ]; then
+            echo "❌ Python ($PY_VER) != pyproject.toml ($PYPROJECT_VER)"
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::Version mismatch detected! All version strings must match."
+            exit 1
+          fi
+          echo "✅ All versions match: $PY_VER"
+
   build-dll:
     name: Build C++ Core (Windows)
+    needs: version-check
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

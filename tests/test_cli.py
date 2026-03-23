@@ -361,21 +361,33 @@ def _has_gui_backend() -> bool:
 _GUI = _has_gui_backend()
 
 
+def _has_desktop_session() -> bool:
+    """Detect whether we have an interactive desktop session on Windows.
+
+    SSH sessions (SESSIONNAME='') without an active console session cannot
+    perform screen capture or SendInput.  RDP sessions (SESSIONNAME like
+    'RDP-Tcp#N') and console sessions (SESSIONNAME='Console') can.
+    """
+    if platform.system() != "Windows":
+        return False
+    import os
+    session = os.environ.get("SESSIONNAME", "")
+    # Console or RDP sessions have desktop access
+    if session == "Console" or session.startswith("RDP-Tcp"):
+        return True
+    # SSH sessions: SESSIONNAME is empty or 'Services' — no desktop
+    # Even if explorer.exe is running, SendInput/capture may not work
+    # in a different session
+    return False
+
+
 def _expected_see_exit() -> int:
     """Return expected exit code for ``see`` with no args.
 
     On Windows with a desktop session ``see`` succeeds (0).  On non-Windows
     or headless/SSH Windows it returns 1 (no display).
     """
-    if platform.system() != "Windows":
-        return 1
-    # Headless Windows (SSH / CI without desktop) also returns 1
-    try:
-        import ctypes
-        desktop = ctypes.windll.user32.GetDesktopWindow()
-        return 0 if desktop else 1
-    except Exception:
-        return 1
+    return 0 if _has_desktop_session() else 1
 
 
 @pytest.mark.parametrize("cmd,expected_exit", [

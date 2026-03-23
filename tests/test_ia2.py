@@ -217,7 +217,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "include", "naturo", "exports.h"
         )
-        with open(header_path) as f:
+        with open(header_path, encoding="utf-8") as f:
             content = f.read()
         assert "naturo_ia2_get_element_tree" in content
         assert "naturo_ia2_find_element" in content
@@ -237,7 +237,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "IServiceProvider" in content
         assert "QueryService" in content
@@ -248,7 +248,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "Heading" in content
         assert "Paragraph" in content
@@ -262,7 +262,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert '"backend\\":\\"ia2\\"' in content or '"backend":"ia2"' in content or \
                'backend' in content and 'ia2' in content
@@ -273,7 +273,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "ia2_attributes" in content
         assert "ia2_states" in content
@@ -285,7 +285,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "naturo_ia2_check_support" in content
 
@@ -295,7 +295,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "#else" in content
         assert "Non-Windows stub" in content or "Non-Windows" in content
@@ -306,7 +306,7 @@ class TestIA2CppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "ia2.cpp"
         )
-        with open(ia2_path) as f:
+        with open(ia2_path, encoding="utf-8") as f:
             content = f.read()
         assert "1546D4B0" in content
         assert "4C98" in content
@@ -325,7 +325,7 @@ class TestMCPIA2Support:
             os.path.dirname(os.path.dirname(__file__)),
             "naturo", "mcp_server.py"
         )
-        with open(mcp_path) as f:
+        with open(mcp_path, encoding="utf-8") as f:
             content = f.read()
         assert '"ia2"' in content
         assert "ia2" in content
@@ -343,7 +343,7 @@ class TestCMakeIA2:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "CMakeLists.txt"
         )
-        with open(cmake_path) as f:
+        with open(cmake_path, encoding="utf-8") as f:
             content = f.read()
         assert "ia2.cpp" in content
 

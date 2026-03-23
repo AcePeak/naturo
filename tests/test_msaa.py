@@ -243,7 +243,7 @@ class TestMSAACppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "include", "naturo", "exports.h"
         )
-        with open(header_path) as f:
+        with open(header_path, encoding="utf-8") as f:
             content = f.read()
         assert "naturo_msaa_get_element_tree" in content
         assert "naturo_msaa_find_element" in content
@@ -255,7 +255,7 @@ class TestMSAACppExports:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "CMakeLists.txt"
         )
-        with open(cmake_path) as f:
+        with open(cmake_path, encoding="utf-8") as f:
             content = f.read()
         assert "msaa.cpp" in content
 
@@ -275,7 +275,8 @@ class TestMCPSeeUITreeMSAA:
         # Check the function in the module
         with open(
             os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                         "naturo", "mcp_server.py")
+                         "naturo", "mcp_server.py"),
+            encoding="utf-8",
         ) as f:
             content = f.read()
         assert "accessibility_backend" in content
@@ -298,7 +299,7 @@ class TestMSAARoleMapping:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "msaa.cpp"
         )
-        with open(msaa_path) as f:
+        with open(msaa_path, encoding="utf-8") as f:
             content = f.read()
         # Core roles that must be mapped
         assert "ROLE_SYSTEM_PUSHBUTTON" in content
@@ -315,7 +316,7 @@ class TestMSAARoleMapping:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "msaa.cpp"
         )
-        with open(msaa_path) as f:
+        with open(msaa_path, encoding="utf-8") as f:
             content = f.read()
         # In C++ source, the JSON field is escaped: \"backend\":\"msaa\"
         assert "backend" in content
@@ -327,7 +328,7 @@ class TestMSAARoleMapping:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "msaa.cpp"
         )
-        with open(msaa_path) as f:
+        with open(msaa_path, encoding="utf-8") as f:
             content = f.read()
         assert "role_id" in content
 
@@ -337,7 +338,7 @@ class TestMSAARoleMapping:
             os.path.dirname(os.path.dirname(__file__)),
             "core", "src", "msaa.cpp"
         )
-        with open(msaa_path) as f:
+        with open(msaa_path, encoding="utf-8") as f:
             content = f.read()
         assert "state" in content
         assert "get_accState" in content

@@ -417,6 +417,7 @@ class TestScanCodeCoverage:
 # ── Integration Test (Windows only) ─────────────────────────────────────────
 
 
+@pytest.mark.ui
 @pytest.mark.skipif(not IS_WINDOWS, reason="Windows-only integration test")
 class TestPhysIntegrationWindows:
     """Integration tests that require Windows + naturo_core.dll."""

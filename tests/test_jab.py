@@ -159,7 +159,7 @@ class TestJABMCP:
         import os
 
         mcp_path = os.path.join(os.path.dirname(__file__), "..", "naturo", "mcp_server.py")
-        with open(mcp_path, "r") as f:
+        with open(mcp_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # The validation line should include 'jab'
@@ -186,7 +186,7 @@ class TestJABRoleMapping:
         if not os.path.exists(jab_cpp):
             pytest.skip("jab.cpp not found")
 
-        with open(jab_cpp, "r") as f:
+        with open(jab_cpp, "r", encoding="utf-8") as f:
             content = f.read()
 
         # Check critical role mappings exist
@@ -212,7 +212,7 @@ class TestJABExports:
         if not os.path.exists(header):
             pytest.skip("exports.h not found")
 
-        with open(header, "r") as f:
+        with open(header, "r", encoding="utf-8") as f:
             content = f.read()
 
         assert "naturo_jab_get_element_tree" in content
@@ -233,7 +233,7 @@ class TestJABBuild:
         if not os.path.exists(cmake):
             pytest.skip("CMakeLists.txt not found")
 
-        with open(cmake, "r") as f:
+        with open(cmake, "r", encoding="utf-8") as f:
             content = f.read()
 
         assert "jab.cpp" in content
