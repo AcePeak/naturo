@@ -323,13 +323,31 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
     if platform.system() != "Windows":
         return None
 
+    target_hwnd = hwnd or _find_main_window(pid)
+    if not target_hwnd:
+        return None
+
+    # Strategy 1: Use the native C++ DLL (same path as 'naturo see').
+    # This is the primary UIA pathway and doesn't require comtypes.
+    try:
+        from naturo.bridge import NaturoCore
+        core = NaturoCore()
+        tree = core.get_element_tree(hwnd=target_hwnd, depth=1)
+        if tree is not None:
+            capabilities = ["click", "type", "find", "tree", "screenshot"]
+            return InteractionMethod(
+                method=InteractionMethodType.UIA,
+                priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                status=ProbeStatus.AVAILABLE,
+                capabilities=capabilities,
+                confidence=0.95,
+            )
+    except Exception as exc:
+        logger.debug("UIA probe via native DLL failed for PID %d: %s", pid, exc)
+
+    # Strategy 2: Fall back to comtypes if native DLL is unavailable.
     try:
         import comtypes.client  # type: ignore
-
-        # Try to get UIA element from hwnd or by finding window for PID
-        target_hwnd = hwnd or _find_main_window(pid)
-        if not target_hwnd:
-            return None
 
         uia = comtypes.client.CreateObject(
             "{ff48dba4-60ef-4201-aa87-54103eef594e}",
@@ -338,7 +356,6 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
 
         element = uia.ElementFromHandle(target_hwnd)
         if element:
-            # Check what patterns are available
             capabilities = ["click", "type", "find", "tree", "screenshot"]
 
             return InteractionMethod(
@@ -350,9 +367,9 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
             )
 
     except ImportError:
-        logger.debug("comtypes not available for UIA probe")
+        logger.debug("comtypes not available for UIA probe — install with: pip install comtypes")
     except Exception as exc:
-        logger.debug("UIA probe failed for PID %d: %s", pid, exc)
+        logger.debug("UIA probe via comtypes failed for PID %d: %s", pid, exc)
 
     return None
 
