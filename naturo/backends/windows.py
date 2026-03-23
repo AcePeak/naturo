@@ -881,6 +881,58 @@ class WindowsBackend(Backend):
 
         raise WindowNotFoundError(search, suggested_action=hint)
 
+    @staticmethod
+    def _find_uwp_core_hwnd(parent_hwnd: int) -> int:
+        """Find the UWP CoreWindow child HWND inside an ApplicationFrameHost window.
+
+        UWP apps wrap their actual UI inside a ``Windows.UI.Core.CoreWindow``
+        child window.  ``ElementFromHandle`` on the outer frame often returns
+        an empty element tree because the ControlViewWalker does not cross
+        the process boundary.  Targeting the CoreWindow directly fixes this.
+
+        Args:
+            parent_hwnd: Handle of the ApplicationFrameHost top-level window.
+
+        Returns:
+            CoreWindow child HWND if found, otherwise 0.
+        """
+        import sys
+        if sys.platform != "win32":
+            return 0
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            FindWindowExW = user32.FindWindowExW
+            FindWindowExW.restype = ctypes.c_void_p
+            FindWindowExW.argtypes = [
+                ctypes.c_void_p,  # hWndParent
+                ctypes.c_void_p,  # hWndChildAfter
+                ctypes.c_wchar_p,  # lpszClass
+                ctypes.c_void_p,  # lpszWindow (NULL = any)
+            ]
+            core_hwnd = FindWindowExW(parent_hwnd, None,
+                                      "Windows.UI.Core.CoreWindow", None)
+            return int(core_hwnd) if core_hwnd else 0
+        except Exception:
+            return 0
+
+    def _is_afh_window(self, handle: int) -> bool:
+        """Check if a window handle belongs to ApplicationFrameHost.exe.
+
+        Args:
+            handle: Window handle to check.
+
+        Returns:
+            True if the window process is ApplicationFrameHost.exe.
+        """
+        for w in self.list_windows():
+            if w.handle == handle:
+                proc = w.process_name.lower()
+                if proc.endswith(".exe"):
+                    proc = proc[:-4]
+                return proc == "applicationframehost"
+        return False
+
     def get_element_tree(self, window_title: Optional[str] = None,
                          depth: int = 3,
                          app: Optional[str] = None,
@@ -890,6 +942,12 @@ class WindowsBackend(Backend):
 
         Fills parent_id, children IDs, and keyboard_shortcut for all elements
         via Python-layer post-processing (the C++ DLL does not emit these).
+
+        For UWP apps (Calculator, Settings, etc.) the UI tree lives inside a
+        ``Windows.UI.Core.CoreWindow`` child of the ``ApplicationFrameHost``
+        top-level window.  When the initial traversal returns an empty tree
+        from an AFH window, this method automatically retries with the
+        CoreWindow child HWND.
 
         Args:
             window_title: Window title pattern (partial match, case-insensitive).
@@ -906,6 +964,21 @@ class WindowsBackend(Backend):
         core = self._ensure_core()
         handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
 
+        def _try_uwp_core(current_result):
+            """If handle is an AFH window with empty tree, retry with CoreWindow child."""
+            if (current_result is not None
+                    and not current_result.children
+                    and handle
+                    and self._is_afh_window(handle)):
+                core_hwnd = self._find_uwp_core_hwnd(handle)
+                if core_hwnd:
+                    logger.debug(
+                        "UWP fallback: retrying element tree with CoreWindow "
+                        "HWND %s (parent AFH %s)", core_hwnd, handle,
+                    )
+                    return core_hwnd
+            return 0
+
         if backend == "jab":
             result = core.jab_get_element_tree(hwnd=handle, depth=depth)
         elif backend == "ia2":
@@ -914,6 +987,12 @@ class WindowsBackend(Backend):
             result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
         elif backend == "auto":
             result = core.get_element_tree(hwnd=handle, depth=depth)
+            # UWP fallback: ApplicationFrameHost → CoreWindow child
+            uwp_hwnd = _try_uwp_core(result)
+            if uwp_hwnd:
+                uwp_result = core.get_element_tree(hwnd=uwp_hwnd, depth=depth)
+                if uwp_result is not None and uwp_result.children:
+                    result = uwp_result
             if result is None or (not result.children and not result.name):
                 # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
                 ia2_result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
@@ -930,6 +1009,12 @@ class WindowsBackend(Backend):
                             result = msaa_result
         else:
             result = core.get_element_tree(hwnd=handle, depth=depth)
+            # UWP fallback for explicit "uia" backend too
+            uwp_hwnd = _try_uwp_core(result)
+            if uwp_hwnd:
+                uwp_result = core.get_element_tree(hwnd=uwp_hwnd, depth=depth)
+                if uwp_result is not None and uwp_result.children:
+                    result = uwp_result
 
         if result is None:
             return None
