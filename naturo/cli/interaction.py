@@ -252,6 +252,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
       hardware — Phys32 driver (bypasses software input filtering)
       hook     — MinHook injection (for protected/game apps)
 
+    \b
     Examples:
       naturo click --coords 500 300
       naturo click --coords 500 300 --right
@@ -367,6 +368,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     Use --paste to set clipboard and Ctrl+V instead of keystroke typing.
     Use --file with --paste to read content from a file.
 
+    \b
     Examples:
       naturo type "Hello World"
       naturo type "Hello" --return
@@ -469,6 +471,7 @@ def press(key, count, delay, app, window_title, hwnd, input_mode, method, json_o
 
     KEY can be a key name (enter, tab, escape, f1-f12, a-z, 0-9, etc.)
 
+    \b
     Examples:
       naturo press enter
       naturo press tab --count 3
@@ -531,6 +534,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 
     KEYS as a string like "ctrl+c" or "alt+f4". Or use --keys for each key.
 
+    \b
     Examples:
       naturo hotkey ctrl+c
       naturo hotkey ctrl+z
@@ -602,6 +606,7 @@ def scroll(direction_arg, direction_option, amount, on_text, smooth, delay, app,
 
     DIRECTION can be: up, down, left, right (default: down)
 
+    \b
     Examples:
       naturo scroll down
       naturo scroll up --amount 5
@@ -658,6 +663,7 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
          modifiers, profile, app, window_title, hwnd, method, json_output):
     """Drag from one element/position to another.
 
+    \b
     Examples:
       naturo drag --from-coords 100 100 --to-coords 500 300
     """
@@ -719,6 +725,7 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
          method, json_output):
     """Move the mouse cursor to a target element or coordinates.
 
+    \b
     Examples:
       naturo move --coords 500 300
     """

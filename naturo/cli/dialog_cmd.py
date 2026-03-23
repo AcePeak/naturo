@@ -33,6 +33,7 @@ def dialog():
     modal dialog windows. Essential for AI agent automation when dialogs
     block the main workflow.
 
+    \b
     Examples:
         naturo dialog detect                   # List active dialogs
         naturo dialog detect --app notepad     # Filter by app
@@ -57,6 +58,7 @@ def detect(app, hwnd, json_output):
     Returns dialog type, title, message, available buttons, and
     whether an input field is present.
 
+    \b
     Examples:
         naturo dialog detect                   # List all dialogs
         naturo dialog detect --app notepad     # Filter by app
@@ -112,6 +114,7 @@ def accept(app, hwnd, json_output):
     Clicks the first accept-type button found: OK, Yes, Open, Save,
     Continue, Apply, Print, 确定, 是, etc.
 
+    \b
     Examples:
         naturo dialog accept                   # Accept first dialog
         naturo dialog accept --app notepad     # Accept notepad's dialog
@@ -176,6 +179,7 @@ def dismiss(app, hwnd, json_output):
     Clicks the first dismiss-type button found: Cancel, No, Close,
     Abort, 取消, 否, etc.
 
+    \b
     Examples:
         naturo dialog dismiss                  # Dismiss first dialog
         naturo dialog dismiss --app notepad    # Dismiss notepad's dialog
@@ -241,6 +245,7 @@ def click_button(button, app, hwnd, json_output):
     Finds a button by name (case-insensitive, supports partial match)
     and clicks it.
 
+    \b
     Examples:
         naturo dialog click-button "Save"         # Click Save
         naturo dialog click-button "Don't Save"   # Click Don't Save
@@ -284,6 +289,7 @@ def dialog_type(text, do_accept, app, hwnd, json_output):
     Finds the dialog's input/edit control, clears it, and types
     the provided text. With --accept, also clicks the OK button.
 
+    \b
     Examples:
         naturo dialog type "hello.txt"            # Type filename
         naturo dialog type "hello.txt" --accept   # Type then click OK

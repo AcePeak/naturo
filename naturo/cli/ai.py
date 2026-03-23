@@ -24,6 +24,7 @@ def start(transport, host, port, json_output):
 
     Default transport is stdio (for integration with AI agents like Claude, OpenClaw).
 
+    \b
     Examples:
         naturo mcp start                    # stdio transport
         naturo mcp start --transport sse    # SSE transport on port 3100

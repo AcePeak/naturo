@@ -49,6 +49,7 @@ def excel_open_cmd(path, visible, read_only, json_output):
 
     PATH is the workbook file (.xlsx, .xls, .xlsm).
 
+    \b
     Examples:
 
       naturo excel open report.xlsx
@@ -83,6 +84,7 @@ def read(path, cell, sheet, json_output):
 
     PATH is the workbook file. CELL is a cell reference (A1) or range (A1:C10).
 
+    \b
     Examples:
 
       naturo excel read report.xlsx A1
@@ -124,6 +126,7 @@ def write(path, cell, value, sheet, create, json_output):
     PATH is the workbook file. CELL is the target cell (e.g., A1).
     VALUE is the data to write.
 
+    \b
     Examples:
 
       naturo excel write report.xlsx A1 "Hello World"
@@ -162,6 +165,7 @@ def write(path, cell, value, sheet, create, json_output):
 def list_sheets(path, json_output):
     """List all sheets in a workbook.
 
+    \b
     Examples:
 
       naturo excel list-sheets report.xlsx
@@ -197,6 +201,7 @@ def run_macro(path, macro_name, macro_args, json_output):
 
     PATH is the workbook file (.xlsm). MACRO_NAME is the macro to run.
 
+    \b
     Examples:
 
       naturo excel run-macro report.xlsm "Module1.FormatReport"
@@ -230,6 +235,7 @@ def excel_info(path, sheet, json_output):
 
     Shows the dimensions of the data area in the sheet.
 
+    \b
     Examples:
 
       naturo excel info report.xlsx

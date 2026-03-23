@@ -29,6 +29,7 @@ def taskbar():
     List running applications and pinned shortcuts on the taskbar,
     and click items to activate windows.
 
+    \b
     Examples:
         naturo taskbar list                    # List all taskbar items
         naturo taskbar list --json             # JSON output
@@ -45,6 +46,7 @@ def taskbar_list(json_output):
     Shows running applications and pinned shortcuts visible on the
     Windows taskbar. Each item includes name, active state, and position.
 
+    \b
     Examples:
         naturo taskbar list                    # Human-readable list
         naturo taskbar list --json             # JSON output
@@ -86,6 +88,7 @@ def taskbar_click(name, json_output):
     Finds a taskbar button matching NAME (case-insensitive, partial match)
     and clicks it to bring the application to the foreground.
 
+    \b
     Examples:
         naturo taskbar click "Chrome"          # Activate Chrome
         naturo taskbar click "Notepad" --json  # JSON output

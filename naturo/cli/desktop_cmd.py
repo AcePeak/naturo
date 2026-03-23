@@ -34,6 +34,7 @@ def desktop():
 
     Windows equivalent of macOS Spaces / Peekaboo's space commands.
 
+    \b
     Examples:
         naturo desktop list                    # List all desktops
         naturo desktop switch 1                # Switch to desktop 1
@@ -52,6 +53,7 @@ def desktop_list(json_output: bool) -> None:
     Shows each desktop's index, name, and whether it is the current
     active desktop.
 
+    \b
     Examples:
         naturo desktop list                    # Human-readable list
         naturo desktop list --json             # JSON output
@@ -93,6 +95,7 @@ def desktop_switch(index: int, json_output: bool) -> None:
 
     INDEX is the zero-based desktop number (from 'desktop list').
 
+    \b
     Examples:
         naturo desktop switch 0               # Switch to first desktop
         naturo desktop switch 2               # Switch to third desktop
@@ -133,6 +136,7 @@ def desktop_create(name: str | None, json_output: bool) -> None:
 
     Optionally assign a NAME. If omitted, Windows assigns a default name.
 
+    \b
     Examples:
         naturo desktop create                  # Create unnamed desktop
         naturo desktop create --name "Work"    # Create named desktop
@@ -167,6 +171,7 @@ def desktop_close(index: int | None, json_output: bool) -> None:
     Without INDEX, closes the current desktop. With INDEX, closes that
     specific desktop. Cannot close the last remaining desktop.
 
+    \b
     Examples:
         naturo desktop close                   # Close current desktop
         naturo desktop close 2                 # Close desktop index 2
@@ -216,6 +221,7 @@ def desktop_move_window(
     --app name or --hwnd handle. If neither is given, moves the
     foreground window.
 
+    \b
     Examples:
         naturo desktop move-window 1 --app "Notepad"    # Move Notepad
         naturo desktop move-window 0 --hwnd 12345       # Move by handle

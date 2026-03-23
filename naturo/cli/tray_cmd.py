@@ -30,6 +30,7 @@ def tray():
     List icons in the Windows notification area and click them to
     interact with background applications.
 
+    \b
     Examples:
         naturo tray list                       # List all tray icons
         naturo tray click "Volume"             # Left-click Volume
@@ -46,6 +47,7 @@ def tray_list(json_output):
     Shows icons in the Windows notification area (system tray), including
     both visible icons and those in the overflow panel.
 
+    \b
     Examples:
         naturo tray list                       # Human-readable list
         naturo tray list --json                # JSON output
@@ -89,6 +91,7 @@ def tray_click(name, right_click, double_click, json_output):
     Finds a tray icon matching NAME (case-insensitive, partial match)
     and clicks it. Use --right for context menus, --double to open.
 
+    \b
     Examples:
         naturo tray click "Volume"             # Left-click
         naturo tray click "Wi-Fi" --right      # Right-click for menu

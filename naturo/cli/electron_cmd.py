@@ -37,6 +37,7 @@ def electron() -> None:
     Electron apps (VS Code, Slack, Discord, etc.) can be controlled
     through the Chrome DevTools Protocol when launched with a debug port.
 
+    \b
     Examples:
 
       naturo electron detect slack
@@ -55,6 +56,7 @@ def electron_detect(app_name: str, json_output: bool) -> None:
     Checks whether APP_NAME is an Electron/CEF app and reports its
     debug port if available.
 
+    \b
     Examples:
 
       naturo electron detect slack
@@ -107,6 +109,7 @@ def electron_list(json_output: bool) -> None:
     Scans running processes for Electron characteristics and reports
     detected apps with their debug port status.
 
+    \b
     Examples:
 
       naturo electron list
@@ -151,6 +154,7 @@ def electron_connect(app_name: str, port: Optional[int], json_output: bool) -> N
     Auto-detects the debug port or uses --port if specified.
     Returns connection info and available tabs.
 
+    \b
     Examples:
 
       naturo electron connect slack
@@ -197,6 +201,7 @@ def electron_launch(app_path: str, port: int, json_output: bool) -> None:
     Starts the application with --remote-debugging-port so it can
     be controlled via CDP.
 
+    \b
     Examples:
 
       naturo electron launch "C:\\\\Program Files\\\\Slack\\\\Slack.exe"
@@ -234,6 +239,7 @@ def chrome() -> None:
     Interact with Chrome/Chromium/Edge browsers via CDP.
     Requires the browser to be started with --remote-debugging-port.
 
+    \b
     Examples:
 
       naturo chrome tabs
@@ -250,6 +256,7 @@ def chrome_tabs(port: int, host: str, json_output: bool) -> None:
 
     Connects to the browser's CDP endpoint and lists all page targets.
 
+    \b
     Examples:
 
       naturo chrome tabs

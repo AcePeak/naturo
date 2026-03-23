@@ -17,6 +17,7 @@ import click
 def wait(ctx, element, window_title, gone, timeout, interval, json_output):
     """Wait for a UI element or window to appear or disappear.
 
+    \b
     Examples:
 
       naturo wait --element "Button:Save" --timeout 10

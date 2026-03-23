@@ -20,6 +20,7 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     Either provide two --snapshot IDs, or use --window to capture before/after
     with an interval.
 
+    \b
     Examples:
 
       naturo diff --snapshot snap1 --snapshot snap2

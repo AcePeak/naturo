@@ -79,6 +79,7 @@ def app_quit(ctx, name, name_option, pid, force, timeout, json_output):
 
     NAME is the application name to quit.
 
+    \b
     Examples:
       naturo app quit notepad
       naturo app quit chrome --force
@@ -390,6 +391,7 @@ def app_inspect(ctx, name, pid, scan_all, quick, json_output):
     Detects which UI framework the app uses (Electron, WPF, Qt, etc.)
     and which interaction methods are available (CDP, UIA, MSAA, JAB, IA2, Vision).
 
+    \b
     Examples:
       naturo app inspect notepad
       naturo app inspect --pid 12345
