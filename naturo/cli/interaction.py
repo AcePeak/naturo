@@ -206,6 +206,64 @@ def _validate_method(method: str, json_output: bool) -> bool:
 # ── Shared helper ────────────────────────────────────────────────────────────
 
 
+def _is_current_session_interactive() -> bool:
+    """Check if the current process runs in an active Console or RDP session.
+
+    Uses the Windows Terminal Services (WTS) API via ctypes and the
+    ``query session`` command to determine whether the session hosting
+    this process is interactive.  This handles cases where ``SESSIONNAME``
+    is not set (e.g. Task Scheduler ``/it`` tasks) but the process *is*
+    running in a desktop session.
+
+    Returns:
+        True if the process session is an active Console or RDP session.
+        False otherwise or on any error.
+    """
+    try:
+        import ctypes
+        import ctypes.wintypes
+        import subprocess
+
+        # Get the Terminal Services session ID for the current process.
+        pid = ctypes.windll.kernel32.GetCurrentProcessId()  # type: ignore[attr-defined]
+        session_id = ctypes.wintypes.DWORD(0)
+        ok = ctypes.windll.kernel32.ProcessIdToSessionId(  # type: ignore[attr-defined]
+            pid, ctypes.byref(session_id),
+        )
+        if not ok:
+            return False
+        sid = session_id.value
+
+        # Session 0 is always the non-interactive services session.
+        if sid == 0:
+            return False
+
+        # Use ``query session`` to check whether our session is Active.
+        result = subprocess.run(
+            ["query", "session"],
+            capture_output=True, text=True, timeout=5,
+            encoding="utf-8", errors="replace",
+        )
+        if result.returncode != 0:
+            return False
+
+        # Parse output.  Each line has columns like:
+        #   SESSIONNAME  USERNAME  ID  STATE  TYPE  DEVICE
+        # The active user line may start with ">" marker.
+        # We look for our session ID and check the next token is "Active".
+        for line in result.stdout.splitlines():
+            parts = line.replace(">", " ").split()
+            if not parts:
+                continue
+            for i, token in enumerate(parts):
+                if token == str(sid) and i + 1 < len(parts):
+                    if parts[i + 1].lower() == "active":
+                        return True
+        return False
+    except Exception:
+        return False
+
+
 def _check_desktop_session() -> None:
     """Raise NoDesktopSessionError if running without an interactive desktop.
 
@@ -214,11 +272,12 @@ def _check_desktop_session() -> None:
 
     Detection logic:
     1. SESSIONNAME == "Console" or starts with "RDP-Tcp" → interactive desktop, OK.
-    2. SESSIONNAME == "Services" or empty/unset → likely non-interactive.
-       - If empty AND explorer.exe is running, this is the SSH-into-desktop-machine
-         scenario: another session owns the desktop but *this* session cannot
-         interact with it. Raise a clear error instead of letting COM fail.
-    3. Any other SESSIONNAME value → assume interactive (e.g., Citrix, VNC).
+    2. SESSIONNAME == "Services" → non-interactive, reject.
+    3. SESSIONNAME empty/unset → check via WTS API whether the current process
+       session is an active Console or RDP session (handles schtasks /it tasks
+       that run interactively but do not set SESSIONNAME).  If the WTS check
+       fails, fall back to explorer.exe heuristic for a descriptive error.
+    4. Any other SESSIONNAME value → assume interactive (e.g., Citrix, VNC).
 
     No-op on other platforms.
     """
@@ -239,11 +298,16 @@ def _check_desktop_session() -> None:
         from naturo.errors import NoDesktopSessionError
         raise NoDesktopSessionError()
 
-    # Empty/unset SESSIONNAME — SSH or headless service
+    # Empty/unset SESSIONNAME — could be SSH, headless service, or schtasks /it
     if not session:
-        # Even if explorer.exe is running (from an RDP/Console session),
-        # this SSH session cannot interact with that desktop.
-        # Provide a specific error message for this scenario.
+        # First, check if the *current* process session is an active
+        # Console or RDP session via WTS API.  Task Scheduler /it tasks
+        # run in the interactive session but do NOT set SESSIONNAME.
+        if _is_current_session_interactive():
+            return
+
+        # Not in an interactive session — check explorer as a hint for
+        # a better error message.
         import subprocess
         explorer_running = False
         try:
