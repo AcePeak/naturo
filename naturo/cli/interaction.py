@@ -209,11 +209,15 @@ def _validate_method(method: str, json_output: bool) -> bool:
 def _is_current_session_interactive() -> bool:
     """Check if the current process runs in an active Console or RDP session.
 
-    Uses the Windows Terminal Services (WTS) API via ctypes and the
-    ``query session`` command to determine whether the session hosting
-    this process is interactive.  This handles cases where ``SESSIONNAME``
-    is not set (e.g. Task Scheduler ``/it`` tasks) but the process *is*
-    running in a desktop session.
+    Uses the Windows Terminal Services (WTS) API purely via ctypes to
+    determine whether the session hosting this process is interactive.
+    This handles cases where ``SESSIONNAME`` is not set (e.g. Task
+    Scheduler ``/it`` tasks) but the process *is* running in a desktop
+    session.
+
+    The implementation queries ``WTSQuerySessionInformationW`` for
+    ``WTSConnectState`` — no subprocess calls, no ``query session``
+    dependency, no encoding or exit-code surprises.
 
     Returns:
         True if the process session is an active Console or RDP session.
@@ -222,9 +226,8 @@ def _is_current_session_interactive() -> bool:
     try:
         import ctypes
         import ctypes.wintypes
-        import subprocess
 
-        # Get the Terminal Services session ID for the current process.
+        # --------------- session ID for current process ---------------
         pid = ctypes.windll.kernel32.GetCurrentProcessId()  # type: ignore[attr-defined]
         session_id = ctypes.wintypes.DWORD(0)
         ok = ctypes.windll.kernel32.ProcessIdToSessionId(  # type: ignore[attr-defined]
@@ -238,28 +241,37 @@ def _is_current_session_interactive() -> bool:
         if sid == 0:
             return False
 
-        # Use ``query session`` to check whether our session is Active.
-        result = subprocess.run(
-            ["query", "session"],
-            capture_output=True, text=True, timeout=5,
-            encoding="utf-8", errors="replace",
+        # --------------- WTS connect state via pure ctypes ---------------
+        WTS_CURRENT_SERVER_HANDLE = 0
+        WTSConnectState = 8  # WTS_INFO_CLASS enum value
+
+        # WTS_CONNECTSTATE_CLASS values we consider interactive:
+        WTSActive = 0
+        WTSConnected = 1  # user connected but not yet logged in — still desktop
+
+        wtsapi32 = ctypes.windll.wtsapi32  # type: ignore[attr-defined]
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+
+        buf = ctypes.wintypes.LPWSTR()
+        bytes_returned = ctypes.wintypes.DWORD(0)
+
+        ok = wtsapi32.WTSQuerySessionInformationW(
+            WTS_CURRENT_SERVER_HANDLE,
+            sid,
+            WTSConnectState,
+            ctypes.byref(buf),
+            ctypes.byref(bytes_returned),
         )
-        if result.returncode != 0:
+        if not ok:
             return False
 
-        # Parse output.  Each line has columns like:
-        #   SESSIONNAME  USERNAME  ID  STATE  TYPE  DEVICE
-        # The active user line may start with ">" marker.
-        # We look for our session ID and check the next token is "Active".
-        for line in result.stdout.splitlines():
-            parts = line.replace(">", " ").split()
-            if not parts:
-                continue
-            for i, token in enumerate(parts):
-                if token == str(sid) and i + 1 < len(parts):
-                    if parts[i + 1].lower() == "active":
-                        return True
-        return False
+        try:
+            # The buffer holds a single DWORD (connect state enum).
+            state = ctypes.cast(buf, ctypes.POINTER(ctypes.wintypes.DWORD)).contents.value
+        finally:
+            wtsapi32.WTSFreeMemory(buf)
+
+        return state in (WTSActive, WTSConnected)
     except Exception:
         return False
 
