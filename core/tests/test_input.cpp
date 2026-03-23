@@ -46,6 +46,34 @@ static int test_mouse_click_valid() {
     return 0;
 }
 
+/* ── naturo_mouse_down / naturo_mouse_up ──────────── */
+
+static int test_mouse_down_invalid_button() {
+    int rc = naturo_mouse_down(5);
+    CHECK(rc == -1, "mouse_down(button=5) returns -1");
+    return 0;
+}
+
+static int test_mouse_down_valid() {
+    int rc = naturo_mouse_down(0);  // left press
+    CHECK(rc == 0 || rc == -2, "mouse_down(left) returns 0 or -2");
+    // Immediately release to avoid stuck button
+    if (rc == 0) naturo_mouse_up(0);
+    return 0;
+}
+
+static int test_mouse_up_invalid_button() {
+    int rc = naturo_mouse_up(5);
+    CHECK(rc == -1, "mouse_up(button=5) returns -1");
+    return 0;
+}
+
+static int test_mouse_up_valid() {
+    int rc = naturo_mouse_up(0);  // left release (even if not held, should succeed)
+    CHECK(rc == 0 || rc == -2, "mouse_up(left) returns 0 or -2");
+    return 0;
+}
+
 /* ── naturo_mouse_scroll ──────────────────────────── */
 
 static int test_mouse_scroll_down() {
@@ -154,6 +182,10 @@ int main() {
     failures += test_mouse_move_valid();
     failures += test_mouse_click_invalid_button();
     failures += test_mouse_click_valid();
+    failures += test_mouse_down_invalid_button();
+    failures += test_mouse_down_valid();
+    failures += test_mouse_up_invalid_button();
+    failures += test_mouse_up_valid();
     failures += test_mouse_scroll_down();
     failures += test_mouse_scroll_horizontal();
     failures += test_key_press_null();

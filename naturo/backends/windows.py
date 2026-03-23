@@ -1186,18 +1186,18 @@ class WindowsBackend(Backend):
         delay_s = (duration_ms / 1000.0) / steps
 
         core.mouse_move(from_x, from_y)
-        core.mouse_click(0, False)  # Press: we simulate hold via move+release
+        time.sleep(0.05)  # Brief settle before pressing
+        core.mouse_down(0)  # Press and hold left button
 
-        # Actually we need press-down + move + release-up.
-        # NaturoCore.mouse_click does down+up; we need separate press/release.
-        # For now, use a rapid move sequence with brief hold simulation.
-        # This is sufficient for Phase 2; Phase 3 will add proper hold support.
-        for i in range(1, steps + 1):
-            t = i / steps
-            ix = int(from_x + (to_x - from_x) * t)
-            iy = int(from_y + (to_y - from_y) * t)
-            core.mouse_move(ix, iy)
-            time.sleep(delay_s)
+        try:
+            for i in range(1, steps + 1):
+                t = i / steps
+                ix = int(from_x + (to_x - from_x) * t)
+                iy = int(from_y + (to_y - from_y) * t)
+                core.mouse_move(ix, iy)
+                time.sleep(delay_s)
+        finally:
+            core.mouse_up(0)  # Always release, even on error
 
     def move_mouse(self, x: int = 0, y: int = 0) -> None:
         """Move the mouse cursor to absolute screen coordinates.

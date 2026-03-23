@@ -167,6 +167,40 @@ extern "C" NATURO_API int naturo_mouse_click(int button, int double_click) {
     return 0;
 }
 
+/* ── naturo_mouse_down ─────────────────────────────── */
+
+extern "C" NATURO_API int naturo_mouse_down(int button) {
+    if (button < 0 || button > 2) return -1;
+
+    DWORD down_flag;
+    switch (button) {
+        case 0:  down_flag = MOUSEEVENTF_LEFTDOWN;   break;
+        case 1:  down_flag = MOUSEEVENTF_RIGHTDOWN;  break;
+        case 2:  down_flag = MOUSEEVENTF_MIDDLEDOWN; break;
+        default: return -1;
+    }
+
+    INPUT inp = make_mouse_input(down_flag);
+    return send_inputs(&inp, 1);
+}
+
+/* ── naturo_mouse_up ──────────────────────────────── */
+
+extern "C" NATURO_API int naturo_mouse_up(int button) {
+    if (button < 0 || button > 2) return -1;
+
+    DWORD up_flag;
+    switch (button) {
+        case 0:  up_flag = MOUSEEVENTF_LEFTUP;   break;
+        case 1:  up_flag = MOUSEEVENTF_RIGHTUP;  break;
+        case 2:  up_flag = MOUSEEVENTF_MIDDLEUP; break;
+        default: return -1;
+    }
+
+    INPUT inp = make_mouse_input(up_flag);
+    return send_inputs(&inp, 1);
+}
+
 /* ── naturo_mouse_scroll ──────────────────────────── */
 
 extern "C" NATURO_API int naturo_mouse_scroll(int delta, int horizontal) {
@@ -550,6 +584,8 @@ extern "C" NATURO_API int naturo_phys_key_hotkey(int modifiers, const char* key_
 
 extern "C" NATURO_API int naturo_mouse_move(int, int)               { return -1; }
 extern "C" NATURO_API int naturo_mouse_click(int, int)              { return -1; }
+extern "C" NATURO_API int naturo_mouse_down(int)                    { return -1; }
+extern "C" NATURO_API int naturo_mouse_up(int)                      { return -1; }
 extern "C" NATURO_API int naturo_mouse_scroll(int, int)             { return -1; }
 extern "C" NATURO_API int naturo_key_type(const char*, int)         { return -1; }
 extern "C" NATURO_API int naturo_key_press(const char*)             { return -1; }

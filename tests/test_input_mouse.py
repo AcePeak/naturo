@@ -515,3 +515,55 @@ class TestMouseFunctionalWindows:
             "--steps", "5",
         ])
         assert result.exit_code == 0
+
+
+# ── Drag uses mouse_down/mouse_up (not mouse_click) ──────────────────────────
+
+
+class TestDragHoldBehavior:
+    """Verify drag() uses proper press-hold-release via mouse_down/mouse_up."""
+
+    def test_drag_calls_mouse_down_and_up(self):
+        """Drag must call mouse_down at start and mouse_up at end, not mouse_click."""
+        from unittest.mock import MagicMock, call
+        from naturo.backends.windows import WindowsBackend
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        mock_core = MagicMock()
+        backend._core = mock_core
+        backend._ensure_core = MagicMock(return_value=mock_core)
+
+        backend.drag(from_x=10, from_y=20, to_x=100, to_y=200, duration_ms=50, steps=2)
+
+        # Must call mouse_down(0) to press, mouse_up(0) to release
+        mock_core.mouse_down.assert_called_once_with(0)
+        mock_core.mouse_up.assert_called_once_with(0)
+        # Must NOT call mouse_click (old broken behavior)
+        mock_core.mouse_click.assert_not_called()
+
+    def test_drag_releases_on_error(self):
+        """mouse_up must be called even if mouse_move raises during drag."""
+        from unittest.mock import MagicMock
+        from naturo.backends.windows import WindowsBackend
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        mock_core = MagicMock()
+        backend._core = mock_core
+        backend._ensure_core = MagicMock(return_value=mock_core)
+
+        # Make mouse_move raise on the second call (during interpolation)
+        call_count = [0]
+        original_move = mock_core.mouse_move
+
+        def move_side_effect(x, y):
+            call_count[0] += 1
+            if call_count[0] > 1:  # Fail on first interpolation step
+                raise RuntimeError("Simulated move failure")
+
+        mock_core.mouse_move.side_effect = move_side_effect
+
+        with pytest.raises(RuntimeError, match="Simulated move failure"):
+            backend.drag(from_x=0, from_y=0, to_x=100, to_y=100, duration_ms=50, steps=2)
+
+        # mouse_up MUST still be called (finally block)
+        mock_core.mouse_up.assert_called_once_with(0)

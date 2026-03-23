@@ -220,6 +220,12 @@ class NaturoCore:
         self._lib.naturo_mouse_click.restype = ctypes.c_int
         self._lib.naturo_mouse_click.argtypes = [ctypes.c_int, ctypes.c_int]
 
+        self._lib.naturo_mouse_down.restype = ctypes.c_int
+        self._lib.naturo_mouse_down.argtypes = [ctypes.c_int]
+
+        self._lib.naturo_mouse_up.restype = ctypes.c_int
+        self._lib.naturo_mouse_up.argtypes = [ctypes.c_int]
+
         self._lib.naturo_mouse_scroll.restype = ctypes.c_int
         self._lib.naturo_mouse_scroll.argtypes = [ctypes.c_int, ctypes.c_int]
 
@@ -653,6 +659,37 @@ class NaturoCore:
         rc = self._lib.naturo_mouse_click(button, 1 if double else 0)
         if rc != 0:
             raise NaturoCoreError(rc, "mouse_click")
+
+    def mouse_down(self, button: int = 0) -> None:
+        """Press a mouse button down without releasing.
+
+        Used for drag operations where the button must remain held
+        during cursor movement.
+
+        Args:
+            button: Mouse button: 0 = left, 1 = right, 2 = middle.
+
+        Raises:
+            NaturoCoreError: On invalid argument or system error.
+        """
+        rc = self._lib.naturo_mouse_down(button)
+        if rc != 0:
+            raise NaturoCoreError(rc, "mouse_down")
+
+    def mouse_up(self, button: int = 0) -> None:
+        """Release a mouse button.
+
+        Used to complete drag operations by releasing the held button.
+
+        Args:
+            button: Mouse button: 0 = left, 1 = right, 2 = middle.
+
+        Raises:
+            NaturoCoreError: On invalid argument or system error.
+        """
+        rc = self._lib.naturo_mouse_up(button)
+        if rc != 0:
+            raise NaturoCoreError(rc, "mouse_up")
 
     def mouse_scroll(self, delta: int, horizontal: bool = False) -> None:
         """Scroll the mouse wheel.

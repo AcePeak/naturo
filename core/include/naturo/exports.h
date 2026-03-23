@@ -143,6 +143,20 @@ NATURO_API int naturo_mouse_move(int x, int y);
 NATURO_API int naturo_mouse_click(int button, int double_click);
 
 /**
+ * @brief Press a mouse button down (without releasing).
+ * @param button Mouse button: 0 = left, 1 = right, 2 = middle.
+ * @return 0 on success, -1 on invalid argument, -2 on system error.
+ */
+NATURO_API int naturo_mouse_down(int button);
+
+/**
+ * @brief Release a mouse button.
+ * @param button Mouse button: 0 = left, 1 = right, 2 = middle.
+ * @return 0 on success, -1 on invalid argument, -2 on system error.
+ */
+NATURO_API int naturo_mouse_up(int button);
+
+/**
  * @brief Scroll the mouse wheel.
  * @param delta Positive = scroll up/forward, negative = scroll down/backward.
  *              Typically ±120 per notch (Windows WHEEL_DELTA).
