@@ -61,6 +61,27 @@ _JAB_DLLS = {"windowsaccessbridge-64.dll", "windowsaccessbridge-32.dll", "window
 _GTK_DLLS = {"libgtk-3-0.dll", "libgtk-4-1.dll"}
 _UWP_DLLS = {"windows.ui.xaml.dll", "microsoft.ui.xaml.dll", "twinapi.appcore.dll"}
 _UWP_EXES = {"applicationframehost.exe"}
+# Known UWP app executables (lowercase) for fallback when DLL scan is unavailable
+_UWP_KNOWN_APPS = {
+    "calculatorapp.exe", "calculator.exe",
+    "windowsalarms.exe", "time.exe",
+    "mspaint.exe",  # New Paint is UWP
+    "notepad.exe",  # Windows 11 Notepad is UWP
+    "microsoft.photos.exe", "photos.exe",
+    "video.ui.exe",  # Movies & TV
+    "microsoft.media.player.exe",  # Media Player
+    "windowsterminal.exe", "wt.exe",
+    "windowscamera.exe",
+    "screenclippinghost.exe",
+    "gamebar.exe", "gamebarftserver.exe",
+    "feedbackhub.exe",
+    "getstarted.exe",  # Tips
+    "yourphone.exe", "phonelink.exe",
+    "textinputhost.exe",
+    "searchhost.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+}
 
 
 def _get_process_dlls(pid: int) -> Set[str]:
@@ -153,6 +174,18 @@ def detect_frameworks_from_dlls(pid: int, exe: str) -> List[FrameworkInfo]:
                 framework_type=FrameworkType.JAVA_SWING,
                 dll_signatures=["(inferred from exe name)"],
             ))
+        # UWP detection: known app names or WindowsApps install path (#257)
+        exe_base = os.path.basename(exe_lower) if exe_lower else ""
+        if not frameworks and (
+            exe_base in _UWP_KNOWN_APPS
+            or exe_base in _UWP_EXES
+            or "\\windowsapps\\" in exe_lower
+            or "/windowsapps/" in exe_lower
+        ):
+            frameworks.append(FrameworkInfo(
+                framework_type=FrameworkType.UWP,
+                dll_signatures=[f"(inferred from {exe_base or 'WindowsApps path'})"],
+            ))
         # Fallback: if no exe-name heuristic matched but we're on Windows,
         # report Win32 so the field is never empty (#253)
         if not frameworks:
@@ -232,10 +265,11 @@ def detect_frameworks_from_dlls(pid: int, exe: str) -> List[FrameworkInfo]:
             dll_signatures=sorted(gtk_matches),
         ))
 
-    # UWP / XAML — detect from DLL signatures or exe name (#253)
+    # UWP / XAML — detect from DLL signatures, exe name, or install path (#253, #257)
     uwp_matches = dlls & _UWP_DLLS
     exe_base = os.path.basename(exe).lower()
-    if uwp_matches or exe_base in _UWP_EXES:
+    _exe_lower = exe.lower()
+    if uwp_matches or exe_base in _UWP_EXES or exe_base in _UWP_KNOWN_APPS or "\\windowsapps\\" in _exe_lower:
         sigs = sorted(uwp_matches) if uwp_matches else [f"(inferred from {exe_base})"]
         frameworks.append(FrameworkInfo(
             framework_type=FrameworkType.UWP,

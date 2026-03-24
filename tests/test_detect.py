@@ -540,3 +540,63 @@ class TestAppInspectPidValidation:
             result = runner.invoke(app_inspect, ["--pid", "999999", "--json"])
         assert result.exit_code != 0
         assert "PROCESS_NOT_FOUND" in result.output or "No process found" in result.output
+
+
+class TestUwpFrameworkDetection:
+    """Tests for UWP app framework detection fallback (fixes #257).
+
+    When DLL scanning is unavailable (common for protected UWP processes),
+    framework detection should still identify UWP apps via exe name or path.
+    """
+
+    def test_calculator_detected_as_uwp_by_exe_name(self):
+        """CalculatorApp.exe should be detected as UWP even without DLL scan."""
+        from naturo.detect.probes import detect_frameworks_from_dlls
+        from naturo.detect.models import FrameworkType
+        from unittest.mock import patch
+
+        # Simulate DLL scan failure (returns empty set)
+        with patch("naturo.detect.probes._get_process_dlls", return_value=set()):
+            frameworks = detect_frameworks_from_dlls(
+                pid=12345, exe="C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator\\CalculatorApp.exe"
+            )
+
+        assert len(frameworks) >= 1
+        assert frameworks[0].framework_type == FrameworkType.UWP
+
+    def test_windowsapps_path_detected_as_uwp(self):
+        """Any exe in WindowsApps directory should be detected as UWP."""
+        from naturo.detect.probes import detect_frameworks_from_dlls
+        from naturo.detect.models import FrameworkType
+        from unittest.mock import patch
+
+        with patch("naturo.detect.probes._get_process_dlls", return_value=set()):
+            frameworks = detect_frameworks_from_dlls(
+                pid=12345, exe="C:\\Program Files\\WindowsApps\\SomeApp\\unknown.exe"
+            )
+
+        assert len(frameworks) >= 1
+        assert frameworks[0].framework_type == FrameworkType.UWP
+
+    def test_known_uwp_apps_detected(self):
+        """All known UWP app exe names should be detected as UWP."""
+        from naturo.detect.probes import detect_frameworks_from_dlls, _UWP_KNOWN_APPS
+        from naturo.detect.models import FrameworkType
+        from unittest.mock import patch
+
+        for app_exe in ["calculatorapp.exe", "windowsterminal.exe", "windowscamera.exe"]:
+            with patch("naturo.detect.probes._get_process_dlls", return_value=set()):
+                frameworks = detect_frameworks_from_dlls(pid=12345, exe=app_exe)
+            assert frameworks[0].framework_type == FrameworkType.UWP, f"{app_exe} not detected as UWP"
+
+    def test_non_uwp_app_not_detected_as_uwp(self):
+        """Non-UWP apps should not be detected as UWP."""
+        from naturo.detect.probes import detect_frameworks_from_dlls
+        from naturo.detect.models import FrameworkType
+        from unittest.mock import patch
+
+        with patch("naturo.detect.probes._get_process_dlls", return_value=set()):
+            frameworks = detect_frameworks_from_dlls(pid=12345, exe="C:\\Windows\\system32\\cmd.exe")
+
+        # Should fallback to WIN32 on Windows or UNKNOWN on other platforms
+        assert frameworks[0].framework_type != FrameworkType.UWP
