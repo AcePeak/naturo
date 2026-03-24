@@ -481,6 +481,14 @@ def permissions(json_output):
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session name for isolation (default: NATURO_SESSION env or 'default')")
+@click.option("--cascade", is_flag=True,
+              help="Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision")
+@click.option("--fill-gaps", "fill_gaps", is_flag=True,
+              help="Use AI vision to fill uncovered UI regions (requires AI provider)")
+@click.option("--stats", "show_stats", is_flag=True,
+              help="Show per-provider recognition statistics after output")
+@click.option("--coverage", "coverage_target", type=float, default=0.0,
+              help="Coverage target (0.0–1.0) before trying next provider (default: 0 = UIA only)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -488,7 +496,8 @@ def permissions(json_output):
     default="uia",
     help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
-def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session, json_output, backend):
+def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
+        cascade, fill_gaps, show_stats, coverage_target, json_output, backend):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -500,6 +509,17 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     don't expose UIAutomation elements. Use --backend ia2 for IA2-enabled
     applications (Firefox, Thunderbird, LibreOffice). Use --backend auto to
     try UIA first, then IA2, then MSAA automatically.
+
+    Use --cascade to progressively try multiple providers (UIA → CDP → AI vision).
+    This maximizes coverage for Electron apps (Feishu, Slack, VS Code, etc.)
+    that render content in a WebView.
+
+    \b
+    Examples:
+        naturo see --app feishu --cascade      # UIA + CDP for Electron content
+        naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
+        naturo see --app feishu --cascade --stats      # Show provider breakdown
+        naturo see --app feishu --backend auto         # Try all A11y backends
     """
     # BUG-028: Validate --depth range (before platform check — input validation first)
     if depth < 1 or depth > 10:
@@ -520,10 +540,30 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
     try:
         be = _get_backend()
-        tree = be.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, depth=depth,
-            backend=backend,
-        )
+
+        # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
+        cascade_stats = None
+        if cascade or backend == "auto":
+            from naturo.cascade import run_cascade
+            cascade_result = run_cascade(
+                be,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                pid=pid,
+                depth=depth,
+                backend_name=backend,
+                coverage_target=coverage_target,
+                fill_gaps_ai=fill_gaps,
+                screenshot_path=path,
+            )
+            tree = cascade_result.tree
+            cascade_stats = cascade_result.stats
+        else:
+            tree = be.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, depth=depth,
+                backend=backend,
+            )
 
         if tree is None:
             msg = "No window found or UI tree is empty."
@@ -604,16 +644,20 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "height": el.height,
                     "children": [to_dict(c) for c in el.children],
                 }
-                # Include hierarchy/shortcut info from properties
+                # Include hierarchy/shortcut info and source from properties
                 props = getattr(el, "properties", {})
                 if props.get("parent_id"):
                     d["parent_id"] = props["parent_id"]
                 if props.get("keyboard_shortcut"):
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
+                if props.get("source"):
+                    d["source"] = props["source"]
                 return d
             out = to_dict(tree)
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
+            if cascade_stats:
+                out["cascade_stats"] = cascade_stats.to_dict()
 
             # Add DPI context so AI agents know coordinate scaling
             try:
@@ -647,7 +691,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 prefix = "  " * indent
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}")
+                props = getattr(el, "properties", {})
+                source_str = f" [{props['source']}]" if props.get("source") else ""
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}")
                 for child in el.children:
                     print_tree(child, indent + 1)
 
@@ -655,6 +701,15 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             if snapshot_id:
                 click.echo(f"\nSnapshot: {snapshot_id}")
                 click.echo("Tip: use 'naturo click e<N>' to click an element by its ref.")
+
+            # Print cascade stats when --stats is requested
+            if show_stats and cascade_stats:
+                click.echo("\nRecognition Stats:")
+                click.echo(f"  Total elements: {cascade_stats.total_elements}")
+                click.echo(f"  Coverage:       {cascade_stats.coverage_estimate:.1%}")
+                click.echo("  Providers:")
+                for p in cascade_stats.providers:
+                    click.echo(f"    {p.name:<12} {p.elements:>4} elements  {p.elapsed_ms:>6.0f}ms  [{p.status}]")
 
         # Generate annotated screenshot
         if annotate and store_snapshot and snapshot_id:
