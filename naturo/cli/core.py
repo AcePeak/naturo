@@ -233,10 +233,13 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         # ── Element / region crop (issue #160) ───────────────────────────────
         crop_box = None  # (left, top, right, bottom) in image coordinates
 
+        # Track whether the capture is window-relative (for element crop offset)
+        _is_window_capture = bool(hwnd or app or window_title)
+
         if element_ref:
             # Resolve eN ref → bounds from most recent snapshot
-            from naturo.snapshot import SnapshotManager
-            _mgr = SnapshotManager()
+            from naturo.snapshot import get_snapshot_manager
+            _mgr = get_snapshot_manager(session=session)
             resolved = _mgr.resolve_ref(element_ref)
             if resolved is None:
                 msg = (
@@ -251,13 +254,45 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
             cx, cy, _snap_id = resolved
             el_result = _mgr.resolve_ref_element(element_ref)
             if el_result:
-                element, _ = el_result
+                element, snap_id = el_result
                 ex, ey, ew, eh = element.frame
+
+                # When capturing a specific window (--app/--hwnd), the
+                # screenshot is window-relative (origin 0,0) but element
+                # coords from the snapshot are screen-absolute.  Subtract
+                # the window origin so the crop aligns with the image.
+                win_offset_x, win_offset_y = 0, 0
+                if _is_window_capture:
+                    # Try 1: query current window rect via Win32 API
+                    try:
+                        import platform as _plat
+                        _cap_hwnd = target_hwnd if target_hwnd else 0
+                        if _cap_hwnd and _plat.system() == "Windows":
+                            import ctypes
+                            import ctypes.wintypes as wt
+                            rect = wt.RECT()
+                            if ctypes.windll.user32.GetWindowRect(
+                                _cap_hwnd, ctypes.byref(rect)
+                            ):
+                                win_offset_x = rect.left
+                                win_offset_y = rect.top
+                    except Exception:
+                        pass
+                    # Try 2: fall back to snapshot window_bounds
+                    if win_offset_x == 0 and win_offset_y == 0:
+                        try:
+                            snap_data = _mgr.get_snapshot(snap_id)
+                            if snap_data.window_bounds:
+                                win_offset_x = snap_data.window_bounds[0]
+                                win_offset_y = snap_data.window_bounds[1]
+                        except Exception:
+                            pass  # Best-effort; absolute coords as last resort
+
                 crop_box = (
-                    max(0, ex - padding),
-                    max(0, ey - padding),
-                    ex + ew + padding,
-                    ey + eh + padding,
+                    max(0, ex - win_offset_x - padding),
+                    max(0, ey - win_offset_y - padding),
+                    ex - win_offset_x + ew + padding,
+                    ey - win_offset_y + eh + padding,
                 )
         elif region:
             # Parse X,Y,W,H
@@ -723,6 +758,21 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # Persist ref mapping so click/type can resolve e<N> refs
             mgr.store_ref_map(snapshot_id, ref_map)
 
+            # Store window bounds in the snapshot metadata for coordinate
+            # offset calculations (e.g. capture --element crop).
+            _win_bounds = None
+            if tree:
+                _win_bounds = (tree.x, tree.y, tree.width, tree.height)
+            snap_obj = mgr.get_snapshot(snapshot_id)
+            snap_obj.window_bounds = _win_bounds
+            snap_obj.window_handle = hwnd
+            snap_obj.application_name = app
+            snap_obj.window_title = window_title
+            mgr._write_json_atomic(
+                mgr._snap_dir(snapshot_id) / "snapshot.json",
+                snap_obj.to_dict(),
+            )
+
             # Optionally capture screenshot into snapshot
             if path:
                 result = backend.capture_screen(output_path=path)
@@ -730,6 +780,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "window_handle": hwnd,
                     "application_name": app,
                     "window_title": window_title,
+                    "window_bounds": _win_bounds,
                 }
                 mgr.store_screenshot(snapshot_id, result.path, metadata)
 
