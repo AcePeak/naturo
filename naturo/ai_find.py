@@ -53,6 +53,8 @@ def ai_find_element(
     screenshot_path: Optional[str] = None,
     refine_with_uia: bool = True,
     max_tokens: int = 512,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> AIFindResult:
     """Find a UI element using natural language and AI vision.
 
@@ -78,7 +80,12 @@ def ai_find_element(
         CaptureFailedError: Screenshot capture failed.
     """
     if provider is None:
-        provider = get_vision_provider(provider_name)
+        kwargs: dict = {}
+        if model:
+            kwargs["model"] = model
+        if api_key:
+            kwargs["api_key"] = api_key
+        provider = get_vision_provider(provider_name, **kwargs)
 
     # Step 1: AI vision identifies the element
     vision_result = identify_element(

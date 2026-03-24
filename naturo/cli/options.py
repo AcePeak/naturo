@@ -19,6 +19,8 @@ Usage::
 """
 from __future__ import annotations
 
+from typing import Optional
+
 import click
 
 
@@ -104,3 +106,69 @@ def process_name_option(func):
     return click.option(
         "--process-name", "app", default=None, hidden=True, help="",
     )(func)
+
+
+# ── AI provider options (#142) ───────────────────────────────────────────────
+
+
+def ai_provider_options(func):
+    """Shared decorator that adds ``--provider``, ``--model``, and ``--api-key``
+    to any AI-capable command (issue #142).
+
+    All three options default to the values already set via environment
+    variables or ``~/.config/naturo/credentials.json``, so existing
+    users notice no change.  They are included in ``--help`` but only
+    take effect when the command actually uses an AI provider.
+
+    Maps to Python params: ``ai_provider``, ``ai_model``, ``ai_api_key``.
+    """
+    func = click.option(
+        "--api-key", "ai_api_key", default=None,
+        help="AI provider API key (overrides env var / credentials file)",
+    )(func)
+    func = click.option(
+        "--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
+        help="AI model name (e.g. claude-sonnet-4-20250514, gpt-4o)",
+    )(func)
+    func = click.option(
+        "--provider", "ai_provider",
+        type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+        default="auto",
+        help="AI provider: auto (default), anthropic, openai, ollama",
+    )(func)
+    return func
+
+
+def get_vision_provider_from_options(
+    provider: str = "auto",
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
+):
+    """Instantiate a vision provider using the values from AI provider options.
+
+    Parameters
+    ----------
+    provider:
+        Provider name (from ``--provider``).
+    model:
+        Model override (from ``--model``).
+    api_key:
+        API key override (from ``--api-key``).
+
+    Returns
+    -------
+    VisionProvider
+        Configured provider instance.
+
+    Raises
+    ------
+    AIProviderUnavailableError
+        If no provider is configured.
+    """
+    from naturo.providers.base import get_vision_provider
+    kwargs: dict = {}
+    if model:
+        kwargs["model"] = model
+    if api_key:
+        kwargs["api_key"] = api_key
+    return get_vision_provider(provider, **kwargs)

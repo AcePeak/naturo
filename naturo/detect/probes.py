@@ -27,6 +27,28 @@ from naturo.detect.models import (
 
 logger = logging.getLogger(__name__)
 
+# Cached NaturoCore instance for probes (avoids repeated DLL load + init)
+_native_core = None
+
+
+def _get_native_core():
+    """Return a lazily-initialized NaturoCore instance.
+
+    The C++ DLL requires ``naturo_init()`` (COM initialization) before
+    UIA calls work.  Without it, ``get_element_tree`` silently fails
+    and returns None — the root cause of #208.
+
+    Returns:
+        Initialized NaturoCore singleton.
+    """
+    global _native_core
+    if _native_core is None:
+        from naturo.bridge import NaturoCore
+        _native_core = NaturoCore()
+        _native_core.init()
+    return _native_core
+
+
 # DLL signatures for framework detection
 _ELECTRON_DLLS = {"electron.exe", "libcef.dll", "chrome_elf.dll"}
 _CEF_DLLS = {"libcef.dll"}
@@ -330,8 +352,7 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
     # Strategy 1: Use the native C++ DLL (same path as 'naturo see').
     # This is the primary UIA pathway and doesn't require comtypes.
     try:
-        from naturo.bridge import NaturoCore
-        core = NaturoCore()
+        core = _get_native_core()
         tree = core.get_element_tree(hwnd=target_hwnd, depth=1)
         if tree is not None:
             capabilities = ["click", "type", "find", "tree", "screenshot"]

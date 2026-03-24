@@ -3,6 +3,7 @@
 Implements the Phase 1 "See" CLI commands for screen capture,
 window listing, UI element tree inspection, and element search.
 """
+from __future__ import annotations
 
 import json as json_module
 import platform
@@ -625,8 +626,6 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--depth", "-d", type=int, default=5, help="Maximum tree depth (1-10)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
 @click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
-@click.option("--provider", type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
-              default="auto", help="AI provider (for --ai mode)")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Use existing screenshot (for --ai mode)")
 @click.option("--app", default=None, help="Target app window")
@@ -637,7 +636,15 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     default="uia",
     help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
-def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, provider, screenshot, app, json_output, backend):
+@click.option("--provider", "ai_provider",
+              type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+              default="auto", help="AI provider for --ai mode (auto, anthropic, openai, ollama)")
+@click.option("--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
+              help="AI model name override (e.g. claude-sonnet-4-20250514, gpt-4o)")
+@click.option("--api-key", "ai_api_key", default=None,
+              help="AI provider API key (overrides env var)")
+def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
+             ai_provider, ai_model, ai_api_key, screenshot, app, json_output, backend):
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
@@ -678,7 +685,8 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, pro
 
     # AI vision mode — natural language element finding
     if ai:
-        _find_with_ai(query, provider, screenshot, app, json_output)
+        _find_with_ai(query, ai_provider, screenshot, app, json_output,
+                      model=ai_model, api_key=ai_api_key)
         return
 
     # BUG-028: Validate --depth range (before platform check — input validation first)
@@ -778,7 +786,16 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai, pro
         raise SystemExit(1)
 
 
-def _find_with_ai(query, provider_name, screenshot, app, json_output):
+def _find_with_ai(
+    query,
+    provider_name,
+    screenshot,
+    app,
+    json_output,
+    *,
+    model: str | None = None,
+    api_key: str | None = None,
+):
     """AI-powered element finding via naturo find --ai.
 
     Args:
@@ -787,6 +804,8 @@ def _find_with_ai(query, provider_name, screenshot, app, json_output):
         screenshot: Optional screenshot path.
         app: Optional target application window.
         json_output: Whether to output JSON.
+        model: Optional AI model name override (from --model).
+        api_key: Optional API key override (from --api-key).
     """
     try:
         from naturo.ai_find import ai_find_element
@@ -813,6 +832,8 @@ def _find_with_ai(query, provider_name, screenshot, app, json_output):
             provider_name=provider_name,
             window_title=app,
             screenshot_path=screenshot,
+            model=model,
+            api_key=api_key,
         )
     except Exception as e:
         msg = str(e)
