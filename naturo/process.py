@@ -90,11 +90,61 @@ def _list_processes() -> list[ProcessInfo]:
     return processes
 
 
+def _get_console_session_id() -> int:
+    """Get the active console (interactive desktop) session ID on Windows.
+
+    Uses WTSGetActiveConsoleSessionId to determine which Windows session
+    owns the physical console.
+
+    Returns:
+        Active console session ID, or -1 on failure or non-Windows.
+    """
+    if platform.system() != "Windows":
+        return -1
+    try:
+        import ctypes
+        session_id = ctypes.windll.kernel32.WTSGetActiveConsoleSessionId()
+        if session_id == 0xFFFFFFFF:
+            return -1
+        return session_id
+    except Exception:
+        return -1
+
+
+def _get_process_session_id(pid: int) -> int:
+    """Get the Windows session ID for a process.
+
+    Args:
+        pid: Process ID.
+
+    Returns:
+        Session ID, or -1 on failure or non-Windows.
+    """
+    if platform.system() != "Windows":
+        return -1
+    try:
+        import ctypes
+        import ctypes.wintypes
+        session_id = ctypes.wintypes.DWORD()
+        success = ctypes.windll.kernel32.ProcessIdToSessionId(
+            pid, ctypes.byref(session_id)
+        )
+        if success:
+            return session_id.value
+        return -1
+    except Exception:
+        return -1
+
+
 def find_process(
     name: str | None = None,
     pid: int | None = None,
 ) -> ProcessInfo | None:
     """Find a running process by name or PID.
+
+    When searching by name, prefers processes in the active console session
+    over those in Session 0 (non-interactive services session).  This
+    prevents schtasks/remote contexts from targeting ghost processes (#230).
 
     Args:
         name: Process name (case-insensitive substring match).
@@ -108,13 +158,31 @@ def find_process(
 
     processes = _list_processes()
 
-    for proc in processes:
-        if pid is not None and proc.pid == pid:
-            return proc
-        if name is not None and name.lower() in proc.name.lower():
-            return proc
+    # PID lookup is exact — no session preference needed
+    if pid is not None:
+        for proc in processes:
+            if proc.pid == pid:
+                return proc
+        return None
 
-    return None
+    # Name lookup: prefer interactive session processes (#230)
+    assert name is not None
+    name_lower = name.lower()
+    first_match: ProcessInfo | None = None
+    console_session = _get_console_session_id()
+
+    for proc in processes:
+        if name_lower not in proc.name.lower():
+            continue
+        if first_match is None:
+            first_match = proc
+        # If we can determine sessions, prefer the console session
+        if console_session >= 0:
+            proc_session = _get_process_session_id(proc.pid)
+            if proc_session == console_session:
+                return proc  # Found an interactive session match — use it
+
+    return first_match  # Fallback to first match if no console session match
 
 
 def is_running(name: str) -> bool:

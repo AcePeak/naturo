@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
     relaunch_app, list_apps, _list_processes,
+    _get_console_session_id, _get_process_session_id,
 )
 from naturo.errors import AppNotFoundError, TimeoutError
 
@@ -58,6 +59,69 @@ class TestFindProcess:
         mock_list.return_value = [ProcessInfo(pid=1, name="Notepad.exe")]
         result = find_process(name="notepad")
         assert result is not None
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_prefers_interactive_session_over_session_0(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """When multiple processes match, prefer the one in the active
+        console session over the one in Session 0 (#230)."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),  # Session 0 ghost
+            ProcessInfo(pid=200, name="Notepad.exe"),  # Interactive session
+        ]
+        mock_console.return_value = 1
+        # PID 100 → Session 0, PID 200 → Session 1 (console)
+        mock_proc_session.side_effect = lambda pid: 0 if pid == 100 else 1
+        result = find_process(name="notepad")
+        assert result is not None
+        assert result.pid == 200, "Should prefer interactive session (PID 200)"
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_falls_back_to_first_match_when_no_console_session(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """When console session ID is unavailable, fall back to first match."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),
+            ProcessInfo(pid=200, name="Notepad.exe"),
+        ]
+        mock_console.return_value = -1  # Can't determine console session
+        result = find_process(name="notepad")
+        assert result is not None
+        assert result.pid == 100, "Should fall back to first match"
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_session_aware_single_match(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """When only one process matches, return it regardless of session."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),
+        ]
+        mock_console.return_value = 1
+        mock_proc_session.return_value = 0  # Only in Session 0
+        result = find_process(name="notepad")
+        assert result is not None
+        assert result.pid == 100
+
+
+class TestSessionHelpers:
+    """Tests for session ID helper functions."""
+
+    @patch("platform.system", return_value="Darwin")
+    def test_console_session_non_windows(self, _mock):
+        assert _get_console_session_id() == -1
+
+    @patch("platform.system", return_value="Darwin")
+    def test_process_session_non_windows(self, _mock):
+        assert _get_process_session_id(1234) == -1
 
 
 class TestIsRunning:

@@ -775,6 +775,52 @@ class WindowsBackend(Backend):
         "终端": {"windowsterminal", "terminal"},
     }
 
+    @staticmethod
+    def _get_console_session_id() -> int:
+        """Get the active console (interactive desktop) session ID.
+
+        Uses WTSGetActiveConsoleSessionId to determine which Windows session
+        owns the physical console.  Returns -1 if the call fails.
+
+        Returns:
+            Active console session ID, or -1 on failure.
+        """
+        try:
+            import ctypes
+            session_id = ctypes.windll.kernel32.WTSGetActiveConsoleSessionId()
+            # WTSGetActiveConsoleSessionId returns 0xFFFFFFFF on failure
+            if session_id == 0xFFFFFFFF:
+                return -1
+            return session_id
+        except Exception:
+            return -1
+
+    @staticmethod
+    def _get_process_session_id(pid: int) -> int:
+        """Get the Windows session ID for a given process.
+
+        Uses ProcessIdToSessionId to determine which session a process
+        belongs to.  Session 0 is the non-interactive services session;
+        session 1+ are interactive user sessions.
+
+        Args:
+            pid: Process ID.
+
+        Returns:
+            Session ID, or -1 on failure.
+        """
+        try:
+            import ctypes
+            session_id = ctypes.wintypes.DWORD()
+            success = ctypes.windll.kernel32.ProcessIdToSessionId(
+                pid, ctypes.byref(session_id)
+            )
+            if success:
+                return session_id.value
+            return -1
+        except Exception:
+            return -1
+
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
                       hwnd: Optional[int] = None) -> int:
@@ -791,6 +837,11 @@ class WindowsBackend(Backend):
           3 — process-name substring    (e.g. ``expl`` in ``explorer.exe``)
           2 — exact title match         (e.g. ``notepad`` == ``Notepad``)
           1 — title substring           (e.g. ``note`` in ``Untitled - Notepad``)
+
+        Session awareness (#230): When multiple windows match with equal
+        scores, windows in the active console session are strongly preferred
+        over windows in Session 0 (the non-interactive services session).
+        This prevents schtasks/remote contexts from targeting ghost windows.
 
         Case-insensitive throughout.  Among equal scores the window whose
         title is shortest wins (heuristic: less noise in the title ⇒ more
@@ -821,10 +872,14 @@ class WindowsBackend(Backend):
         search_lower = search.lower()
         windows = self.list_windows()
 
+        # Get console session for session-aware ranking (#230)
+        console_session = self._get_console_session_id()
+
         # --app → match process name first; --window-title → match title only
         match_process = app is not None
 
         best_score = 0
+        best_session_bonus = False  # True if best_window is in console session
         best_window = None
 
         for w in windows:
@@ -863,14 +918,34 @@ class WindowsBackend(Backend):
                 elif search_lower in title_lower:
                     score = 1  # substring in title
 
-            if score > best_score or (
-                score == best_score
-                and score > 0
-                and best_window is not None
-                and len(w.title) < len(best_window.title)
-            ):
+            if score == 0:
+                continue
+
+            # Session-aware ranking (#230): prefer windows in the active
+            # console session over windows in Session 0 (services session).
+            # This prevents schtasks-launched commands from targeting ghost
+            # processes that exist in the non-interactive session.
+            in_console = False
+            if console_session >= 0:
+                w_session = self._get_process_session_id(w.pid)
+                in_console = (w_session == console_session)
+
+            # Decision: pick this window if it has a higher score, or if
+            # scores are equal but this window is in the console session
+            # while the current best is not, or if all else is equal,
+            # prefer the shorter title (more likely the "main" window).
+            if score > best_score:
                 best_score = score
+                best_session_bonus = in_console
                 best_window = w
+            elif score == best_score and best_window is not None:
+                if in_console and not best_session_bonus:
+                    # Same score but this one is in the interactive session
+                    best_session_bonus = in_console
+                    best_window = w
+                elif in_console == best_session_bonus and len(w.title) < len(best_window.title):
+                    # Same score and same session status — prefer shorter title
+                    best_window = w
 
         if best_window is not None:
             # UWP/WinUI apps: the real UI tree lives under

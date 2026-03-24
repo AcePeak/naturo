@@ -730,6 +730,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # (#230) When --app/--hwnd/--window is specified, focus the target window
     # before typing. SendInput sends keystrokes to the foreground window, so
     # without focusing first, type silently sends to the wrong window.
+    # Session-aware: _resolve_hwnd now prefers interactive session windows.
+    _focused_hwnd = None
     if (app or window_title or hwnd) and not on_element:
         import platform as _plat
         if _plat.system() == "Windows":
@@ -738,11 +740,21 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     app=app, window_title=window_title, hwnd=hwnd,
                 )
                 if _target_hwnd:
+                    _focused_hwnd = _target_hwnd
                     import ctypes
+                    import ctypes.wintypes
                     SW_RESTORE = 9
                     if backend._is_iconic(_target_hwnd):
                         ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
                     ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+                    # Record the actual PID we focused for accurate routing info
+                    _focused_pid = ctypes.wintypes.DWORD()
+                    ctypes.windll.user32.GetWindowThreadProcessId(
+                        _target_hwnd, ctypes.byref(_focused_pid)
+                    )
+                    if route_info and _focused_pid.value:
+                        route_info["focused_pid"] = _focused_pid.value
+                        route_info["focused_hwnd"] = _target_hwnd
                     import time
                     time.sleep(0.15)  # Allow focus to settle
             except Exception as exc:
@@ -973,6 +985,7 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
     # (#230) Focus target window before sending key input.
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
+    # Session-aware: _resolve_hwnd now prefers interactive session windows.
     if (app or window_title or hwnd):
         import platform as _plat
         if _plat.system() == "Windows":
@@ -982,10 +995,19 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
                 )
                 if _target_hwnd:
                     import ctypes
+                    import ctypes.wintypes
                     SW_RESTORE = 9
                     if backend._is_iconic(_target_hwnd):
                         ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
                     ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+                    # Record actual focused PID for routing accuracy
+                    _focused_pid = ctypes.wintypes.DWORD()
+                    ctypes.windll.user32.GetWindowThreadProcessId(
+                        _target_hwnd, ctypes.byref(_focused_pid)
+                    )
+                    if route_info and _focused_pid.value:
+                        route_info["focused_pid"] = _focused_pid.value
+                        route_info["focused_hwnd"] = _target_hwnd
                     # Also try UIA SetFocus for schtasks/remote contexts (#226)
                     if hasattr(backend, "focus_element_uia"):
                         try:
