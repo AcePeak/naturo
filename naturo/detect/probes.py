@@ -59,6 +59,8 @@ _QT_DLLS = {"qt5core.dll", "qt6core.dll", "qt5widgets.dll", "qt6widgets.dll"}
 _JAVA_DLLS = {"jvm.dll", "java.dll"}
 _JAB_DLLS = {"windowsaccessbridge-64.dll", "windowsaccessbridge-32.dll", "windowsaccessbridge.dll"}
 _GTK_DLLS = {"libgtk-3-0.dll", "libgtk-4-1.dll"}
+_UWP_DLLS = {"windows.ui.xaml.dll", "microsoft.ui.xaml.dll", "twinapi.appcore.dll"}
+_UWP_EXES = {"applicationframehost.exe"}
 
 
 def _get_process_dlls(pid: int) -> Set[str]:
@@ -151,6 +153,13 @@ def detect_frameworks_from_dlls(pid: int, exe: str) -> List[FrameworkInfo]:
                 framework_type=FrameworkType.JAVA_SWING,
                 dll_signatures=["(inferred from exe name)"],
             ))
+        # Fallback: if no exe-name heuristic matched but we're on Windows,
+        # report Win32 so the field is never empty (#253)
+        if not frameworks:
+            frameworks.append(FrameworkInfo(
+                framework_type=FrameworkType.WIN32 if platform.system() == "Windows" else FrameworkType.UNKNOWN,
+                dll_signatures=["(DLL scan unavailable)"],
+            ))
         return frameworks
 
     frameworks = []
@@ -221,6 +230,16 @@ def detect_frameworks_from_dlls(pid: int, exe: str) -> List[FrameworkInfo]:
         frameworks.append(FrameworkInfo(
             framework_type=FrameworkType.GTK,
             dll_signatures=sorted(gtk_matches),
+        ))
+
+    # UWP / XAML — detect from DLL signatures or exe name (#253)
+    uwp_matches = dlls & _UWP_DLLS
+    exe_base = os.path.basename(exe).lower()
+    if uwp_matches or exe_base in _UWP_EXES:
+        sigs = sorted(uwp_matches) if uwp_matches else [f"(inferred from {exe_base})"]
+        frameworks.append(FrameworkInfo(
+            framework_type=FrameworkType.UWP,
+            dll_signatures=sigs,
         ))
 
     # If nothing detected, mark as unknown Win32

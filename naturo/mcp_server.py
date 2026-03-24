@@ -520,7 +520,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     @_safe_tool
     def see_ui_tree(
         window_title: Optional[str] = None,
-        depth: int = 5,
+        depth: int = 7,
         accessibility_backend: str = "uia",
     ) -> dict:
         """Inspect the UI accessibility tree of a window.
@@ -1083,7 +1083,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     @_safe_tool
     def create_snapshot(
         window_title: Optional[str] = None,
-        depth: int = 5,
+        depth: int = 7,
     ) -> dict:
         """Create a snapshot of the current UI state (screenshot + element tree).
 
@@ -1093,7 +1093,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
 
         Args:
             window_title: Target window (partial match). None = foreground window.
-            depth: How deep to traverse the UI tree (1-10, default 5).
+            depth: How deep to traverse the UI tree (1-10, default 7).
 
         Returns:
             Dict with snapshot_id, screenshot_path (base64), and element tree summary.

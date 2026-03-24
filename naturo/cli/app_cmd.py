@@ -533,6 +533,10 @@ def app_inspect(ctx, name, pid, scan_all, quick, json_output):
 def _inspect_all_windows(quick: bool, json_output: bool) -> None:
     """Scan all visible windows and report detection results.
 
+    Uses (PID, window title) as the deduplication key instead of PID alone.
+    This ensures UWP apps hosted by the same ApplicationFrameHost.exe process
+    are inspected individually rather than collapsed into a single entry (#252).
+
     Args:
         quick: If True, use quick probe mode.
         json_output: If True, output as JSON.
@@ -542,7 +546,7 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        apps_data = backend.list_apps()
+        windows = backend.list_windows()
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
@@ -552,19 +556,23 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         return
 
     results = []
-    seen_pids = set()
+    seen_keys = set()
 
-    for app_info in apps_data:
-        app_pid = app_info.get("pid")
-        if not app_pid or app_pid in seen_pids:
+    for w in windows:
+        if not w.is_visible or w.is_minimized:
             continue
-        seen_pids.add(app_pid)
+        # Deduplicate by (PID, title) to keep distinct UWP windows (#252)
+        key = (w.pid, w.title)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
 
         result = detect(
-            pid=app_pid,
-            exe=app_info.get("process", ""),
-            app_name=app_info.get("name", ""),
-            use_cache=True,
+            pid=w.pid,
+            exe=w.process_name,
+            hwnd=w.handle,
+            app_name=w.title or w.process_name,
+            use_cache=False,  # Different windows may have different results
             quick=quick,
         )
         results.append(result)
