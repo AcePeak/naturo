@@ -6,6 +6,7 @@ from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
     relaunch_app, list_apps, _list_processes,
     _get_console_session_id, _get_process_session_id,
+    _resolve_launch_name, _LAUNCH_ALIASES,
 )
 from naturo.errors import AppNotFoundError, TimeoutError
 
@@ -246,6 +247,93 @@ class TestLaunchApp:
 
         with pytest.raises(AppNotFoundError):
             launch_app(name="app", wait_until_ready=True, timeout=2.0)
+
+
+class TestResolveLaunchName:
+    """Tests for _resolve_launch_name alias resolution (#246)."""
+
+    def test_aliases_table_has_expected_entries(self):
+        """Smoke test: key aliases exist in the table."""
+        assert "calculator" in _LAUNCH_ALIASES
+        assert "paint" in _LAUNCH_ALIASES
+        assert "settings" in _LAUNCH_ALIASES
+
+    def test_calculator_aliases(self):
+        """calculator maps to calc and calculatorapp."""
+        aliases = _LAUNCH_ALIASES["calculator"]
+        assert "calc" in aliases
+        assert "calculatorapp" in aliases
+
+    def test_paint_aliases(self):
+        """paint maps to mspaint."""
+        assert "mspaint" in _LAUNCH_ALIASES["paint"]
+
+    @patch("naturo.process.platform.system", return_value="Darwin")
+    def test_non_windows_returns_original(self, _mock_sys):
+        """On non-Windows platforms, alias resolution is a no-op."""
+        assert _resolve_launch_name("calculator") == "calculator"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_direct_name_found(self, mock_run, _mock_sys):
+        """If the name itself is resolvable via 'where', return it unchanged."""
+        mock_run.return_value = MagicMock(returncode=0)
+        assert _resolve_launch_name("notepad") == "notepad"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_alias_resolution(self, mock_run, _mock_sys):
+        """'calculator' should resolve to 'calc' when 'where calculator' fails."""
+        def where_side_effect(args, **kwargs):
+            name = args[1] if len(args) > 1 else ""
+            if name == "calc":
+                return MagicMock(returncode=0)
+            return MagicMock(returncode=1)
+        mock_run.side_effect = where_side_effect
+        assert _resolve_launch_name("calculator") == "calc"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_paint_alias_resolution(self, mock_run, _mock_sys):
+        """'paint' should resolve to 'mspaint'."""
+        def where_side_effect(args, **kwargs):
+            name = args[1] if len(args) > 1 else ""
+            if name == "mspaint":
+                return MagicMock(returncode=0)
+            return MagicMock(returncode=1)
+        mock_run.side_effect = where_side_effect
+        assert _resolve_launch_name("paint") == "mspaint"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_unknown_name_returns_original(self, mock_run, _mock_sys):
+        """Unknown names with no aliases return the original name."""
+        mock_run.return_value = MagicMock(returncode=1)
+        assert _resolve_launch_name("some_random_app") == "some_random_app"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_case_insensitive_lookup(self, mock_run, _mock_sys):
+        """Alias lookup is case-insensitive."""
+        def where_side_effect(args, **kwargs):
+            name = args[1] if len(args) > 1 else ""
+            if name == "calc":
+                return MagicMock(returncode=0)
+            return MagicMock(returncode=1)
+        mock_run.side_effect = where_side_effect
+        assert _resolve_launch_name("Calculator") == "calc"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.subprocess.run")
+    def test_cjk_alias_resolution(self, mock_run, _mock_sys):
+        """Chinese alias '计算器' should resolve to 'calc'."""
+        def where_side_effect(args, **kwargs):
+            name = args[1] if len(args) > 1 else ""
+            if name == "calc":
+                return MagicMock(returncode=0)
+            return MagicMock(returncode=1)
+        mock_run.side_effect = where_side_effect
+        assert _resolve_launch_name("计算器") == "calc"
 
 
 class TestQuitApp:

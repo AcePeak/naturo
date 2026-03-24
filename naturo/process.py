@@ -197,6 +197,76 @@ def is_running(name: str) -> bool:
     return find_process(name=name) is not None
 
 
+# Launch aliases: map user-friendly names to executable names for launching.
+# These mirror _APP_ALIASES in WindowsBackend but only include entries
+# where the alias resolves to an actual executable basename (no CJK display
+# names since those aren't valid for ``where`` / ``start``).
+_LAUNCH_ALIASES: dict[str, list[str]] = {
+    "calculator": ["calc", "calculatorapp"],
+    "计算器": ["calc", "calculatorapp"],
+    "paint": ["mspaint"],
+    "画图": ["mspaint"],
+    "settings": ["systemsettings"],
+    "设置": ["systemsettings"],
+    "notepad": ["notepad"],
+    "记事本": ["notepad"],
+    "explorer": ["explorer"],
+    "file explorer": ["explorer"],
+    "文件资源管理器": ["explorer"],
+    "edge": ["msedge"],
+    "task manager": ["taskmgr"],
+    "任务管理器": ["taskmgr"],
+    "command prompt": ["cmd"],
+    "命令提示符": ["cmd"],
+    "terminal": ["windowsterminal"],
+    "终端": ["windowsterminal"],
+}
+
+
+def _resolve_launch_name(name: str) -> str:
+    """Resolve a user-friendly app name to a launchable executable name.
+
+    Checks if the given *name* is directly resolvable via ``where`` on
+    Windows.  If not, looks up ``_LAUNCH_ALIASES`` and returns the first
+    alias that ``where`` can find.  Falls back to the original *name*
+    when no alias resolves.
+
+    Args:
+        name: User-provided application name (e.g. "calculator").
+
+    Returns:
+        An executable name that the system can launch (e.g. "calc").
+    """
+    if platform.system() != "Windows":
+        return name
+
+    # If the name itself is directly resolvable, use it as-is.
+    try:
+        result = subprocess.run(
+            ["where", name], capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            return name
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+    # Try aliases
+    aliases = _LAUNCH_ALIASES.get(name.lower(), [])
+    for alias in aliases:
+        try:
+            result = subprocess.run(
+                ["where", alias], capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                return alias
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+
+    # Last resort: return first alias if available (let ``start`` try it),
+    # otherwise the original name.
+    return aliases[0] if aliases else name
+
+
 def launch_app(
     name: str | None = None,
     path: str | None = None,
@@ -237,10 +307,14 @@ def launch_app(
                     raise AppNotFoundError(launch_target, suggested_action="File does not exist")
                 proc = subprocess.Popen([path] + cmd_args)
             else:
+                # Resolve the launch name: try the original name first,
+                # then fall back to alias-resolved executable names.
+                resolved_name = _resolve_launch_name(name or "")
+
                 # Use 'where' to verify command exists, then 'start'
                 try:
                     where_result = subprocess.run(
-                        ["where", name or ""],
+                        ["where", resolved_name],
                         capture_output=True, text=True, timeout=5,
                     )
                 except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError):
@@ -249,7 +323,7 @@ def launch_app(
                     # Also check if it's a known app via start — run synchronously to check
                     try:
                         result = subprocess.run(
-                            ["cmd", "/c", "start", "/wait", "", name or ""] + cmd_args,
+                            ["cmd", "/c", "start", "/wait", "", resolved_name] + cmd_args,
                             capture_output=True, text=True, timeout=10,
                         )
                     except subprocess.TimeoutExpired:
@@ -261,12 +335,14 @@ def launch_app(
                     if result.returncode != 0:
                         raise AppNotFoundError(launch_target)
                     # start /wait succeeded but we need to find the PID now
-                    found = find_process(name=name)
+                    found = find_process(name=resolved_name)
+                    if not found and resolved_name != (name or ""):
+                        found = find_process(name=name)
                     if found:
                         return found
                     # Launched but already exited — report success with a dummy PID
                     return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
-                proc = subprocess.Popen(["cmd", "/c", "start", "", name or ""] + cmd_args)
+                proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
         elif system == "Darwin":
             if path:
                 proc = subprocess.Popen([path] + cmd_args)
