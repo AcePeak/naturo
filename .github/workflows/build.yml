@@ -75,7 +75,7 @@ jobs:
     name: Python Tests with DLL (Windows)
     runs-on: windows-latest
     needs: build-dll
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 

@@ -46,6 +46,7 @@ Changelog = "https://github.com/AcePeak/naturo/releases"
 dev = [
     "pytest>=7.0",
     "pytest-cov",
+    "pytest-timeout",
 ]
 ai = [
     "anthropic>=0.20",
@@ -75,6 +76,7 @@ naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+timeout = 120
 markers = [
     "ui: marks tests that need a desktop session (deselect with '-m \"not ui\"')",
     "windows: Windows-only test",
