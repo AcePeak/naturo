@@ -154,17 +154,36 @@ def capture():
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
 @click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
+@click.option("--element", "-e", "element_ref", default=None,
+              help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5")
+@click.option("--region", default=None, metavar="X,Y,W,H",
+              help="Crop to region: x,y,width,height (e.g. --region 100,50,400,300)")
+@click.option("--padding", type=int, default=0,
+              help="Extra padding (px) added around --element or --region crop")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session, json_output):
-    """Capture a live screenshot.
+def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+         element_ref, region, padding, json_output):
+    """Capture a live screenshot, optionally cropped to an element or region.
 
     Captures the screen or a specific window and saves to a file.
     Use --hwnd to capture a specific window, or --screen to select a monitor.
     The screenshot is automatically stored in a snapshot (use --no-snapshot to skip).
     Output format is PNG by default (matching Peekaboo).
+
+    Use --element eN to crop to a specific element from the last 'naturo see' snapshot.
+    Use --region X,Y,W,H to crop to arbitrary coordinates.
+    Use --padding N to add N pixels of padding around the crop area.
+
+    \b
+    Examples:
+        naturo capture live                              # full screen
+        naturo capture live --element e5                 # crop to element e5
+        naturo capture live --element e5 --padding 20   # with 20px padding
+        naturo capture live --region 100,50,400,300      # crop to region
+        naturo capture live --app feishu --element e12   # element in specific app
     """
     if not _platform_supports_gui():
         msg = _platform_error_msg("Screen capture")
@@ -211,6 +230,87 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session, js
                 pass  # Non-Windows: skip validation, let backend handle it
             result = backend.capture_screen(screen_index=screen, output_path=path)
 
+        # ── Element / region crop (issue #160) ───────────────────────────────
+        crop_box = None  # (left, top, right, bottom) in image coordinates
+
+        if element_ref:
+            # Resolve eN ref → bounds from most recent snapshot
+            from naturo.snapshot import SnapshotManager
+            _mgr = SnapshotManager()
+            resolved = _mgr.resolve_ref(element_ref)
+            if resolved is None:
+                msg = (
+                    f"Element ref '{element_ref}' not found in recent snapshots. "
+                    "Run 'naturo see' first to create a snapshot."
+                )
+                if json_output:
+                    click.echo(_json_error_str("REF_NOT_FOUND", msg))
+                else:
+                    click.echo(f"Error: {msg}", err=True)
+                raise SystemExit(1)
+            cx, cy, _snap_id = resolved
+            el_result = _mgr.resolve_ref_element(element_ref)
+            if el_result:
+                element, _ = el_result
+                ex, ey, ew, eh = element.frame
+                crop_box = (
+                    max(0, ex - padding),
+                    max(0, ey - padding),
+                    ex + ew + padding,
+                    ey + eh + padding,
+                )
+        elif region:
+            # Parse X,Y,W,H
+            try:
+                parts = [int(v.strip()) for v in region.split(",")]
+                if len(parts) != 4:
+                    raise ValueError("need 4 values")
+                rx, ry, rw, rh = parts
+                crop_box = (
+                    max(0, rx - padding),
+                    max(0, ry - padding),
+                    rx + rw + padding,
+                    ry + rh + padding,
+                )
+            except (ValueError, TypeError) as exc:
+                msg = f"--region must be X,Y,W,H (e.g. 100,50,400,300): {exc}"
+                if json_output:
+                    click.echo(_json_error_str("INVALID_INPUT", msg))
+                else:
+                    click.echo(f"Error: {msg}", err=True)
+                raise SystemExit(1)
+
+        # Apply crop if requested
+        if crop_box is not None:
+            try:
+                from PIL import Image as _PILImage
+                img = _PILImage.open(result.path)
+                # Clamp to image bounds
+                iw, ih = img.size
+                left = max(0, crop_box[0])
+                top = max(0, crop_box[1])
+                right = min(iw, crop_box[2])
+                bottom = min(ih, crop_box[3])
+                if right <= left or bottom <= top:
+                    msg = f"Crop region ({left},{top},{right},{bottom}) has zero size."
+                    if json_output:
+                        click.echo(_json_error_str("INVALID_INPUT", msg))
+                    else:
+                        click.echo(f"Error: {msg}", err=True)
+                    raise SystemExit(1)
+                cropped = img.crop((left, top, right, bottom))
+                cropped.save(result.path)
+                # Update result dimensions (best-effort via dataclass copy)
+                from dataclasses import replace as _dc_replace
+                result = _dc_replace(result, width=right - left, height=bottom - top)
+            except ImportError:
+                msg = "Pillow required for --element/--region crop. Install: pip install naturo[annotate]"
+                if json_output:
+                    click.echo(_json_error_str("MISSING_DEPENDENCY", msg))
+                else:
+                    click.echo(f"Error: {msg}", err=True)
+                raise SystemExit(1)
+
         snapshot_id = None
         if store_snapshot:
             from naturo.snapshot import get_snapshot_manager
@@ -224,7 +324,7 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session, js
             mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
-            out = {
+            out: dict = {
                 "success": True,
                 "path": result.path,
                 "width": result.width,
@@ -233,13 +333,21 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session, js
                 "scale_factor": result.scale_factor,
                 "dpi": result.dpi,
             }
+            if crop_box is not None:
+                out["cropped"] = True
+                out["crop_source"] = "element" if element_ref else "region"
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
             click.echo(json_module.dumps(out))
         else:
             import os
             full_path = os.path.abspath(result.path)
-            click.echo(f"Saved: {full_path} ({result.width}x{result.height})")
+            crop_note = ""
+            if element_ref:
+                crop_note = f" [cropped to {element_ref}]"
+            elif region:
+                crop_note = f" [cropped to {region}]"
+            click.echo(f"Saved: {full_path} ({result.width}x{result.height}){crop_note}")
     except WindowNotFoundError as e:
         if json_output:
             click.echo(_json_error_str("WINDOW_NOT_FOUND", str(e)))
