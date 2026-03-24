@@ -101,7 +101,7 @@ def _post_action_see(
         props = getattr(el, "properties", {})
         # (#237) Preserve real AutomationId in identifier, filter
         # tree-assigned "eN" IDs (same logic as core.py _flatten).
-        _raw_id = el.id if el.id else None
+        _raw_id = str(el.id) if el.id else None
         if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
             _raw_id = None
         # Use ref as canonical key to avoid overwrites when multiple

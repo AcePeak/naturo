@@ -741,7 +741,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # not a tree-assigned sequential ID like "e1", "e2", etc.
                 # populate_hierarchy assigns "eN" to elements with empty ids,
                 # so we must filter those out to avoid false AutomationId lookups.
-                _raw_id = el.id if el.id else None
+                _raw_id = str(el.id) if el.id else None
                 if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
                     _raw_id = None  # Tree-assigned, not a real AutomationId
                 # (#237) Always use the sequential ref as canonical key in
