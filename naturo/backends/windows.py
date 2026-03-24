@@ -1202,6 +1202,30 @@ class WindowsBackend(Backend):
             role=resolved_role,
             name=resolved_name,
         )
+
+        # (#229) Fallback: if UIA lookup returned None but we have snapshot
+        # data from the ref, return the snapshot metadata so the caller gets
+        # at least role/name/bounds instead of ELEMENT_NOT_FOUND.
+        if result is None and ref:
+            from naturo.snapshot import get_snapshot_manager as _gsm
+            _mgr = _gsm()
+            _el_result = _mgr.resolve_ref_element(ref)
+            if _el_result:
+                _elem, _snap = _el_result
+                ex, ey, ew, eh = _elem.frame
+                result = {
+                    "role": _elem.role,
+                    "name": _elem.title or _elem.label,
+                    "value": _elem.value,
+                    "pattern": None,
+                    "automation_id": _elem.identifier,
+                    "x": ex,
+                    "y": ey,
+                    "width": ew,
+                    "height": eh,
+                    "source": "snapshot",
+                }
+
         return result
 
     # === Phase 2: Input ===

@@ -731,11 +731,20 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             _ref_seq = [0]
             ref_map = {}  # "e1" → element_id (backend id)
 
+            import re as _re_mod
+
             def _flatten(el, parent_id=None):
                 _ref_seq[0] += 1
                 ref = f"e{_ref_seq[0]}"
                 child_ids = [c.id for c in el.children]
                 props = getattr(el, "properties", {})
+                # (#229) Only store identifier if it's a real UIA AutomationId,
+                # not a tree-assigned sequential ID like "e1", "e2", etc.
+                # populate_hierarchy assigns "eN" to elements with empty ids,
+                # so we must filter those out to avoid false AutomationId lookups.
+                _raw_id = el.id if el.id else None
+                if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
+                    _raw_id = None  # Tree-assigned, not a real AutomationId
                 ui_map[el.id] = UIElement(
                     id=el.id,
                     element_id=f"element_{el.id}",
@@ -743,7 +752,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     title=el.name,
                     label=el.name,
                     value=el.value,
-                    identifier=el.id if el.id else None,
+                    identifier=_raw_id,
                     frame=(el.x, el.y, el.width, el.height),
                     is_actionable=getattr(el, "is_actionable", False),
                     parent_id=props.get("parent_id", parent_id),
