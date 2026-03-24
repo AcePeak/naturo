@@ -462,3 +462,107 @@ class TestVerificationIntegration:
         assert d["verified"] is False
         assert "verification_error" in d
         assert d["verification_error"] == "Element value unchanged after type operation"
+
+
+class TestGetElementValueProbing:
+    """Test #242: get_element_value auto-probing editable elements."""
+
+    @pytest.fixture
+    def mock_core(self):
+        """Create a mock core with get_element_value."""
+        core = MagicMock()
+        return core
+
+    def test_probe_finds_edit_element(self, mock_core):
+        """When no identifiers but HWND is available, probe Edit role."""
+        from naturo.backends.windows import WindowsBackend
+        from unittest.mock import PropertyMock
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        # First call (Edit role) returns a result
+        mock_core.get_element_value.return_value = {
+            "value": "Hello",
+            "pattern": "ValuePattern",
+            "role": "Edit",
+            "name": "",
+            "automation_id": "15",
+        }
+
+        with patch.object(backend, "_ensure_core", return_value=mock_core):
+            result = backend.get_element_value(hwnd=12345)
+
+        assert result is not None
+        assert result["value"] == "Hello"
+        assert result["probe_role"] == "Edit"
+        mock_core.get_element_value.assert_called_once_with(
+            hwnd=12345,
+            automation_id=None,
+            role="Edit",
+            name=None,
+        )
+
+    def test_probe_falls_through_to_document(self, mock_core):
+        """If Edit not found, try Document role."""
+        from naturo.backends.windows import WindowsBackend
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        # Edit returns None, Document returns result
+        mock_core.get_element_value.side_effect = [
+            None,  # Edit probe fails
+            {"value": "Document text", "role": "Document"},  # Document probe succeeds
+        ]
+
+        with patch.object(backend, "_ensure_core", return_value=mock_core):
+            result = backend.get_element_value(hwnd=12345)
+
+        assert result is not None
+        assert result["probe_role"] == "Document"
+        assert mock_core.get_element_value.call_count == 2
+
+    def test_probe_raises_when_all_fail(self, mock_core):
+        """If all probes fail, raise NaturoError."""
+        from naturo.backends.windows import WindowsBackend
+        from naturo.errors import NaturoError
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        mock_core.get_element_value.return_value = None  # All probes fail
+
+        with patch.object(backend, "_ensure_core", return_value=mock_core):
+            with pytest.raises(NaturoError, match="No editable element found"):
+                backend.get_element_value(hwnd=12345)
+
+    def test_probe_not_triggered_without_hwnd(self, mock_core):
+        """Without HWND, original error is raised (no probing)."""
+        from naturo.backends.windows import WindowsBackend
+        from naturo.errors import NaturoError
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, "_ensure_core", return_value=mock_core):
+            with pytest.raises(NaturoError, match="Must specify ref"):
+                backend.get_element_value()
+
+
+class TestExitCodeWarning:
+    """Test #242: exit code 2 for inconclusive verification."""
+
+    def test_unknown_status_properties(self):
+        """Unknown status should have verified=None and status=unknown."""
+        result = unknown_result("test reason")
+        assert result.verified is None
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.status.value == "unknown"
+
+    def test_skipped_not_treated_as_unknown(self):
+        """Skipped results should not trigger exit code 2."""
+        result = skip_result("not applicable")
+        assert result.verified is None
+        assert result.status != VerifyStatus.UNKNOWN
+        assert result.status.value == "skipped"

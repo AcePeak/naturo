@@ -1302,6 +1302,28 @@ class WindowsBackend(Backend):
                             break
 
         if not resolved_aid and not resolved_role and not resolved_name:
+            # (#242) Fallback: when no element identifiers are provided but
+            # we have a target HWND (e.g., from --app notepad), auto-probe
+            # common editable element roles in the window. This enables
+            # verification for the common `type --app X --verify` pattern.
+            if target_hwnd:
+                _editable_roles = ("Edit", "Document", "RichEdit20W")
+                for _probe_role in _editable_roles:
+                    _probe_result = core.get_element_value(
+                        hwnd=target_hwnd,
+                        automation_id=None,
+                        role=_probe_role,
+                        name=None,
+                    )
+                    if _probe_result is not None:
+                        _probe_result["probe_role"] = _probe_role
+                        return _probe_result
+                # All probes failed — still no identifiers available
+                raise NaturoError(
+                    "No editable element found in target window. "
+                    "Tried probing roles: Edit, Document, RichEdit20W. "
+                    "Use --on eN to specify the target element explicitly."
+                )
             raise NaturoError(
                 "Must specify ref, automation_id, or role/name to get value"
             )

@@ -688,6 +688,16 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
+    # (#242) Exit code 2 for inconclusive click verification
+    if _verification and _verification.verified is None and _verification.status.value == "unknown":
+        if json_output:
+            click.echo(json.dumps({"success": True, "data": result_data}))
+        else:
+            for k, v in result_data.items():
+                click.echo(f"{k}: {v}")
+            click.echo("WARNING: Verification inconclusive — click may not have taken effect", err=True)
+        sys.exit(2)
+
     _json_ok(result_data, json_output)
 
 
@@ -1037,6 +1047,18 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 click.echo(f"{k}: {v}")
             sys.exit(1)
 
+    # (#242) Exit code 2 (warning) when verification is inconclusive:
+    # success=true but verified=null means we can't confirm the action worked.
+    # Callers can distinguish 0 (confirmed), 1 (failed), 2 (inconclusive).
+    if _verification and _verification.verified is None and _verification.status.value == "unknown":
+        if json_output:
+            click.echo(json.dumps({"success": True, "data": result_data}))
+        else:
+            for k, v in result_data.items():
+                click.echo(f"{k}: {v}")
+            click.echo("WARNING: Verification inconclusive — action may not have taken effect", err=True)
+        sys.exit(2)
+
     _json_ok(result_data, json_output)
 
 
@@ -1225,6 +1247,16 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
         )
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
+
+    # (#242) Exit code 2 for inconclusive press verification
+    if _verification and _verification.verified is None and _verification.status.value == "unknown":
+        if json_output:
+            click.echo(json.dumps({"success": True, "data": result_data}))
+        else:
+            for k, v in result_data.items():
+                click.echo(f"{k}: {v}")
+            click.echo("WARNING: Verification inconclusive — press may not have taken effect", err=True)
+        sys.exit(2)
 
     _json_ok(result_data, json_output)
 
