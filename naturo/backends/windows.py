@@ -1418,8 +1418,7 @@ class WindowsBackend(Backend):
         """
         try:
             uia, mod = self._init_comtypes_uia()
-            from comtypes import COMError  # type: ignore[import-untyped]
-        except ImportError:
+        except (ImportError, Exception):
             logger.debug("comtypes not available — cannot use SetValue")
             return False
 
@@ -1465,7 +1464,7 @@ class WindowsBackend(Backend):
                         name, len(text))
             return True
 
-        except (COMError, OSError, AttributeError) as exc:
+        except (OSError, AttributeError) as exc:
             logger.debug("SetValue failed: %s", exc)
             return False
         except Exception as exc:
@@ -1496,8 +1495,7 @@ class WindowsBackend(Backend):
         """
         try:
             uia, mod = self._init_comtypes_uia()
-            from comtypes import COMError  # type: ignore[import-untyped]
-        except ImportError:
+        except (ImportError, Exception):
             logger.debug("comtypes not available — cannot use UIA SetFocus")
             return False
 
@@ -1512,7 +1510,7 @@ class WindowsBackend(Backend):
             logger.info("UIA SetFocus: focused element (name=%r, role=%r)", name, role)
             return True
 
-        except (COMError, OSError) as exc:
+        except (OSError, AttributeError) as exc:
             logger.debug("UIA SetFocus failed: %s", exc)
             return False
         except Exception as exc:

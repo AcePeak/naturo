@@ -14,6 +14,13 @@ pytestmark = pytest.mark.skipif(
     reason="UIA input methods are Windows-only",
 )
 
+# Check if comtypes is available (not installed in CI)
+try:
+    import comtypes  # noqa: F401
+    _has_comtypes = True
+except ImportError:
+    _has_comtypes = False
+
 
 @pytest.fixture
 def windows_backend():
@@ -26,6 +33,7 @@ def windows_backend():
 class TestInitComtypesUia:
     """Tests for _init_comtypes_uia helper."""
 
+    @pytest.mark.skipif(not _has_comtypes, reason="comtypes not installed")
     def test_returns_uia_and_module(self, windows_backend):
         """_init_comtypes_uia returns (uia, module) tuple."""
         mock_mod = MagicMock()
@@ -39,9 +47,18 @@ class TestInitComtypesUia:
 
     def test_raises_on_no_comtypes(self, windows_backend):
         """_init_comtypes_uia raises ImportError without comtypes."""
-        with patch.dict("sys.modules", {"comtypes": None, "comtypes.client": None}):
-            with pytest.raises(ImportError):
-                windows_backend._init_comtypes_uia()
+        import sys
+        # Temporarily hide comtypes
+        saved = {}
+        for key in list(sys.modules.keys()):
+            if key == "comtypes" or key.startswith("comtypes."):
+                saved[key] = sys.modules.pop(key)
+        try:
+            with patch.dict("sys.modules", {"comtypes": None, "comtypes.client": None}):
+                with pytest.raises((ImportError, ModuleNotFoundError)):
+                    windows_backend._init_comtypes_uia()
+        finally:
+            sys.modules.update(saved)
 
 
 class TestSetElementValue:
@@ -57,19 +74,20 @@ class TestSetElementValue:
     def test_returns_true_on_success(self, windows_backend):
         """set_element_value returns True after successful SetValue."""
         mock_mod = MagicMock()
+        mock_mod.UIA_ValuePatternId = 10002
         mock_uia = MagicMock()
         mock_elem = MagicMock()
         mock_vp = MagicMock()
         mock_vp.CurrentIsReadOnly = False
 
-        # _find_uia_element returns the mock element
+        mock_pat_unk = MagicMock()
+        mock_pat_unk.QueryInterface.return_value = mock_vp
+        mock_elem.GetCurrentPattern.return_value = mock_pat_unk
+
         with patch.object(windows_backend, "_init_comtypes_uia",
                           return_value=(mock_uia, mock_mod)), \
              patch.object(windows_backend, "_find_uia_element",
                           return_value=mock_elem):
-            mock_elem.GetCurrentPattern.return_value = MagicMock()
-            mock_elem.GetCurrentPattern.return_value.QueryInterface.return_value = mock_vp
-
             result = windows_backend.set_element_value(
                 "Hello World", hwnd=12345, role="Edit"
             )
@@ -79,7 +97,12 @@ class TestSetElementValue:
     def test_returns_false_when_element_not_found(self, windows_backend):
         """set_element_value returns False when target element not found."""
         mock_mod = MagicMock()
+        mock_mod.UIA_ControlTypePropertyId = 30003
         mock_uia = MagicMock()
+        # Make FindFirst also return None for the fallback path
+        mock_root = MagicMock()
+        mock_root.FindFirst.return_value = None
+        mock_uia.ElementFromHandle.return_value = mock_root
 
         with patch.object(windows_backend, "_init_comtypes_uia",
                           return_value=(mock_uia, mock_mod)), \
@@ -93,18 +116,20 @@ class TestSetElementValue:
     def test_returns_false_when_readonly(self, windows_backend):
         """set_element_value returns False for read-only elements."""
         mock_mod = MagicMock()
+        mock_mod.UIA_ValuePatternId = 10002
         mock_uia = MagicMock()
         mock_elem = MagicMock()
         mock_vp = MagicMock()
         mock_vp.CurrentIsReadOnly = True
 
+        mock_pat_unk = MagicMock()
+        mock_pat_unk.QueryInterface.return_value = mock_vp
+        mock_elem.GetCurrentPattern.return_value = mock_pat_unk
+
         with patch.object(windows_backend, "_init_comtypes_uia",
                           return_value=(mock_uia, mock_mod)), \
              patch.object(windows_backend, "_find_uia_element",
                           return_value=mock_elem):
-            mock_elem.GetCurrentPattern.return_value = MagicMock()
-            mock_elem.GetCurrentPattern.return_value.QueryInterface.return_value = mock_vp
-
             result = windows_backend.set_element_value(
                 "text", hwnd=12345, role="Edit"
             )
@@ -113,15 +138,15 @@ class TestSetElementValue:
     def test_returns_false_when_no_value_pattern(self, windows_backend):
         """set_element_value returns False when element lacks ValuePattern."""
         mock_mod = MagicMock()
+        mock_mod.UIA_ValuePatternId = 10002
         mock_uia = MagicMock()
         mock_elem = MagicMock()
+        mock_elem.GetCurrentPattern.return_value = None
 
         with patch.object(windows_backend, "_init_comtypes_uia",
                           return_value=(mock_uia, mock_mod)), \
              patch.object(windows_backend, "_find_uia_element",
                           return_value=mock_elem):
-            mock_elem.GetCurrentPattern.return_value = None
-
             result = windows_backend.set_element_value(
                 "text", hwnd=12345, role="Edit"
             )
