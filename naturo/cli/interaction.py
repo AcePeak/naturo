@@ -38,6 +38,21 @@ def _see_options(func):
     return func
 
 
+def _verify_options(func):
+    """Shared Click decorator that adds --verify/--no-verify to action commands.
+
+    Post-action verification checks whether the action actually had effect.
+    Default is ON — naturo must never lie about success (#231).
+    """
+    func = click.option(
+        "--verify/--no-verify",
+        default=True,
+        help="Verify action had effect (default: on). Use --no-verify to skip.",
+        show_default=True,
+    )(func)
+    return func
+
+
 def _post_action_see(
     backend,
     settle_ms: int,
@@ -481,12 +496,13 @@ def _auto_route(
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
+@_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
               window_title, hwnd, wait_for, input_mode, method,
-              see_after, settle, json_output):
+              verify, see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
 
     QUERY is optional text to find and click on. Use --on, --id, or --coords
@@ -576,6 +592,21 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
         except Exception as exc:
             logger.debug("UIA focus for click failed: %s", exc)
 
+    # (#231) Capture before-state for post-action verification
+    _before_state = None
+    if verify:
+        try:
+            from naturo.verify import capture_before_state
+            _before_state = capture_before_state(
+                backend,
+                action="click",
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+            )
+        except Exception as exc:
+            logger.debug("Pre-click state capture failed: %s", exc)
+
     try:
         if _zero_bounds_element is not None:
             # Zero-bounds fallback (#137): attempt UIA Invoke pattern for
@@ -619,6 +650,33 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     result_data = {"action": action, "target": str(loc), "button": button}
     if route_info:
         result_data["routing"] = route_info
+
+    # (#231) Post-action verification
+    _verification = None
+    if verify:
+        try:
+            from naturo.verify import verify_click
+            _before_focus = _before_state.get("focus") if _before_state else None
+            _verification = verify_click(
+                backend,
+                x=x,
+                y=y,
+                target_id=target_id,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                before_focus=_before_focus,
+            )
+        except Exception as exc:
+            logger.debug("Click verification failed: %s", exc)
+            from naturo.verify import unknown_result
+            _verification = unknown_result(str(exc))
+    else:
+        from naturo.verify import skip_result
+        _verification = skip_result()
+
+    if _verification:
+        result_data.update(_verification.to_dict())
 
     # --see: re-capture UI tree after action
     if see_after:
@@ -667,12 +725,13 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
 )
 @_method_option
+@_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, app,
-             window_title, hwnd, input_mode, method, see_after, settle,
+             window_title, hwnd, input_mode, method, verify, see_after, settle,
              json_output):
     """Type text with configurable speed and profile.
 
@@ -808,6 +867,22 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             _json_err(f"Failed to click target element: {exc}", json_output)
             return
 
+    # (#231) Capture before-state for post-action verification
+    _before_state = None
+    if verify:
+        try:
+            from naturo.verify import capture_before_state
+            _before_state = capture_before_state(
+                backend,
+                action="type",
+                ref=on_element if on_element else None,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+            )
+        except Exception as exc:
+            logger.debug("Pre-type state capture failed: %s", exc)
+
     try:
         if clear:
             backend.hotkey("ctrl", "a")
@@ -910,6 +985,33 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     if route_info:
         result_data["routing"] = route_info
 
+    # (#231) Post-action verification
+    _verification = None
+    if verify:
+        try:
+            from naturo.verify import verify_type, skip_result
+            _before_value = _before_state.get("value") if _before_state else None
+            _verification = verify_type(
+                backend,
+                text=text,
+                ref=on_element if on_element else None,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                before_value=_before_value,
+                paste_mode=paste_mode,
+            )
+        except Exception as exc:
+            logger.debug("Type verification failed: %s", exc)
+            from naturo.verify import unknown_result
+            _verification = unknown_result(str(exc))
+    else:
+        from naturo.verify import skip_result
+        _verification = skip_result()
+
+    if _verification:
+        result_data.update(_verification.to_dict())
+
     # --see: re-capture UI tree after action
     if see_after:
         snapshot_data = _post_action_see(
@@ -919,6 +1021,21 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         )
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
+
+    # (#231) Exit with error if verification detected silent failure
+    if _verification and _verification.verified is False:
+        if json_output:
+            from naturo.cli.error_helpers import json_error
+            # Merge verification data into error output
+            err_data = json.loads(json_error("VERIFICATION_FAILED", _verification.detail))
+            err_data["data"] = result_data
+            click.echo(json.dumps(err_data))
+            sys.exit(1)
+        else:
+            click.echo(f"WARNING: {_verification.detail}", err=True)
+            for k, v in result_data.items():
+                click.echo(f"{k}: {v}")
+            sys.exit(1)
 
     _json_ok(result_data, json_output)
 
@@ -947,9 +1064,10 @@ def _is_combo(key_str: str) -> bool:
     help="Input method",
 )
 @_method_option
+@_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode, method, see_after, settle, json_output):
+def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -1018,6 +1136,21 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
             except Exception as exc:
                 logger.warning("Failed to focus target window for press: %s", exc)
 
+    # (#231) Capture before-state for post-action verification
+    _before_state = None
+    if verify:
+        try:
+            from naturo.verify import capture_before_state
+            _before_state = capture_before_state(
+                backend,
+                action="press",
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+            )
+        except Exception as exc:
+            logger.debug("Pre-press state capture failed: %s", exc)
+
     results: list[dict] = []
     try:
         for idx, key_spec in enumerate(keys):
@@ -1057,6 +1190,31 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
 
     if route_info:
         result_data["routing"] = route_info
+
+    # (#231) Post-action verification
+    _verification = None
+    if verify:
+        try:
+            from naturo.verify import verify_press
+            _before_focus = _before_state.get("focus") if _before_state else None
+            _verification = verify_press(
+                backend,
+                keys=keys,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                before_focus=_before_focus,
+            )
+        except Exception as exc:
+            logger.debug("Press verification failed: %s", exc)
+            from naturo.verify import unknown_result
+            _verification = unknown_result(str(exc))
+    else:
+        from naturo.verify import skip_result
+        _verification = skip_result()
+
+    if _verification:
+        result_data.update(_verification.to_dict())
 
     # --see: re-capture UI tree after action
     if see_after:

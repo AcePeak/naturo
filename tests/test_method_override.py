@@ -84,13 +84,13 @@ class TestMethodFlagOnCommands:
     def test_type_accepts_method_flag(self, runner, mock_backend):
         """type command accepts --method."""
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
-            result = runner.invoke(type_cmd, ["Hello", "--method", "cdp"])
+            result = runner.invoke(type_cmd, ["Hello", "--method", "cdp", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_press_accepts_method_flag(self, runner, mock_backend):
         """press command accepts --method."""
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
-            result = runner.invoke(press, ["enter", "--method", "msaa"])
+            result = runner.invoke(press, ["enter", "--method", "msaa", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_hotkey_accepts_method_flag(self, runner, mock_backend):

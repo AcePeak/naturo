@@ -80,6 +80,13 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "is in the foreground, 3) take a screenshot to check the current UI state.",
         True,
     ),
+    "VERIFICATION_FAILED": (
+        "The action was sent but had no detectable effect. The target element's state "
+        "did not change. Possible causes: 1) wrong window is focused, 2) the element "
+        "is not editable/clickable, 3) running in a non-interactive session (schtasks). "
+        "Use --no-verify to skip verification, or use --see to inspect the UI state.",
+        True,
+    ),
     "NO_DESKTOP_SESSION": (
         "No interactive desktop session. Connect via RDP or VNC to get a "
         "desktop session, or run naturo on the machine's physical console.",
