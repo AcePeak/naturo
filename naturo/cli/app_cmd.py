@@ -496,6 +496,27 @@ def app_inspect(ctx, name, pid, scan_all, quick, json_output):
         sys.exit(1)
         return
 
+    # Validate PID if provided directly
+    if pid is not None:
+        if pid <= 0:
+            msg = f"Invalid PID: {pid}. PID must be a positive integer."
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                _safe_echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+        # Check if process actually exists
+        from naturo.process import find_process as _find_proc
+        if _find_proc(pid=pid) is None:
+            msg = f"No process found with PID {pid}. The process may have exited."
+            if json_output:
+                click.echo(_json_error_str("PROCESS_NOT_FOUND", msg))
+            else:
+                _safe_echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+
     # Resolve PID from name
     target_pid = pid
     target_exe = ""

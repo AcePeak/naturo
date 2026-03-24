@@ -499,3 +499,44 @@ class TestFindMainWindowUwp:
         desktop_hwnd = user32.GetDesktopWindow()
         result = _frame_hosts_pid(user32, desktop_hwnd, 0)
         assert isinstance(result, bool)
+
+
+class TestAppInspectPidValidation:
+    """Tests for app inspect --pid input validation (fixes #256).
+
+    Verifies that invalid PIDs (0, negative, non-existent) are rejected
+    with clear error messages instead of showing misleading 'Unknown' results.
+    """
+
+    def test_zero_pid_rejected(self):
+        """PID 0 should be rejected with INVALID_INPUT error."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+
+        runner = CliRunner()
+        result = runner.invoke(app_inspect, ["--pid", "0", "--json"])
+        assert result.exit_code != 0
+        assert "INVALID_INPUT" in result.output or "Invalid PID" in result.output
+
+    def test_negative_pid_rejected(self):
+        """Negative PID should be rejected with INVALID_INPUT error."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+
+        runner = CliRunner()
+        result = runner.invoke(app_inspect, ["--pid", "-1", "--json"])
+        assert result.exit_code != 0
+        assert "INVALID_INPUT" in result.output or "Invalid PID" in result.output
+
+    def test_nonexistent_pid_rejected(self):
+        """Non-existent PID should be rejected with PROCESS_NOT_FOUND error."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+        from unittest.mock import patch
+
+        # Use a PID that almost certainly doesn't exist
+        runner = CliRunner()
+        with patch("naturo.process.find_process", return_value=None):
+            result = runner.invoke(app_inspect, ["--pid", "999999", "--json"])
+        assert result.exit_code != 0
+        assert "PROCESS_NOT_FOUND" in result.output or "No process found" in result.output
