@@ -240,7 +240,7 @@ class TestCLIInputMode:
         mock_get_backend.return_value = mock_backend
 
         from naturo.cli.interaction import type_cmd
-        result = self.runner.invoke(type_cmd, ["hello", "--input-mode", "hardware", "--json"])
+        result = self.runner.invoke(type_cmd, ["hello", "--input-mode", "hardware", "--json", "--no-verify"])
 
         mock_backend.type_text.assert_called_once()
         call_kwargs = mock_backend.type_text.call_args
@@ -254,7 +254,7 @@ class TestCLIInputMode:
         mock_get_backend.return_value = mock_backend
 
         from naturo.cli.interaction import press
-        result = self.runner.invoke(press, ["enter", "--input-mode", "hardware", "--json"])
+        result = self.runner.invoke(press, ["enter", "--input-mode", "hardware", "--json", "--no-verify"])
 
         mock_backend.press_key.assert_called_once_with(
             "enter", input_mode="hardware"
@@ -267,7 +267,7 @@ class TestCLIInputMode:
         mock_get_backend.return_value = mock_backend
 
         from naturo.cli.interaction import hotkey
-        result = self.runner.invoke(hotkey, ["ctrl+c", "--input-mode", "hardware", "--json"])
+        result = self.runner.invoke(hotkey, ["ctrl+c", "--input-mode", "hardware", "--json", "--no-verify"])
 
         mock_backend.hotkey.assert_called_once()
         call_kwargs = mock_backend.hotkey.call_args
@@ -280,7 +280,7 @@ class TestCLIInputMode:
         mock_get_backend.return_value = mock_backend
 
         from naturo.cli.interaction import type_cmd
-        result = self.runner.invoke(type_cmd, ["hello", "--json"])
+        result = self.runner.invoke(type_cmd, ["hello", "--json", "--no-verify"])
 
         mock_backend.type_text.assert_called_once()
         call_kwargs = mock_backend.type_text.call_args
@@ -297,6 +297,7 @@ class TestCLIInputMode:
             "--coords", "100", "200",
             "--input-mode", "hardware",
             "--json",
+            "--no-verify",
         ])
 
         mock_backend.click.assert_called_once()

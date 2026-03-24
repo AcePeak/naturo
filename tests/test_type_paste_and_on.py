@@ -69,7 +69,7 @@ class TestTypePasteWithoutText:
 
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, ["hello", "--paste", "--json"])
+            result = runner.invoke(type_cmd, ["hello", "--paste", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -102,7 +102,7 @@ class TestTypeOnElement:
             mock_mgr = MockMgr.return_value
             mock_mgr.resolve_ref.return_value = (100, 200)
 
-            result = runner.invoke(type_cmd, ["hello", "--on", "e5", "--json"])
+            result = runner.invoke(type_cmd, ["hello", "--on", "e5", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
