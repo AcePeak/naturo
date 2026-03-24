@@ -551,6 +551,21 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
                 )
                 return
 
+    # (#226) When UIA routing is active and --app is specified, ensure
+    # the target window has focus via UIA before sending mouse input.
+    _uia_method = route_info.get("method") == "uia" if route_info else False
+    if _uia_method and (app or hwnd) and hasattr(backend, "focus_element_uia"):
+        try:
+            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
+            if _target_hwnd:
+                import ctypes
+                SW_RESTORE = 9
+                if backend._is_iconic(_target_hwnd):
+                    ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
+                ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+        except Exception as exc:
+            logger.debug("UIA focus for click failed: %s", exc)
+
     try:
         if _zero_bounds_element is not None:
             # Zero-bounds fallback (#137): attempt UIA Invoke pattern for
@@ -751,6 +766,13 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         elif delete:
             backend.press_key("delete")
 
+        # Determine if UIA-based input should be attempted (#226).
+        # When routing detects UIA for the target app, try UIA ValuePattern
+        # first — it works in schtasks/remote contexts where SendInput fails
+        # silently.
+        _uia_method = route_info.get("method") == "uia" if route_info else False
+        _used_uia = False
+
         if paste_mode:
             if text is not None:
                 # Text provided: save clipboard → set text → Ctrl+V → restore
@@ -769,6 +791,49 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             else:
                 # No text: paste current clipboard content directly (#165)
                 backend.hotkey("ctrl", "v")
+        elif _uia_method and text and hasattr(backend, "set_element_value"):
+            # UIA ValuePattern path (#226): bypasses SendInput entirely.
+            # Resolves target HWND from --app and sets text directly on the
+            # focused or first editable element in the window.
+            _target_hwnd = 0
+            _target_name = None
+            _target_aid = None
+            _target_role = "Edit"  # Default to Edit control
+
+            # Resolve element info from --on ref if available
+            if on_element:
+                import re as _re
+                if _re.fullmatch(r"e\d+", on_element):
+                    from naturo.snapshot import get_snapshot_manager
+                    mgr = get_snapshot_manager()
+                    el_result = mgr.resolve_ref_element(on_element)
+                    if el_result:
+                        elem, _snap = el_result
+                        _target_name = elem.title or elem.label
+                        _target_aid = elem.identifier
+                        _target_role = elem.role
+
+            # Resolve HWND from --app
+            if app or window_title or hwnd:
+                try:
+                    _target_hwnd = backend._resolve_hwnd(
+                        app=app, window_title=window_title, hwnd=hwnd
+                    )
+                except Exception:
+                    _target_hwnd = 0
+
+            _used_uia = backend.set_element_value(
+                text=text,
+                hwnd=_target_hwnd,
+                name=_target_name,
+                automation_id=_target_aid,
+                role=_target_role,
+            )
+            if not _used_uia:
+                # UIA SetValue failed — fall back to SendInput
+                logger.debug("UIA SetValue failed, falling back to SendInput")
+                backend.type_text(text, delay_ms=int(delay), profile=profile,
+                                  wpm=wpm, input_mode=input_mode)
         else:
             backend.type_text(text, delay_ms=int(delay), profile=profile, wpm=wpm,
                               input_mode=input_mode)
@@ -789,6 +854,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     display_text = text if text is not None else "(clipboard)"
     display_len = len(text) if text is not None else 0
     result_data = {"action": action, "text": display_text, "length": display_len}
+    if _used_uia:
+        result_data["input_method"] = "uia_set_value"
     if on_element:
         result_data["target"] = on_element
     if route_info:
@@ -865,6 +932,20 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
 
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
+
+    # (#226) When UIA routing is active and --app is specified, use UIA
+    # SetFocus to ensure keyboard input reaches the correct window.
+    # In schtasks context, SetForegroundWindow alone may not deliver focus.
+    _uia_method = route_info.get("method") == "uia" if route_info else False
+    if _uia_method and (app or window_title or hwnd) and hasattr(backend, "focus_element_uia"):
+        try:
+            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
+            if _target_hwnd:
+                backend.focus_element_uia(hwnd=_target_hwnd)
+                import ctypes
+                ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+        except Exception as exc:
+            logger.debug("UIA focus for press failed: %s", exc)
 
     results: list[dict] = []
     try:

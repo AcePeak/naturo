@@ -1320,6 +1320,205 @@ class WindowsBackend(Backend):
             logger.warning("Invoke fallback unexpected error for %r: %s", name, exc)
             return False
 
+    def _init_comtypes_uia(self):
+        """Initialize comtypes UIA and return (uia, module) tuple.
+
+        Ensures comtypes gen modules are generated before importing from them.
+        Returns a tuple of (IUIAutomation instance, module reference).
+
+        Raises:
+            ImportError: If comtypes is not available.
+            Exception: If UIA COM initialization fails.
+        """
+        import comtypes.client  # type: ignore[import-untyped]
+        try:
+            from comtypes.gen import UIAutomationClient as mod  # type: ignore[import-untyped]
+        except (ImportError, ModuleNotFoundError):
+            comtypes.client.GetModule("UIAutomationCore.dll")
+            from comtypes.gen import UIAutomationClient as mod  # type: ignore[import-untyped]
+
+        uia = comtypes.client.CreateObject(
+            "{ff48dba4-60ef-4201-aa87-54103eef594e}",
+            interface=mod.IUIAutomation,
+        )
+        return uia, mod
+
+    def _find_uia_element(self, uia, mod, hwnd: int = 0,
+                          name: Optional[str] = None,
+                          automation_id: Optional[str] = None,
+                          role: Optional[str] = None):
+        """Find a UIA element in the tree by name, automationId, or role.
+
+        Searches under the given window (by hwnd) or the entire desktop.
+
+        Args:
+            uia: IUIAutomation instance from _init_comtypes_uia.
+            mod: UIAutomationClient module.
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            name: Accessible name of the element.
+            automation_id: UIA AutomationId of the element.
+            role: UIA control type name (e.g. "Edit", "Button").
+
+        Returns:
+            IUIAutomationElement if found, None otherwise.
+        """
+        import ctypes
+
+        if hwnd:
+            root = uia.ElementFromHandle(hwnd)
+        else:
+            root = uia.GetRootElement()
+
+        conditions = []
+        if automation_id:
+            conditions.append(
+                uia.CreatePropertyCondition(mod.UIA_AutomationIdPropertyId, automation_id)
+            )
+        if name:
+            conditions.append(
+                uia.CreatePropertyCondition(mod.UIA_NamePropertyId, name)
+            )
+
+        if not conditions:
+            return None
+
+        # Combine conditions with AND
+        if len(conditions) == 1:
+            cond = conditions[0]
+        else:
+            cond = conditions[0]
+            for c in conditions[1:]:
+                cond = uia.CreateAndCondition(cond, c)
+
+        return root.FindFirst(mod.TreeScope_Descendants, cond)
+
+    def set_element_value(
+        self,
+        text: str,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+    ) -> bool:
+        """Set text on a UI element using UIA ValuePattern.SetValue().
+
+        This bypasses SendInput entirely, directly setting the element's
+        value through the UIA accessibility interface. Works reliably in
+        schtasks / remote session contexts where SendInput has no effect.
+
+        Args:
+            text: Text to set on the element.
+            hwnd: Window handle to scope the search. 0 = desktop root.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId of the target element.
+            role: UIA control type (e.g. "Edit").
+
+        Returns:
+            True if SetValue succeeded, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:
+            logger.debug("comtypes not available — cannot use SetValue")
+            return False
+
+        try:
+            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
+                                          automation_id=automation_id, role=role)
+            if elem is None:
+                # If targeting by name/automation_id failed, try finding the
+                # first editable element (e.g. Edit control) in the window
+                if hwnd and role:
+                    root = uia.ElementFromHandle(hwnd)
+                    # Map common role names to UIA ControlTypeId
+                    role_map = {
+                        "Edit": 50004, "Document": 50030, "Text": 50020,
+                    }
+                    ctl_type_id = role_map.get(role)
+                    if ctl_type_id:
+                        cond = uia.CreatePropertyCondition(
+                            mod.UIA_ControlTypePropertyId, ctl_type_id
+                        )
+                        elem = root.FindFirst(mod.TreeScope_Descendants, cond)
+
+                if elem is None:
+                    logger.debug("SetValue: target element not found (name=%r, aid=%r, role=%r)",
+                                 name, automation_id, role)
+                    return False
+
+            # Try ValuePattern
+            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
+            if pat_unk is None:
+                logger.debug("SetValue: element does not support ValuePattern")
+                return False
+
+            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+
+            # Check if the value is read-only
+            if vp.CurrentIsReadOnly:
+                logger.debug("SetValue: element's ValuePattern is read-only")
+                return False
+
+            vp.SetValue(text)
+            logger.info("SetValue: successfully set text on element (name=%r, len=%d)",
+                        name, len(text))
+            return True
+
+        except (COMError, OSError, AttributeError) as exc:
+            logger.debug("SetValue failed: %s", exc)
+            return False
+        except Exception as exc:
+            logger.debug("SetValue unexpected error: %s", exc)
+            return False
+
+    def focus_element_uia(
+        self,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+    ) -> bool:
+        """Focus a UI element using UIA SetFocus().
+
+        Directly sets keyboard focus on a UIA element. Works in schtasks
+        context where SetForegroundWindow + mouse click may not deliver
+        actual focus.
+
+        Args:
+            hwnd: Window handle to scope the search.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId.
+            role: UIA control type.
+
+        Returns:
+            True if SetFocus succeeded, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:
+            logger.debug("comtypes not available — cannot use UIA SetFocus")
+            return False
+
+        try:
+            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
+                                          automation_id=automation_id, role=role)
+            if elem is None:
+                logger.debug("UIA SetFocus: element not found (name=%r, role=%r)", name, role)
+                return False
+
+            elem.SetFocus()
+            logger.info("UIA SetFocus: focused element (name=%r, role=%r)", name, role)
+            return True
+
+        except (COMError, OSError) as exc:
+            logger.debug("UIA SetFocus failed: %s", exc)
+            return False
+        except Exception as exc:
+            logger.debug("UIA SetFocus unexpected error: %s", exc)
+            return False
+
     def type_text(self, text: str = "", delay_ms: int = 5, profile: str = "linear",
                   wpm: int = 120, input_mode: str = "normal") -> None:
         """Type text using SendInput.
