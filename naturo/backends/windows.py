@@ -882,39 +882,87 @@ class WindowsBackend(Backend):
         raise WindowNotFoundError(search, suggested_action=hint)
 
     @staticmethod
-    def _find_uwp_core_hwnd(parent_hwnd: int) -> int:
-        """Find the UWP CoreWindow child HWND inside an ApplicationFrameHost window.
+    def _find_uwp_content_hwnd(parent_hwnd: int) -> list:
+        """Find content child HWNDs inside an ApplicationFrameHost window.
 
-        UWP apps wrap their actual UI inside a ``Windows.UI.Core.CoreWindow``
-        child window.  ``ElementFromHandle`` on the outer frame often returns
-        an empty element tree because the ControlViewWalker does not cross
-        the process boundary.  Targeting the CoreWindow directly fixes this.
+        UWP and WinUI 3 apps host their actual UI inside child windows of the
+        ApplicationFrameHost top-level window.  Classic UWP uses
+        ``Windows.UI.Core.CoreWindow``; WinUI 3 (Windows App SDK) may use
+        other window classes.  This method enumerates all child windows so
+        the caller can try each one for a non-empty UIA element tree.
+
+        The children are returned in priority order: known UWP/WinUI classes
+        first (CoreWindow, DesktopWindowXamlSource), then any remaining
+        visible children.
 
         Args:
             parent_hwnd: Handle of the ApplicationFrameHost top-level window.
 
         Returns:
-            CoreWindow child HWND if found, otherwise 0.
+            List of child HWNDs to try, ordered by priority (best first).
         """
         import sys
         if sys.platform != "win32":
-            return 0
+            return []
         try:
             import ctypes
+            from ctypes import wintypes
+
             user32 = ctypes.windll.user32
-            FindWindowExW = user32.FindWindowExW
-            FindWindowExW.restype = ctypes.c_void_p
-            FindWindowExW.argtypes = [
-                ctypes.c_void_p,  # hWndParent
-                ctypes.c_void_p,  # hWndChildAfter
-                ctypes.c_wchar_p,  # lpszClass
-                ctypes.c_void_p,  # lpszWindow (NULL = any)
-            ]
-            core_hwnd = FindWindowExW(parent_hwnd, None,
-                                      "Windows.UI.Core.CoreWindow", None)
-            return int(core_hwnd) if core_hwnd else 0
+
+            # Enumerate all child windows
+            children = []
+            WNDENUMPROC = ctypes.WINFUNCTYPE(
+                wintypes.BOOL, wintypes.HWND, wintypes.LPARAM,
+            )
+
+            def _enum_cb(hwnd, _lparam):
+                children.append(int(hwnd))
+                return True
+
+            user32.EnumChildWindows(
+                wintypes.HWND(parent_hwnd), WNDENUMPROC(_enum_cb), 0,
+            )
+
+            if not children:
+                return []
+
+            # Classify by window class name for priority ordering
+            GetClassNameW = user32.GetClassNameW
+            GetClassNameW.argtypes = [wintypes.HWND, ctypes.c_wchar_p, ctypes.c_int]
+            GetClassNameW.restype = ctypes.c_int
+
+            PRIORITY_CLASSES = {
+                "windows.ui.core.corewindow": 0,   # Classic UWP
+                "desktopwindowxamlsource": 1,       # WinUI 3
+            }
+
+            prioritized = []
+            rest = []
+            for hwnd in children:
+                cls_buf = ctypes.create_unicode_buffer(256)
+                GetClassNameW(wintypes.HWND(hwnd), cls_buf, 256)
+                cls_name = cls_buf.value.lower()
+                prio = PRIORITY_CLASSES.get(cls_name)
+                if prio is not None:
+                    prioritized.append((prio, hwnd, cls_buf.value))
+                else:
+                    rest.append(hwnd)
+
+            prioritized.sort(key=lambda t: t[0])
+            result = [h for _, h, _ in prioritized] + rest
+
+            if prioritized:
+                logger.debug(
+                    "UWP child windows for AFH %s: priority=%s, other=%d",
+                    parent_hwnd,
+                    [(cls, h) for _, h, cls in prioritized],
+                    len(rest),
+                )
+
+            return result
         except Exception:
-            return 0
+            return []
 
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
@@ -943,11 +991,13 @@ class WindowsBackend(Backend):
         Fills parent_id, children IDs, and keyboard_shortcut for all elements
         via Python-layer post-processing (the C++ DLL does not emit these).
 
-        For UWP apps (Calculator, Settings, etc.) the UI tree lives inside a
-        ``Windows.UI.Core.CoreWindow`` child of the ``ApplicationFrameHost``
-        top-level window.  When the initial traversal returns an empty tree
-        from an AFH window, this method automatically retries with the
-        CoreWindow child HWND.
+        For UWP/WinUI apps (Calculator, Settings, etc.) the UI tree lives
+        inside child windows of the ``ApplicationFrameHost`` top-level window.
+        Classic UWP uses ``Windows.UI.Core.CoreWindow``; WinUI 3 apps use
+        other classes like ``DesktopWindowXamlSource``.  When the initial
+        traversal returns an empty tree from an AFH window, this method
+        enumerates all child windows and retries with each until a non-empty
+        tree is found.
 
         Args:
             window_title: Window title pattern (partial match, case-insensitive).
@@ -964,20 +1014,38 @@ class WindowsBackend(Backend):
         core = self._ensure_core()
         handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
 
-        def _try_uwp_core(current_result):
-            """If handle is an AFH window with empty tree, retry with CoreWindow child."""
+        def _try_uwp_children(current_result, get_tree_fn):
+            """If handle is an AFH window with empty tree, try child windows.
+
+            Enumerates all child HWNDs of the ApplicationFrameHost window
+            and returns the first one that yields a non-empty element tree.
+
+            Args:
+                current_result: The element tree from the AFH window itself.
+                get_tree_fn: Callable(hwnd, depth) -> element tree result.
+
+            Returns:
+                A non-empty element tree from a child HWND, or current_result
+                if no child yields a better result.
+            """
             if (current_result is not None
                     and not current_result.children
                     and handle
                     and self._is_afh_window(handle)):
-                core_hwnd = self._find_uwp_core_hwnd(handle)
-                if core_hwnd:
+                child_hwnds = self._find_uwp_content_hwnd(handle)
+                for child_hwnd in child_hwnds:
                     logger.debug(
-                        "UWP fallback: retrying element tree with CoreWindow "
-                        "HWND %s (parent AFH %s)", core_hwnd, handle,
+                        "UWP fallback: trying child HWND %s "
+                        "(parent AFH %s)", child_hwnd, handle,
                     )
-                    return core_hwnd
-            return 0
+                    child_result = get_tree_fn(child_hwnd, depth)
+                    if child_result is not None and child_result.children:
+                        logger.info(
+                            "UWP fallback: found %d children via child "
+                            "HWND %s", len(child_result.children), child_hwnd,
+                        )
+                        return child_result
+            return current_result
 
         if backend == "jab":
             result = core.jab_get_element_tree(hwnd=handle, depth=depth)
@@ -987,12 +1055,11 @@ class WindowsBackend(Backend):
             result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
         elif backend == "auto":
             result = core.get_element_tree(hwnd=handle, depth=depth)
-            # UWP fallback: ApplicationFrameHost → CoreWindow child
-            uwp_hwnd = _try_uwp_core(result)
-            if uwp_hwnd:
-                uwp_result = core.get_element_tree(hwnd=uwp_hwnd, depth=depth)
-                if uwp_result is not None and uwp_result.children:
-                    result = uwp_result
+            # UWP/WinUI fallback: try child windows of AFH
+            result = _try_uwp_children(
+                result,
+                lambda h, d: core.get_element_tree(hwnd=h, depth=d),
+            )
             if result is None or (not result.children and not result.name):
                 # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
                 ia2_result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
@@ -1009,12 +1076,11 @@ class WindowsBackend(Backend):
                             result = msaa_result
         else:
             result = core.get_element_tree(hwnd=handle, depth=depth)
-            # UWP fallback for explicit "uia" backend too
-            uwp_hwnd = _try_uwp_core(result)
-            if uwp_hwnd:
-                uwp_result = core.get_element_tree(hwnd=uwp_hwnd, depth=depth)
-                if uwp_result is not None and uwp_result.children:
-                    result = uwp_result
+            # UWP/WinUI fallback for explicit "uia" backend too
+            result = _try_uwp_children(
+                result,
+                lambda h, d: core.get_element_tree(hwnd=h, depth=d),
+            )
 
         if result is None:
             return None

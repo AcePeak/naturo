@@ -1,7 +1,11 @@
-"""Tests for UWP ApplicationFrameHost → CoreWindow element tree fallback.
+"""Tests for UWP/WinUI ApplicationFrameHost child window element tree fallback.
 
 These tests use mocking and run on all platforms to verify the fallback
-logic in WindowsBackend.get_element_tree for UWP apps.
+logic in WindowsBackend.get_element_tree for UWP and WinUI 3 apps.
+
+The fallback enumerates child HWNDs of the ApplicationFrameHost window
+and tries each one until a non-empty UIA element tree is found.  This
+handles both classic UWP (CoreWindow) and WinUI 3 (DesktopWindowXamlSource).
 """
 
 from __future__ import annotations
@@ -74,40 +78,40 @@ class TestIsAfhWindow:
         assert backend._is_afh_window(999) is False
 
 
-class TestFindUwpCoreHwnd:
-    """Tests for _find_uwp_core_hwnd static method."""
+class TestFindUwpContentHwnd:
+    """Tests for _find_uwp_content_hwnd static method."""
 
-    def test_returns_zero_on_non_windows(self):
-        """Should return 0 on non-Windows platforms."""
+    def test_returns_empty_on_non_windows(self):
+        """Should return empty list on non-Windows platforms."""
         from naturo.backends.windows import WindowsBackend
 
         import sys
         if sys.platform == "win32":
             pytest.skip("Test only applicable on non-Windows")
 
-        assert WindowsBackend._find_uwp_core_hwnd(12345) == 0
+        assert WindowsBackend._find_uwp_content_hwnd(12345) == []
 
 
 class TestUwpElementTreeFallback:
-    """Tests for UWP CoreWindow fallback in get_element_tree."""
+    """Tests for UWP/WinUI child window fallback in get_element_tree."""
 
-    def test_uwp_fallback_retries_with_core_hwnd(self, backend):
-        """When AFH returns empty tree, should retry with CoreWindow HWND."""
+    def test_uwp_fallback_retries_with_child_hwnds(self, backend):
+        """When AFH returns empty tree, should try child HWNDs."""
         empty_root = _make_element(role="Pane", name="", children=[])
         rich_root = _make_element(
             role="Window", name="Calculator",
             children=[_make_element(role="Button", name="1")],
         )
 
-        # First call returns empty tree, second with CoreWindow returns rich
+        # First call returns empty tree, second with child HWND returns rich
         backend._core.get_element_tree = MagicMock(
             side_effect=[empty_root, rich_root],
         )
         backend._resolve_hwnd = MagicMock(return_value=100)
         backend._is_afh_window = MagicMock(return_value=True)
 
-        with patch.object(type(backend), "_find_uwp_core_hwnd",
-                          return_value=200):
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200]):
             with patch("naturo.backends.windows.populate_hierarchy"):
                 result = backend.get_element_tree(app="calc", backend="uia")
 
@@ -115,6 +119,33 @@ class TestUwpElementTreeFallback:
         assert result.role == "Window"
         assert len(result.children) == 1
         assert result.children[0].role == "Button"
+
+    def test_uwp_fallback_tries_multiple_children(self, backend):
+        """Should try multiple child HWNDs until one has content."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        also_empty = _make_element(role="Pane", name="", children=[])
+        rich_root = _make_element(
+            role="Window", name="Settings",
+            children=[_make_element(role="List", name="Categories")],
+        )
+
+        # First call: AFH empty; child 200: empty; child 300: rich
+        backend._core.get_element_tree = MagicMock(
+            side_effect=[empty_root, also_empty, rich_root],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200, 300]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="settings", backend="uia")
+
+        assert result is not None
+        assert result.role == "Window"
+        assert len(result.children) == 1
+        # Should have tried 3 times: AFH + child 200 + child 300
+        assert backend._core.get_element_tree.call_count == 3
 
     def test_no_fallback_when_tree_has_children(self, backend):
         """Should not attempt fallback when tree already has children."""
@@ -162,8 +193,8 @@ class TestUwpElementTreeFallback:
         backend._resolve_hwnd = MagicMock(return_value=100)
         backend._is_afh_window = MagicMock(return_value=True)
 
-        with patch.object(type(backend), "_find_uwp_core_hwnd",
-                          return_value=300):
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[300]):
             with patch("naturo.backends.windows.populate_hierarchy"):
                 result = backend.get_element_tree(app="settings",
                                                   backend="auto")
@@ -171,3 +202,68 @@ class TestUwpElementTreeFallback:
         assert result is not None
         assert result.role == "Window"
         assert len(result.children) == 1
+
+    def test_fallback_returns_original_when_no_children_found(self, backend):
+        """When all child HWNDs also return empty, keep original result."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        child_empty = _make_element(role="Pane", name="", children=[])
+
+        backend._core.get_element_tree = MagicMock(
+            side_effect=[empty_root, child_empty],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", backend="uia")
+
+        # Should return original empty result (post-processed)
+        assert result is not None
+        assert result.children == []
+
+    def test_fallback_with_no_child_windows(self, backend):
+        """When AFH has no child windows at all, return original result."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+
+        backend._core.get_element_tree = MagicMock(return_value=empty_root)
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", backend="uia")
+
+        assert result is not None
+        assert backend._core.get_element_tree.call_count == 1
+
+    def test_winui3_desktop_window_xaml_source(self, backend):
+        """Should find WinUI 3 apps that use DesktopWindowXamlSource."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        # First child (CoreWindow) also empty, second (DesktopWindowXamlSource) has content
+        also_empty = _make_element(role="Pane", name="", children=[])
+        rich_root = _make_element(
+            role="Window", name="Calculator",
+            children=[
+                _make_element(role="Group", name="Number pad"),
+                _make_element(role="Button", name="7"),
+            ],
+        )
+
+        backend._core.get_element_tree = MagicMock(
+            side_effect=[empty_root, also_empty, rich_root],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        # Simulate: CoreWindow(200) → empty, DesktopWindowXamlSource(300) → rich
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200, 300]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", backend="uia")
+
+        assert result is not None
+        assert result.role == "Window"
+        assert len(result.children) == 2
