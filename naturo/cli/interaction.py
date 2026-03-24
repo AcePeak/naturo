@@ -717,6 +717,33 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
+    # (#230) When --app/--hwnd/--window is specified, focus the target window
+    # before typing. SendInput sends keystrokes to the foreground window, so
+    # without focusing first, type silently sends to the wrong window.
+    if (app or window_title or hwnd) and not on_element:
+        import platform as _plat
+        if _plat.system() == "Windows":
+            try:
+                _target_hwnd = backend._resolve_hwnd(
+                    app=app, window_title=window_title, hwnd=hwnd,
+                )
+                if _target_hwnd:
+                    import ctypes
+                    SW_RESTORE = 9
+                    if backend._is_iconic(_target_hwnd):
+                        ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
+                    ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+                    import time
+                    time.sleep(0.15)  # Allow focus to settle
+            except Exception as exc:
+                _json_err(
+                    f"Failed to focus target window: {exc}. "
+                    f"Cannot guarantee keystrokes reach '{app or window_title}'.",
+                    json_output,
+                    code="WINDOW_FOCUS_ERROR",
+                )
+                return
+
     # --on: resolve element ref and click to focus before typing (#165)
     if on_element:
         import re as _re
@@ -933,19 +960,31 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
-    # (#226) When UIA routing is active and --app is specified, use UIA
-    # SetFocus to ensure keyboard input reaches the correct window.
-    # In schtasks context, SetForegroundWindow alone may not deliver focus.
-    _uia_method = route_info.get("method") == "uia" if route_info else False
-    if _uia_method and (app or window_title or hwnd) and hasattr(backend, "focus_element_uia"):
-        try:
-            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
-            if _target_hwnd:
-                backend.focus_element_uia(hwnd=_target_hwnd)
-                import ctypes
-                ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
-        except Exception as exc:
-            logger.debug("UIA focus for press failed: %s", exc)
+    # (#230) Focus target window before sending key input.
+    # SendInput/key_press deliver to the foreground window, so we must
+    # ensure the correct window has focus when --app/--hwnd is specified.
+    if (app or window_title or hwnd):
+        import platform as _plat
+        if _plat.system() == "Windows":
+            try:
+                _target_hwnd = backend._resolve_hwnd(
+                    app=app, window_title=window_title, hwnd=hwnd,
+                )
+                if _target_hwnd:
+                    import ctypes
+                    SW_RESTORE = 9
+                    if backend._is_iconic(_target_hwnd):
+                        ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
+                    ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+                    # Also try UIA SetFocus for schtasks/remote contexts (#226)
+                    if hasattr(backend, "focus_element_uia"):
+                        try:
+                            backend.focus_element_uia(hwnd=_target_hwnd)
+                        except Exception:
+                            pass
+                    time.sleep(0.15)
+            except Exception as exc:
+                logger.warning("Failed to focus target window for press: %s", exc)
 
     results: list[dict] = []
     try:
