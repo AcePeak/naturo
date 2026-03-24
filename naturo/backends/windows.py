@@ -1946,6 +1946,7 @@ class WindowsBackend(Backend):
 
         windows = self.list_windows()
         seen_pids: set[int] = set()
+        seen_uwp: set[tuple[int, str]] = set()
         apps: list[dict] = []
         for w in windows:
             if not w.is_visible or w.is_minimized or w.pid in seen_pids:
@@ -1960,7 +1961,13 @@ class WindowsBackend(Backend):
             # with the window title as the app name (since the process name
             # is generic and unhelpful).  Don't add to seen_pids — multiple
             # UWP apps may share one AFH process but each has its own window.
+            # Deduplicate by (pid, title) to avoid listing the same UWP app
+            # multiple times when it has multiple top-level windows.
             if basename == self._UWP_HOST_PROCESS:
+                key = (w.pid, w.title)
+                if key in seen_uwp:
+                    continue
+                seen_uwp.add(key)
                 apps.append({
                     "name": w.title,
                     "pid": w.pid,

@@ -319,6 +319,56 @@ class TestWindowCLIOptions:
         assert "--height" in result.output
 
 
+# ── UWP deduplication unit test (all platforms, mocked) ───────────────────────
+
+
+class TestUwpAppListDedup:
+    """Regression test for #244 — UWP app list deduplication."""
+
+    def test_uwp_duplicate_pid_title_deduplicated(self):
+        """list_apps should not list the same UWP app twice when it has
+        multiple top-level windows with identical PID and title (#244)."""
+        from unittest.mock import patch, PropertyMock
+        from naturo.backends.windows import WindowsBackend
+        from naturo.backends.base import WindowInfo as BaseWindowInfo
+
+        # Two Calculator windows with same PID and title (UWP duplicate)
+        # Plus one 设置 window with same PID but different title (should keep)
+        # Use ntpath-style basename via patch so os.path.basename works
+        # cross-platform in the test.
+        afh = "ApplicationFrameHost.exe"
+        fake_windows = [
+            BaseWindowInfo(
+                handle=0x1001, title="计算器",
+                process_name=afh,
+                pid=9984, x=0, y=0, width=400, height=500,
+                is_visible=True, is_minimized=False,
+            ),
+            BaseWindowInfo(
+                handle=0x1002, title="计算器",
+                process_name=afh,
+                pid=9984, x=0, y=0, width=400, height=500,
+                is_visible=True, is_minimized=False,
+            ),
+            BaseWindowInfo(
+                handle=0x1003, title="设置",
+                process_name=afh,
+                pid=9984, x=0, y=0, width=600, height=700,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+        with patch.object(backend, "list_windows", return_value=fake_windows):
+            apps = backend.list_apps()
+
+        uwp_names = [a["name"] for a in apps]
+        assert uwp_names.count("计算器") == 1, (
+            f"Calculator should appear once, got {uwp_names.count('计算器')}"
+        )
+        assert "设置" in uwp_names, "设置 should still appear"
+
+
 # ── Windows-only functional tests ─────────────────────────────────────────────
 
 
