@@ -82,11 +82,11 @@ def _post_action_see(
             click.echo("\n--- UI snapshot (empty) ---\nNo window found or UI tree is empty.")
         return None
 
-    # Store snapshot with ref mapping
-    from naturo.snapshot import SnapshotManager
+    # Store snapshot with ref mapping (inherit active session via NATURO_SESSION)
+    from naturo.snapshot import get_snapshot_manager
     from naturo.models.snapshot import UIElement
 
-    mgr = SnapshotManager()
+    mgr = get_snapshot_manager()
     snapshot_id = mgr.create_snapshot()
 
     ui_map = {}
@@ -519,8 +519,8 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     import re as _re
     _zero_bounds_element = None  # Track element for Invoke fallback (#137)
     if target_id and _re.fullmatch(r"e\d+", target_id):
-        from naturo.snapshot import SnapshotManager
-        mgr = SnapshotManager()
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
         resolved = mgr.resolve_ref(target_id)
         if resolved:
             x, y = resolved[0], resolved[1]
@@ -705,8 +705,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     if on_element:
         import re as _re
         if _re.fullmatch(r"e\d+", on_element):
-            from naturo.snapshot import SnapshotManager
-            mgr = SnapshotManager()
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
             resolved = mgr.resolve_ref(on_element)
             if resolved:
                 click_x, click_y = resolved[0], resolved[1]
@@ -1035,8 +1035,8 @@ def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
         import re as _re
         if _re.fullmatch(r"e\d+", target_id):
             # Resolve eN ref from most recent `see` snapshot
-            from naturo.snapshot import SnapshotManager
-            mgr = SnapshotManager()
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
             resolved = mgr.resolve_ref(target_id)
             if resolved:
                 x, y = resolved[0], resolved[1]
@@ -1135,7 +1135,7 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
     """
     # Resolve element refs (eN) from snapshot for --from and --to (#154)
     import re as _re
-    from naturo.snapshot import SnapshotManager
+    from naturo.snapshot import get_snapshot_manager
 
     fx, fy = None, None
     tx, ty = None, None
@@ -1145,7 +1145,7 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
     if from_coords:
         fx, fy = from_coords
     elif from_text and _re.fullmatch(r"e\d+", from_text):
-        mgr = SnapshotManager()
+        mgr = get_snapshot_manager()
         resolved = mgr.resolve_ref(from_text)
         if resolved:
             fx, fy = resolved[0], resolved[1]
@@ -1169,7 +1169,7 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
     if to_coords:
         tx, ty = to_coords
     elif to_text and _re.fullmatch(r"e\d+", to_text):
-        mgr = SnapshotManager()
+        mgr = get_snapshot_manager()
         resolved = mgr.resolve_ref(to_text)
         if resolved:
             tx, ty = resolved[0], resolved[1]

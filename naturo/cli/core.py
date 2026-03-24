@@ -81,8 +81,10 @@ def capture():
 @click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
+@click.option("--session", default=None, envvar="NATURO_SESSION",
+              help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output):
+def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session, json_output):
     """Capture a live screenshot.
 
     Captures the screen or a specific window and saves to a file.
@@ -137,8 +139,8 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, json_output
 
         snapshot_id = None
         if store_snapshot:
-            from naturo.snapshot import SnapshotManager
-            mgr = SnapshotManager()
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager(session=session)
             snapshot_id = mgr.create_snapshot()
             metadata = {
                 "window_handle": hwnd,
@@ -403,6 +405,8 @@ def permissions(json_output):
 @click.option("--path", "-p", help="Save screenshot to path")
 @click.option("--annotate", is_flag=True, help="Annotate screenshot with element labels")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
+@click.option("--session", default=None, envvar="NATURO_SESSION",
+              help="Snapshot session name for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -410,7 +414,7 @@ def permissions(json_output):
     default="uia",
     help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
-def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, json_output, backend):
+def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session, json_output, backend):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -458,10 +462,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         snapshot_id = None
         ref_map = {}  # Maps "eN" → backend element id; built when snapshot is stored
         if store_snapshot:
-            from naturo.snapshot import SnapshotManager
+            from naturo.snapshot import get_snapshot_manager
             from naturo.models.snapshot import UIElement
 
-            mgr = SnapshotManager()
+            mgr = get_snapshot_manager(session=session)
             snapshot_id = mgr.create_snapshot()
 
             # Flatten element tree into ui_map and build ref→element mapping

@@ -1,12 +1,35 @@
 """SnapshotManager — thread-safe snapshot storage aligned with Peekaboo's SnapshotManager.
 
-Storage layout::
+Storage layout (session-aware)::
 
     ~/.naturo/snapshots/
-    └── <snapshot_id>/          # e.g. 1742363045123-7321
-        ├── snapshot.json       # full Snapshot serialisation
-        ├── raw.png             # copied raw screenshot (optional)
-        └── annotated.png       # annotated screenshot (optional)
+    └── <session>/              # e.g. "default", "workflow-a", or NATURO_SESSION env value
+        └── <snapshot_id>/      # e.g. 1742363045123-7321
+            ├── snapshot.json   # full Snapshot serialisation
+            ├── raw.png         # copied raw screenshot (optional)
+            └── annotated.png   # annotated screenshot (optional)
+
+Session isolation (fixes #173)
+--------------------------------
+Different automation workflows can run concurrently without element ref conflicts:
+
+* **Automatic** — read ``NATURO_SESSION`` environment variable.  If unset, falls back to
+  the ``"default"`` session.
+* **Per-command** — pass ``--session <name>`` to ``see``, ``click``, etc.
+* **Factory helper** — call :func:`get_snapshot_manager` to get a ``SnapshotManager``
+  pre-configured with the active session.
+
+Example::
+
+    # Workflow A
+    export NATURO_SESSION=workflow-a
+    naturo see --app feishu   # stores refs under workflow-a/
+    naturo click e42          # resolves e42 from workflow-a/ — safe!
+
+    # Workflow B (different terminal / NATURO_SESSION)
+    export NATURO_SESSION=workflow-b
+    naturo see --app wechat   # stores refs under workflow-b/
+    naturo click e42          # resolves e42 from workflow-b/ — no conflict
 
 Design notes
 ------------
@@ -14,9 +37,11 @@ Design notes
   ``os.replace()``-d into place, so readers never see partial data.
 * **Thread safety** — a single :class:`threading.Lock` guards all mutations.
   For async callers, wrap calls in ``asyncio.get_event_loop().run_in_executor``.
-* **Snapshot ID format** — ``<unix-ms>-<4-digit-random>`` for easy chronological sorting
+* **Snapshot ID format** — ``<unix-ms>-<8-digit-random>`` for easy chronological sorting
   without a UUID dependency.
-* **Validity window** — 10 minutes, matching Peekaboo's ``snapshotValidityWindow``.
+* **Validity window** — 30 minutes by default (increased from 10 to support longer workflows).
+  Override with ``NATURO_SNAPSHOT_TTL`` env var (seconds) or the ``validity_seconds``
+  constructor argument.
 """
 
 from __future__ import annotations
@@ -44,11 +69,89 @@ from naturo.models.snapshot import (
 
 logger = logging.getLogger(__name__)
 
-#: Snapshot validity window — matches Peekaboo (10 minutes).
-SNAPSHOT_VALIDITY_SECONDS: int = 600
+#: Snapshot validity window — 30 minutes (increased from Peekaboo's 10 min
+#: to support longer automation workflows).
+SNAPSHOT_VALIDITY_SECONDS: int = 1800
 
 #: Default storage root.
 DEFAULT_STORAGE_ROOT: Path = Path.home() / ".naturo" / "snapshots"
+
+#: Default session name when NATURO_SESSION is not set.
+DEFAULT_SESSION: str = "default"
+
+#: Environment variable used to set the active session for snapshot isolation.
+SESSION_ENV_VAR: str = "NATURO_SESSION"
+
+#: Environment variable for overriding snapshot TTL (seconds).
+TTL_ENV_VAR: str = "NATURO_SNAPSHOT_TTL"
+
+
+def get_active_session() -> str:
+    """Return the active session name from the ``NATURO_SESSION`` env var.
+
+    Defaults to ``"default"`` when the variable is not set.
+
+    Returns
+    -------
+    str
+        Session name (safe to use as a directory component).
+    """
+    raw = os.environ.get(SESSION_ENV_VAR, "").strip()
+    return raw if raw else DEFAULT_SESSION
+
+
+def get_active_ttl() -> int:
+    """Return the active snapshot TTL from the ``NATURO_SNAPSHOT_TTL`` env var.
+
+    Defaults to :data:`SNAPSHOT_VALIDITY_SECONDS` (1800 s) when the variable
+    is not set or contains a non-integer value.
+    """
+    raw = os.environ.get(TTL_ENV_VAR, "").strip()
+    try:
+        ttl = int(raw)
+        if ttl > 0:
+            return ttl
+    except ValueError:
+        pass
+    return SNAPSHOT_VALIDITY_SECONDS
+
+
+def get_snapshot_manager(
+    session: Optional[str] = None,
+    storage_root: Optional[Path] = None,
+    validity_seconds: Optional[int] = None,
+) -> "SnapshotManager":
+    """Return a :class:`SnapshotManager` scoped to the active session.
+
+    The session is resolved in this order:
+
+    1. Explicit ``session`` argument.
+    2. ``NATURO_SESSION`` environment variable.
+    3. ``"default"`` fallback.
+
+    Parameters
+    ----------
+    session:
+        Override session name (takes precedence over env var).
+    storage_root:
+        Override storage root path (default: ``~/.naturo/snapshots``).
+    validity_seconds:
+        Override snapshot TTL in seconds (default: ``NATURO_SNAPSHOT_TTL``
+        env var, or 1800 s).
+
+    Returns
+    -------
+    SnapshotManager
+        A manager instance isolated to the resolved session.
+    """
+    active_session = session or get_active_session()
+    ttl = validity_seconds if validity_seconds is not None else get_active_ttl()
+    root = Path(storage_root) if storage_root else DEFAULT_STORAGE_ROOT
+    return SnapshotManager(
+        storage_root=root,
+        session=active_session,
+        validity_seconds=ttl,
+    )
 
 
 class SnapshotManager:
@@ -57,22 +160,34 @@ class SnapshotManager:
     Parameters
     ----------
     storage_root:
-        Override the default storage path (``~/.naturo/snapshots``).
+        Override the default storage root (``~/.naturo/snapshots``).
         Useful for testing.
+    session:
+        Session name for snapshot isolation (e.g. ``"workflow-a"``).
+        Defaults to ``"default"``.  Snapshots are stored under
+        ``<storage_root>/<session>/``.
     validity_seconds:
         How old a snapshot may be before :meth:`get_most_recent_snapshot`
-        ignores it.  Defaults to 600 s (10 minutes).
+        ignores it.  Defaults to 1800 s (30 minutes).
     """
 
     def __init__(
         self,
         storage_root: Optional[Path] = None,
+        session: Optional[str] = None,
         validity_seconds: int = SNAPSHOT_VALIDITY_SECONDS,
     ) -> None:
-        self._root = Path(storage_root) if storage_root else DEFAULT_STORAGE_ROOT
+        self._base_root = Path(storage_root) if storage_root else DEFAULT_STORAGE_ROOT
+        self._session = session or DEFAULT_SESSION
+        self._root = self._base_root / self._session
         self._validity_seconds = validity_seconds
         self._lock = threading.Lock()
         self._root.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def session(self) -> str:
+        """Active session name."""
+        return self._session
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -530,8 +645,13 @@ class SnapshotManager:
 
     @property
     def storage_path(self) -> str:
-        """Absolute path to the snapshot storage root."""
+        """Absolute path to the session-scoped snapshot storage directory."""
         return str(self._root)
+
+    @property
+    def base_storage_path(self) -> str:
+        """Absolute path to the snapshot storage root (all sessions)."""
+        return str(self._base_root)
 
     # ── Private helpers ──────────────────────────────────────────────────────
 

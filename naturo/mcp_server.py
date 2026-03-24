@@ -1101,9 +1101,9 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if depth < 1 or depth > 10:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"depth must be between 1 and 10, got {depth}"}}
 
-        from naturo.snapshot import SnapshotManager
+        from naturo.snapshot import get_snapshot_manager
         backend = _get_backend()
-        manager = SnapshotManager()
+        manager = get_snapshot_manager()
 
         # Create snapshot and capture
         snapshot_id = manager.create_snapshot()
@@ -1167,10 +1167,10 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with snapshot details including UI tree and screenshot path.
         """
-        from naturo.snapshot import SnapshotManager
+        from naturo.snapshot import get_snapshot_manager
         from naturo.models.snapshot import SnapshotNotFoundError
 
-        manager = SnapshotManager()
+        manager = get_snapshot_manager()
         try:
             snapshot = manager.get_snapshot(snapshot_id)
         except SnapshotNotFoundError:
@@ -1215,8 +1215,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if limit < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"limit must be >= 1, got {limit}"}}
 
-        from naturo.snapshot import SnapshotManager
-        manager = SnapshotManager()
+        from naturo.snapshot import get_snapshot_manager
+        manager = get_snapshot_manager()
         snapshots = manager.list_snapshots(limit=limit)
 
         return {

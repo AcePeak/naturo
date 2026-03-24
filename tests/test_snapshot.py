@@ -46,7 +46,7 @@ from naturo.snapshot import SnapshotManager
 
 @pytest.fixture()
 def tmp_root(tmp_path: Path) -> Path:
-    """Isolated snapshot storage root."""
+    """Isolated snapshot storage root (base, contains session subdirs)."""
     root = tmp_path / "snapshots"
     root.mkdir()
     return root
@@ -54,8 +54,20 @@ def tmp_root(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def mgr(tmp_root: Path) -> SnapshotManager:
-    """SnapshotManager backed by a temporary directory."""
-    return SnapshotManager(storage_root=tmp_root)
+    """SnapshotManager backed by a temporary directory (uses 'default' session)."""
+    return SnapshotManager(storage_root=tmp_root, session="default")
+
+
+@pytest.fixture()
+def snap_root(tmp_root: Path) -> Path:
+    """Session-scoped storage path (tmp_root / 'default').
+
+    All snapshot directories live here.  Tests should use this instead of
+    ``tmp_root`` when checking for snapshot files.
+    """
+    p = tmp_root / "default"
+    p.mkdir(exist_ok=True)
+    return p
 
 
 @pytest.fixture()
@@ -123,13 +135,13 @@ class TestCreateSnapshot:
         assert len(parts) == 2
         assert parts[0].isdigit()
 
-    def test_creates_directory(self, mgr: SnapshotManager, tmp_root: Path) -> None:
+    def test_creates_directory(self, mgr: SnapshotManager, snap_root: Path) -> None:
         sid = mgr.create_snapshot()
-        assert (tmp_root / sid).is_dir()
+        assert (snap_root / sid).is_dir()
 
-    def test_creates_skeleton_json(self, mgr: SnapshotManager, tmp_root: Path) -> None:
+    def test_creates_skeleton_json(self, mgr: SnapshotManager, snap_root: Path) -> None:
         sid = mgr.create_snapshot()
-        json_path = tmp_root / sid / "snapshot.json"
+        json_path = snap_root / sid / "snapshot.json"
         assert json_path.exists()
         data = json.loads(json_path.read_text(encoding="utf-8"))
         assert data["snapshotId"] == sid
@@ -143,13 +155,13 @@ class TestCreateSnapshot:
 
 
 class TestStoreScreenshot:
-    def test_copies_file(self, mgr: SnapshotManager, tmp_root: Path, png_file: Path) -> None:
+    def test_copies_file(self, mgr: SnapshotManager, snap_root: Path, png_file: Path) -> None:
         sid = mgr.create_snapshot()
         mgr.store_screenshot(sid, str(png_file))
-        assert (tmp_root / sid / "raw.png").exists()
+        assert (snap_root / sid / "raw.png").exists()
 
     def test_updates_screenshot_path_in_json(
-        self, mgr: SnapshotManager, tmp_root: Path, png_file: Path
+        self, mgr: SnapshotManager, snap_root: Path, png_file: Path
     ) -> None:
         sid = mgr.create_snapshot()
         mgr.store_screenshot(sid, str(png_file))
@@ -229,11 +241,11 @@ class TestStoreDetectionResult:
 
 class TestStoreAnnotated:
     def test_copies_annotated(
-        self, mgr: SnapshotManager, tmp_root: Path, png_file: Path
+        self, mgr: SnapshotManager, snap_root: Path, png_file: Path
     ) -> None:
         sid = mgr.create_snapshot()
         mgr.store_annotated(sid, str(png_file))
-        assert (tmp_root / sid / "annotated.png").exists()
+        assert (snap_root / sid / "annotated.png").exists()
 
     def test_updates_annotated_path(
         self, mgr: SnapshotManager, png_file: Path
@@ -258,9 +270,9 @@ class TestGetSnapshot:
         with pytest.raises(SnapshotNotFoundError):
             mgr.get_snapshot("no-such-id")
 
-    def test_raises_version_mismatch(self, mgr: SnapshotManager, tmp_root: Path) -> None:
+    def test_raises_version_mismatch(self, mgr: SnapshotManager, snap_root: Path) -> None:
         sid = mgr.create_snapshot()
-        json_path = tmp_root / sid / "snapshot.json"
+        json_path = snap_root / sid / "snapshot.json"
         data = json.loads(json_path.read_text(encoding="utf-8"))
         data["version"] = 999
         json_path.write_text(json.dumps(data))
@@ -295,7 +307,7 @@ class TestGetMostRecentSnapshot:
         self, tmp_root: Path
     ) -> None:
         # Very short validity window
-        mgr = SnapshotManager(storage_root=tmp_root, validity_seconds=0)
+        mgr = SnapshotManager(storage_root=tmp_root, session="default", validity_seconds=0)
         mgr.create_snapshot()
         time.sleep(0.01)
         assert mgr.get_most_recent_snapshot() is None
@@ -376,11 +388,11 @@ class TestListSnapshots:
 
 
 class TestCleanSnapshot:
-    def test_removes_directory(self, mgr: SnapshotManager, tmp_root: Path) -> None:
+    def test_removes_directory(self, mgr: SnapshotManager, snap_root: Path) -> None:
         sid = mgr.create_snapshot()
-        assert (tmp_root / sid).exists()
+        assert (snap_root / sid).exists()
         mgr.clean_snapshot(sid)
-        assert not (tmp_root / sid).exists()
+        assert not (snap_root / sid).exists()
 
     def test_no_error_on_missing(self, mgr: SnapshotManager) -> None:
         mgr.clean_snapshot("nonexistent-snapshot")  # should not raise
@@ -403,9 +415,9 @@ class TestCleanOlderThan:
         assert mgr.get_snapshot(sid) is not None
 
     def test_deletes_old_snapshots(self, tmp_root: Path) -> None:
-        mgr = SnapshotManager(storage_root=tmp_root)
+        mgr = SnapshotManager(storage_root=tmp_root, session="default")
         sid = mgr.create_snapshot()
-        snap_dir = tmp_root / sid
+        snap_dir = Path(mgr.storage_path) / sid
 
         # Backdate the directory mtime to 2 days ago
         old_time = time.time() - 2 * 86400
@@ -417,10 +429,10 @@ class TestCleanOlderThan:
 
     def test_returns_count(self, tmp_root: Path) -> None:
         import os as _os
-        mgr = SnapshotManager(storage_root=tmp_root)
+        mgr = SnapshotManager(storage_root=tmp_root, session="default")
         for _ in range(3):
             sid = mgr.create_snapshot()
-            snap_dir = tmp_root / sid
+            snap_dir = Path(mgr.storage_path) / sid
             old_time = time.time() - 5 * 86400
             _os.utime(snap_dir, (old_time, old_time))
         assert mgr.clean_older_than(days=1) == 3
@@ -582,10 +594,10 @@ class TestJSONRoundTrip:
 
 
 class TestAtomicWrite:
-    def test_no_partial_file_visible(self, mgr: SnapshotManager, tmp_root: Path) -> None:
+    def test_no_partial_file_visible(self, mgr: SnapshotManager, snap_root: Path) -> None:
         """After create_snapshot the JSON must be fully readable."""
         sid = mgr.create_snapshot()
-        json_path = tmp_root / sid / "snapshot.json"
+        json_path = snap_root / sid / "snapshot.json"
         data = json.loads(json_path.read_text(encoding="utf-8"))
         assert data["snapshotId"] == sid
 
@@ -594,8 +606,8 @@ class TestAtomicWrite:
 
 
 class TestStoragePath:
-    def test_returns_correct_path(self, mgr: SnapshotManager, tmp_root: Path) -> None:
-        assert Path(mgr.storage_path) == tmp_root
+    def test_returns_correct_path(self, mgr: SnapshotManager, snap_root: Path) -> None:
+        assert Path(mgr.storage_path) == snap_root
 
 
 # ── resolve_ref zero-bounds detection (#137) ─────────────────────────────────
