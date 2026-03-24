@@ -346,7 +346,9 @@ class SnapshotManager:
         except Exception:
             return None
 
-        element = snapshot.ui_map.get(element_id)
+        # (#237) ui_map may be keyed by ref ("e1") or by backend id,
+        # depending on snapshot version.  Try ref first, then backend id.
+        element = snapshot.ui_map.get(ref) or snapshot.ui_map.get(element_id)
         if not element:
             return None
 
@@ -408,7 +410,8 @@ class SnapshotManager:
         except Exception:
             return None
 
-        element = snapshot.ui_map.get(element_id)
+        # (#237) ui_map may be keyed by ref ("e1") or by backend id.
+        element = snapshot.ui_map.get(ref) or snapshot.ui_map.get(element_id)
         if not element:
             return None
 

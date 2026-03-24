@@ -93,41 +93,51 @@ def _post_action_see(
     _ref_seq = [0]
     ref_map = {}
 
+    import re as _re_mod
+
     def _flatten(el, parent_id=None):
         _ref_seq[0] += 1
         ref = f"e{_ref_seq[0]}"
-        child_ids = [c.id for c in el.children]
         props = getattr(el, "properties", {})
-        ui_map[el.id] = UIElement(
-            id=el.id,
-            element_id=f"element_{el.id}",
+        # (#237) Preserve real AutomationId in identifier, filter
+        # tree-assigned "eN" IDs (same logic as core.py _flatten).
+        _raw_id = el.id if el.id else None
+        if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
+            _raw_id = None
+        # Use ref as canonical key to avoid overwrites when multiple
+        # elements share the same backend AutomationId.
+        child_refs = []
+        for child in el.children:
+            child_refs.append(_flatten(child, parent_id=ref))
+        ui_map[ref] = UIElement(
+            id=ref,
+            element_id=f"element_{ref}",
             role=el.role,
             title=el.name,
             label=el.name,
             value=el.value,
-            identifier=el.id if el.id else None,
+            identifier=_raw_id,
             frame=(el.x, el.y, el.width, el.height),
             is_actionable=getattr(el, "is_actionable", False),
-            parent_id=props.get("parent_id", parent_id),
-            children=child_ids,
+            parent_id=parent_id,
+            children=child_refs,
             keyboard_shortcut=props.get("keyboard_shortcut"),
         )
         ref_map[ref] = el.id
-        for child in el.children:
-            _flatten(child, parent_id=el.id)
+        return ref
 
     _flatten(tree)
     mgr.store_detection_result(snapshot_id, ui_map)
     mgr.store_ref_map(snapshot_id, ref_map)
 
     if json_output:
-        # Build reverse map: backend element id → user-facing ref (e.g. "e3")
-        _backend_to_ref = {backend_id: ref_key for ref_key, backend_id in ref_map.items()}
+        # (#237) Use sequential counter matching _flatten() DFS order for
+        # unique display IDs (same fix as core.py to_dict).
+        _json_ref_seq = [0]
 
-        # Build JSON-serializable tree using user-facing refs as IDs so that
-        # the "id" values shown in JSON output match what `click --id` expects.
         def _to_dict(el):
-            display_id = _backend_to_ref.get(el.id, el.id)
+            _json_ref_seq[0] += 1
+            display_id = f"e{_json_ref_seq[0]}"
             d = {
                 "id": display_id,
                 "role": el.role,

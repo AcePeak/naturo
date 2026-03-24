@@ -736,7 +736,6 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             def _flatten(el, parent_id=None):
                 _ref_seq[0] += 1
                 ref = f"e{_ref_seq[0]}"
-                child_ids = [c.id for c in el.children]
                 props = getattr(el, "properties", {})
                 # (#229) Only store identifier if it's a real UIA AutomationId,
                 # not a tree-assigned sequential ID like "e1", "e2", etc.
@@ -745,9 +744,17 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 _raw_id = el.id if el.id else None
                 if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
                     _raw_id = None  # Tree-assigned, not a real AutomationId
-                ui_map[el.id] = UIElement(
-                    id=el.id,
-                    element_id=f"element_{el.id}",
+                # (#237) Always use the sequential ref as canonical key in
+                # ui_map.  Multiple elements can share the same UIA
+                # AutomationId (e.g. Notepad status bar texts), so using
+                # el.id as key caused overwrites and duplicate display IDs.
+                # The original AutomationId is preserved in `identifier`.
+                child_refs = []
+                for child in el.children:
+                    child_refs.append(_flatten(child, parent_id=ref))
+                ui_map[ref] = UIElement(
+                    id=ref,
+                    element_id=f"element_{ref}",
                     role=el.role,
                     title=el.name,
                     label=el.name,
@@ -755,13 +762,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     identifier=_raw_id,
                     frame=(el.x, el.y, el.width, el.height),
                     is_actionable=getattr(el, "is_actionable", False),
-                    parent_id=props.get("parent_id", parent_id),
-                    children=child_ids,
+                    parent_id=parent_id,
+                    children=child_refs,
                     keyboard_shortcut=props.get("keyboard_shortcut"),
                 )
                 ref_map[ref] = el.id
-                for child in el.children:
-                    _flatten(child, parent_id=el.id)
+                return ref
 
             _flatten(tree)
             mgr.store_detection_result(snapshot_id, ui_map)
@@ -795,13 +801,17 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
-            # Build reverse map: backend element id → user-facing ref (e.g. "e3")
-            # so JSON output shows refs that match what `click --id` expects.
-            _backend_to_ref = {backend_id: ref_key for ref_key, backend_id in ref_map.items()} if ref_map else {}
+            # (#237) Use a sequential counter matching _flatten() DFS order
+            # to assign unique display IDs.  The previous reverse-map approach
+            # was lossy: when multiple elements share the same backend
+            # AutomationId, the dict comprehension kept only the last ref,
+            # causing duplicate display IDs in JSON output.
+            _json_ref_seq = [0]
 
             def to_dict(el):
                 """Convert ElementInfo tree to a JSON-serializable dict."""
-                display_id = _backend_to_ref.get(el.id, el.id)
+                _json_ref_seq[0] += 1
+                display_id = f"e{_json_ref_seq[0]}"
                 d = {
                     "id": display_id,
                     "role": el.role,

@@ -701,5 +701,83 @@ class TestResolveRefZeroBounds:
         assert element.frame == (0, 0, 0, 0)
 
 
+# ── resolve_ref with duplicate backend IDs (#237) ────────────────────────────
+
+
+class TestResolveRefDuplicateBackendIds:
+    """Refs should resolve correctly even when multiple elements share the
+    same backend AutomationId (e.g. Notepad status bar texts)."""
+
+    def test_duplicate_backend_ids_resolve_to_different_elements(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """When ui_map is keyed by ref, each ref resolves to its own element."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        # Simulate two elements that share the same backend AutomationId
+        # but have unique ref keys in ui_map (the #237 fix).
+        el_a = UIElement(
+            id="e1", element_id="element_e1", role="Text",
+            title="行 1，列 1", label="行 1，列 1", value=None,
+            frame=(100, 500, 80, 20), is_actionable=False,
+            parent_id=None, children=[],
+        )
+        el_b = UIElement(
+            id="e2", element_id="element_e2", role="Text",
+            title="UTF-8", label="UTF-8", value=None,
+            frame=(300, 500, 60, 20), is_actionable=False,
+            parent_id=None, children=[],
+        )
+        # Both refs map to the same backend id "StatusBarItem"
+        ui_map = {"e1": el_a, "e2": el_b}
+        ref_map = {"e1": "StatusBarItem", "e2": "StatusBarItem"}
+
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, ref_map)
+
+        result_a = mgr.resolve_ref("e1")
+        result_b = mgr.resolve_ref("e2")
+
+        assert result_a is not None, "e1 should resolve"
+        assert result_b is not None, "e2 should resolve"
+
+        # They should have different coordinates
+        assert result_a[0] != result_b[0], "e1 and e2 should have different x coords"
+
+    def test_resolve_ref_element_with_duplicate_backend_ids(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """resolve_ref_element should return the correct element for each ref."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        el_a = UIElement(
+            id="e1", element_id="element_e1", role="Text",
+            title="纯文本", label="纯文本", value=None,
+            frame=(200, 500, 50, 20), is_actionable=False,
+            parent_id=None, children=[],
+        )
+        el_b = UIElement(
+            id="e2", element_id="element_e2", role="MenuBar",
+            title="系统", label="系统", value=None,
+            frame=(34, 34, 22, 22), is_actionable=True,
+            parent_id=None, children=[],
+        )
+        ui_map = {"e1": el_a, "e2": el_b}
+        ref_map = {"e1": "SharedAutomationId", "e2": "SharedAutomationId"}
+
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, ref_map)
+
+        result_a = mgr.resolve_ref_element("e1")
+        result_b = mgr.resolve_ref_element("e2")
+
+        assert result_a is not None
+        assert result_b is not None
+        assert result_a[0].title == "纯文本"
+        assert result_b[0].title == "系统"
+
+
 # ── need os for backdate test ─────────────────────────────────────────────────
 import os  # noqa: E402  (placed here intentionally to keep test-only import)
