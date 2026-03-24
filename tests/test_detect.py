@@ -407,3 +407,69 @@ class TestFrameworkDetection:
         frameworks = detect_frameworks_from_dlls(pid=0, exe="/usr/bin/java")
         types = [f.framework_type for f in frameworks]
         assert FrameworkType.JAVA_SWING in types
+
+
+class TestNativeCoreInit:
+    """Tests for _get_native_core — ensures probes call init() (#208)."""
+
+    def test_get_native_core_calls_init(self):
+        """_get_native_core must call .init() on the NaturoCore instance."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        # Reset cached instance
+        probes_mod._native_core = None
+
+        mock_core = MagicMock()
+        with patch("naturo.bridge.NaturoCore", return_value=mock_core) as mock_cls:
+            result = probes_mod._get_native_core()
+            mock_cls.assert_called_once()
+            mock_core.init.assert_called_once()
+            assert result is mock_core
+
+        # Cleanup
+        probes_mod._native_core = None
+
+    def test_get_native_core_caches_instance(self):
+        """_get_native_core returns the same instance on subsequent calls."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        # Reset cached instance
+        probes_mod._native_core = None
+
+        mock_core = MagicMock()
+        with patch("naturo.bridge.NaturoCore", return_value=mock_core):
+            first = probes_mod._get_native_core()
+            second = probes_mod._get_native_core()
+            assert first is second
+
+        # Cleanup
+        probes_mod._native_core = None
+
+    def test_probe_uia_uses_initialized_core(self):
+        """probe_uia should use _get_native_core (with init) not raw NaturoCore."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        if platform.system() != "Windows":
+            pytest.skip("probe_uia returns None on non-Windows")
+
+        # Reset cached instance
+        probes_mod._native_core = None
+
+        mock_core = MagicMock()
+        mock_element = MagicMock()
+        mock_core.get_element_tree.return_value = mock_element
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core) as mock_get:
+            with patch("naturo.detect.probes._find_main_window", return_value=12345):
+                result = probes_mod.probe_uia(pid=1234, exe="notepad.exe")
+                mock_get.assert_called_once()
+                mock_core.get_element_tree.assert_called_once_with(hwnd=12345, depth=1)
+                assert result is not None
+                assert result.method == InteractionMethodType.UIA
+                assert result.status == ProbeStatus.AVAILABLE
+
+        # Cleanup
+        probes_mod._native_core = None
