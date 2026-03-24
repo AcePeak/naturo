@@ -676,6 +676,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
         try:
             from naturo.verify import verify_click
             _before_focus = _before_state.get("focus") if _before_state else None
+            _before_ui_texts = _before_state.get("ui_texts") if _before_state else None
             _verification = verify_click(
                 backend,
                 x=x,
@@ -685,6 +686,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
                 window_title=window_title,
                 hwnd=hwnd,
                 before_focus=_before_focus,
+                before_ui_texts=_before_ui_texts,
             )
         except Exception as exc:
             logger.debug("Click verification failed: %s", exc)

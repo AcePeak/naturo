@@ -278,6 +278,140 @@ class TestVerifyClick:
         assert result.status == VerifyStatus.UNKNOWN
 
 
+class TestVerifyClickUiTextFallback:
+    """Test #263: click verification falls back to UI text diff when focus unchanged."""
+
+    def test_verified_when_ui_texts_changed(self):
+        """Focus unchanged but UI element text changed → VERIFIED."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100, "foreground_title": "Calculator"}
+        before_texts = {"uia:50033:CalculatorResults": "Display is 0"}
+        after_texts = {"uia:50033:CalculatorResults": "Display is 7"}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus, \
+             patch("naturo.verify._capture_ui_texts") as mock_texts:
+            mock_focus.return_value = focus.copy()
+            mock_texts.return_value = after_texts
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                before_ui_texts=before_texts,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.VERIFIED
+        assert result.method == "ui_text_diff"
+        assert "display updated" in result.detail.lower()
+
+    def test_unknown_when_ui_texts_unchanged(self):
+        """Focus unchanged and UI texts unchanged → UNKNOWN."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100, "foreground_title": "Calculator"}
+        texts = {"uia:50033:CalculatorResults": "Display is 0"}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus, \
+             patch("naturo.verify._capture_ui_texts") as mock_texts:
+            mock_focus.return_value = focus.copy()
+            mock_texts.return_value = texts.copy()
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                before_ui_texts=texts,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+
+    def test_unknown_when_no_before_ui_texts(self):
+        """No before_ui_texts provided → falls through to UNKNOWN."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus:
+            mock_focus.return_value = focus.copy()
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                before_ui_texts=None,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+
+    def test_ui_text_capture_error_handled_gracefully(self):
+        """UI text capture fails → falls through to UNKNOWN, no crash."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+        before_texts = {"some:element": "value"}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus, \
+             patch("naturo.verify._capture_ui_texts", side_effect=Exception("COM error")):
+            mock_focus.return_value = focus.copy()
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                before_ui_texts=before_texts,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+
+    def test_focus_change_takes_priority_over_ui_texts(self):
+        """Focus changed → VERIFIED via focus_check, ui_texts not consulted."""
+        backend = MagicMock(spec=[])
+        before_focus = {"foreground_hwnd": 100}
+        before_texts = {"some:element": "value"}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus:
+            mock_focus.return_value = {"foreground_hwnd": 200}
+            result = verify_click(
+                backend,
+                before_focus=before_focus,
+                before_ui_texts=before_texts,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.VERIFIED
+        assert result.method == "focus_check"
+
+
+class TestCaptureBeforeStateUiTexts:
+    """Test #263: capture_before_state includes UI texts for click actions."""
+
+    def test_click_captures_ui_texts(self):
+        """Before-state for click should capture UI element texts."""
+        backend = MagicMock(spec=[])
+        focus_data = {"foreground_hwnd": 123}
+        ui_texts = {"uia:50004:CalculatorResults": "0"}
+
+        with patch("naturo.verify._capture_focus_state", return_value=focus_data), \
+             patch("naturo.verify._capture_ui_texts", return_value=ui_texts):
+            state = capture_before_state(backend, action="click")
+
+        assert state["focus"] == focus_data
+        assert state["ui_texts"] == ui_texts
+
+    def test_type_does_not_capture_ui_texts(self):
+        """Before-state for type should NOT capture UI texts."""
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": "text"}
+
+        with patch("naturo.verify._capture_focus_state", return_value={}):
+            state = capture_before_state(backend, action="type")
+
+        assert "ui_texts" not in state
+
+    def test_click_handles_ui_texts_error(self):
+        """UI text capture failure → ui_texts=None, still works."""
+        backend = MagicMock(spec=[])
+
+        with patch("naturo.verify._capture_focus_state", return_value={}), \
+             patch("naturo.verify._capture_ui_texts", side_effect=Exception("error")):
+            state = capture_before_state(backend, action="click")
+
+        assert state["ui_texts"] is None
+
+
 class TestVerifyPress:
     """Test press action verification."""
 

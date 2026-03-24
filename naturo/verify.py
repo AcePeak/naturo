@@ -259,6 +259,7 @@ def verify_click(
     window_title: Optional[str] = None,
     hwnd: Optional[int] = None,
     before_focus: Optional[dict] = None,
+    before_ui_texts: Optional[dict[str, str]] = None,
     settle_ms: int = 200,
 ) -> VerificationResult:
     """Verify that a click action changed the UI state.
@@ -266,7 +267,11 @@ def verify_click(
     Strategy:
     1. Compare foreground window / focused element before vs after.
     2. If focus changed → verified (click had effect).
-    3. If nothing changed → failed (silent failure).
+    3. If focus unchanged, fall back to UI text comparison — check whether
+       any sibling/nearby element text changed (e.g., calculator display
+       updates after pressing a digit button).
+    4. If nothing changed → report UNKNOWN (not FAILED, to avoid false
+       positives on idempotent clicks).
 
     This is inherently less precise than type verification because clicks
     can have many valid effects (menu open, button press, focus change, etc).
@@ -281,6 +286,9 @@ def verify_click(
         window_title: Window title filter.
         hwnd: Window handle filter.
         before_focus: Focus state captured before the click.
+        before_ui_texts: Mapping of element identifiers to their text/value
+            captured before the click. Used as fallback when focus doesn't
+            change (e.g., UWP Calculator display).
         settle_ms: Milliseconds to wait for UI to settle.
 
     Returns:
@@ -323,23 +331,44 @@ def verify_click(
             after=after_focus,
             elapsed_ms=elapsed,
         )
-    else:
-        # Focus unchanged — but this might be expected for some clicks
-        # (e.g., clicking on an already-focused element, or a toggle).
-        # We report UNKNOWN rather than FAILED to avoid false positives
-        # on "click did nothing" when it actually did something non-focus-related.
-        return VerificationResult(
-            status=VerifyStatus.UNKNOWN,
-            detail=(
-                "No focus change detected after click. This may be normal "
-                "(e.g., clicking an already-focused element) or indicate a "
-                "silent failure."
-            ),
-            method="focus_check",
-            before=before_focus,
-            after=after_focus,
-            elapsed_ms=elapsed,
-        )
+
+    # Focus unchanged — try UI text comparison as fallback (#263).
+    # This catches cases like UWP Calculator where button clicks update
+    # a display element without changing focus.
+    if before_ui_texts:
+        try:
+            after_ui_texts = _capture_ui_texts(
+                backend, app=app, window_title=window_title, hwnd=hwnd,
+            )
+            if after_ui_texts and after_ui_texts != before_ui_texts:
+                elapsed = (time.monotonic() - start) * 1000
+                return VerificationResult(
+                    status=VerifyStatus.VERIFIED,
+                    detail="UI element text changed after click (display updated)",
+                    method="ui_text_diff",
+                    before=before_ui_texts,
+                    after=after_ui_texts,
+                    elapsed_ms=elapsed,
+                )
+        except Exception as exc:
+            logger.debug("Click UI text comparison failed: %s", exc)
+
+    elapsed = (time.monotonic() - start) * 1000
+
+    # Nothing detected — report UNKNOWN (not FAILED) to avoid false
+    # positives on idempotent clicks or clicks with non-observable effects.
+    return VerificationResult(
+        status=VerifyStatus.UNKNOWN,
+        detail=(
+            "No focus change detected after click. This may be normal "
+            "(e.g., clicking an already-focused element) or indicate a "
+            "silent failure."
+        ),
+        method="focus_check",
+        before=before_focus,
+        after=after_focus,
+        elapsed_ms=elapsed,
+    )
 
 
 # ── Press verification ───────────────────────────────────────────────────────
@@ -436,6 +465,171 @@ def verify_press(
 
 
 # ── Focus state capture ──────────────────────────────────────────────────────
+
+
+def _capture_ui_texts(
+    backend,
+    *,
+    app: Optional[str] = None,
+    window_title: Optional[str] = None,
+    hwnd: Optional[int] = None,
+    max_children: int = 50,
+) -> dict[str, str]:
+    """Capture a lightweight snapshot of child window texts for diff.
+
+    Uses Win32 ``EnumChildWindows`` + ``GetWindowTextW`` which is fast and
+    does not require UIA traversal.  This captures text from child HWNDs —
+    sufficient for detecting display changes in apps like UWP Calculator
+    where button clicks update a child window's text without focus change.
+
+    Args:
+        backend: Platform backend instance.
+        app: Application name filter.
+        window_title: Window title filter.
+        hwnd: Window handle filter.
+        max_children: Maximum child windows to enumerate.
+
+    Returns:
+        Dict mapping ``"child:<hwnd>"`` to the window text.
+        Empty dict on non-Windows or failure.
+    """
+    import platform as _plat
+
+    texts: dict[str, str] = {}
+    if _plat.system() != "Windows":
+        return texts
+
+    try:
+        import ctypes
+        import ctypes.wintypes
+
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+
+        # Resolve target window handle
+        target_hwnd = hwnd or 0
+        if not target_hwnd:
+            target_hwnd = user32.GetForegroundWindow()
+        if not target_hwnd:
+            return texts
+
+        # Enumerate child windows and collect their text
+        collected: list[tuple[int, str]] = []
+        buf = ctypes.create_unicode_buffer(512)
+
+        @ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+        def _enum_callback(child_hwnd, _lparam):
+            if len(collected) >= max_children:
+                return False
+            length = user32.GetWindowTextLengthW(child_hwnd)
+            if length > 0:
+                user32.GetWindowTextW(child_hwnd, buf, min(length + 1, 512))
+                text = buf.value
+                if text:
+                    collected.append((child_hwnd, text))
+            return True
+
+        user32.EnumChildWindows(target_hwnd, _enum_callback, 0)
+
+        for child_hwnd_val, text in collected:
+            texts[f"child:{child_hwnd_val}"] = text
+
+        # Also capture the foreground window's own text
+        user32.GetWindowTextW(target_hwnd, buf, 512)
+        if buf.value:
+            texts[f"main:{target_hwnd}"] = buf.value
+
+        # For UWP/XAML apps, child HWNDs may not have meaningful text.
+        # Use a lightweight UIA scan of direct children to capture element
+        # names (e.g., Calculator display "0" → "56").
+        if len(texts) <= 1:
+            try:
+                _uia_texts = _capture_uia_child_names(target_hwnd, max_children)
+                texts.update(_uia_texts)
+            except Exception:
+                pass
+
+    except Exception as exc:
+        logger.debug("UI text capture failed: %s", exc)
+
+    return texts
+
+
+def _capture_uia_child_names(
+    hwnd: int,
+    max_elements: int = 30,
+) -> dict[str, str]:
+    """Capture UIA element names for a window's direct children.
+
+    Lightweight alternative to full tree traversal — only walks depth=2
+    children and collects Name properties.  Used as fallback for UWP apps
+    where Win32 ``GetWindowTextW`` returns nothing on child windows.
+
+    Args:
+        hwnd: Target window handle.
+        max_elements: Maximum elements to inspect.
+
+    Returns:
+        Dict mapping ``"uia:<ControlType>:<AutomationId or Name>"`` to Name.
+    """
+    texts: dict[str, str] = {}
+    try:
+        import comtypes.client  # type: ignore[import-untyped]
+
+        uia = comtypes.client.CreateObject(
+            "{ff48dba4-60ef-4201-aa87-54103eef594e}",
+            interface=None,
+        )
+        root = uia.ElementFromHandle(hwnd)
+        if not root:
+            return texts
+
+        # TreeScope_Children = 2, TreeScope_Descendants would be 4
+        # Use FindAll with TrueCondition to get direct children
+        true_cond = uia.CreateTrueCondition()
+        children = root.FindAll(2, true_cond)  # TreeScope_Children
+        if not children:
+            return texts
+
+        count = min(children.Length, max_elements)
+        for i in range(count):
+            child = children.GetElement(i)
+            name = child.CurrentName or ""
+            if not name:
+                continue
+            aid = child.CurrentAutomationId or ""
+            ctrl_type = child.CurrentControlType
+            key = f"uia:{ctrl_type}:{aid}" if aid else f"uia:{ctrl_type}:{name}"
+            texts[key] = name
+
+            # Also scan one more level (grandchildren) for display elements
+            try:
+                grandchildren = child.FindAll(2, true_cond)
+                if grandchildren:
+                    gc_count = min(grandchildren.Length, max_elements - len(texts))
+                    for j in range(gc_count):
+                        gc = grandchildren.GetElement(j)
+                        gc_name = gc.CurrentName or ""
+                        if not gc_name:
+                            continue
+                        gc_aid = gc.CurrentAutomationId or ""
+                        gc_ctrl = gc.CurrentControlType
+                        gc_key = (
+                            f"uia:{gc_ctrl}:{gc_aid}" if gc_aid
+                            else f"uia:{gc_ctrl}:{gc_name}"
+                        )
+                        texts[gc_key] = gc_name
+                        if len(texts) >= max_elements:
+                            break
+            except Exception:
+                pass
+
+            if len(texts) >= max_elements:
+                break
+
+    except Exception as exc:
+        logger.debug("UIA child name capture failed: %s", exc)
+
+    return texts
 
 
 def _capture_focus_state(backend) -> dict:
@@ -551,5 +745,17 @@ def capture_before_state(
     except Exception as exc:
         logger.debug("Pre-action focus capture failed: %s", exc)
         state["focus"] = None
+
+    # (#263) For click actions, also capture UI texts for fallback verification.
+    # This enables detecting display changes that don't involve focus shifts
+    # (e.g., UWP Calculator buttons update the display without focus change).
+    if action == "click":
+        try:
+            state["ui_texts"] = _capture_ui_texts(
+                backend, app=app, window_title=window_title, hwnd=hwnd,
+            )
+        except Exception as exc:
+            logger.debug("Pre-click UI text capture failed: %s", exc)
+            state["ui_texts"] = None
 
     return state
