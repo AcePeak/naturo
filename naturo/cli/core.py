@@ -59,77 +59,10 @@ def _platform_supports_gui() -> bool:
     return False
 
 
-_ELECTRON_SUSPICION_THRESHOLD = 40
-"""Element count below which a UIA tree is considered suspicious for Electron apps."""
 
 
-def _count_elements(tree) -> int:
-    """Recursively count all elements in an ElementInfo tree."""
-    if tree is None:
-        return 0
-    return 1 + sum(_count_elements(child) for child in (tree.children or []))
 
 
-def _is_electron_candidate(tree) -> bool:
-    """Return True when the element tree looks like an Electron app.
-
-    Electron apps typically expose very few UIA elements because their
-    content lives in a WebView. A suspiciously low element count
-    (below *_ELECTRON_SUSPICION_THRESHOLD*) is treated as a signal.
-
-    Args:
-        tree: Root ElementInfo from the backend, or None.
-
-    Returns:
-        True if the element count is below the threshold.
-    """
-    if tree is None:
-        return False
-    return _count_elements(tree) < _ELECTRON_SUSPICION_THRESHOLD
-
-
-def _get_electron_hint(app_name: str):
-    """Return an Electron hint dict for *app_name*, or None.
-
-    Only meaningful on Windows. Returns None on other platforms or when
-    the app is not detected as Electron.
-
-    Args:
-        app_name: Target application name (e.g. 'feishu', 'slack').
-
-    Returns:
-        A dict with keys is_electron, debug_port, suggestion; or None.
-    """
-    if platform.system() != "Windows":
-        return None
-
-    try:
-        import naturo.electron as _electron
-        info = _electron.detect_electron_app(app_name)
-    except Exception:
-        return None
-
-    if not info.get("is_electron"):
-        return None
-
-    debug_port = info.get("debug_port")
-    if debug_port:
-        suggestion = (
-            f"CDP port {debug_port} available. Use: naturo see --cascade"
-        )
-    else:
-        suggestion = (
-            f"No CDP debug port. Relaunch with --remote-debugging-port to enable full access:\n"
-            f"  naturo electron launch --app '{app_name}' --debug-port 9222\n"
-            f"  Then run: naturo see --cascade"
-        )
-
-    return {
-        "is_electron": True,
-        "app": app_name,
-        "debug_port": debug_port,
-        "suggestion": suggestion,
-    }
 
 
 def _platform_error_msg(feature: str) -> str:
@@ -866,11 +799,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             except Exception:
                 out["dpi_context"] = {"scale_factor": 1.0, "dpi": 96, "note": "Element coordinates are in physical (pixel) space."}
 
-            # Auto-detect Electron apps when element count is suspiciously low
-            if _is_electron_candidate(tree) and app:
-                hint = _get_electron_hint(app)
-                if hint:
-                    out["electron_hint"] = hint
+
 
             click.echo(json_module.dumps(out, indent=2))
         else:
@@ -1499,18 +1428,10 @@ def learn(topic):
     naturo excel info report.xlsx                Used range info
     (Requires Microsoft Excel and pywin32)
 
-  Electron/CEF Apps
-  -----------------
-    naturo electron detect slack                Detect if app is Electron
-    naturo electron list                        List all Electron apps
-    naturo electron connect slack               Connect via CDP
-    naturo electron launch "C:\\App.exe" --port 9229
-    (Enables DOM automation via Chrome DevTools Protocol)
-
-  Chrome DevTools
-  ---------------
-    naturo chrome tabs                          List Chrome tabs
-    naturo chrome tabs --port 9229              Connect to custom port
+  Electron/Chrome (Removed in v0.2.0)
+  ------------------------------------
+    Use Playwright or browser automation tools for Electron/Chrome.
+    Backend modules retained for Unified App Model internal use.
 
   Java Access Bridge (planned)
   ----------------------------

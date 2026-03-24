@@ -199,19 +199,19 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         True,
     ),
     "NOT_ELECTRON": (
-        "The application is not Electron-based. Try running "
-        "`naturo electron list` to see detected Electron apps.",
+        "The application is not Electron-based. Try using Playwright or "
+        "browser automation tools for Electron/Chrome apps.",
         False,
     ),
     "NO_DEBUG_PORT": (
         "The Electron app is running but without remote debugging. Try "
-        "restarting it with --remote-debugging-port=9229 or run "
-        "`naturo electron launch <path> --port 9229`.",
+        "restarting it with --remote-debugging-port=9229. Use Playwright "
+        "or browser automation tools for CDP access.",
         True,
     ),
     "ELECTRON_ERROR": (
-        "An error occurred during Electron app detection. Check that the "
-        "application is running and try `naturo electron detect <app>`.",
+        "An error occurred during Electron app detection. Try using "
+        "Playwright or browser automation tools for Electron/Chrome apps.",
         True,
     ),
 }
