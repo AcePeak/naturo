@@ -750,6 +750,31 @@ class WindowsBackend(Backend):
             properties={},
         )
 
+    # Common app aliases for cross-locale matching.
+    # Maps lowercase alias → set of lowercase patterns to match against
+    # process names (without .exe) and window titles.
+    _APP_ALIASES: dict[str, set[str]] = {
+        "calculator": {"calc", "calculatorapp", "计算器"},
+        "calc": {"calc", "calculatorapp", "计算器"},
+        "计算器": {"calc", "calculatorapp", "calculator"},
+        "notepad": {"notepad", "记事本"},
+        "记事本": {"notepad", "记事本"},
+        "settings": {"systemsettings", "设置"},
+        "设置": {"systemsettings", "settings"},
+        "paint": {"mspaint", "画图"},
+        "画图": {"mspaint", "paint"},
+        "explorer": {"explorer", "文件资源管理器", "file explorer"},
+        "file explorer": {"explorer", "文件资源管理器"},
+        "文件资源管理器": {"explorer", "file explorer"},
+        "edge": {"msedge", "microsoft edge"},
+        "task manager": {"taskmgr", "任务管理器"},
+        "任务管理器": {"taskmgr", "task manager"},
+        "command prompt": {"cmd", "命令提示符"},
+        "命令提示符": {"cmd", "command prompt"},
+        "terminal": {"windowsterminal", "终端"},
+        "终端": {"windowsterminal", "terminal"},
+    }
+
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
                       hwnd: Optional[int] = None) -> int:
@@ -821,6 +846,16 @@ class WindowsBackend(Backend):
                     score = 2  # exact title
                 elif search_lower in title_lower:
                     score = 1  # substring in title
+                # Alias matching: cross-locale app name resolution
+                if score == 0:
+                    aliases = self._APP_ALIASES.get(search_lower, set())
+                    for alias in aliases:
+                        if alias == proc_stem or alias == title_lower:
+                            score = 2  # alias match (same priority as exact title)
+                            break
+                        if alias in proc_stem or alias in title_lower:
+                            score = 1  # alias substring match
+                            break
             else:
                 # --window-title: only match window title
                 if search_lower == title_lower:
