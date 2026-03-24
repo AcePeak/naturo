@@ -618,7 +618,7 @@ def permissions(json_output):
     default="full",
     help="Analysis mode: full (all elements), interactive (clickable only), fast (quick scan)",
 )
-@click.option("--depth", "-d", type=int, default=3, help="Maximum tree depth (1-10)")
+@click.option("--depth", "-d", type=int, default=5, help="Maximum tree depth (1-10)")
 @click.option("--path", "-p", help="Save screenshot to path")
 @click.option("--annotate", is_flag=True, help="Annotate screenshot with element labels")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
