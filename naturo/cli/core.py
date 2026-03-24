@@ -15,16 +15,31 @@ from naturo.errors import WindowNotFoundError
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 
-def _get_backend():
+def _get_backend(json_output: bool = False):
     """Get the platform-appropriate backend.
+
+    Performs a pre-flight check for an interactive desktop session on Windows
+    so that see/find/capture give the same clear error as click/type/press
+    instead of a vague 'No window found' message.
+
+    Args:
+        json_output: When True, emit JSON-formatted error and sys.exit
+            instead of raising an exception for NoDesktopSessionError.
 
     Returns:
         A Backend instance for the current platform.
 
     Raises:
-        RuntimeError: If no backend is available (unsupported platform or
-            missing dependencies like Peekaboo on macOS).
+        click.UsageError: If no interactive desktop session or no backend.
     """
+    from naturo.cli.interaction import _check_desktop_session
+    try:
+        _check_desktop_session()
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+            raise SystemExit(1)
+        raise click.UsageError(str(exc))
     from naturo.backends.base import get_backend
     return get_backend()
 
@@ -201,7 +216,7 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         path = f"naturo-{app_label}-{timestamp}.{fmt}"
 
     try:
-        backend = _get_backend()
+        backend = _get_backend(json_output)
         if hwnd or app or window_title:
             # Resolve app/window_title to hwnd if needed
             target_hwnd = hwnd
@@ -475,7 +490,7 @@ def windows(app, pid, json_output):
         raise SystemExit(1)
 
     try:
-        backend = _get_backend()
+        backend = _get_backend(json_output)
         win_list = backend.list_windows()
 
         # Apply filters
@@ -542,7 +557,7 @@ def screens(json_output):
     whether the monitor is the primary display.
     """
     try:
-        backend = _get_backend()
+        backend = _get_backend(json_output)
         monitors = backend.list_monitors()
 
         if json_output:
@@ -682,7 +697,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         raise SystemExit(1)
 
     try:
-        be = _get_backend()
+        be = _get_backend(json_output)
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
@@ -1024,7 +1039,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         raise SystemExit(1)
 
     try:
-        be = _get_backend()
+        be = _get_backend(json_output)
         tree = be.get_element_tree(app=app, depth=depth, backend=backend)
         if tree is None:
             msg = "No window found or UI tree is empty."
@@ -1233,7 +1248,7 @@ def menu_inspect(app, flat, json_output):
         raise SystemExit(1)
 
     try:
-        backend = _get_backend()
+        backend = _get_backend(json_output)
 
         # BUG-026: Check if app exists before inspecting menus
         if app:

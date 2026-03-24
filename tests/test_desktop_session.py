@@ -149,3 +149,44 @@ class TestIsCurrentSessionInteractive:
         """On Windows, the function should return a boolean."""
         result = _is_current_session_interactive()
         assert isinstance(result, bool)
+
+
+class TestCoreGetBackendDesktopCheck:
+    """Tests that core.py _get_backend checks for interactive desktop (fixes #255).
+
+    Previously, see/find/capture gave vague 'No window found' errors when
+    running without an interactive desktop. Now they show the same clear
+    NoDesktopSessionError that click/type/press already show.
+    """
+
+    def test_raises_usage_error_on_no_desktop(self):
+        """core._get_backend() should raise UsageError when no desktop session."""
+        import click
+        from naturo.cli.core import _get_backend
+
+        with patch("naturo.cli.interaction._check_desktop_session",
+                   side_effect=NoDesktopSessionError()):
+            with pytest.raises(click.UsageError, match="interactive desktop"):
+                _get_backend()
+
+    def test_json_output_exits_on_no_desktop(self):
+        """core._get_backend(json_output=True) should sys.exit with JSON error."""
+        from naturo.cli.core import _get_backend
+
+        with patch("naturo.cli.interaction._check_desktop_session",
+                   side_effect=NoDesktopSessionError()):
+            with pytest.raises(SystemExit):
+                _get_backend(json_output=True)
+
+    def test_passes_when_desktop_available(self):
+        """core._get_backend() should work normally when desktop is available."""
+        from naturo.cli.core import _get_backend
+
+        with patch("naturo.cli.interaction._check_desktop_session"):
+            # On non-Windows (macOS CI), get_backend may raise for other
+            # reasons — we only care that the desktop check passed.
+            try:
+                _get_backend()
+            except Exception as exc:
+                # Any error EXCEPT NoDesktopSessionError is fine
+                assert "interactive desktop" not in str(exc).lower()
