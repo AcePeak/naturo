@@ -1785,7 +1785,7 @@ class WindowsBackend(Backend):
     # System/framework processes to exclude from app list — these have visible
     # windows but are not user-facing applications.
     _SYSTEM_PROCESS_NAMES: set[str] = {
-        "applicationframehost.exe", "textinputhost.exe", "shellexperiencehost.exe",
+        "textinputhost.exe", "shellexperiencehost.exe",
         "searchhost.exe", "startmenuexperiencehost.exe", "lockapp.exe",
         "systemsettings.exe", "gamebar.exe", "gamebarftserver.exe",
         "windowsinternal.composableshell.experiences.textinput.inputapp.exe",
@@ -1795,6 +1795,11 @@ class WindowsBackend(Backend):
         "runtimebroker.exe", "backgroundtaskhost.exe", "taskhostw.exe",
         "smartscreen.exe", "searchui.exe", "shellhost.exe",
     }
+
+    # ApplicationFrameHost.exe hosts UWP apps (Calculator, Settings, etc.).
+    # Unlike other system processes, AFH windows with non-empty titles are
+    # real user-facing apps that should appear in app list.
+    _UWP_HOST_PROCESS: str = "applicationframehost.exe"
 
     def list_apps(self) -> list[dict]:
         """List running applications with visible, non-minimized windows.
@@ -1818,6 +1823,19 @@ class WindowsBackend(Backend):
                 continue
             # Skip windows with empty titles (likely invisible/utility windows)
             if not w.title or not w.title.strip():
+                continue
+            # UWP apps hosted by ApplicationFrameHost.exe: include them
+            # with the window title as the app name (since the process name
+            # is generic and unhelpful).  Don't add to seen_pids — multiple
+            # UWP apps may share one AFH process but each has its own window.
+            if basename == self._UWP_HOST_PROCESS:
+                apps.append({
+                    "name": w.title,
+                    "pid": w.pid,
+                    "title": w.title,
+                    "path": w.process_name,
+                    "process": w.process_name,
+                })
                 continue
             seen_pids.add(w.pid)
             apps.append({
