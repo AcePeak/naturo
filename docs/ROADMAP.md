@@ -121,7 +121,8 @@ See [design doc](design/UNIFIED_APP_MODEL.md).
 - [x] MCP tools for app inspect
 - [x] Integration tests across framework types
 - [x] Element ref caching system (temporary eN → coordinates cache with TTL)
-- [ ] Unified Selector format specification ([design doc](design/UNIFIED_SELECTOR.md))
+- [x] Unified Selector format specification ([design doc](design/UNIFIED_SELECTOR.md))
+- [x] Post-action verification engine (`--verify/--no-verify` on type/click/press, #231)
 
 ## 0.4.0 — Unified Selector Engine + Enterprise Features
 
