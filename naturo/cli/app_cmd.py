@@ -534,7 +534,7 @@ def app_inspect(ctx, name, pid, scan_all, quick, json_output):
             sys.exit(1)
             return
         target_pid = proc.pid
-        target_exe = proc.path or ""
+        target_exe = proc.path or proc.name or ""
         target_name = proc.name or name
 
     result = detect(

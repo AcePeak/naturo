@@ -600,3 +600,21 @@ class TestUwpFrameworkDetection:
 
         # Should fallback to WIN32 on Windows or UNKNOWN on other platforms
         assert frameworks[0].framework_type != FrameworkType.UWP
+
+    def test_uwp_detected_from_bare_proc_name(self):
+        """When proc.path is empty, proc.name (bare exe) should still detect UWP.
+
+        Regression test for #257: UWP protected processes return empty path
+        from find_process(). The fallback passes proc.name (e.g. 'CalculatorApp.exe')
+        as the exe argument, and framework detection must still match it.
+        """
+        from naturo.detect.probes import detect_frameworks_from_dlls
+        from naturo.detect.models import FrameworkType
+        from unittest.mock import patch
+
+        # Simulate what happens when proc.path="" and we fall back to proc.name
+        with patch("naturo.detect.probes._get_process_dlls", return_value=set()):
+            frameworks = detect_frameworks_from_dlls(pid=12345, exe="CalculatorApp.exe")
+
+        assert len(frameworks) >= 1
+        assert frameworks[0].framework_type == FrameworkType.UWP

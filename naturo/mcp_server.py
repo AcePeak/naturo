@@ -493,7 +493,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
                     },
                 }
             target_pid = proc.pid
-            target_exe = proc.path or ""
+            target_exe = proc.path or proc.name or ""
             target_name = proc.name or name
 
         if target_pid is None:
