@@ -99,6 +99,7 @@ class TestGetCLI:
             automation_id=None,
             role=None,
             name=None,
+            app=None,
             window_title=None,
             hwnd=None,
         )
@@ -132,6 +133,7 @@ class TestGetCLI:
             automation_id="txtSearch",
             role=None,
             name=None,
+            app=None,
             window_title=None,
             hwnd=None,
         )
@@ -150,6 +152,7 @@ class TestGetCLI:
             automation_id=None,
             role="Edit",
             name="Search",
+            app=None,
             window_title=None,
             hwnd=None,
         )
@@ -220,6 +223,7 @@ class TestGetCLI:
             automation_id=None,
             role=None,
             name=None,
+            app=None,
             window_title="Notepad",
             hwnd=None,
         )
@@ -240,6 +244,7 @@ class TestGetCLI:
             automation_id=None,
             role=None,
             name=None,
+            app=None,
             window_title=None,
             hwnd=12345,
         )
@@ -258,6 +263,7 @@ class TestGetCLI:
             automation_id="txtSearch",
             role=None,
             name=None,
+            app=None,
             window_title=None,
             hwnd=None,
         )
@@ -276,6 +282,7 @@ class TestGetCLI:
             automation_id=None,
             role=None,
             name=None,
+            app=None,
             window_title=None,
             hwnd=None,
         )

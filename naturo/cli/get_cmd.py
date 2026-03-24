@@ -111,6 +111,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
             automation_id=automation_id,
             role=role,
             name=name,
+            app=app,
             window_title=window_title,
             hwnd=hwnd,
         )

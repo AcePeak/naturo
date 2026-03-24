@@ -199,6 +199,7 @@ class Backend(ABC):
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        app: Optional[str] = None,
         window_title: Optional[str] = None,
         hwnd: Optional[int] = None,
     ) -> Optional[dict]:
@@ -212,6 +213,7 @@ class Backend(ABC):
             automation_id: UIA AutomationId.
             role: Element role (e.g. ``"Edit"``).
             name: Element name.
+            app: Application name (partial match) for window targeting.
             window_title: Window title for targeting.
             hwnd: Window handle.
 

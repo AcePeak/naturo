@@ -1116,6 +1116,7 @@ class WindowsBackend(Backend):
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        app: Optional[str] = None,
         window_title: Optional[str] = None,
         hwnd: Optional[int] = None,
     ) -> Optional[dict]:
@@ -1130,6 +1131,7 @@ class WindowsBackend(Backend):
             automation_id: UIA AutomationId string.
             role: Element role (e.g. ``"Edit"``).
             name: Element name.
+            app: Application name (partial match) for window targeting.
             window_title: Window title for targeting.
             hwnd: Window handle.
 
@@ -1149,8 +1151,8 @@ class WindowsBackend(Backend):
         target_hwnd = hwnd or 0
 
         if ref and not resolved_aid:
-            from naturo.snapshot import SnapshotManager
-            mgr = SnapshotManager()
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
             result = mgr.resolve_ref_element(ref)
             if result:
                 elem, _snap_id = result
@@ -1174,12 +1176,20 @@ class WindowsBackend(Backend):
                     f"Run 'naturo see' first to capture elements."
                 )
 
-        if window_title and not target_hwnd:
-            wins = core.list_windows()
-            for w in wins:
-                if window_title.lower() in (w.title or "").lower():
-                    target_hwnd = w.hwnd
-                    break
+        # Resolve app/window_title to HWND for targeted lookup
+        if (app or window_title) and not target_hwnd:
+            try:
+                target_hwnd = self._resolve_hwnd(
+                    app=app, window_title=window_title
+                )
+            except Exception:
+                # Fall back to scanning windows manually
+                if window_title:
+                    wins = core.list_windows()
+                    for w in wins:
+                        if window_title.lower() in (w.title or "").lower():
+                            target_hwnd = w.hwnd
+                            break
 
         if not resolved_aid and not resolved_role and not resolved_name:
             raise NaturoError(

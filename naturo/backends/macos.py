@@ -540,6 +540,7 @@ class MacOSBackend(Backend):
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        app: Optional[str] = None,
         window_title: Optional[str] = None,
         hwnd: Optional[int] = None,
     ) -> Optional[dict]:

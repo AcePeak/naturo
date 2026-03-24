@@ -119,5 +119,5 @@ class LinuxBackend(Backend):
         raise NotImplementedError("Linux backend coming in Phase 7")
 
     def get_element_value(self, ref=None, automation_id=None, role=None,
-                          name=None, window_title=None, hwnd=None) -> Optional[dict]:
+                          name=None, app=None, window_title=None, hwnd=None) -> Optional[dict]:
         raise NotImplementedError("Linux backend coming in Phase 7")

@@ -743,6 +743,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     title=el.name,
                     label=el.name,
                     value=el.value,
+                    identifier=el.id if el.id else None,
                     frame=(el.x, el.y, el.width, el.height),
                     is_actionable=getattr(el, "is_actionable", False),
                     parent_id=props.get("parent_id", parent_id),
