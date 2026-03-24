@@ -43,6 +43,7 @@ from naturo.cli.diff_cmd import diff
 from naturo.cli.ai import mcp
 from naturo.cli.extensions import excel
 from naturo.cli.electron_cmd import electron, chrome
+from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 
 
 def _patch_json_flag(cmd) -> None:
@@ -149,6 +150,9 @@ main.add_command(excel)
 # ── Phase 5C: Electron/CDP ──────────────────────
 main.add_command(electron)
 main.add_command(chrome)
+
+# ── Config / Credentials ────────────────────────
+main.add_command(_config_cmd_group, "config")
 
 # Replace stub app subcommands with working implementations
 app.add_command(app_launch, "launch")

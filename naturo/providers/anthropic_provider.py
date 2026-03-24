@@ -1,13 +1,22 @@
 """Anthropic (Claude) vision provider for Naturo.
 
 Uses the Anthropic Messages API with vision capability to analyze screenshots.
-Requires ANTHROPIC_API_KEY environment variable.
+
+Auth modes (in priority order):
+1. ``api_key`` constructor argument (explicit override)
+2. ``ANTHROPIC_API_KEY`` environment variable (pay-per-use)
+3. ``ANTHROPIC_AUTH_TOKEN`` environment variable (subscription/OAuth session token)
+4. ``~/.config/naturo/credentials.json`` — ``anthropic.token`` field
+
+The session token path (2 and 3) is intended for Anthropic Pro/Max subscribers
+who authenticate via browser OAuth rather than paying per-token.
 """
 from __future__ import annotations
 
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Optional
 
 from naturo.errors import AIAnalysisFailedError, AIProviderUnavailableError
@@ -21,6 +30,73 @@ from naturo.providers.base import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "claude-sonnet-4-20250514"
+
+# Credentials file location
+_CREDENTIALS_PATH: Path = Path.home() / ".config" / "naturo" / "credentials.json"
+
+
+def _load_credentials() -> dict:
+    """Load credentials from ``~/.config/naturo/credentials.json``.
+
+    Returns an empty dict if the file does not exist or cannot be parsed.
+    """
+    try:
+        if _CREDENTIALS_PATH.exists():
+            return json.loads(_CREDENTIALS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.debug("Could not read credentials file %s: %s", _CREDENTIALS_PATH, exc)
+    return {}
+
+
+def _save_credentials(data: dict) -> None:
+    """Write credentials dict to ``~/.config/naturo/credentials.json`` atomically."""
+    import tempfile
+    _CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=_CREDENTIALS_PATH.parent,
+        prefix=".tmp_",
+        suffix=".json",
+        delete=False,
+    ) as tmp:
+        json.dump(data, tmp, indent=2, ensure_ascii=False)
+        tmp_path = tmp.name
+    try:
+        os.replace(tmp_path, _CREDENTIALS_PATH)
+    except OSError:
+        os.unlink(tmp_path)
+        raise
+
+
+def _resolve_auth() -> tuple[str, str]:
+    """Resolve the best available Anthropic credentials.
+
+    Returns
+    -------
+    (auth_mode, token)
+        *auth_mode* is ``"api_key"`` or ``"oauth"``.
+        *token* is the raw credential string (empty string if none found).
+    """
+    # 1. ANTHROPIC_API_KEY env var (traditional API key)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if api_key:
+        return ("api_key", api_key)
+
+    # 2. ANTHROPIC_AUTH_TOKEN env var (session / OAuth token)
+    auth_token = os.environ.get("ANTHROPIC_AUTH_TOKEN", "")
+    if auth_token:
+        return ("oauth", auth_token)
+
+    # 3. Credentials file
+    creds = _load_credentials()
+    anthropic_creds = creds.get("anthropic", {})
+    stored_token = anthropic_creds.get("token", "")
+    stored_mode = anthropic_creds.get("auth_mode", "api_key")
+    if stored_token:
+        return (stored_mode, stored_token)
+
+    return ("api_key", "")
 _DEFAULT_DESCRIBE_PROMPT = """\
 Analyze this screenshot and describe what you see. Include:
 1. The application name and window state
@@ -45,11 +121,24 @@ Return ONLY the JSON object, no other text."""
 class AnthropicVisionProvider:
     """Anthropic Claude vision provider.
 
-    Uses Claude's vision capability to analyze screenshots and identify UI elements.
+    Supports two authentication modes:
+
+    * **API key** — ``ANTHROPIC_API_KEY`` env var or ``api_key`` constructor arg.
+      Standard pay-per-use access.
+    * **OAuth / session token** — ``ANTHROPIC_AUTH_TOKEN`` env var or the
+      ``anthropic.token`` field in ``~/.config/naturo/credentials.json``.
+      For Anthropic Pro/Max subscribers who sign in via browser.
+
+    Auth resolution order (highest to lowest priority):
+    1. ``api_key`` constructor argument
+    2. ``ANTHROPIC_API_KEY`` environment variable
+    3. ``ANTHROPIC_AUTH_TOKEN`` environment variable
+    4. ``~/.config/naturo/credentials.json``
 
     Args:
-        api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var).
-        model: Model name (defaults to claude-sonnet-4-20250514).
+        api_key: Explicit API key (overrides all env-var / file-based auth).
+        model: Model name (defaults to ``claude-sonnet-4-20250514`` or
+            ``NATURO_AI_MODEL`` env var).
     """
 
     def __init__(
@@ -57,7 +146,11 @@ class AnthropicVisionProvider:
         api_key: Optional[str] = None,
         model: Optional[str] = None,
     ) -> None:
-        self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        if api_key:
+            self._auth_mode = "api_key"
+            self._token = api_key
+        else:
+            self._auth_mode, self._token = _resolve_auth()
         self._model = model or os.environ.get("NATURO_AI_MODEL", _DEFAULT_MODEL)
 
     @property
@@ -66,18 +159,24 @@ class AnthropicVisionProvider:
         return "anthropic"
 
     @property
+    def auth_mode(self) -> str:
+        """Active authentication mode: ``'api_key'`` or ``'oauth'``."""
+        return self._auth_mode
+
+    @property
     def is_available(self) -> bool:
-        """Whether the Anthropic API key is configured."""
-        return bool(self._api_key)
+        """Whether any Anthropic credentials are configured."""
+        return bool(self._token)
 
     def _get_client(self) -> Any:
         """Get or create Anthropic client.
 
         Returns:
-            Anthropic client instance.
+            Anthropic client instance configured with the active auth mode.
 
         Raises:
-            AIProviderUnavailableError: anthropic package not installed.
+            AIProviderUnavailableError: anthropic package not installed or
+                no credentials configured.
         """
         try:
             import anthropic
@@ -86,7 +185,30 @@ class AnthropicVisionProvider:
                 provider="anthropic",
                 suggested_action="Install anthropic: pip install anthropic",
             )
-        return anthropic.Anthropic(api_key=self._api_key)
+        if not self._token:
+            raise AIProviderUnavailableError(
+                provider="anthropic",
+                suggested_action=(
+                    "Set ANTHROPIC_API_KEY (API key) or ANTHROPIC_AUTH_TOKEN "
+                    "(subscription/OAuth token), or run: naturo config setup anthropic"
+                ),
+            )
+
+        if self._auth_mode == "oauth":
+            # Session tokens use the same Anthropic SDK but are passed as
+            # the api_key parameter with the "Bearer" scheme internally.
+            # The Anthropic Python SDK >= 0.50 accepts auth_token for OAuth flows.
+            try:
+                return anthropic.Anthropic(auth_token=self._token)
+            except TypeError:
+                # Older SDK versions: fall back to api_key param
+                logger.debug(
+                    "anthropic SDK does not support auth_token kwarg; "
+                    "falling back to api_key for OAuth token"
+                )
+                return anthropic.Anthropic(api_key=self._token)
+
+        return anthropic.Anthropic(api_key=self._token)
 
     def describe_screenshot(
         self,
