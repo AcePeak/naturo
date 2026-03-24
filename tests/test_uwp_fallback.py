@@ -239,6 +239,31 @@ class TestUwpElementTreeFallback:
         assert result is not None
         assert backend._core.get_element_tree.call_count == 1
 
+class TestClickElementUia:
+    """Tests for click_element_uia UWP click fallback (#248)."""
+
+    def test_click_element_uia_returns_false_on_non_windows(self, backend):
+        """Should return False gracefully on non-Windows (no comtypes)."""
+        import sys
+        if sys.platform == "win32":
+            pytest.skip("Test only applicable on non-Windows")
+        result = backend.click_element_uia(x=100, y=200)
+        assert result is False
+
+    def test_click_element_uia_method_exists(self, backend):
+        """Backend should have click_element_uia method."""
+        assert hasattr(backend, "click_element_uia")
+
+    def test_click_element_uia_handles_import_error(self, backend):
+        """Should return False when comtypes is not available."""
+        with patch.object(backend, "_init_comtypes_uia", side_effect=ImportError("no comtypes")):
+            result = backend.click_element_uia(x=100, y=200)
+        assert result is False
+
+
+class TestWinui3DesktopWindowXamlSource:
+    """Tests for WinUI 3 DesktopWindowXamlSource child window support."""
+
     def test_winui3_desktop_window_xaml_source(self, backend):
         """Should find WinUI 3 apps that use DesktopWindowXamlSource."""
         empty_root = _make_element(role="Pane", name="", children=[])

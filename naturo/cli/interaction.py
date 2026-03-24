@@ -580,10 +580,14 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     # (#226) When UIA routing is active and --app is specified, ensure
     # the target window has focus via UIA before sending mouse input.
     _uia_method = route_info.get("method") == "uia" if route_info else False
+    _is_uwp = False  # Track UWP apps for UIA click fallback (#248)
     if _uia_method and (app or hwnd) and hasattr(backend, "focus_element_uia"):
         try:
             _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
             if _target_hwnd:
+                # Detect if target is a UWP app (#248)
+                if hasattr(backend, "_is_applicationframehost"):
+                    _is_uwp = backend._is_applicationframehost(_target_hwnd)
                 import ctypes
                 SW_RESTORE = 9
                 if backend._is_iconic(_target_hwnd):
@@ -631,8 +635,20 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
             backend.click(element_id=target_id, button=button, double=double,
                           input_mode=input_mode)
         else:
-            backend.click(x=x, y=y, button=button, double=double,
-                          input_mode=input_mode)
+            # (#248) UWP apps: SendInput clicks don't reach content inside
+            # ApplicationFrameHost.  Try UIA InvokePattern first for
+            # coordinate-based clicks on UWP apps.
+            _used_uia_click = False
+            if _is_uwp and x is not None and y is not None and button == "left" and not double:
+                if hasattr(backend, "click_element_uia"):
+                    _used_uia_click = backend.click_element_uia(
+                        x=x, y=y, app=app, hwnd=hwnd,
+                    )
+                    if _used_uia_click:
+                        logger.info("UWP click: used UIA InvokePattern at (%d, %d)", x, y)
+            if not _used_uia_click:
+                backend.click(x=x, y=y, button=button, double=double,
+                              input_mode=input_mode)
     except Exception as exc:
         _json_err(str(exc), json_output)
         return
@@ -648,6 +664,9 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data = {"action": action, "target": str(loc), "button": button}
+    # (#248) Indicate UIA click was used for UWP apps
+    if _is_uwp and locals().get("_used_uia_click"):
+        result_data["uwp_uia_click"] = True
     if route_info:
         result_data["routing"] = route_info
 

@@ -473,3 +473,29 @@ class TestNativeCoreInit:
 
         # Cleanup
         probes_mod._native_core = None
+
+
+class TestFindMainWindowUwp:
+    """Tests for _find_main_window UWP/ApplicationFrameHost support (#249)."""
+
+    def test_returns_none_non_windows(self):
+        """Should return None on non-Windows platforms."""
+        if platform.system() == "Windows":
+            pytest.skip("Only tests non-Windows behavior")
+        from naturo.detect.probes import _find_main_window
+        assert _find_main_window(pid=12345) is None
+
+    def test_frame_hosts_pid_helper(self):
+        """_frame_hosts_pid should detect child windows with matching PID."""
+        if platform.system() != "Windows":
+            pytest.skip("Windows-only test")
+
+        from naturo.detect.probes import _frame_hosts_pid
+        import ctypes
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        # We can't easily mock EnumChildWindows, but we can test it
+        # against the desktop window (should not crash, may return False)
+        desktop_hwnd = user32.GetDesktopWindow()
+        result = _frame_hosts_pid(user32, desktop_hwnd, 0)
+        assert isinstance(result, bool)

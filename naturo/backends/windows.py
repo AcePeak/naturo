@@ -1404,6 +1404,93 @@ class WindowsBackend(Backend):
 
         core.mouse_click(btn, double)
 
+    def click_element_uia(
+        self,
+        x: int,
+        y: int,
+        app: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> bool:
+        """Click a UI element at (x, y) using UIA patterns instead of SendInput.
+
+        For UWP apps hosted by ApplicationFrameHost.exe, SendInput clicks
+        don't reach the inner content.  This method uses UIA to find the
+        element at the given point and invokes it via InvokePattern,
+        TogglePattern, or SelectionItemPattern (#248).
+
+        Args:
+            x: Screen X coordinate of the target element center.
+            y: Screen Y coordinate of the target element center.
+            app: Application name (used to resolve window handle).
+            hwnd: Direct window handle.
+
+        Returns:
+            True if UIA invoke succeeded, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception) as exc:
+            logger.debug("comtypes not available for UIA click: %s", exc)
+            return False
+
+        try:
+            import ctypes
+            from ctypes import wintypes
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            # Use UIA.ElementFromPoint to find the element at coordinates
+            point = wintypes.POINT(x, y)
+            element = uia.ElementFromPoint(point)
+            if element is None:
+                logger.debug("UIA click: no element found at (%d, %d)", x, y)
+                return False
+
+            elem_name = element.CurrentName or ""
+            logger.debug("UIA click: found element %r at (%d, %d)", elem_name, x, y)
+
+            # Try InvokePattern first (buttons, links, menu items)
+            try:
+                pattern = element.GetCurrentPattern(mod.UIA_InvokePatternId)
+                if pattern is not None:
+                    invoke = pattern.QueryInterface(mod.IUIAutomationInvokePattern)
+                    invoke.Invoke()
+                    logger.info("UIA click: invoked %r via InvokePattern", elem_name)
+                    return True
+            except (COMError, AttributeError):
+                pass
+
+            # Try TogglePattern (checkboxes, toggle buttons)
+            try:
+                pattern = element.GetCurrentPattern(mod.UIA_TogglePatternId)
+                if pattern is not None:
+                    toggle = pattern.QueryInterface(mod.IUIAutomationTogglePattern)
+                    toggle.Toggle()
+                    logger.info("UIA click: toggled %r via TogglePattern", elem_name)
+                    return True
+            except (COMError, AttributeError):
+                pass
+
+            # Try SelectionItemPattern (radio buttons, list items)
+            try:
+                pattern = element.GetCurrentPattern(mod.UIA_SelectionItemPatternId)
+                if pattern is not None:
+                    sel = pattern.QueryInterface(mod.IUIAutomationSelectionItemPattern)
+                    sel.Select()
+                    logger.info("UIA click: selected %r via SelectionItemPattern", elem_name)
+                    return True
+            except (COMError, AttributeError):
+                pass
+
+            logger.debug(
+                "UIA click: element %r at (%d, %d) supports no invoke/toggle/select pattern",
+                elem_name, x, y,
+            )
+            return False
+
+        except Exception as exc:
+            logger.debug("UIA click failed at (%d, %d): %s", x, y, exc)
+            return False
+
     def invoke_element(self, name: str, role: str) -> bool:
         """Invoke a UI element by name and role using UIA InvokePattern.
 

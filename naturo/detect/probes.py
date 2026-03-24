@@ -557,6 +557,12 @@ def probe_vision(pid: int, exe: str, hwnd: Optional[int] = None) -> InteractionM
 def _find_main_window(pid: int) -> Optional[int]:
     """Find the main window handle for a process.
 
+    For UWP apps hosted by ApplicationFrameHost.exe, the visible window
+    belongs to ApplicationFrameHost, not the actual app process (e.g.,
+    CalculatorApp.exe).  When no direct match is found, this function
+    checks for an ApplicationFrameHost window whose child process matches
+    the target PID (#249).
+
     Args:
         pid: Process ID.
 
@@ -571,21 +577,79 @@ def _find_main_window(pid: int) -> Optional[int]:
         from ctypes import wintypes
 
         user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
         found_hwnd = ctypes.c_void_p(0)
+        frame_hwnds: list = []  # ApplicationFrameHost windows
 
         @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
         def enum_callback(hwnd, lparam):
             window_pid = wintypes.DWORD()
             user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+            if not user32.IsWindowVisible(hwnd):
+                return True
+
             if window_pid.value == pid:
-                if user32.IsWindowVisible(hwnd):
-                    found_hwnd.value = hwnd
-                    return False  # Stop enumeration
+                found_hwnd.value = hwnd
+                return False  # Stop enumeration
+
+            # Track ApplicationFrameHost windows for UWP fallback (#249)
+            cls_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, cls_buf, 256)
+            if cls_buf.value == "ApplicationFrameWindow":
+                frame_hwnds.append((int(hwnd), window_pid.value))
+
             return True
 
         user32.EnumWindows(enum_callback, 0)
-        return found_hwnd.value or None
+
+        if found_hwnd.value:
+            return found_hwnd.value
+
+        # UWP fallback (#249): no direct window found for this PID.
+        # Check if any ApplicationFrameHost window hosts a child whose
+        # owning PID matches the target.  UWP apps have a child window
+        # (class "Windows.UI.Core.CoreWindow") owned by the actual app
+        # process inside the ApplicationFrameHost top-level window.
+        if frame_hwnds:
+            for frame_hwnd, _frame_pid in frame_hwnds:
+                if _frame_hosts_pid(user32, frame_hwnd, pid):
+                    return frame_hwnd
+
+        return None
 
     except Exception as exc:
         logger.debug("Failed to find main window for PID %d: %s", pid, exc)
         return None
+
+
+def _frame_hosts_pid(user32, frame_hwnd: int, target_pid: int) -> bool:
+    """Check if an ApplicationFrameHost window hosts a child with the target PID.
+
+    Enumerates child windows of the given frame window and checks if any
+    belong to the target process.
+
+    Args:
+        user32: ctypes user32 DLL handle.
+        frame_hwnd: Handle of the ApplicationFrameHost top-level window.
+        target_pid: Process ID to look for among child windows.
+
+    Returns:
+        True if a child window owned by target_pid is found.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    found = ctypes.c_bool(False)
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def child_callback(child_hwnd, lparam):
+        child_pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(child_hwnd, ctypes.byref(child_pid))
+        if child_pid.value == target_pid:
+            found.value = True
+            return False  # Stop enumeration
+        return True
+
+    user32.EnumChildWindows(frame_hwnd, child_callback, 0)
+    return found.value
