@@ -70,10 +70,11 @@ class TestCLIFunctionalWindows:
     def test_list_windows_json(self, runner):
         """'naturo list windows --json' should produce valid JSON."""
         import json
+        from tests.conftest import cli_stdout
 
         result = runner.invoke(main, ["list", "windows", "--json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = json.loads(cli_stdout(result))
         assert isinstance(data, dict)
         assert data["success"] is True
         assert isinstance(data["windows"], list)
