@@ -348,10 +348,12 @@ class TestAppListFiltering:
         from naturo.backends.windows import WindowsBackend
         excluded = WindowsBackend._SYSTEM_PROCESS_NAMES
         # Key system processes should be excluded
-        assert "applicationframehost.exe" in excluded
         assert "textinputhost.exe" in excluded
         assert "dwm.exe" in excluded
         assert "csrss.exe" in excluded
+        # ApplicationFrameHost is NOT in blocklist — UWP apps with titles are included
+        assert "applicationframehost.exe" not in excluded
+        assert WindowsBackend._UWP_HOST_PROCESS == "applicationframehost.exe"
         # Normal apps should NOT be in the exclusion list
         assert "notepad.exe" not in excluded
         assert "chrome.exe" not in excluded
@@ -388,8 +390,11 @@ class TestAppListFiltering:
         with patch.object(backend, "list_windows", return_value=[mock_win_visible, mock_win_empty, mock_win_system]):
             apps = backend.list_apps()
 
-        # Only notepad should survive filtering
-        assert len(apps) == 1
+        # Notepad + UWP app (ApplicationFrameHost with title) should survive
+        assert len(apps) == 2
         assert apps[0]["name"] == "notepad.exe"
+        # UWP app uses window title as name
+        assert apps[1]["name"] == "Some Frame"
+        assert apps[1]["process"] == "ApplicationFrameHost.exe"
         assert apps[0]["pid"] == 100
         assert apps[0]["path"] == "notepad.exe"
