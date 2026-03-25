@@ -771,8 +771,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # (#295) Expose AutomationId separately.  The raw
                 # el.id from the bridge may be an AutomationId or a
                 # tree-assigned "eN" placeholder.  Filter placeholders.
+                import re as _re_local
                 raw_id = str(el.id) if el.id else ""
-                automation_id = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+                automation_id = raw_id if raw_id and not _re_local.fullmatch(r"e\d+", raw_id) else ""
 
                 d = {
                     "id": display_id,
