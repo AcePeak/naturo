@@ -22,6 +22,19 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Control class names that benefit from UIA probing to reveal internal structure.
+# These controls contain virtual items (rows, cells) that are not real HWNDs,
+# so Win32 enumeration sees them as leaf nodes while UIA exposes their content.
+HYBRID_UIA_PROBE_CLASSES = {
+    "VSFlexGrid8N",                 # ComponentOne VSFlexGrid (VB6/ActiveX)
+    "VSFlexGrid8U",                 # ComponentOne VSFlexGrid Unicode
+    "SysListView32",                # Win32 ListView (virtual items)
+    "SysTreeView32",                # Win32 TreeView
+    "SysTabControl32",              # Win32 Tab control
+    "AfxOleControl42u",             # OLE embedded ActiveX control
+    "WindowsForms10.DataGridView",  # .NET DataGridView
+}
+
 
 class WindowsBackend(Backend):
     """Windows automation via naturo_core.dll.
@@ -1408,6 +1421,130 @@ class WindowsBackend(Backend):
 
         return False
 
+
+    def _hybrid_get_element_tree(
+        self, handle: int, depth: int
+    ) -> "Optional[BaseElementInfo]":
+        """Build a hybrid Win32+UIA element tree for VB6/ActiveX windows.
+
+        Strategy:
+        1. Use Win32 HWND enumeration to build the full control skeleton.
+        2. Walk the tree; for each node in HYBRID_UIA_PROBE_CLASSES (or any
+           leaf node), attempt a UIA sub-tree query via the C++ engine.
+        3. If UIA returns meaningful children, attach them to the node.
+        4. Tag all elements with a ``source`` property: "win32" or "uia".
+
+        This gives far better coverage than either approach alone:
+        - Win32 sees 500+ HWNDs that UIA collapses into opaque Pane nodes.
+        - UIA sees VSFlexGrid rows/cells that Win32 cannot enumerate.
+
+        Args:
+            handle: Parent window handle (HWND).
+            depth: Maximum tree depth.
+
+        Returns:
+            Merged ElementInfo tree, or None if Win32 enumeration fails.
+        """
+        import platform as _platform
+        if _platform.system() != "Windows":
+            return None
+
+        from naturo.bridge import enumerate_child_windows
+
+        # Build Win32 skeleton
+        win32_root = enumerate_child_windows(hwnd=handle, depth=depth)
+        if win32_root is None:
+            # Win32 failed — fall back to straight UIA
+            core = self._ensure_core()
+            uia_result = core.get_element_tree(hwnd=handle, depth=depth)
+            return uia_result
+
+        core = self._ensure_core()
+
+        def _extract_class_name(name: str) -> str:
+            """Extract the Win32 class name from a display name like 'Title [ClassName]'."""
+            if name and "[" in name and name.endswith("]"):
+                return name[name.rfind("[") + 1:-1]
+            return ""
+
+        def _should_probe_uia(node) -> bool:
+            """Return True if we should attempt UIA probing for this node."""
+            cls = _extract_class_name(node.name or "")
+            if cls in HYBRID_UIA_PROBE_CLASSES:
+                return True
+            # Also probe leaf nodes (no child HWNDs)
+            return len(node.children) == 0
+
+        def _uia_depth_for(node) -> int:
+            """Determine UIA probe depth based on node type."""
+            cls = _extract_class_name(node.name or "")
+            # Known complex controls get deeper UIA traversal
+            if cls in HYBRID_UIA_PROBE_CLASSES:
+                return 3
+            # Leaf nodes get a shallower probe to limit overhead
+            return 2
+
+        def _tag_source(node, source: str) -> None:
+            """Recursively tag all nodes in a subtree with the given source."""
+            node._hybrid_source = source
+            for child in node.children:
+                _tag_source(child, source)
+
+        def _merge_uia_children(win32_node, uia_children) -> None:
+            """Replace win32_node.children with UIA-sourced children."""
+            for child in uia_children:
+                _tag_source(child, "uia")
+            win32_node.children = list(uia_children)
+
+        def _walk_and_probe(node) -> None:
+            """Walk the Win32 tree and optionally fill with UIA sub-trees."""
+            # Tag the win32 node
+            node._hybrid_source = "win32"
+
+            if not _should_probe_uia(node):
+                # Recurse into existing children
+                for child in node.children:
+                    _walk_and_probe(child)
+                return
+
+            # Attempt UIA probe
+            node_hwnd = node.hwnd
+            if not node_hwnd:
+                # No hwnd available — just tag existing children
+                for child in node.children:
+                    _walk_and_probe(child)
+                return
+
+            uia_depth = _uia_depth_for(node)
+            try:
+                uia_result = core.get_element_tree(hwnd=node_hwnd, depth=uia_depth)
+            except Exception as exc:
+                logger.debug(
+                    "Hybrid: UIA probe failed for hwnd=%s (class=%s): %s",
+                    node_hwnd,
+                    _extract_class_name(node.name or ""),
+                    exc,
+                )
+                uia_result = None
+
+            if uia_result is not None and uia_result.children:
+                logger.debug(
+                    "Hybrid: UIA added %d children to hwnd=%s (%s)",
+                    len(uia_result.children),
+                    node_hwnd,
+                    _extract_class_name(node.name or ""),
+                )
+                _merge_uia_children(node, uia_result.children)
+            else:
+                # No useful UIA data — recurse into existing Win32 children
+                for child in node.children:
+                    _walk_and_probe(child)
+
+        # Walk and probe the Win32 tree
+        _walk_and_probe(win32_root)
+
+        return win32_root
+
     def get_element_tree(self, window_title: Optional[str] = None,
                          depth: int = 3,
                          app: Optional[str] = None,
@@ -1487,6 +1624,9 @@ class WindowsBackend(Backend):
             # Pure Win32 HWND enumeration (VB6/ActiveX fallback)
             from naturo.bridge import enumerate_child_windows
             result = enumerate_child_windows(hwnd=handle, depth=depth)
+        elif backend == "hybrid":
+            # Win32+UIA hybrid: HWND skeleton + UIA fill for complex controls
+            result = self._hybrid_get_element_tree(handle, depth)
         elif backend == "auto":
             result = core.get_element_tree(hwnd=handle, depth=depth)
             # UWP/WinUI fallback: try child windows of AFH
@@ -1495,23 +1635,23 @@ class WindowsBackend(Backend):
                 lambda h, d: core.get_element_tree(hwnd=h, depth=d),
             )
             
-            # Win32 HWND fallback for VB6/ActiveX apps (Issue #308)
+            # Win32+UIA hybrid fallback for VB6/ActiveX apps (Issue #308, #312)
             # When UIA/MSAA return shallow trees (only Pane containers),
-            # fall back to EnumChildWindows
+            # upgrade to the hybrid mode: HWND skeleton + UIA fill for complex
+            # controls like VSFlexGrid that have virtual row/cell elements.
             if result is not None and self._is_shallow_tree(result):
                 logger.info(
                     "UIA/MSAA returned shallow tree (%d children), "
-                    "trying Win32 HWND enumeration fallback (VB6/ActiveX)",
-                    len(result.children)
+                    "upgrading to Win32+UIA hybrid mode (VB6/ActiveX)",
+                    len(result.children),
                 )
-                from naturo.bridge import enumerate_child_windows
-                win32_result = enumerate_child_windows(hwnd=handle, depth=depth)
-                if win32_result is not None and len(win32_result.children) > len(result.children):
+                hybrid_result = self._hybrid_get_element_tree(handle, depth)
+                if hybrid_result is not None and len(hybrid_result.children) > len(result.children):
                     logger.info(
-                        "Win32 fallback found %d children (vs %d from UIA/MSAA), using it",
-                        len(win32_result.children), len(result.children)
+                        "Hybrid mode found %d children (vs %d from UIA/MSAA), using it",
+                        len(hybrid_result.children), len(result.children),
                     )
-                    result = win32_result
+                    result = hybrid_result
             
             if result is None or (not result.children and not result.name):
                 # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
@@ -1550,6 +1690,20 @@ class WindowsBackend(Backend):
 
         def convert(el) -> BaseElementInfo:
             """Convert bridge ElementInfo to backend ElementInfo."""
+            props: dict = {
+                k: v for k, v in {
+                    "parent_id": el.parent_id,
+                    "keyboard_shortcut": el.keyboard_shortcut,
+                }.items() if v is not None
+            }
+            # Preserve HWND for elements that carry it (Win32 HWND nodes)
+            el_hwnd = getattr(el, "hwnd", None)
+            if el_hwnd is not None:
+                props["hwnd"] = el_hwnd
+            # Preserve hybrid source tag injected by _hybrid_get_element_tree
+            source = getattr(el, "_hybrid_source", None)
+            if source is not None:
+                props["source"] = source
             return BaseElementInfo(
                 id=el.id,
                 role=el.role,
@@ -1560,12 +1714,7 @@ class WindowsBackend(Backend):
                 width=el.width,
                 height=el.height,
                 children=[convert(c) for c in el.children],
-                properties={
-                    k: v for k, v in {
-                        "parent_id": el.parent_id,
-                        "keyboard_shortcut": el.keyboard_shortcut,
-                    }.items() if v is not None
-                },
+                properties=props,
             )
 
         return convert(result)
