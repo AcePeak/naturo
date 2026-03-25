@@ -107,7 +107,7 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "::group::pip install"
-          pip install -e ".[dev,mcp,annotate]" pywin32 2>&1
+          pip install -e ".[dev,mcp,annotate]" pywin32 comtypes 2>&1
           echo "::endgroup::"
           echo "::group::pywin32 postinstall"
           # pywin32 postinstall registers COM DLLs and copies pywintypes DLLs.
