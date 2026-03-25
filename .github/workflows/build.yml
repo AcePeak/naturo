@@ -104,15 +104,61 @@ jobs:
 
       - name: Install package
         shell: bash
+        timeout-minutes: 5
         run: |
-          pip install -e ".[dev,mcp,annotate]" pywin32
-          python -c "import pywin32_postinstall; pywin32_postinstall.install()" 2>/dev/null || true
+          echo "::group::pip install"
+          pip install -e ".[dev,mcp,annotate]" pywin32 2>&1
+          echo "::endgroup::"
+          echo "::group::pywin32 postinstall"
+          python -c "import pywin32_postinstall; pywin32_postinstall.install()" 2>&1 || true
+          echo "::endgroup::"
+
+      - name: Verify environment
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          python -c "
+          import sys, time
+          modules = ['naturo', 'pytest', 'win32api', 'win32con', 'comtypes', 'ctypes']
+          for mod in modules:
+              t0 = time.time()
+              try:
+                  __import__(mod)
+                  dt = time.time() - t0
+                  print(f'  OK {mod} ({dt:.2f}s)')
+              except ImportError as e:
+                  dt = time.time() - t0
+                  print(f'  FAIL {mod} ({dt:.2f}s): {e}')
+          "
+          python -c "
+          from naturo.core import dll
+          if dll._dll:
+              print(f'DLL loaded: {dll._dll_path}, version: {dll.version()}')
+          else:
+              print('DLL not loaded')
+          " 2>&1 || true
+
+      - name: Collect tests (dry run)
+        shell: bash
+        timeout-minutes: 3
+        run: |
+          echo "Collecting tests to detect import-phase hangs..."
+          pytest --collect-only -q -m "not ui and not integration" 2>&1 | tail -5
 
       - name: Run all tests
-        run: pytest -v -m "not ui and not integration" --timeout=30 --timeout-method=thread -x
-        timeout-minutes: 8
+        shell: bash
+        timeout-minutes: 5
+        run: pytest -v -m "not ui and not integration" --timeout=30 --timeout-method=thread -x --tb=short 2>&1 | tee pytest-output.txt
         env:
           PYTEST_TIMEOUT: "30"
+
+      - name: Upload test log on failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v5
+        with:
+          name: pytest-output
+          path: pytest-output.txt
+          retention-days: 7
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v5

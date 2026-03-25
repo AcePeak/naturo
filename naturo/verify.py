@@ -512,8 +512,18 @@ def _capture_ui_texts(
 
         user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
-        # Resolve target window handle
+        # Resolve target window handle.
+        # Use the backend's _resolve_hwnd when available (#266) — this
+        # matches the same window that click/type commands target,
+        # avoiding capture from the wrong (foreground) window.
         target_hwnd = hwnd or 0
+        if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
+            try:
+                target_hwnd = backend._resolve_hwnd(
+                    app=app, window_title=window_title,
+                )
+            except Exception:
+                pass
         if not target_hwnd:
             target_hwnd = user32.GetForegroundWindow()
         if not target_hwnd:
