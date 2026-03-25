@@ -557,6 +557,7 @@ def _capture_ui_texts(
 def _capture_uia_child_names(
     hwnd: int,
     max_elements: int = 30,
+    timeout_s: float = 3.0,
 ) -> dict[str, str]:
     """Capture UIA element names for a window's direct children.
 
@@ -564,72 +565,92 @@ def _capture_uia_child_names(
     children and collects Name properties.  Used as fallback for UWP apps
     where Win32 ``GetWindowTextW`` returns nothing on child windows.
 
+    The UIA scan runs in a daemon thread with a timeout to prevent hangs
+    on headless CI runners or unresponsive UIA providers.
+
     Args:
         hwnd: Target window handle.
         max_elements: Maximum elements to inspect.
+        timeout_s: Maximum seconds to wait for UIA scan (default 3).
 
     Returns:
         Dict mapping ``"uia:<ControlType>:<AutomationId or Name>"`` to Name.
     """
-    texts: dict[str, str] = {}
-    try:
-        import comtypes.client  # type: ignore[import-untyped]
+    import threading
 
-        uia = comtypes.client.CreateObject(
-            "{ff48dba4-60ef-4201-aa87-54103eef594e}",
-            interface=None,
-        )
-        root = uia.ElementFromHandle(hwnd)
-        if not root:
-            return texts
+    result_holder: dict[str, dict[str, str]] = {}
 
-        # TreeScope_Children = 2, TreeScope_Descendants would be 4
-        # Use FindAll with TrueCondition to get direct children
-        true_cond = uia.CreateTrueCondition()
-        children = root.FindAll(2, true_cond)  # TreeScope_Children
-        if not children:
-            return texts
+    def _scan() -> None:
+        texts: dict[str, str] = {}
+        try:
+            import comtypes.client  # type: ignore[import-untyped]
 
-        count = min(children.Length, max_elements)
-        for i in range(count):
-            child = children.GetElement(i)
-            name = child.CurrentName or ""
-            if not name:
-                continue
-            aid = child.CurrentAutomationId or ""
-            ctrl_type = child.CurrentControlType
-            key = f"uia:{ctrl_type}:{aid}" if aid else f"uia:{ctrl_type}:{name}"
-            texts[key] = name
+            uia = comtypes.client.CreateObject(
+                "{ff48dba4-60ef-4201-aa87-54103eef594e}",
+                interface=None,
+            )
+            root = uia.ElementFromHandle(hwnd)
+            if not root:
+                result_holder["texts"] = texts
+                return
 
-            # Also scan one more level (grandchildren) for display elements
-            try:
-                grandchildren = child.FindAll(2, true_cond)
-                if grandchildren:
-                    gc_count = min(grandchildren.Length, max_elements - len(texts))
-                    for j in range(gc_count):
-                        gc = grandchildren.GetElement(j)
-                        gc_name = gc.CurrentName or ""
-                        if not gc_name:
-                            continue
-                        gc_aid = gc.CurrentAutomationId or ""
-                        gc_ctrl = gc.CurrentControlType
-                        gc_key = (
-                            f"uia:{gc_ctrl}:{gc_aid}" if gc_aid
-                            else f"uia:{gc_ctrl}:{gc_name}"
-                        )
-                        texts[gc_key] = gc_name
-                        if len(texts) >= max_elements:
-                            break
-            except Exception:
-                pass
+            # TreeScope_Children = 2
+            true_cond = uia.CreateTrueCondition()
+            children = root.FindAll(2, true_cond)
+            if not children:
+                result_holder["texts"] = texts
+                return
 
-            if len(texts) >= max_elements:
-                break
+            count = min(children.Length, max_elements)
+            for i in range(count):
+                child = children.GetElement(i)
+                name = child.CurrentName or ""
+                if not name:
+                    continue
+                aid = child.CurrentAutomationId or ""
+                ctrl_type = child.CurrentControlType
+                key = f"uia:{ctrl_type}:{aid}" if aid else f"uia:{ctrl_type}:{name}"
+                texts[key] = name
 
-    except Exception as exc:
-        logger.debug("UIA child name capture failed: %s", exc)
+                # Also scan one more level (grandchildren) for display elements
+                try:
+                    grandchildren = child.FindAll(2, true_cond)
+                    if grandchildren:
+                        gc_count = min(grandchildren.Length, max_elements - len(texts))
+                        for j in range(gc_count):
+                            gc = grandchildren.GetElement(j)
+                            gc_name = gc.CurrentName or ""
+                            if not gc_name:
+                                continue
+                            gc_aid = gc.CurrentAutomationId or ""
+                            gc_ctrl = gc.CurrentControlType
+                            gc_key = (
+                                f"uia:{gc_ctrl}:{gc_aid}" if gc_aid
+                                else f"uia:{gc_ctrl}:{gc_name}"
+                            )
+                            texts[gc_key] = gc_name
+                            if len(texts) >= max_elements:
+                                break
+                except Exception:
+                    pass
 
-    return texts
+                if len(texts) >= max_elements:
+                    break
+
+        except Exception as exc:
+            logger.debug("UIA child name capture failed: %s", exc)
+
+        result_holder["texts"] = texts
+
+    thread = threading.Thread(target=_scan, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_s)
+
+    if "texts" not in result_holder:
+        logger.debug("UIA child name capture timed out after %.1fs", timeout_s)
+        return {}
+
+    return result_holder["texts"]
 
 
 def _capture_focus_state(backend) -> dict:
