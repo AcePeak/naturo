@@ -19,7 +19,7 @@ from naturo.detect.models import (
     ProbeStatus,
 )
 from naturo.detect.cache import DetectionCache
-from naturo.detect.chain import detect
+from naturo.detect.chain import detect, _run_probe_with_timeout, _PROBE_TIMEOUT_SECONDS
 
 
 # ── Models ──────────────────────────────────────────────────────────
@@ -618,3 +618,61 @@ class TestUwpFrameworkDetection:
 
         assert len(frameworks) >= 1
         assert frameworks[0].framework_type == FrameworkType.UWP
+
+
+# ── Probe Timeout ──────────────────────────────────────────────────
+
+
+class TestProbeTimeout:
+    """Tests for the per-probe timeout guard (#288)."""
+
+    def test_fast_probe_returns_result(self):
+        """A probe that completes quickly should return its result."""
+        def fast_probe(pid, exe, hwnd):
+            return InteractionMethod(
+                method=InteractionMethodType.UIA,
+                priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                status=ProbeStatus.AVAILABLE,
+                capabilities=["click"],
+                confidence=0.9,
+            )
+
+        result = _run_probe_with_timeout(fast_probe, pid=123, exe="", hwnd=None)
+        assert result is not None
+        assert result.method == InteractionMethodType.UIA
+
+    def test_hanging_probe_returns_none(self):
+        """A probe that exceeds the timeout should return None, not hang."""
+        import time
+        import naturo.detect.chain as chain_mod
+        orig = chain_mod._PROBE_TIMEOUT_SECONDS
+
+        def hanging_probe(pid, exe, hwnd):
+            time.sleep(60)  # Simulate indefinite hang
+            return InteractionMethod(
+                method=InteractionMethodType.CDP,
+                priority=METHOD_PRIORITY[InteractionMethodType.CDP],
+                status=ProbeStatus.AVAILABLE,
+                capabilities=["dom"],
+                confidence=0.9,
+            )
+
+        # Use a short timeout for the test
+        try:
+            chain_mod._PROBE_TIMEOUT_SECONDS = 0.5
+            start = time.monotonic()
+            result = _run_probe_with_timeout(hanging_probe, pid=123, exe="", hwnd=None)
+            elapsed = time.monotonic() - start
+        finally:
+            chain_mod._PROBE_TIMEOUT_SECONDS = orig
+
+        assert result is None, "Hanging probe should return None after timeout"
+        assert elapsed < 5, f"Timeout took too long: {elapsed:.1f}s"
+
+    def test_probe_exception_propagates(self):
+        """A probe that raises an exception should propagate the error."""
+        def broken_probe(pid, exe, hwnd):
+            raise RuntimeError("probe internal error")
+
+        with pytest.raises(RuntimeError, match="probe internal error"):
+            _run_probe_with_timeout(broken_probe, pid=123, exe="", hwnd=None)

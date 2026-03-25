@@ -40,6 +40,64 @@ _DEFAULT_PROBES: List[ProbeFunc] = [
     probe_vision,
 ]
 
+# Per-probe timeout in seconds.  CDP and UIA probes can hang on certain
+# applications (e.g. UWP Notepad without --quick), so each probe is
+# executed with a hard timeout to guarantee the chain always completes.
+_PROBE_TIMEOUT_SECONDS = 10
+
+
+def _run_probe_with_timeout(
+    probe_fn: ProbeFunc,
+    pid: int,
+    exe: str,
+    hwnd: Optional[int],
+) -> Optional["InteractionMethod"]:
+    """Execute a single probe function with a timeout guard.
+
+    Runs the probe in a daemon thread so that a hung probe (e.g. CDP wmic
+    call, UIA COM deadlock) cannot block the detection chain forever.
+    The thread is abandoned (not joined) on timeout — daemon threads are
+    reaped automatically when the process exits.
+
+    Args:
+        probe_fn: Probe function to execute.
+        pid: Process ID.
+        exe: Executable path.
+        hwnd: Window handle.
+
+    Returns:
+        InteractionMethod from the probe, or None on timeout / error.
+    """
+    import threading
+
+    result_holder: list = []
+    error_holder: list = []
+
+    def _target() -> None:
+        try:
+            r = probe_fn(pid, exe, hwnd)
+            result_holder.append(r)
+        except Exception as exc:
+            error_holder.append(exc)
+
+    t = threading.Thread(target=_target, daemon=True)
+    t.start()
+    t.join(timeout=_PROBE_TIMEOUT_SECONDS)
+
+    if t.is_alive():
+        logger.warning(
+            "Probe %s timed out after %ds for PID %d",
+            probe_fn.__name__,
+            _PROBE_TIMEOUT_SECONDS,
+            pid,
+        )
+        return None
+
+    if error_holder:
+        raise error_holder[0]
+
+    return result_holder[0] if result_holder else None
+
 
 def detect(
     pid: int,
@@ -81,11 +139,12 @@ def detect(
     # Phase 1: Detect frameworks from DLL signatures
     frameworks = detect_frameworks_from_dlls(pid, exe)
 
-    # Phase 2: Run probes to discover available interaction methods
+    # Phase 2: Run probes to discover available interaction methods.
+    # Each probe runs with a timeout to prevent indefinite hangs (#288).
     methods: List[InteractionMethod] = []
     for probe_fn in _DEFAULT_PROBES:
         try:
-            result = probe_fn(pid, exe, hwnd)
+            result = _run_probe_with_timeout(probe_fn, pid, exe, hwnd)
             if result is not None:
                 methods.append(result)
                 # In quick mode, stop at first available method
