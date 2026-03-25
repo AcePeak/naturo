@@ -339,6 +339,91 @@ class TestGetMostRecentSnapshot:
         assert mgr.get_most_recent_snapshot(app_name="notepad") == sid
         assert mgr.get_most_recent_snapshot(app_name="NOTE") == sid
 
+    def test_require_refs_skips_screenshot_only_snapshots(
+        self, mgr: SnapshotManager, png_file: Path, sample_ui_map: Dict[str, UIElement]
+    ) -> None:
+        """Snapshot without refs.json should be skipped when require_refs=True.
+
+        Regression test for #283: ``capture live`` creates a snapshot with
+        only a screenshot (no refs.json), which was shadowing ``see``
+        snapshots and breaking subsequent element ref resolution.
+        """
+        # 1. Create a "see" snapshot with refs
+        see_sid = mgr.create_snapshot()
+        mgr.store_screenshot(see_sid, str(png_file), {"application_name": "App"})
+        mgr.store_detection_result(see_sid, sample_ui_map)
+        mgr.store_ref_map(see_sid, {"e1": "element_0", "e2": "element_1"})
+        time.sleep(0.02)  # ensure different mtime
+
+        # 2. Create a "capture live" snapshot (screenshot only, no refs)
+        cap_sid = mgr.create_snapshot()
+        mgr.store_screenshot(cap_sid, str(png_file), {"application_name": "App"})
+
+        # Without require_refs, the capture snapshot is most recent
+        assert mgr.get_most_recent_snapshot() == cap_sid
+
+        # With require_refs, the see snapshot is returned
+        assert mgr.get_most_recent_snapshot(require_refs=True) == see_sid
+
+    def test_require_refs_returns_none_when_no_refs_exist(
+        self, mgr: SnapshotManager, png_file: Path
+    ) -> None:
+        """When no snapshot has refs.json, require_refs=True returns None."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file), {})
+        assert mgr.get_most_recent_snapshot(require_refs=True) is None
+
+
+# ── resolve_ref after capture live (#283) ─────────────────────────────────────
+
+
+class TestResolveRefAfterCaptureLive:
+    """Verify that capture live does not break element ref resolution (#283)."""
+
+    def test_resolve_ref_survives_capture_live_snapshot(
+        self, mgr: SnapshotManager, png_file: Path, sample_ui_map: Dict[str, UIElement]
+    ) -> None:
+        """Element refs remain resolvable after a capture-live snapshot is created."""
+        # Create a "see" snapshot with refs and ui_map
+        see_sid = mgr.create_snapshot()
+        mgr.store_screenshot(see_sid, str(png_file), {"application_name": "App"})
+        mgr.store_detection_result(see_sid, sample_ui_map)
+        mgr.store_ref_map(see_sid, {"e1": "element_0", "e2": "element_1"})
+        time.sleep(0.02)
+
+        # Create a newer "capture live" snapshot (no refs)
+        cap_sid = mgr.create_snapshot()
+        mgr.store_screenshot(cap_sid, str(png_file), {"application_name": "App"})
+
+        # resolve_ref should still find e1 from the see snapshot
+        result = mgr.resolve_ref("e1")
+        assert result is not None
+        cx, cy, snap_id = result
+        assert snap_id == see_sid
+        # e1 frame is (10, 20, 80, 30) → center (50, 35)
+        assert cx == 50
+        assert cy == 35
+
+    def test_resolve_ref_element_survives_capture_live_snapshot(
+        self, mgr: SnapshotManager, png_file: Path, sample_ui_map: Dict[str, UIElement]
+    ) -> None:
+        """resolve_ref_element still works after capture-live creates a new snapshot."""
+        see_sid = mgr.create_snapshot()
+        mgr.store_screenshot(see_sid, str(png_file), {"application_name": "App"})
+        mgr.store_detection_result(see_sid, sample_ui_map)
+        mgr.store_ref_map(see_sid, {"e1": "element_0", "e2": "element_1"})
+        time.sleep(0.02)
+
+        cap_sid = mgr.create_snapshot()
+        mgr.store_screenshot(cap_sid, str(png_file), {"application_name": "App"})
+
+        result = mgr.resolve_ref_element("e1")
+        assert result is not None
+        element, snap_id = result
+        assert snap_id == see_sid
+        assert element.role == "AXButton"
+        assert element.title == "Save"
+
 
 # ── list_snapshots ────────────────────────────────────────────────────────────
 

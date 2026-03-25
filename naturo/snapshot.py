@@ -322,7 +322,7 @@ class SnapshotManager:
             ``(x, y, snapshot_id)`` — center coordinates and the snapshot ID
             used; or ``None`` if no matching ref was found.
         """
-        recent_id = self.get_most_recent_snapshot()
+        recent_id = self.get_most_recent_snapshot(require_refs=True)
         if not recent_id:
             return None
 
@@ -386,7 +386,7 @@ class SnapshotManager:
         tuple | None
             ``(UIElement, snapshot_id)`` or ``None`` if not found.
         """
-        recent_id = self.get_most_recent_snapshot()
+        recent_id = self.get_most_recent_snapshot(require_refs=True)
         if not recent_id:
             return None
 
@@ -474,7 +474,11 @@ class SnapshotManager:
 
             return Snapshot.from_dict(data)
 
-    def get_most_recent_snapshot(self, app_name: Optional[str] = None) -> Optional[str]:
+    def get_most_recent_snapshot(
+        self,
+        app_name: Optional[str] = None,
+        require_refs: bool = False,
+    ) -> Optional[str]:
         """Return the ID of the most recent valid snapshot within the validity window.
 
         Parameters
@@ -482,6 +486,11 @@ class SnapshotManager:
         app_name:
             If provided, only consider snapshots whose ``application_name``
             matches (case-insensitive substring match).
+        require_refs:
+            If ``True``, only consider snapshots that have a ``refs.json``
+            file (i.e. snapshots produced by ``see`` that contain element
+            refs).  This prevents ``capture live`` screenshots from
+            shadowing ``see`` snapshots when resolving element refs (#283).
 
         Returns
         -------
@@ -500,6 +509,10 @@ class SnapshotManager:
                     continue
                 json_path = entry / "snapshot.json"
                 if not json_path.exists():
+                    continue
+
+                # Skip snapshots without refs when caller needs element refs
+                if require_refs and not (entry / "refs.json").exists():
                     continue
 
                 try:
