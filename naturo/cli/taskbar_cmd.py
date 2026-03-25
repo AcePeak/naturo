@@ -52,9 +52,11 @@ def taskbar_list(json_output):
         naturo taskbar list --json             # JSON output
     """
     from naturo.backends.base import get_backend
-    from naturo.errors import NaturoError
+    from naturo.errors import NaturoError, NoDesktopSessionError
+    from naturo.cli.interaction import _check_desktop_session
 
     try:
+        _check_desktop_session()
         backend = get_backend()
         items = backend.taskbar_list()
 

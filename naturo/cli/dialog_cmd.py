@@ -66,9 +66,11 @@ def detect(app, hwnd, json_output):
         naturo dialog detect --json            # JSON output
     """
     from naturo.backends.base import get_backend
-    from naturo.errors import NaturoError
+    from naturo.errors import NaturoError, NoDesktopSessionError
+    from naturo.cli.interaction import _check_desktop_session
 
     try:
+        _check_desktop_session()
         backend = get_backend()
         dialogs = backend.detect_dialogs(app=app, hwnd=hwnd)
 

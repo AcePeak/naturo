@@ -370,6 +370,104 @@ class SnapshotManager:
         cy = ey + eh // 2
         return (cx, cy, recent_id)
 
+    def check_ref_status(self, ref: str) -> dict:
+        """Check detailed status of an element ref for better error messages.
+
+        Returns a dict with status and element info, useful for distinguishing
+        between "not found" and "zero-bounds" cases.
+
+        Parameters
+        ----------
+        ref:
+            Short ref string (e.g. ``"e3"``).
+
+        Returns
+        -------
+        dict
+            {
+                "status": "found" | "not_found" | "zero_bounds" | "no_snapshot",
+                "element": UIElement | None,
+                "snapshot_id": str | None,
+                "message": str (human-readable description)
+            }
+        """
+        recent_id = self.get_most_recent_snapshot(require_refs=True)
+        if not recent_id:
+            return {
+                "status": "no_snapshot",
+                "element": None,
+                "snapshot_id": None,
+                "message": "No recent snapshot found. Run 'naturo see' first to create a snapshot.",
+            }
+
+        snap_dir = self._snap_dir(recent_id)
+        ref_path = snap_dir / "refs.json"
+
+        with self._lock:
+            if not ref_path.exists():
+                return {
+                    "status": "no_snapshot",
+                    "element": None,
+                    "snapshot_id": recent_id,
+                    "message": "Snapshot has no ref map. Run 'naturo see' first.",
+                }
+            try:
+                ref_map = json.loads(ref_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return {
+                    "status": "no_snapshot",
+                    "element": None,
+                    "snapshot_id": recent_id,
+                    "message": "Could not read ref map from snapshot.",
+                }
+
+        element_id = ref_map.get(ref)
+        if not element_id:
+            return {
+                "status": "not_found",
+                "element": None,
+                "snapshot_id": recent_id,
+                "message": f"Element ref '{ref}' not found in recent snapshots. Run 'naturo see' first to create a snapshot.",
+            }
+
+        try:
+            snapshot = self.get_snapshot(recent_id)
+        except Exception:
+            return {
+                "status": "not_found",
+                "element": None,
+                "snapshot_id": recent_id,
+                "message": f"Could not load snapshot {recent_id}.",
+            }
+
+        element = snapshot.ui_map.get(ref) or snapshot.ui_map.get(element_id)
+        if not element:
+            return {
+                "status": "not_found",
+                "element": None,
+                "snapshot_id": recent_id,
+                "message": f"Element ref '{ref}' not found in snapshot ui_map.",
+            }
+
+        ex, ey, ew, eh = element.frame
+        if ew == 0 and eh == 0:
+            return {
+                "status": "zero_bounds",
+                "element": element,
+                "snapshot_id": recent_id,
+                "message": (
+                    f"Element {ref} ({element.role} '{element.title or ''}') has zero-size bounds (0x0) and cannot be cropped. "
+                    "This element may be off-screen, collapsed, or in a virtualized/lazy-loaded container."
+                ),
+            }
+
+        return {
+            "status": "found",
+            "element": element,
+            "snapshot_id": recent_id,
+            "message": f"Element {ref} found with bounds ({ex},{ey} {ew}x{eh}).",
+        }
+
     def resolve_ref_element(self, ref: str) -> Optional[tuple]:
         """Resolve a short element ref (e.g. ``e3``) to full element info.
 

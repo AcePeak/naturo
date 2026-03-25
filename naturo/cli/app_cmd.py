@@ -205,11 +205,22 @@ def app_list(ctx, show_all, show_windows, json_output):
 
     if show_windows:
         # Detailed window listing (replaces `naturo window list`)
-        from naturo.errors import NaturoError
+        from naturo.errors import NaturoError, NoDesktopSessionError
         try:
+            # Desktop session check
+            from naturo.cli.interaction import _check_desktop_session
+            _check_desktop_session()
+            
             from naturo.backends.base import get_backend
             backend = get_backend()
             windows = backend.list_windows()
+        except NoDesktopSessionError as exc:
+            if json_output:
+                click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+            else:
+                _safe_echo(f"Error: {exc}", err=True)
+            sys.exit(1)
+            return
         except Exception as exc:
             if json_output:
                 click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
@@ -543,6 +554,19 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
         target_exe = proc.path or proc.name or ""
         target_name = proc.name or name
 
+    # Desktop session check (detect requires window inspection)
+    from naturo.errors import NoDesktopSessionError
+    from naturo.cli.interaction import _check_desktop_session
+    try:
+        _check_desktop_session()
+    except NoDesktopSessionError as exc:
+        if json_output:
+            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+        return
+
     result = detect(
         pid=target_pid,
         exe=target_exe,
@@ -569,11 +593,21 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         json_output: If True, output as JSON.
     """
     from naturo.detect import detect
+    from naturo.errors import NoDesktopSessionError
+    from naturo.cli.interaction import _check_desktop_session
 
     try:
+        _check_desktop_session()
         from naturo.backends.base import get_backend
         backend = get_backend()
         windows = backend.list_windows()
+    except NoDesktopSessionError as exc:
+        if json_output:
+            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+        return
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("BACKEND_ERROR", str(exc)))

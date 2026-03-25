@@ -88,21 +88,15 @@ def _platform_error_msg(feature: str) -> str:
 # ── capture ─────────────────────────────────────
 
 
-@click.group(cls=FuzzyGroup)
-def capture():
-    """Capture screenshots, video, or watch for changes."""
-    pass
-
-
-@capture.command()
+@click.command("capture")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
-@click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
+@click.option("--path", "-p", "-o", default=None, help="Output file path (default: capture.<format>)")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
-@click.option("--element", "-e", "element_ref", default=None,
+@click.option("--element", "-e", "--ref", "element_ref", default=None,
               help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5")
 @click.option("--region", default=None, metavar="X,Y,W,H",
               help="Crop to region: x,y,width,height (e.g. --region 100,50,400,300)")
@@ -112,8 +106,8 @@ def capture():
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
-         element_ref, region, padding, json_output):
+def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+            element_ref, region, padding, json_output):
     """Capture a live screenshot, optionally cropped to an element or region.
 
     Captures the screen or a specific window and saves to a file.
@@ -127,11 +121,12 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
 
     \b
     Examples:
-        naturo capture live                              # full screen
-        naturo capture live --element e5                 # crop to element e5
-        naturo capture live --element e5 --padding 20   # with 20px padding
-        naturo capture live --region 100,50,400,300      # crop to region
-        naturo capture live --app feishu --element e12   # element in specific app
+        naturo capture                                   # full screen
+        naturo capture --element e5                      # crop to element e5
+        naturo capture --ref e5 --padding 20             # with 20px padding
+        naturo capture --region 100,50,400,300           # crop to region
+        naturo capture --app feishu --element e12        # element in specific app
+        naturo capture -o output.png                     # save to output.png
     """
     if not _platform_supports_gui():
         msg = _platform_error_msg("Screen capture")
@@ -188,60 +183,60 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
             # Resolve eN ref → bounds from most recent snapshot
             from naturo.snapshot import get_snapshot_manager
             _mgr = get_snapshot_manager(session=session)
-            resolved = _mgr.resolve_ref(element_ref)
-            if resolved is None:
-                msg = (
-                    f"Element ref '{element_ref}' not found in recent snapshots. "
-                    "Run 'naturo see' first to create a snapshot."
-                )
+
+            # (#280) Use check_ref_status for better error messages,
+            # distinguishing "not found" from "zero-bounds" cases
+            ref_status = _mgr.check_ref_status(element_ref)
+            if ref_status["status"] != "found":
+                error_code = "ZERO_BOUNDS" if ref_status["status"] == "zero_bounds" else "REF_NOT_FOUND"
+                msg = ref_status["message"]
                 if json_output:
-                    click.echo(_json_error_str("REF_NOT_FOUND", msg))
+                    click.echo(_json_error_str(error_code, msg))
                 else:
                     click.echo(f"Error: {msg}", err=True)
                 raise SystemExit(1)
-            cx, cy, _snap_id = resolved
-            el_result = _mgr.resolve_ref_element(element_ref)
-            if el_result:
-                element, snap_id = el_result
-                ex, ey, ew, eh = element.frame
 
-                # When capturing a specific window (--app/--hwnd), the
-                # screenshot is window-relative (origin 0,0) but element
-                # coords from the snapshot are screen-absolute.  Subtract
-                # the window origin so the crop aligns with the image.
-                win_offset_x, win_offset_y = 0, 0
-                if _is_window_capture:
-                    # Try 1: query current window rect via Win32 API
+            element = ref_status["element"]
+            snap_id = ref_status["snapshot_id"]
+            ex, ey, ew, eh = element.frame
+
+            # When capturing a specific window (--app/--hwnd), the
+            # screenshot is window-relative (origin 0,0) but element
+            # coords from the snapshot are screen-absolute.  Subtract
+            # the window origin so the crop aligns with the image.
+            win_offset_x, win_offset_y = 0, 0
+            if _is_window_capture:
+                # Try 1: query current window rect via Win32 API
+                try:
+                    import platform as _plat
+                    _cap_hwnd = target_hwnd if target_hwnd else 0
+                    if _cap_hwnd and _plat.system() == "Windows":
+                        import ctypes
+                        import ctypes.wintypes as wt
+                        rect = wt.RECT()
+                        if ctypes.windll.user32.GetWindowRect(
+                            _cap_hwnd, ctypes.byref(rect)
+                        ):
+                            win_offset_x = rect.left
+                            win_offset_y = rect.top
+                except Exception:
+                    pass
+                # Try 2: fall back to snapshot window_bounds
+                if win_offset_x == 0 and win_offset_y == 0:
                     try:
-                        import platform as _plat
-                        _cap_hwnd = target_hwnd if target_hwnd else 0
-                        if _cap_hwnd and _plat.system() == "Windows":
-                            import ctypes
-                            import ctypes.wintypes as wt
-                            rect = wt.RECT()
-                            if ctypes.windll.user32.GetWindowRect(
-                                _cap_hwnd, ctypes.byref(rect)
-                            ):
-                                win_offset_x = rect.left
-                                win_offset_y = rect.top
+                        snap_data = _mgr.get_snapshot(snap_id)
+                        if snap_data.window_bounds:
+                            win_offset_x = snap_data.window_bounds[0]
+                            win_offset_y = snap_data.window_bounds[1]
                     except Exception:
-                        pass
-                    # Try 2: fall back to snapshot window_bounds
-                    if win_offset_x == 0 and win_offset_y == 0:
-                        try:
-                            snap_data = _mgr.get_snapshot(snap_id)
-                            if snap_data.window_bounds:
-                                win_offset_x = snap_data.window_bounds[0]
-                                win_offset_y = snap_data.window_bounds[1]
-                        except Exception:
-                            pass  # Best-effort; absolute coords as last resort
+                        pass  # Best-effort; absolute coords as last resort
 
-                crop_box = (
-                    max(0, ex - win_offset_x - padding),
-                    max(0, ey - win_offset_y - padding),
-                    ex - win_offset_x + ew + padding,
-                    ey - win_offset_y + eh + padding,
-                )
+            crop_box = (
+                max(0, ex - win_offset_x - padding),
+                max(0, ey - win_offset_y - padding),
+                ex - win_offset_x + ew + padding,
+                ey - win_offset_y + eh + padding,
+            )
         elif region:
             # Parse X,Y,W,H
             try:
@@ -343,6 +338,77 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+
+
+# (#280) capture is a group with invoke_without_command=True so that:
+# - `naturo capture --app foo` runs the default capture (equivalent to `capture live`)
+# - `naturo capture video` and `naturo capture watch` still work as subcommands
+@click.group(cls=FuzzyGroup, invoke_without_command=True)
+@click.option("--app", default=None, help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
+@click.option("--path", "-p", "-o", default=None, help="Output file path (default: capture.<format>)")
+@click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
+@click.option("--element", "-e", "--ref", "element_ref", default=None,
+              help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5")
+@click.option("--region", default=None, metavar="X,Y,W,H",
+              help="Crop to region: x,y,width,height (e.g. --region 100,50,400,300)")
+@click.option("--padding", type=int, default=0,
+              help="Extra padding (px) added around --element or --region crop")
+@click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
+@click.option("--session", default=None, envvar="NATURO_SESSION",
+              help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def capture(ctx, app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+            element_ref, region, padding, json_output):
+    """Capture screenshots, video, or watch for changes.
+
+    When called without a subcommand, captures a screenshot (same as 'capture live').
+
+    \b
+    Examples:
+        naturo capture                                   # full screen
+        naturo capture --element e5                      # crop to element e5
+        naturo capture --ref e5 --padding 20             # with 20px padding
+        naturo capture --region 100,50,400,300           # crop to region
+        naturo capture --app feishu --element e12        # element in specific app
+        naturo capture -o output.png                     # save to output.png
+    """
+    # If no subcommand was invoked, run the default capture
+    if ctx.invoked_subcommand is None:
+        _do_capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+                    element_ref, region, padding, json_output)
+
+
+@capture.command("live")
+@click.option("--app", default=None, help="Target application (name or partial match)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--window-title", "window_title", default=None, hidden=True, help="")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
+@click.option("--path", "-p", "-o", default=None, help="Output file path (default: capture.<format>)")
+@click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
+@click.option("--element", "-e", "--ref", "element_ref", default=None,
+              help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5")
+@click.option("--region", default=None, metavar="X,Y,W,H",
+              help="Crop to region: x,y,width,height (e.g. --region 100,50,400,300)")
+@click.option("--padding", type=int, default=0,
+              help="Extra padding (px) added around --element or --region crop")
+@click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
+@click.option("--session", default=None, envvar="NATURO_SESSION",
+              help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+         element_ref, region, padding, json_output):
+    """Capture a live screenshot, optionally cropped to an element or region.
+
+    This is the default action when running 'naturo capture' without a subcommand.
+    """
+    _do_capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+                element_ref, region, padding, json_output)
 
 
 @capture.command(hidden=True)
@@ -843,6 +909,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "height": el.height,
                     "children": [to_dict(c, parent_ref=display_id) for c in el.children],
                 }
+                # (#280) Flag zero-bounds elements in JSON output
+                if el.width == 0 and el.height == 0:
+                    d["zero_bounds"] = True
                 # (#295) Always use naturo ref for parent, never raw
                 # AutomationId — keeps a single consistent ID space.
                 if parent_ref:
@@ -892,7 +961,11 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
                 source_str = f" [{props['source']}]" if props.get("source") else ""
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}")
+                # (#280) Mark zero-bounds elements so users know they can't be cropped/clicked
+                zero_bounds_marker = ""
+                if el.width == 0 and el.height == 0:
+                    zero_bounds_marker = " [0x0]"
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{zero_bounds_marker}")
                 for child in el.children:
                     print_tree(child, indent + 1)
 
@@ -970,8 +1043,8 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto"]),
-    default="uia",
-    help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
+    default="auto",
+    help="Accessibility backend / interaction method: auto (default, cascade UIA→MSAA→Win32), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32",
 )
 @click.option("--provider", "ai_provider",
               type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
