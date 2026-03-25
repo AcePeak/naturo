@@ -110,32 +110,23 @@ jobs:
           pip install -e ".[dev,mcp,annotate]" pywin32 2>&1
           echo "::endgroup::"
           echo "::group::pywin32 postinstall"
-          # pywin32 postinstall registers COM DLLs.  The module may live
-          # under Scripts/ on some runner images.  Try multiple locations.
+          # pywin32 postinstall registers COM DLLs and copies pywintypes DLLs.
+          # Different pywin32 versions have different install() signatures.
+          python Scripts/pywin32_postinstall.py -install 2>&1 || \
           python -c "
-          import importlib, sys, os, glob
-          # Attempt direct import first
+          import sys, os, site
           try:
               import pywin32_postinstall
-              pywin32_postinstall.install()
-              print('pywin32 postinstall OK (direct import)')
-              sys.exit(0)
-          except ImportError:
-              pass
-          # Fallback: find the script in site-packages/pywin32_system32 or Scripts
-          for pattern in [
-              os.path.join(sys.prefix, 'Scripts', 'pywin32_postinstall.py'),
-              os.path.join(sys.prefix, 'Lib', 'site-packages', 'pywin32_system32', '..', 'pywin32_postinstall.py'),
-          ]:
-              matches = glob.glob(pattern)
-              if matches:
-                  spec = importlib.util.spec_from_file_location('pywin32_postinstall', matches[0])
-                  mod = importlib.util.module_from_spec(spec)
-                  spec.loader.exec_module(mod)
-                  mod.install()
-                  print(f'pywin32 postinstall OK (from {matches[0]})')
-                  sys.exit(0)
-          print('WARNING: pywin32_postinstall not found, skipping')
+              import inspect
+              sig = inspect.signature(pywin32_postinstall.install)
+              if 'lib_dir' in sig.parameters:
+                  lib_dir = site.getsitepackages()[0] if hasattr(site, 'getsitepackages') else os.path.join(sys.prefix, 'Lib', 'site-packages')
+                  pywin32_postinstall.install(lib_dir)
+              else:
+                  pywin32_postinstall.install()
+              print('pywin32 postinstall OK')
+          except Exception as e:
+              print(f'WARNING: pywin32 postinstall failed: {e}')
           " 2>&1 || true
           echo "::endgroup::"
 
