@@ -135,6 +135,226 @@ def populate_hierarchy(root: ElementInfo, parent_id: Optional[str] = None, count
         populate_hierarchy(child, parent_id=root.id, counter=counter)
 
 
+# ── Win32 HWND Enumeration Fallback (Issue #308) ──
+
+# Win32 class name → UIA-style role mapping for VB6/ActiveX controls
+_WIN32_CLASS_ROLE_MAP = {
+    "Static": "Text",
+    "Edit": "Edit",
+    "Button": "Button",
+    "ComboBox": "ComboBox",
+    "ComboBoxEx32": "ComboBox",
+    "ListBox": "List",
+    "SysListView32": "DataGrid",
+    "SysTreeView32": "Tree",
+    "msctls_statusbar32": "StatusBar",
+    "ThunderRT6FormDC": "Window",
+    "ThunderRT6UserControlDC": "Pane",
+    "ThunderRT6PictureBoxDC": "Pane",
+    "ThunderRT6TextBox": "Edit",
+    "ThunderRT6CommandButton": "Button",
+    "ThunderRT6ComboBox": "ComboBox",
+    "ThunderRT6ListBox": "List",
+    "ThunderRT6Frame": "Group",
+    "ThunderRT6OptionButton": "RadioButton",
+    "ThunderRT6CheckBox": "CheckBox",
+}
+
+
+def enumerate_child_windows(hwnd: int, depth: int = 3) -> Optional[ElementInfo]:
+    """Enumerate child windows using Win32 EnumChildWindows as UIA fallback.
+
+    For VB6/ActiveX applications (e.g., 用友U8 ERP) where UIA/MSAA see
+    controls as opaque Pane containers, this function walks the Win32 HWND
+    tree directly and constructs an ElementInfo tree from GetClassName,
+    GetWindowText, and GetWindowRect.
+
+    Args:
+        hwnd: Parent window handle. 0 for the foreground window.
+        depth: Maximum recursion depth (1-10). Default 3.
+
+    Returns:
+        Root ElementInfo with children, or None if enumeration fails.
+    """
+    import ctypes
+    from ctypes import wintypes
+    import platform
+
+    if platform.system() != "Windows":
+        return None
+
+    if depth < 1:
+        depth = 1
+    if depth > 10:
+        depth = 10
+
+    user32 = ctypes.windll.user32
+
+    # Resolve foreground window if hwnd is 0
+    if hwnd == 0:
+        hwnd = user32.GetForegroundWindow()
+        if not hwnd:
+            return None
+
+    # Get root window info
+    root_rect = wintypes.RECT()
+    if not user32.GetWindowRect(hwnd, ctypes.byref(root_rect)):
+        return None
+
+    title_buf = ctypes.create_unicode_buffer(256)
+    user32.GetWindowTextW(hwnd, title_buf, 256)
+    root_title = title_buf.value or ""
+
+    class_buf = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, class_buf, 256)
+    root_class = class_buf.value or ""
+
+    root_role = _WIN32_CLASS_ROLE_MAP.get(root_class, "Window")
+
+    root = ElementInfo(
+        id="e0",
+        role=root_role,
+        name=root_title,
+        value=None,
+        x=root_rect.left,
+        y=root_rect.top,
+        width=root_rect.right - root_rect.left,
+        height=root_rect.bottom - root_rect.top,
+        children=[],
+    )
+
+    # Counter for sequential IDs
+    counter = [1]
+
+    # Recursive enumeration callback
+    def enum_callback(child_hwnd, lparam):
+        """Callback for EnumChildWindows."""
+        try:
+            current_depth = lparam
+
+            # Respect depth limit
+            if current_depth >= depth:
+                return True  # Continue enumeration but don't recurse deeper
+
+            # Get child window rect
+            rect = wintypes.RECT()
+            if not user32.GetWindowRect(child_hwnd, ctypes.byref(rect)):
+                return True
+
+            # Get child window text
+            text_buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(child_hwnd, text_buf, 256)
+            text = text_buf.value or ""
+
+            # Get child window class
+            cls_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(child_hwnd, cls_buf, 256)
+            cls_name = cls_buf.value or ""
+
+            # Map class to role
+            role = _WIN32_CLASS_ROLE_MAP.get(cls_name, "Pane")
+
+            # Create ElementInfo
+            child_elem = ElementInfo(
+                id=f"e{counter[0]}",
+                role=role,
+                name=text,
+                value=None,
+                x=rect.left,
+                y=rect.top,
+                width=rect.right - rect.left,
+                height=rect.bottom - rect.top,
+                children=[],
+            )
+            counter[0] += 1
+
+            # Add to root's children
+            root.children.append(child_elem)
+
+            # Recursively enumerate this child's children (if depth allows)
+            if current_depth + 1 < depth:
+                WNDENUMPROC = ctypes.WINFUNCTYPE(
+                    wintypes.BOOL, wintypes.HWND, wintypes.LPARAM
+                )
+                sub_callback = WNDENUMPROC(
+                    lambda sub_hwnd, sub_lparam: _enum_child_for_parent(
+                        sub_hwnd, sub_lparam, child_elem
+                    )
+                )
+                user32.EnumChildWindows(
+                    wintypes.HWND(child_hwnd), sub_callback, current_depth + 1
+                )
+
+            return True  # Continue enumeration
+        except Exception:
+            return True  # Continue even on error
+
+    def _enum_child_for_parent(child_hwnd, lparam, parent_elem):
+        """Helper to enumerate children for a specific parent ElementInfo."""
+        try:
+            current_depth = lparam
+
+            if current_depth >= depth:
+                return True
+
+            rect = wintypes.RECT()
+            if not user32.GetWindowRect(child_hwnd, ctypes.byref(rect)):
+                return True
+
+            text_buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(child_hwnd, text_buf, 256)
+            text = text_buf.value or ""
+
+            cls_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(child_hwnd, cls_buf, 256)
+            cls_name = cls_buf.value or ""
+
+            role = _WIN32_CLASS_ROLE_MAP.get(cls_name, "Pane")
+
+            child_elem = ElementInfo(
+                id=f"e{counter[0]}",
+                role=role,
+                name=text,
+                value=None,
+                x=rect.left,
+                y=rect.top,
+                width=rect.right - rect.left,
+                height=rect.bottom - rect.top,
+                children=[],
+            )
+            counter[0] += 1
+
+            parent_elem.children.append(child_elem)
+
+            # Recurse further
+            if current_depth + 1 < depth:
+                WNDENUMPROC = ctypes.WINFUNCTYPE(
+                    wintypes.BOOL, wintypes.HWND, wintypes.LPARAM
+                )
+                sub_callback = WNDENUMPROC(
+                    lambda sub_hwnd, sub_lparam: _enum_child_for_parent(
+                        sub_hwnd, sub_lparam, child_elem
+                    )
+                )
+                user32.EnumChildWindows(
+                    wintypes.HWND(child_hwnd), sub_callback, current_depth + 1
+                )
+
+            return True
+        except Exception:
+            return True
+
+    # Enumerate direct children of the root window
+    WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    callback = WNDENUMPROC(enum_callback)
+    user32.EnumChildWindows(wintypes.HWND(hwnd), callback, 0)
+
+    # Populate parent IDs and fill empty IDs
+    populate_hierarchy(root)
+
+    return root
+
+
 class NaturoCoreError(Exception):
     """Error raised when a naturo_core function fails.
 

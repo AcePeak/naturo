@@ -1233,6 +1233,47 @@ class WindowsBackend(Backend):
                 return proc == "applicationframehost"
         return False
 
+    @staticmethod
+    def _is_shallow_tree(element) -> bool:
+        """Check if an element tree is too shallow (VB6/ActiveX fallback signal).
+
+        VB6/ActiveX apps often expose a tree with only a few Pane containers
+        at depth 1-2, hiding all actual form controls (Static/Edit/Button).
+        This heuristic detects that pattern to trigger Win32 HWND enumeration.
+
+        Args:
+            element: Root ElementInfo from get_element_tree.
+
+        Returns:
+            True if the tree is too shallow (trigger fallback).
+        """
+        if not element or not element.children:
+            return True
+
+        # Count actionable elements (non-Pane roles at any depth)
+        actionable_count = 0
+        pane_count = 0
+
+        def count_actionable(el):
+            nonlocal actionable_count, pane_count
+            role = (el.role or "").lower()
+            if role == "pane":
+                pane_count += 1
+            elif role in ("button", "edit", "text", "combobox", "checkbox", "radiobutton"):
+                actionable_count += 1
+            for child in el.children:
+                count_actionable(child)
+
+        count_actionable(element)
+
+        # Shallow tree heuristic: <5 actionable elements or >80% panes
+        if actionable_count < 5:
+            return True
+        if pane_count > 0 and actionable_count / (actionable_count + pane_count) < 0.2:
+            return True
+
+        return False
+
     def get_element_tree(self, window_title: Optional[str] = None,
                          depth: int = 3,
                          app: Optional[str] = None,
@@ -1256,9 +1297,12 @@ class WindowsBackend(Backend):
             depth: Maximum depth to traverse (1-10).
             app: Application name to search for (partial match, case-insensitive).
             hwnd: Direct window handle. Overrides app/window_title.
-            backend: Accessibility backend — "uia" (default), "msaa", or "auto".
-                     "auto" tries UIA first, falls back to MSAA if UIA returns
-                     no meaningful elements.
+            backend: Accessibility backend — "auto" (default), "uia", "msaa",
+                     "win32", "ia2", or "jab".
+                     "auto" tries UIA first, falls back to MSAA/IA2/JAB/Win32
+                     if UIA returns no meaningful elements.
+                     "win32" uses pure Win32 HWND enumeration (fallback for
+                     VB6/ActiveX apps where UIA/MSAA see opaque Pane containers).
 
         Returns:
             Root ElementInfo with nested children, or None.
@@ -1305,6 +1349,10 @@ class WindowsBackend(Backend):
             result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
         elif backend == "msaa":
             result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
+        elif backend == "win32":
+            # Pure Win32 HWND enumeration (VB6/ActiveX fallback)
+            from naturo.bridge import enumerate_child_windows
+            result = enumerate_child_windows(hwnd=handle, depth=depth)
         elif backend == "auto":
             result = core.get_element_tree(hwnd=handle, depth=depth)
             # UWP/WinUI fallback: try child windows of AFH
@@ -1312,6 +1360,25 @@ class WindowsBackend(Backend):
                 result,
                 lambda h, d: core.get_element_tree(hwnd=h, depth=d),
             )
+            
+            # Win32 HWND fallback for VB6/ActiveX apps (Issue #308)
+            # When UIA/MSAA return shallow trees (only Pane containers),
+            # fall back to EnumChildWindows
+            if result is not None and self._is_shallow_tree(result):
+                logger.info(
+                    "UIA/MSAA returned shallow tree (%d children), "
+                    "trying Win32 HWND enumeration fallback (VB6/ActiveX)",
+                    len(result.children)
+                )
+                from naturo.bridge import enumerate_child_windows
+                win32_result = enumerate_child_windows(hwnd=handle, depth=depth)
+                if win32_result is not None and len(win32_result.children) > len(result.children):
+                    logger.info(
+                        "Win32 fallback found %d children (vs %d from UIA/MSAA), using it",
+                        len(win32_result.children), len(result.children)
+                    )
+                    result = win32_result
+            
             if result is None or (not result.children and not result.name):
                 # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
                 ia2_result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
@@ -1326,6 +1393,13 @@ class WindowsBackend(Backend):
                         msaa_result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
                         if msaa_result is not None:
                             result = msaa_result
+                        else:
+                            # Final fallback: try Win32 enumeration
+                            from naturo.bridge import enumerate_child_windows
+                            win32_result = enumerate_child_windows(hwnd=handle, depth=depth)
+                            if win32_result is not None:
+                                logger.info("Auto mode: all backends failed, using Win32 fallback")
+                                result = win32_result
         else:
             result = core.get_element_tree(hwnd=handle, depth=depth)
             # UWP/WinUI fallback for explicit "uia" backend too
