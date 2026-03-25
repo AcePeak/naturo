@@ -88,22 +88,16 @@ def _platform_error_msg(feature: str) -> str:
 # ── capture ─────────────────────────────────────
 
 
-@click.group(cls=FuzzyGroup)
-def capture():
-    """Capture screenshots, video, or watch for changes."""
-    pass
-
-
-@capture.command()
+@click.command("capture")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--screen", "-s", type=int, default=0, help="Screen/monitor index")
-@click.option("--path", "-p", default=None, help="Output file path (default: capture.<format>)")
+@click.option("--path", "-p", "-o", default=None, help="Output file path (default: capture.<format>)")
 @click.option("--format", "fmt", type=click.Choice(["png", "jpg", "bmp"]), default="png", help="Image format (default: png)")
-@click.option("--element", "-e", "element_ref", default=None,
-              help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5")
+@click.option("--element", "-e", "--ref", "element_ref", default=None,
+              help="Crop to element ref (eN) from most recent snapshot, e.g. --element e5 or --ref e5")
 @click.option("--region", default=None, metavar="X,Y,W,H",
               help="Crop to region: x,y,width,height (e.g. --region 100,50,400,300)")
 @click.option("--padding", type=int, default=0,
@@ -112,8 +106,8 @@ def capture():
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
-         element_ref, region, padding, json_output):
+def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+            element_ref, region, padding, json_output):
     """Capture a live screenshot, optionally cropped to an element or region.
 
     Captures the screen or a specific window and saves to a file.
@@ -121,17 +115,18 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
     The screenshot is automatically stored in a snapshot (use --no-snapshot to skip).
     Output format is PNG by default (matching Peekaboo).
 
-    Use --element eN to crop to a specific element from the last 'naturo see' snapshot.
+    Use --element eN (or --ref eN) to crop to a specific element from the last 'naturo see' snapshot.
     Use --region X,Y,W,H to crop to arbitrary coordinates.
     Use --padding N to add N pixels of padding around the crop area.
 
     \b
     Examples:
-        naturo capture live                              # full screen
-        naturo capture live --element e5                 # crop to element e5
-        naturo capture live --element e5 --padding 20   # with 20px padding
-        naturo capture live --region 100,50,400,300      # crop to region
-        naturo capture live --app feishu --element e12   # element in specific app
+        naturo capture                                  # full screen
+        naturo capture --element e5                     # crop to element e5
+        naturo capture --ref e5 --padding 20            # with 20px padding
+        naturo capture --region 100,50,400,300          # crop to region
+        naturo capture --app feishu --element e12       # element in specific app
+        naturo capture -o output.png                    # save to output.png
     """
     if not _platform_supports_gui():
         msg = _platform_error_msg("Screen capture")
@@ -204,6 +199,19 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
             if el_result:
                 element, snap_id = el_result
                 ex, ey, ew, eh = element.frame
+
+                # Check for zero-size bounds (cannot crop)
+                if ew <= 0 or eh <= 0:
+                    msg = (
+                        f"Element {element_ref} (role={element.role!r} name={element.name!r}) "
+                        f"has zero-size bounds ({ew}x{eh}) at ({ex},{ey}) and cannot be cropped. "
+                        "This element may be off-screen, hidden, or in a virtualized container."
+                    )
+                    if json_output:
+                        click.echo(_json_error_str("ZERO_SIZE_ELEMENT", msg))
+                    else:
+                        click.echo(f"Error: {msg}", err=True)
+                    raise SystemExit(1)
 
                 # When capturing a specific window (--app/--hwnd), the
                 # screenshot is window-relative (origin 0,0) but element
@@ -343,45 +351,6 @@ def live(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
-
-
-@capture.command(hidden=True)
-@click.option("--app", help="Target application (name or partial match)")
-@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
-@click.option("--window-title", "window_title", default=None, hidden=True, help="")
-@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
-@click.option("--screen", "-s", type=int, help="Screen/monitor index")
-@click.option("--duration", "-d", type=float, default=5.0, help="Duration in seconds")
-@click.option("--fps", type=int, default=30, help="Frames per second")
-@click.option("--path", "-p", default="capture.mp4", help="Output file path")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def video(app, window_title, hwnd, screen, duration, fps, path, json_output):
-    """Record video of screen or window."""
-    msg = "Video recording is not implemented yet — coming in a future release."
-    if json_output:
-        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    raise SystemExit(1)
-
-
-@capture.command(hidden=True)
-@click.option("--app", help="Target application (name or partial match)")
-@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
-@click.option("--window-title", "window_title", default=None, hidden=True, help="")
-@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
-@click.option("--interval", type=float, default=1.0, help="Check interval in seconds")
-@click.option("--timeout", type=float, help="Max watch time in seconds")
-@click.option("--path", "-p", help="Output directory")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def watch(app, window_title, hwnd, interval, timeout, path, json_output):
-    """Watch for screen changes and capture on change."""
-    msg = "Watch mode is not implemented yet — coming in a future release."
-    if json_output:
-        click.echo(_json_error_str("NOT_IMPLEMENTED", msg))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    raise SystemExit(1)
 
 
 # ── list ────────────────────────────────────────
