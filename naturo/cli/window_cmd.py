@@ -57,6 +57,23 @@ def _resolve_target(app: Optional[str], title: Optional[str], hwnd: Optional[int
     return {"title": effective_title, "hwnd": hwnd}
 
 
+_DEPRECATION_MSG = (
+    "Warning: 'naturo window' is deprecated and will be removed in v0.4.0. "
+    "Use 'naturo app' instead."
+)
+
+
+def _emit_deprecation(json_output: bool) -> None:
+    """Print a deprecation warning to stderr unless in JSON mode.
+
+    Args:
+        json_output: When ``True`` the warning is suppressed (JSON consumers
+            should check the ``deprecated`` key in the response instead).
+    """
+    if not json_output:
+        click.echo(_DEPRECATION_MSG, err=True)
+
+
 @click.group(cls=FuzzyGroup, hidden=True)
 def window():
     """Manage windows (deprecated — use 'naturo app' instead)."""
@@ -64,14 +81,19 @@ def window():
 
 
 @window.command()
+@click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def focus(ctx, app, title, hwnd, json_output):
+def focus(ctx, name, app, title, hwnd, json_output):
     """Focus a window (bring to foreground)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
+    # Support positional NAME for backward compat: naturo window focus "Notepad"
+    if name and not app:
+        app = name
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -105,15 +127,19 @@ def focus(ctx, app, title, hwnd, json_output):
 
 
 @window.command()
+@click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--force", is_flag=True, help="Force terminate the process")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def close(ctx, app, title, hwnd, force, json_output):
+def close(ctx, name, app, title, hwnd, force, json_output):
     """Close a window (graceful or forced)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
+    if name and not app:
+        app = name
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -149,14 +175,18 @@ def close(ctx, app, title, hwnd, force, json_output):
 
 
 @window.command()
+@click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def minimize(ctx, app, title, hwnd, json_output):
+def minimize(ctx, name, app, title, hwnd, json_output):
     """Minimize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
+    if name and not app:
+        app = name
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -190,14 +220,18 @@ def minimize(ctx, app, title, hwnd, json_output):
 
 
 @window.command()
+@click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def maximize(ctx, app, title, hwnd, json_output):
+def maximize(ctx, name, app, title, hwnd, json_output):
     """Maximize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
+    if name and not app:
+        app = name
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -231,14 +265,18 @@ def maximize(ctx, app, title, hwnd, json_output):
 
 
 @window.command()
+@click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def restore(ctx, app, title, hwnd, json_output):
+def restore(ctx, name, app, title, hwnd, json_output):
     """Restore a minimized or maximized window to normal state."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
+    if name and not app:
+        app = name
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -282,6 +320,7 @@ def restore(ctx, app, title, hwnd, json_output):
 def window_move(ctx, app, title, hwnd, x, y, json_output):
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if x is None or y is None:
@@ -334,6 +373,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
 def resize(ctx, app, title, hwnd, width, height, json_output):
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
     from naturo.errors import NaturoError, InvalidInputError
 
     if width is None or height is None:
@@ -397,6 +437,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
 def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
     from naturo.errors import NaturoError
 
     missing = []
@@ -465,6 +506,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
 def window_list(ctx, app, pid, json_output):
     """List open windows."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_deprecation(json_output)
     from naturo.errors import NaturoError
 
     try:
