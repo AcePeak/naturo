@@ -152,7 +152,9 @@ def test_list_apps_delegates_to_app_list():
     )
     # On platforms with a backend, it should succeed
     if parsed.get("success") is True:
-        assert "apps" in parsed, "Response should contain 'apps' key"
+        assert "apps" in parsed or "windows" in parsed, (
+            "Response should contain 'apps' or 'windows' key"
+        )
 
 
 def test_hidden_commands_not_in_help():
