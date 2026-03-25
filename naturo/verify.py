@@ -499,6 +499,13 @@ def _capture_ui_texts(
     if _plat.system() != "Windows":
         return texts
 
+    # Only attempt UI text capture when we have an explicit target.
+    # Without a target (app/window_title/hwnd), the text diff is
+    # unreliable (we'd snapshot random foreground windows) and the
+    # Win32/COM calls can hang on headless environments.
+    if not (app or window_title or hwnd):
+        return texts
+
     try:
         import ctypes
         import ctypes.wintypes
