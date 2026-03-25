@@ -436,6 +436,96 @@ class TestFindAICLI:
         assert data["error"]["code"] == "AI_PROVIDER_UNAVAILABLE"
 
 
-# ── MCP Tool Tests ──────────────────────────────
+class TestFindAutoAIMode:
+    """Issue #287: --provider or --model should auto-enable AI mode."""
 
+    def test_provider_auto_enables_ai(self, fake_image):
+        """When --provider is set to non-auto, AI mode should be auto-enabled."""
+        from click.testing import CliRunner
+        from naturo.cli import main
+
+        mock_result = AIFindResult(
+            found=True,
+            description="Found element",
+            ai_bounds={"x": 100, "y": 100, "width": 50, "height": 30},
+            confidence=0.9,
+            model="claude-sonnet-4-20250514",
+            tokens_used=200,
+            method="ai_only",
+        )
+
+        with patch("naturo.ai_find.ai_find_element", return_value=mock_result) as mock_ai:
+            runner = CliRunner()
+            result = runner.invoke(main, [
+                "find", "公众号", "--provider", "anthropic",
+                "--screenshot", fake_image, "--json",
+            ])
+
+        # AI find should have been called (auto-enabled by --provider)
+        mock_ai.assert_called_once()
+
+    def test_model_auto_enables_ai(self, fake_image):
+        """When --model is set, AI mode should be auto-enabled."""
+        from click.testing import CliRunner
+        from naturo.cli import main
+
+        mock_result = AIFindResult(
+            found=True,
+            description="Found element",
+            ai_bounds={"x": 100, "y": 100, "width": 50, "height": 30},
+            confidence=0.9,
+            model="gpt-4o",
+            tokens_used=200,
+            method="ai_only",
+        )
+
+        with patch("naturo.ai_find.ai_find_element", return_value=mock_result) as mock_ai:
+            runner = CliRunner()
+            result = runner.invoke(main, [
+                "find", "button", "--model", "gpt-4o",
+                "--screenshot", fake_image, "--json",
+            ])
+
+        mock_ai.assert_called_once()
+
+    def test_api_key_auto_enables_ai(self, fake_image):
+        """When --api-key is set, AI mode should be auto-enabled."""
+        from click.testing import CliRunner
+        from naturo.cli import main
+
+        mock_result = AIFindResult(
+            found=True,
+            description="Found element",
+            ai_bounds={"x": 100, "y": 100, "width": 50, "height": 30},
+            confidence=0.9,
+            model="claude-sonnet-4-20250514",
+            tokens_used=200,
+            method="ai_only",
+        )
+
+        with patch("naturo.ai_find.ai_find_element", return_value=mock_result) as mock_ai:
+            runner = CliRunner()
+            result = runner.invoke(main, [
+                "find", "button", "--api-key", "sk-test-123",
+                "--screenshot", fake_image, "--json",
+            ])
+
+        mock_ai.assert_called_once()
+
+    def test_provider_auto_no_false_positive(self):
+        """--provider auto (default) should NOT auto-enable AI mode."""
+        from click.testing import CliRunner
+        from naturo.cli import main
+
+        with patch("naturo.ai_find.ai_find_element") as mock_ai:
+            runner = CliRunner()
+            # Only --provider auto (the default) — should NOT trigger AI
+            result = runner.invoke(main, [
+                "find", "Save", "--provider", "auto",
+            ])
+
+        mock_ai.assert_not_called()
+
+
+# ── MCP Tool Tests ──────────────────────────────
 

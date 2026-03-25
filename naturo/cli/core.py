@@ -944,6 +944,10 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
 
+    # Auto-enable AI mode when --provider or --model is explicitly set (#287)
+    if not ai and (ai_provider != "auto" or ai_model is not None or ai_api_key is not None):
+        ai = True
+
     # AI vision mode — natural language element finding
     if ai:
         _find_with_ai(query, ai_provider, screenshot, app, json_output,
