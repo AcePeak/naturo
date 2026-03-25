@@ -1074,6 +1074,79 @@ class WindowsBackend(Backend):
         except Exception:
             return []
 
+    def _resolve_uwp_child_pid(
+        self, afh_hwnd: int,
+    ) -> tuple[Optional[int], Optional[str]]:
+        """Resolve the real process PID/exe for a UWP app inside AFH (#267).
+
+        ApplicationFrameHost.exe hosts UWP apps as child windows. The
+        child CoreWindow belongs to the actual app process (e.g.,
+        CalculatorApp.exe). This method finds that child and returns its
+        PID and executable path so ``list_apps`` reports the same PID as
+        ``app inspect``.
+
+        Args:
+            afh_hwnd: Window handle of the ApplicationFrameHost top-level window.
+
+        Returns:
+            Tuple of (pid, exe_path) for the real app process, or
+            (None, None) if resolution fails.
+        """
+        import sys
+        if sys.platform != "win32":
+            return None, None
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            afh_pid = ctypes.wintypes.DWORD()
+            user32.GetWindowThreadProcessId(
+                wintypes.HWND(afh_hwnd), ctypes.byref(afh_pid),
+            )
+            afh_pid_val = afh_pid.value
+
+            # Enumerate child windows, find one owned by a different process.
+            children = self._find_uwp_content_children(afh_hwnd)
+            for child_hwnd in children:
+                child_pid = ctypes.wintypes.DWORD()
+                user32.GetWindowThreadProcessId(
+                    wintypes.HWND(child_hwnd), ctypes.byref(child_pid),
+                )
+                if child_pid.value != afh_pid_val and child_pid.value != 0:
+                    # Found the real app process — get its exe path.
+                    import os
+                    pid = child_pid.value
+                    exe_path = None
+                    try:
+                        import psutil  # type: ignore[import-untyped]
+                        proc = psutil.Process(pid)
+                        exe_path = proc.exe()
+                    except Exception:
+                        try:
+                            # Fallback: QueryFullProcessImageNameW
+                            kernel32 = ctypes.windll.kernel32
+                            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+                            h = kernel32.OpenProcess(
+                                PROCESS_QUERY_LIMITED_INFORMATION, False, pid,
+                            )
+                            if h:
+                                buf = ctypes.create_unicode_buffer(1024)
+                                size = wintypes.DWORD(1024)
+                                if kernel32.QueryFullProcessImageNameW(
+                                    h, 0, buf, ctypes.byref(size),
+                                ):
+                                    exe_path = buf.value
+                                kernel32.CloseHandle(h)
+                        except Exception:
+                            pass
+                    return pid, exe_path
+
+        except Exception as exc:
+            logger.debug("UWP child PID resolution failed: %s", exc)
+
+        return None, None
+
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
 
@@ -2044,23 +2117,24 @@ class WindowsBackend(Backend):
             # Skip windows with empty titles (likely invisible/utility windows)
             if not w.title or not w.title.strip():
                 continue
-            # UWP apps hosted by ApplicationFrameHost.exe: include them
-            # with the window title as the app name (since the process name
-            # is generic and unhelpful).  Don't add to seen_pids — multiple
-            # UWP apps may share one AFH process but each has its own window.
-            # Deduplicate by (pid, title) to avoid listing the same UWP app
-            # multiple times when it has multiple top-level windows.
+            # UWP apps hosted by ApplicationFrameHost.exe: resolve the
+            # real child process PID so it matches `app inspect` output
+            # (#267).  The AFH window hosts the UWP app's CoreWindow as a
+            # child; that child belongs to the actual app process.
             if basename == self._UWP_HOST_PROCESS:
-                key = (w.pid, w.title)
+                real_pid, real_exe = self._resolve_uwp_child_pid(w.handle)
+                app_pid = real_pid or w.pid
+                app_exe = real_exe or w.process_name
+                key = (app_pid, w.title)
                 if key in seen_uwp:
                     continue
                 seen_uwp.add(key)
                 apps.append({
                     "name": w.title,
-                    "pid": w.pid,
+                    "pid": app_pid,
                     "title": w.title,
-                    "path": w.process_name,
-                    "process": w.process_name,
+                    "path": app_exe,
+                    "process": app_exe,
                 })
                 continue
             seen_pids.add(w.pid)
