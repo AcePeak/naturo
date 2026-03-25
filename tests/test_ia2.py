@@ -124,7 +124,11 @@ class TestBackendIA2Mocked:
         be._core.ia2_get_element_tree.return_value = ia2_el
         be._core.list_windows.return_value = []
 
-        with patch.object(be, "_resolve_hwnd", return_value=12345):
+        # Mock _is_afh_window and _is_shallow_tree to prevent UWP/hybrid
+        # retry paths from calling get_element_tree a second time (#335)
+        with patch.object(be, "_resolve_hwnd", return_value=12345), \
+             patch.object(be, "_is_afh_window", return_value=False), \
+             patch.object(be, "_is_shallow_tree", return_value=False):
             result = be.get_element_tree(hwnd=12345, backend="auto")
 
         be._core.get_element_tree.assert_called_once()
@@ -158,7 +162,9 @@ class TestBackendIA2Mocked:
         be._core.msaa_get_element_tree.return_value = msaa_el
         be._core.list_windows.return_value = []
 
-        with patch.object(be, "_resolve_hwnd", return_value=12345):
+        with patch.object(be, "_resolve_hwnd", return_value=12345), \
+             patch.object(be, "_is_afh_window", return_value=False), \
+             patch.object(be, "_is_shallow_tree", return_value=False):
             result = be.get_element_tree(hwnd=12345, backend="auto")
 
         be._core.get_element_tree.assert_called_once()
