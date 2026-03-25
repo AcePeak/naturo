@@ -677,6 +677,12 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
             from naturo.verify import verify_click
             _before_focus = _before_state.get("focus") if _before_state else None
             _before_ui_texts = _before_state.get("ui_texts") if _before_state else None
+            # (#270) When UIA Invoke pattern was used successfully for UWP
+            # apps, pass that as a signal — the Invoke call itself is
+            # strong evidence the click worked.
+            _uia_invoked = bool(
+                _is_uwp and locals().get("_used_uia_click")
+            )
             _verification = verify_click(
                 backend,
                 x=x,
@@ -687,6 +693,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
                 hwnd=hwnd,
                 before_focus=_before_focus,
                 before_ui_texts=_before_ui_texts,
+                uia_invoked=_uia_invoked,
             )
         except Exception as exc:
             logger.debug("Click verification failed: %s", exc)

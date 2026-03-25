@@ -400,6 +400,38 @@ class TestVerifyClickUiTextFallback:
         assert result.method == "focus_check"
 
 
+    def test_uia_invoked_returns_verified_immediately(self):
+        """#270: UIA Invoke succeeded → verified without focus/text checks."""
+        backend = MagicMock(spec=[])
+        result = verify_click(
+            backend,
+            before_focus=None,
+            uia_invoked=True,
+            settle_ms=0,
+        )
+
+        assert result.status == VerifyStatus.VERIFIED
+        assert result.method == "uia_invoke"
+        assert "Invoke" in result.detail
+
+    def test_uia_invoked_false_falls_through(self):
+        """uia_invoked=False should use normal focus/text verification."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus:
+            mock_focus.return_value = focus.copy()
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                uia_invoked=False,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.method == "focus_check"
+
+
 class TestCaptureBeforeStateUiTexts:
     """Test #263: capture_before_state includes UI texts for click actions."""
 

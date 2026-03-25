@@ -260,11 +260,14 @@ def verify_click(
     hwnd: Optional[int] = None,
     before_focus: Optional[dict] = None,
     before_ui_texts: Optional[dict[str, str]] = None,
+    uia_invoked: bool = False,
     settle_ms: int = 200,
 ) -> VerificationResult:
     """Verify that a click action changed the UI state.
 
     Strategy:
+    0. If UIA Invoke pattern was used successfully → verified (the COM
+       call itself confirms the button was activated; #270).
     1. Compare foreground window / focused element before vs after.
     2. If focus changed → verified (click had effect).
     3. If focus unchanged, fall back to UI text comparison — check whether
@@ -289,12 +292,25 @@ def verify_click(
         before_ui_texts: Mapping of element identifiers to their text/value
             captured before the click. Used as fallback when focus doesn't
             change (e.g., UWP Calculator display).
+        uia_invoked: If True, the click was performed via UIA Invoke
+            pattern (COM call succeeded). This is strong evidence the
+            button was activated, even when focus/UI text checks fail.
         settle_ms: Milliseconds to wait for UI to settle.
 
     Returns:
         VerificationResult with outcome.
     """
     start = time.monotonic()
+
+    # (#270) UIA Invoke pattern succeeded — the COM call itself confirms
+    # the control was activated. No need for heuristic focus/text checks.
+    if uia_invoked:
+        return VerificationResult(
+            status=VerifyStatus.VERIFIED,
+            detail="UIA Invoke pattern succeeded — control was activated",
+            method="uia_invoke",
+            elapsed_ms=(time.monotonic() - start) * 1000,
+        )
 
     if settle_ms > 0:
         time.sleep(settle_ms / 1000.0)
