@@ -128,6 +128,42 @@ def _flatten(root: ElementInfo) -> List[ElementInfo]:
     return result
 
 
+# ── Shallow tree detection (issue #275) ───────────────────────────────────────
+
+#: Maximum element count to consider a tree "shallow".
+SHALLOW_TREE_MAX_ELEMENTS = 5
+
+#: Minimum ratio of elements with invalid bounds to trigger fallback.
+SHALLOW_TREE_INVALID_BOUNDS_RATIO = 0.5
+
+
+def _has_invalid_bounds(el: ElementInfo) -> bool:
+    """Return True if the element has zero-area or negative-coordinate bounds."""
+    if el.width <= 0 or el.height <= 0:
+        return True
+    if el.x < 0 or el.y < 0:
+        return True
+    return False
+
+
+def _is_shallow_tree(elements: List[ElementInfo]) -> tuple[bool, int, int]:
+    """Detect whether a UIA tree is too shallow to be useful.
+
+    Returns (is_shallow, total_count, invalid_count).
+    """
+    if not elements:
+        return True, 0, 0
+
+    total = len(elements)
+    if total > SHALLOW_TREE_MAX_ELEMENTS:
+        return False, total, 0
+
+    invalid = sum(1 for e in elements if _has_invalid_bounds(e))
+    ratio = invalid / total if total > 0 else 0.0
+    is_shallow = ratio >= SHALLOW_TREE_INVALID_BOUNDS_RATIO
+    return is_shallow, total, invalid
+
+
 # ── Tag helpers ───────────────────────────────────────────────────────────────
 
 
@@ -427,22 +463,44 @@ def run_cascade(
                     status="skipped" if debug_port is None else "no_elements"
                 ))
 
+    # ── Shallow tree detection (issue #275) ────────────────────────────────
+    # When the UIA tree is too shallow (few elements, mostly invalid bounds),
+    # automatically enable AI vision fallback even without --fill-gaps.
+    shallow_fallback = False
+    if root_tree is not None and not fill_gaps_ai:
+        flat_all = _flatten(root_tree)
+        is_shallow, total_count, invalid_count = _is_shallow_tree(flat_all)
+        if is_shallow and screenshot_path:
+            shallow_fallback = True
+            logger.info(
+                "UIA tree too shallow (%d elements, %d with invalid bounds), "
+                "falling back to AI vision...",
+                total_count, invalid_count,
+            )
+
     # ── Provider 3: AI vision fallback ──────────────────────────────────────
-    if fill_gaps_ai and root_tree is not None and screenshot_path:
+    should_run_ai = (fill_gaps_ai or shallow_fallback) and root_tree is not None and screenshot_path
+    if should_run_ai:
         current_coverage = _estimate_coverage(merged_elements, window_area) if window_area > 0 else 0.0
 
-        if current_coverage < coverage_target or coverage_target == 0.0:
+        if current_coverage < coverage_target or coverage_target == 0.0 or shallow_fallback:
             t0 = time.monotonic()
             bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
             ai_elements = _fetch_ai_elements(screenshot_path, bounds, ai_provider)
             elapsed = (time.monotonic() - t0) * 1000
 
+            trigger = "shallow_tree" if shallow_fallback else "fill_gaps"
             if ai_elements:
                 for el in ai_elements:
                     merged_elements.append(el)
                 stats.providers.append(ProviderStat(
-                    name="vision", elements=len(ai_elements), elapsed_ms=elapsed, status="ok"
+                    name="vision", elements=len(ai_elements), elapsed_ms=elapsed,
+                    status="ok",
                 ))
+                logger.info(
+                    "AI vision added %d elements (trigger: %s)",
+                    len(ai_elements), trigger,
+                )
             else:
                 stats.providers.append(ProviderStat(
                     name="vision", elapsed_ms=elapsed, status="skipped"

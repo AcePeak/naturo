@@ -604,6 +604,24 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
         if cascade or backend == "auto":
+            # (#275) Auto-capture screenshot for cascade mode so AI vision
+            # fallback can trigger when UIA tree is too shallow.
+            cascade_screenshot = path
+            _cascade_tmp_screenshot = None
+            if not cascade_screenshot and cascade:
+                import tempfile as _tmpfile
+                _cascade_tmp_screenshot = _tmpfile.NamedTemporaryFile(
+                    suffix=".png", prefix="naturo_cascade_", delete=False,
+                )
+                _cascade_tmp_screenshot.close()
+                try:
+                    _cap_result = be.capture_screen(
+                        output_path=_cascade_tmp_screenshot.name
+                    )
+                    cascade_screenshot = _cap_result.path
+                except Exception:
+                    cascade_screenshot = None
+
             from naturo.cascade import run_cascade
             cascade_result = run_cascade(
                 be,
@@ -615,7 +633,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 backend_name=backend,
                 coverage_target=coverage_target,
                 fill_gaps_ai=fill_gaps,
-                screenshot_path=path,
+                screenshot_path=cascade_screenshot,
             )
             tree = cascade_result.tree
             cascade_stats = cascade_result.stats
