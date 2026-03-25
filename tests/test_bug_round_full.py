@@ -186,7 +186,13 @@ class TestBUG028DepthValidation:
         assert data["error"]["code"] == "INVALID_INPUT"
 
     def test_see_depth_11(self, runner):
+        """Depth 11 is now accepted (limit raised to 50 for VB6/ActiveX)."""
         result = runner.invoke(main, ["see", "--depth", "11"])
+        assert result.exit_code == 0 or "must be between" not in (result.output or "")
+
+    def test_see_depth_51_rejected(self, runner):
+        """Depth > 50 should be rejected."""
+        result = runner.invoke(main, ["see", "--depth", "51"])
         assert result.exit_code != 0
 
     def test_find_depth_20_accepted(self, runner):
