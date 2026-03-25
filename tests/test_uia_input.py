@@ -31,6 +31,7 @@ class TestInitComtypesUia:
     """Tests for _init_comtypes_uia helper."""
 
     @pytest.mark.skipif(not _has_comtypes, reason="comtypes not installed")
+    @pytest.mark.desktop
     def test_returns_uia_and_module(self, windows_backend):
         """_init_comtypes_uia returns (uia, module) tuple."""
         mock_mod = MagicMock()
