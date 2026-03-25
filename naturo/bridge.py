@@ -161,6 +161,46 @@ _WIN32_CLASS_ROLE_MAP = {
 }
 
 
+def _get_role_from_class_name(cls_name: str, is_top_level: bool = False) -> str:
+    """Map Win32 class name to UIA-style role.
+
+    Handles WindowsForms dynamic class names (e.g., WindowsForms10.EDIT.app.0.xxx).
+
+    Args:
+        cls_name: Win32 class name from GetClassName
+        is_top_level: If True, default to "Window" instead of "Pane"
+
+    Returns:
+        UIA role string (Button, Edit, Text, etc.)
+    """
+    # Direct match (e.g., "Button", "ThunderRT6CommandButton")
+    role = _WIN32_CLASS_ROLE_MAP.get(cls_name)
+    if role:
+        return role
+
+    # WindowsForms class name pattern: WindowsForms10.{TYPE}.app.{version}.{hash}
+    # Examples:
+    #   WindowsForms10.STATIC.app.0.xxx → TYPE=STATIC → Text
+    #   WindowsForms10.EDIT.app.0.xxx → TYPE=EDIT → Edit
+    #   WindowsForms10.Window.8.app.0.xxx → TYPE=Window → Pane (generic container)
+    if cls_name.startswith("WindowsForms10."):
+        parts = cls_name.split(".")
+        if len(parts) >= 3:
+            inner_type = parts[1]  # e.g., "EDIT", "STATIC", "Window", "SysTreeView32"
+            # Try exact match first (handles "SysTreeView32" embedded in WindowsForms)
+            role = _WIN32_CLASS_ROLE_MAP.get(inner_type)
+            if role:
+                return role
+            # Fallback: uppercase TYPE might be uppercase version of base class
+            # (STATIC → Static, EDIT → Edit)
+            if inner_type.isupper():
+                role = _WIN32_CLASS_ROLE_MAP.get(inner_type.capitalize())
+                if role:
+                    return role
+
+    return "Window" if is_top_level else "Pane"
+
+
 def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
                        refs: Optional[list] = None) -> None:
     """Draw colored borders and labels on Win32 child windows for visual identification.
@@ -373,10 +413,8 @@ def enumerate_child_windows(hwnd: int, depth: int = 10) -> Optional[ElementInfo]
     def _build_tree(h, current_depth):
         """Recursively build ElementInfo tree from HWND hierarchy."""
         title, cls_name, rect = _get_window_info(h)
-        role = _WIN32_CLASS_ROLE_MAP.get(cls_name, "Pane")
-        # Use "Window" for top-level
-        if current_depth == 0:
-            role = _WIN32_CLASS_ROLE_MAP.get(cls_name, "Window")
+        is_top_level = (current_depth == 0)
+        role = _get_role_from_class_name(cls_name, is_top_level=is_top_level)
 
         # Include class name in display for debugging and identification
         display_name = title
