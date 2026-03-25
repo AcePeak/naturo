@@ -922,11 +922,14 @@ class WindowsBackend(Backend):
                     score = 4  # exact process name
                 elif search_lower in proc_stem:
                     score = 3  # substring in process name
-                # Title fallback (lower priority)
-                elif search_lower == title_lower:
-                    score = 2  # exact title
-                elif search_lower in title_lower:
-                    score = 1  # substring in title
+                # Title fallback (lower priority) — BUT skip for terminal processes
+                # (#315: cmd/powershell titles include the running command, causing
+                # false matches like "naturo see --app SomeApp" matching the cmd window)
+                elif proc_stem not in ("cmd", "powershell", "conhost", "pwsh"):
+                    if search_lower == title_lower:
+                        score = 2  # exact title
+                    elif search_lower in title_lower:
+                        score = 1  # substring in title
                 # Alias matching: cross-locale app name resolution
                 if score == 0:
                     aliases = self._APP_ALIASES.get(search_lower, set())
