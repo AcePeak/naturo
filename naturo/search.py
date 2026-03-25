@@ -167,11 +167,25 @@ def _search_recursive(
     current_path = path + [(el.role, el.name)]
 
     # Check match
-    role_match = _matches_role(el.role, role_filter) if role_filter else True
-    name_match = _matches_name(el.name, name_filter) if name_filter else True
+    # Issue #281: when role_filter is not specified but name_filter is,
+    # match against BOTH role and name (fuzzy search).
+    if role_filter:
+        role_match = _matches_role(el.role, role_filter)
+        name_match = _matches_name(el.name, name_filter) if name_filter else True
+        match_any = role_match and name_match
+    elif name_filter:
+        # Fuzzy all-fields search: match if name OR role OR value contains pattern
+        role_match_fuzzy = _matches_name(el.role, name_filter)
+        name_match_fuzzy = _matches_name(el.name, name_filter)
+        value_match_fuzzy = _matches_name(el.value, name_filter) if el.value else False
+        # At least one must match
+        match_any = role_match_fuzzy or name_match_fuzzy or value_match_fuzzy
+    else:
+        match_any = True
+
     actionable_match = (not actionable_only) or _is_actionable(el)
 
-    if role_match and name_match and actionable_match:
+    if match_any and actionable_match:
         # For "match all" queries (no filters), skip if both name and role empty
         if role_filter or name_filter or (el.name or el.role):
             results.append(SearchResult(element=el, breadcrumb=current_path))
