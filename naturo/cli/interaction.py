@@ -404,12 +404,29 @@ def _get_backend(json_output: bool = False):
         raise click.UsageError(str(exc))
 
 
+_VERIFICATION_KEYS = frozenset({
+    "verified",
+    "verification_detail",
+    "verification_method",
+    "verification_ms",
+    "verification_error",
+})
+"""Keys that should only appear in JSON output, not in default text mode."""
+
+
 def _json_ok(data: dict, json_output: bool) -> None:
-    """Emit success result as JSON or plain text."""
+    """Emit success result as JSON or plain text.
+
+    In text mode, verification internals (verified, verification_detail, etc.)
+    are suppressed — they are useful for machine consumers but confusing for
+    end users (#273).  JSON mode retains all fields.
+    """
     if json_output:
         click.echo(json.dumps({"success": True, "data": data}))
     else:
         for k, v in data.items():
+            if k in _VERIFICATION_KEYS:
+                continue
             click.echo(f"{k}: {v}")
 
 
@@ -722,8 +739,9 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
             click.echo(json.dumps({"success": True, "data": result_data}))
         else:
             for k, v in result_data.items():
+                if k in _VERIFICATION_KEYS:
+                    continue
                 click.echo(f"{k}: {v}")
-            click.echo("WARNING: Verification inconclusive — click may not have taken effect", err=True)
         sys.exit(2)
 
     _json_ok(result_data, json_output)
@@ -1072,6 +1090,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         else:
             click.echo(f"WARNING: {_verification.detail}", err=True)
             for k, v in result_data.items():
+                if k in _VERIFICATION_KEYS:
+                    continue
                 click.echo(f"{k}: {v}")
             sys.exit(1)
 
@@ -1083,8 +1103,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             click.echo(json.dumps({"success": True, "data": result_data}))
         else:
             for k, v in result_data.items():
+                if k in _VERIFICATION_KEYS:
+                    continue
                 click.echo(f"{k}: {v}")
-            click.echo("WARNING: Verification inconclusive — action may not have taken effect", err=True)
         sys.exit(2)
 
     _json_ok(result_data, json_output)
@@ -1299,8 +1320,9 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
             click.echo(json.dumps({"success": True, "data": result_data}))
         else:
             for k, v in result_data.items():
+                if k in _VERIFICATION_KEYS:
+                    continue
                 click.echo(f"{k}: {v}")
-            click.echo("WARNING: Verification inconclusive — press may not have taken effect", err=True)
         sys.exit(2)
 
     _json_ok(result_data, json_output)
