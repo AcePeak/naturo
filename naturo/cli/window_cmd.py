@@ -57,6 +57,23 @@ def _resolve_target(app: Optional[str], title: Optional[str], hwnd: Optional[int
     return {"title": effective_title, "hwnd": hwnd}
 
 
+_WINDOW_DEPRECATION_MSG = (
+    "Warning: 'naturo window' is deprecated and will be removed in a future version. "
+    "Use 'naturo app' instead."
+)
+
+
+def _emit_window_deprecation(json_output: bool) -> None:
+    """Emit deprecation warning for window commands.
+
+    Args:
+        json_output: If True, skip text warning (caller should include
+            ``deprecated`` field in JSON response instead).
+    """
+    if not json_output:
+        click.echo(_WINDOW_DEPRECATION_MSG, err=True)
+
+
 @click.group(cls=FuzzyGroup, hidden=True)
 def window():
     """Manage windows (deprecated — use 'naturo app' instead)."""
@@ -72,6 +89,7 @@ def window():
 def focus(ctx, app, title, hwnd, json_output):
     """Focus a window (bring to foreground)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -114,6 +132,7 @@ def focus(ctx, app, title, hwnd, json_output):
 def close(ctx, app, title, hwnd, force, json_output):
     """Close a window (graceful or forced)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -157,6 +176,7 @@ def close(ctx, app, title, hwnd, force, json_output):
 def minimize(ctx, app, title, hwnd, json_output):
     """Minimize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -198,6 +218,7 @@ def minimize(ctx, app, title, hwnd, json_output):
 def maximize(ctx, app, title, hwnd, json_output):
     """Maximize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -239,6 +260,7 @@ def maximize(ctx, app, title, hwnd, json_output):
 def restore(ctx, app, title, hwnd, json_output):
     """Restore a minimized or maximized window to normal state."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -282,6 +304,7 @@ def restore(ctx, app, title, hwnd, json_output):
 def window_move(ctx, app, title, hwnd, x, y, json_output):
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     if x is None or y is None:
@@ -334,6 +357,7 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
 def resize(ctx, app, title, hwnd, width, height, json_output):
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError, InvalidInputError
 
     if width is None or height is None:
@@ -397,6 +421,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
 def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     missing = []
@@ -465,6 +490,7 @@ def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
 def window_list(ctx, app, pid, json_output):
     """List open windows."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    _emit_window_deprecation(json_output)
     from naturo.errors import NaturoError
 
     try:

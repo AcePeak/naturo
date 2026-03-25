@@ -1357,6 +1357,14 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     Deprecated: use 'naturo press ctrl+c' instead of 'naturo hotkey ctrl+c'.
     This command is kept for backward compatibility.
     """
+    # Emit deprecation warning (goes to stderr, does not affect JSON output on stdout)
+    if not json_output:
+        click.echo(
+            "Warning: 'naturo hotkey' is deprecated and will be removed in a future version. "
+            "Use 'naturo press' instead.",
+            err=True,
+        )
+
     # Build a single combo string from positional or --keys options
     if keys:
         combo = keys
