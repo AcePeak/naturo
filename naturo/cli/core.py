@@ -756,12 +756,27 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # causing duplicate display IDs in JSON output.
             _json_ref_seq = [0]
 
-            def to_dict(el):
-                """Convert ElementInfo tree to a JSON-serializable dict."""
+            def to_dict(el, parent_ref=None):
+                """Convert ElementInfo tree to a JSON-serializable dict.
+
+                Args:
+                    el: Backend ElementInfo node.
+                    parent_ref: The naturo ref (eN) of the parent element,
+                        ensuring parent references are always in the same
+                        ID space as element refs (#295).
+                """
                 _json_ref_seq[0] += 1
                 display_id = f"e{_json_ref_seq[0]}"
+
+                # (#295) Expose AutomationId separately.  The raw
+                # el.id from the bridge may be an AutomationId or a
+                # tree-assigned "eN" placeholder.  Filter placeholders.
+                raw_id = str(el.id) if el.id else ""
+                automation_id = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+
                 d = {
                     "id": display_id,
+                    "automation_id": automation_id,
                     "role": el.role,
                     "name": el.name,
                     "value": el.value,
@@ -769,12 +784,16 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "y": el.y,
                     "width": el.width,
                     "height": el.height,
-                    "children": [to_dict(c) for c in el.children],
+                    "children": [to_dict(c, parent_ref=display_id) for c in el.children],
                 }
-                # Include hierarchy/shortcut info and source from properties
+                # (#295) Always use naturo ref for parent, never raw
+                # AutomationId — keeps a single consistent ID space.
+                if parent_ref:
+                    d["parent_ref"] = parent_ref
+                # Keep deprecated "parent_id" as alias for backward compat
+                if parent_ref:
+                    d["parent_id"] = parent_ref
                 props = getattr(el, "properties", {})
-                if props.get("parent_id"):
-                    d["parent_id"] = props["parent_id"]
                 if props.get("keyboard_shortcut"):
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
