@@ -73,6 +73,7 @@ class ElementInfo:
         children: Child elements.
         parent_id: Parent element's id (filled by Python-layer traversal).
         keyboard_shortcut: Keyboard shortcut string (e.g., "Ctrl+S").
+        hwnd: Win32 window handle (Windows only, for hybrid mode and direct messaging).
     """
     id: str
     role: str
@@ -85,6 +86,7 @@ class ElementInfo:
     children: list["ElementInfo"] = field(default_factory=list)
     parent_id: Optional[str] = None
     keyboard_shortcut: Optional[str] = None
+    hwnd: Optional[int] = None
 
 
 def _parse_element(data: dict) -> ElementInfo:
@@ -393,6 +395,7 @@ def enumerate_child_windows(hwnd: int, depth: int = 10) -> Optional[ElementInfo]
             width=rect.right - rect.left,
             height=rect.bottom - rect.top,
             children=[],
+            hwnd=h,
         )
         counter[0] += 1
 
