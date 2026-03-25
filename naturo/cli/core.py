@@ -691,6 +691,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                         width=subtree.width,
                         height=subtree.height,
                         children=[subtree],
+                        properties={},
                     )
                     tree.children.append(window_node)
             else:
