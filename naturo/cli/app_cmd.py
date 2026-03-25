@@ -207,6 +207,8 @@ def app_list(ctx, show_all, show_windows, json_output):
         # Detailed window listing (replaces `naturo window list`)
         from naturo.errors import NaturoError
         try:
+            from naturo.cli.interaction import _check_desktop_session
+            _check_desktop_session()
             from naturo.backends.base import get_backend
             backend = get_backend()
             windows = backend.list_windows()
@@ -270,6 +272,8 @@ def app_list(ctx, show_all, show_windows, json_output):
     # Default: only apps with visible windows (via backend)
     from naturo.errors import NaturoError
     try:
+        from naturo.cli.interaction import _check_desktop_session
+        _check_desktop_session()
         from naturo.backends.base import get_backend
         backend = get_backend()
         apps_data = backend.list_apps()
@@ -308,9 +312,11 @@ def app_hide(ctx, name, json_output):
     """Hide (minimize) all windows of an application. Alias for minimize."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     from naturo.backends.base import get_backend
-    from naturo.errors import NaturoError
+    from naturo.errors import NaturoError, NoDesktopSessionError
 
     try:
+        from naturo.cli.interaction import _check_desktop_session
+        _check_desktop_session()
         backend = get_backend()
         windows = backend.list_windows()
         name_lower = name.lower()

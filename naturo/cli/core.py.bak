@@ -584,8 +584,8 @@ def permissions(json_output):
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto"]),
-    default="auto",
-    help="Accessibility backend / interaction method: auto (default, cascade UIA→MSAA→Win32), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32",
+    default="uia",
+    help="Accessibility backend / interaction method: uia (default), msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), auto",
 )
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
         cascade, fill_gaps, show_stats, coverage_target, json_output, backend):
