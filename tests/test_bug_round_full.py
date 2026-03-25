@@ -176,7 +176,7 @@ class TestBUG028DepthValidation:
     def test_find_depth_zero(self, runner):
         result = runner.invoke(main, ["find", "Save", "--depth", "0"])
         assert result.exit_code != 0
-        assert "must be between 1 and 10" in result.output or "error" in result.output.lower()
+        assert "must be between 1 and 50" in result.output or "error" in result.output.lower()
 
     def test_find_depth_negative_json(self, runner):
         result = runner.invoke(main, ["find", "Save", "--depth", "-1", "--json"])
@@ -188,6 +188,19 @@ class TestBUG028DepthValidation:
     def test_see_depth_11(self, runner):
         result = runner.invoke(main, ["see", "--depth", "11"])
         assert result.exit_code != 0
+
+    def test_find_depth_20_accepted(self, runner):
+        """Issue #284: find should accept depth > 10 (default is 20)."""
+        # depth=20 should be accepted (not rejected as out-of-range)
+        result = runner.invoke(main, ["find", "Save", "--depth", "20"])
+        # Should not fail with INVALID_INPUT for depth
+        assert "must be between" not in (result.output or "")
+
+    def test_find_depth_51_rejected(self, runner):
+        """Issue #284: find depth max is 50."""
+        result = runner.invoke(main, ["find", "Save", "--depth", "51"])
+        assert result.exit_code != 0
+        assert "must be between 1 and 50" in result.output or "error" in result.output.lower()
 
 
 class TestBUG032TypeWpmValidation:

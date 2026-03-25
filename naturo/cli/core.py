@@ -884,7 +884,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
               help="Find all elements (equivalent to query \"*\"). Safe from shell glob expansion.")
 @click.option("--role", help="Filter by element role (e.g., Button, Edit)")
 @click.option("--actionable", is_flag=True, help="Only show actionable elements")
-@click.option("--depth", "-d", type=int, default=7, help="Maximum tree depth (1-10)")
+@click.option("--depth", "-d", type=int, default=20, help="Maximum tree depth (default 20; use lower values for performance)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
 @click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
 @click.option("--screenshot", type=click.Path(), default=None,
@@ -950,9 +950,9 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
                       model=ai_model, api_key=ai_api_key)
         return
 
-    # BUG-028: Validate --depth range (before platform check — input validation first)
-    if depth < 1 or depth > 10:
-        msg = f"--depth must be between 1 and 10, got {depth}"
+    # Validate --depth range (find supports deeper traversal than see)
+    if depth < 1 or depth > 50:
+        msg = f"--depth must be between 1 and 50, got {depth}"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
