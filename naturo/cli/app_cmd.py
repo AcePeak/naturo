@@ -532,6 +532,7 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
     target_pid = pid
     target_exe = ""
     target_name = name or ""
+    target_hwnd = None
 
     if name and not pid:
         from naturo.process import find_process
@@ -548,9 +549,23 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
         target_exe = proc.path or proc.name or ""
         target_name = proc.name or name
 
+    # Resolve hwnd via the backend for accurate UIA probing (#335).
+    # UWP apps (Notepad, Calculator, etc.) have their top-level window
+    # owned by ApplicationFrameHost.exe, not the app process itself.
+    # The backend's _resolve_hwnd handles this correctly via fuzzy
+    # matching on process names and window titles.
+    try:
+        from naturo.backends.base import get_backend
+        _backend = get_backend()
+        if hasattr(_backend, "_resolve_hwnd"):
+            target_hwnd = _backend._resolve_hwnd(app=name or None)
+    except Exception:
+        pass  # Non-critical: probes will use _find_main_window fallback
+
     result = detect(
         pid=target_pid,
         exe=target_exe,
+        hwnd=target_hwnd,
         app_name=target_name,
         use_cache=True,
         quick=quick,
