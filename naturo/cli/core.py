@@ -981,7 +981,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         naturo find "Save"                      # fuzzy name search
         naturo find "Button:Save"               # role + name
         naturo find "role:Edit"                  # by role only
-        naturo find --all --actionable           # all actionable elements (SSH-safe)
+        naturo find --all --actionable           # all actionable elements
         naturo find --all --role Button          # all buttons
         naturo find "the save button" --ai       # AI vision search
         naturo find "Save" --app "Notepad"              # search in specific app
