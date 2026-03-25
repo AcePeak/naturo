@@ -191,59 +191,18 @@ def app_relaunch(ctx, name, wait_until_ready, timeout, json_output):
 
 @click.command("list")
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
-@click.option("--windows", "show_windows", is_flag=True, help="Show all open windows with details")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_list(ctx, show_all, show_windows, json_output):
+def app_list(ctx, show_all, json_output):
     """List running applications with visible windows.
 
-    By default, only user-facing applications with visible windows are shown.
+    By default, shows user-facing applications with visible windows
+    (PID, HWND, process name, and title). Output is compatible with
+    the deprecated `naturo window list` command.
+
     Use --all to include all processes (system services, background tasks).
-    Use --windows to list all open windows with handles and dimensions.
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
-
-    if show_windows:
-        # Detailed window listing (replaces `naturo window list`)
-        from naturo.errors import NaturoError
-        try:
-            from naturo.backends.base import get_backend
-            backend = get_backend()
-            windows = backend.list_windows()
-        except Exception as exc:
-            if json_output:
-                click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
-            else:
-                _safe_echo(f"Error: {exc}", err=True)
-            sys.exit(1)
-            return
-
-        if json_output:
-            click.echo(json.dumps({
-                "success": True,
-                "windows": [
-                    {
-                        "handle": w.handle,
-                        "title": w.title,
-                        "process_name": w.process_name,
-                        "pid": w.pid,
-                        "x": w.x, "y": w.y,
-                        "width": w.width, "height": w.height,
-                        "is_visible": w.is_visible,
-                        "is_minimized": w.is_minimized,
-                    }
-                    for w in windows
-                ],
-                "count": len(windows),
-            }, indent=2))
-        else:
-            if not windows:
-                click.echo("No windows found")
-            else:
-                for w in windows:
-                    _safe_echo(f"  {w.handle:>10}  {w.process_name:<20}  {w.title}")
-                click.echo(f"\n{len(windows)} windows")
-        return
 
     if show_all:
         # Legacy behavior: list all processes via tasklist/ps
@@ -267,12 +226,48 @@ def app_list(ctx, show_all, show_windows, json_output):
                 click.echo(f"\n{len(apps)} processes")
         return
 
-    # Default: only apps with visible windows (via backend)
+    # Default: list windows (replaces backend.list_apps with filtered backend.list_windows)
+    # This unifies `app list` and `window list` output formats (#274)
     from naturo.errors import NaturoError
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        apps_data = backend.list_apps()
+        windows = backend.list_windows()
+        
+        # Apply same filtering as backend.list_apps:
+        # - visible, non-minimized windows
+        # - exclude system processes (platform-specific)
+        # - exclude empty titles
+        # - deduplicate by (PID, title) for UWP apps
+        import os
+        
+        system_processes = set()
+        if hasattr(backend, '_SYSTEM_PROCESS_NAMES'):
+            system_processes = backend._SYSTEM_PROCESS_NAMES
+        
+        filtered_windows = []
+        seen_keys = set()
+        
+        for w in windows:
+            if not w.is_visible or w.is_minimized:
+                continue
+            if not w.title or not w.title.strip():
+                continue
+            
+            basename = os.path.basename(w.process_name).lower()
+            if basename in system_processes:
+                continue
+            
+            # Deduplicate by (PID, title) to match backend.list_apps behavior for UWP apps
+            key = (w.pid, w.title)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            
+            filtered_windows.append(w)
+        
+        windows = filtered_windows
+        
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
@@ -284,20 +279,30 @@ def app_list(ctx, show_all, show_windows, json_output):
     if json_output:
         click.echo(json.dumps({
             "success": True,
-            "apps": apps_data,
-            "count": len(apps_data),
+            "windows": [
+                {
+                    "handle": w.handle,
+                    "pid": w.pid,
+                    "process_name": w.process_name,
+                    "title": w.title,
+                    "x": w.x, "y": w.y,
+                    "width": w.width, "height": w.height,
+                    "is_visible": w.is_visible,
+                    "is_minimized": w.is_minimized,
+                }
+                for w in windows
+            ],
+            "count": len(windows),
         }, indent=2))
     else:
-        if not apps_data:
+        if not windows:
             click.echo("No running applications with visible windows found")
         else:
-            for a in apps_data:
-                pid = a.get("pid", "")
-                name = a.get("name", "")
-                title = a.get("title", "")
-                path = a.get("process", a.get("path", ""))
-                _safe_echo(f"  {pid:>8}  {name:<30} {title}")
-            click.echo(f"\n{len(apps_data)} applications")
+            # Format: PID  HWND  process_name  title
+            # Align with window list output for consistency
+            for w in windows:
+                _safe_echo(f"  {w.pid:>8}  {w.handle:>10}  {w.process_name:<20}  {w.title}")
+            click.echo(f"\n{len(windows)} applications")
 
 
 @click.command("hide", hidden=True)
