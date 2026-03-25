@@ -660,14 +660,20 @@ def _capture_uia_child_names(
     return result_holder["texts"]
 
 
-def _capture_focus_state(backend) -> dict:
+def _capture_focus_state(backend, timeout_s: float = 3.0) -> dict:
     """Capture current focus/UI state for before/after comparison.
 
     Returns a dict with foreground window info that can be compared
     across two points in time.
 
+    Win32 calls (GetForegroundWindow, GetWindowText) are fast and safe.
+    The UIA portion (GetFocusedElement via comtypes) runs in a daemon
+    thread with a timeout to prevent hangs on headless CI runners or
+    unresponsive UIA providers.
+
     Args:
         backend: Platform backend instance.
+        timeout_s: Maximum seconds to wait for UIA focus capture (default 3).
 
     Returns:
         Dict with keys: foreground_hwnd, foreground_title, foreground_pid.
@@ -682,7 +688,7 @@ def _capture_focus_state(backend) -> dict:
 
             user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
-            # Foreground window handle
+            # Foreground window handle — fast Win32 call, no timeout needed
             fg_hwnd = user32.GetForegroundWindow()
             state["foreground_hwnd"] = fg_hwnd
 
@@ -696,21 +702,38 @@ def _capture_focus_state(backend) -> dict:
             user32.GetWindowThreadProcessId(fg_hwnd, ctypes.byref(pid))
             state["foreground_pid"] = pid.value
 
-            # Focused element (UIA) — try to get the focused element's name
-            try:
-                import comtypes.client  # type: ignore[import-untyped]
+            # Focused element (UIA) — run in daemon thread with timeout
+            # to prevent hangs on headless CI runners.
+            import threading
 
-                uia = comtypes.client.CreateObject(
-                    "{ff48dba4-60ef-4201-aa87-54103eef594e}",
-                    interface=None,
-                )
-                focused = uia.GetFocusedElement()
-                if focused:
-                    state["focused_name"] = focused.CurrentName or ""
-                    state["focused_role"] = focused.CurrentControlType
-                    state["focused_aid"] = focused.CurrentAutomationId or ""
-            except Exception:
-                pass
+            uia_result: dict[str, dict] = {}
+
+            def _uia_focus() -> None:
+                uia_state: dict = {}
+                try:
+                    import comtypes.client  # type: ignore[import-untyped]
+
+                    uia = comtypes.client.CreateObject(
+                        "{ff48dba4-60ef-4201-aa87-54103eef594e}",
+                        interface=None,
+                    )
+                    focused = uia.GetFocusedElement()
+                    if focused:
+                        uia_state["focused_name"] = focused.CurrentName or ""
+                        uia_state["focused_role"] = focused.CurrentControlType
+                        uia_state["focused_aid"] = focused.CurrentAutomationId or ""
+                except Exception:
+                    pass
+                uia_result["state"] = uia_state
+
+            thread = threading.Thread(target=_uia_focus, daemon=True)
+            thread.start()
+            thread.join(timeout=timeout_s)
+
+            if "state" in uia_result:
+                state.update(uia_result["state"])
+            else:
+                logger.debug("UIA focus capture timed out after %.1fs", timeout_s)
 
         except Exception as exc:
             logger.debug("Focus capture failed: %s", exc)
