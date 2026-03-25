@@ -103,7 +103,7 @@ class TestFindAllFlag:
         mock_backend.get_element_tree.assert_called()
 
     def test_all_with_actionable(self, runner, mock_backend):
-        """--all --actionable finds all actionable elements (SSH-safe wildcard)."""
+        """--all --actionable finds all actionable elements (wildcard)."""
         result = runner.invoke(find_cmd, ["--all", "--actionable", "--json"])
         assert "Missing argument" not in (result.output or "")
         mock_backend.get_element_tree.assert_called()
