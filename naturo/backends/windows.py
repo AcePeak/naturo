@@ -1017,6 +1017,137 @@ class WindowsBackend(Backend):
 
         raise WindowNotFoundError(search, suggested_action=hint)
 
+    def _resolve_hwnds(self, app: Optional[str] = None,
+                       window_title: Optional[str] = None) -> list[int]:
+        """Resolve ALL window handles matching app name or window title.
+
+        Same matching logic as _resolve_hwnd, but returns ALL windows that
+        match (score > 0), sorted by score descending.
+
+        Used by `see --app` to enumerate all windows of an application (#304).
+
+        Args:
+            app: Application/process name (case-insensitive, partial match).
+            window_title: Window title pattern (case-insensitive, partial match).
+
+        Returns:
+            List of window handles (HWNDs), sorted by match quality (best first).
+            Empty list if no matches found.
+
+        Note:
+            Does NOT accept `hwnd` parameter (use [hwnd] if you have a handle).
+            Skips foreground window fallback (returns [] if no search term).
+        """
+        search = app or window_title
+        if not search:
+            return []
+
+        search_lower = search.lower()
+        windows = self.list_windows()
+        console_session = self._get_console_session_id()
+        match_process = app is not None
+
+        # Collect all matching windows with their scores
+        matches = []  # [(score, in_console, title_len, WindowInfo), ...]
+
+        for w in windows:
+            score = 0
+            proc_stem = w.process_name.lower()
+            if proc_stem.endswith(".exe"):
+                proc_stem = proc_stem[:-4]
+            title_lower = w.title.lower()
+
+            if match_process:
+                # Process-name matching
+                if search_lower == proc_stem:
+                    score = 4
+                elif search_lower in proc_stem:
+                    score = 3
+                # Title fallback
+                elif search_lower == title_lower:
+                    score = 2
+                elif search_lower in title_lower:
+                    score = 1
+                # Alias matching
+                if score == 0:
+                    aliases = self._APP_ALIASES.get(search_lower, set())
+                    for alias in aliases:
+                        if alias == proc_stem or alias == title_lower:
+                            score = 2
+                            break
+                        if alias in proc_stem or alias in title_lower:
+                            score = 1
+                            break
+            else:
+                # --window-title: only match window title
+                if search_lower == title_lower:
+                    score = 4
+                elif search_lower in title_lower:
+                    score = 1
+
+            if score == 0:
+                continue
+
+            # Session-aware ranking
+            in_console = False
+            if console_session >= 0:
+                w_session = self._get_process_session_id(w.pid)
+                in_console = (w_session == console_session)
+
+            matches.append((score, in_console, len(w.title), w))
+
+        # Sort by: score desc, console first, shorter title first
+        # (in_console: True > False, so negate for descending)
+        matches.sort(key=lambda x: (x[0], x[1], -x[2]), reverse=True)
+
+        # Extract HWNDs
+        hwnds = [m[3].handle for m in matches]
+
+        # UWP/ApplicationFrameHost fixup: prefer frame windows when available
+        # (same logic as _resolve_hwnd, but applied to all matches)
+        fixed_hwnds = []
+        for hwnd in hwnds:
+            # Find the WindowInfo for this hwnd
+            w_info = next((m[3] for m in matches if m[3].handle == hwnd), None)
+            if not w_info:
+                fixed_hwnds.append(hwnd)
+                continue
+
+            proc = w_info.process_name.lower()
+            if proc.endswith(".exe"):
+                proc = proc[:-4]
+
+            if proc != "applicationframehost":
+                # Check if there's a frame window with same title
+                frame_hwnd = None
+                for m in matches:
+                    frame_proc = m[3].process_name.lower()
+                    if frame_proc.endswith(".exe"):
+                        frame_proc = frame_proc[:-4]
+                    if (
+                        frame_proc == "applicationframehost"
+                        and m[3].title == w_info.title
+                        and m[3].handle != hwnd
+                    ):
+                        frame_hwnd = m[3].handle
+                        break
+                if frame_hwnd:
+                    fixed_hwnds.append(frame_hwnd)
+                else:
+                    fixed_hwnds.append(hwnd)
+            else:
+                fixed_hwnds.append(hwnd)
+
+        # Deduplicate (in case of frame window replacements)
+        seen = set()
+        result = []
+        for h in fixed_hwnds:
+            if h not in seen:
+                seen.add(h)
+                result.append(h)
+
+        return result
+
     @staticmethod
     def _find_uwp_content_hwnd(parent_hwnd: int) -> list:
         """Find content child HWNDs inside an ApplicationFrameHost window.

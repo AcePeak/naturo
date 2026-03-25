@@ -651,10 +651,66 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             tree = cascade_result.tree
             cascade_stats = cascade_result.stats
         else:
-            tree = be.get_element_tree(
-                app=app, window_title=window_title, hwnd=hwnd, depth=depth,
-                backend=backend,
-            )
+            # (#304) When --app is used without --hwnd, enumerate ALL windows
+            # of the application and merge their UI trees.
+            if app and not hwnd and hasattr(be, "_resolve_hwnds"):
+                hwnds = be._resolve_hwnds(app=app)
+                if not hwnds:
+                    msg = f"No windows found for app '{app}'."
+                    if json_output:
+                        click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
+                    else:
+                        click.echo(msg)
+                    raise SystemExit(1)
+
+                # Get element tree for each window
+                from naturo.backends.base import ElementInfo as BaseElementInfo
+                window_trees = []
+                for h in hwnds:
+                    subtree = be.get_element_tree(
+                        hwnd=h, depth=depth, backend=backend,
+                    )
+                    if subtree:
+                        window_trees.append((h, subtree))
+
+                if not window_trees:
+                    msg = "All windows have empty UI trees."
+                    if json_output:
+                        click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
+                    else:
+                        click.echo(msg)
+                    raise SystemExit(1)
+
+                # Merge into a single root: create a virtual root node
+                # with each window's tree as a child
+                tree = BaseElementInfo(
+                    id="app_root",
+                    role="Application",
+                    name=app,
+                    value=None,
+                    x=0, y=0, width=0, height=0,
+                    children=[],
+                )
+                for h, subtree in window_trees:
+                    # Wrap each window tree with a "Window" group node
+                    # to preserve window identity in output
+                    window_node = BaseElementInfo(
+                        id=f"window_{h}",
+                        role="WindowGroup",
+                        name=f"{subtree.name} (HWND:{h})",
+                        value=None,
+                        x=subtree.x,
+                        y=subtree.y,
+                        width=subtree.width,
+                        height=subtree.height,
+                        children=[subtree],
+                    )
+                    tree.children.append(window_node)
+            else:
+                tree = be.get_element_tree(
+                    app=app, window_title=window_title, hwnd=hwnd, depth=depth,
+                    backend=backend,
+                )
 
         if tree is None:
             msg = "No window found or UI tree is empty."
