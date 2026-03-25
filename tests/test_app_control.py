@@ -516,6 +516,23 @@ class _FakeWindow:
         self.handle = 0
 
 
+def _safe_pids(count: int = 1) -> list:
+    """Return *count* PIDs guaranteed to differ from os.getpid() and os.getppid().
+
+    The previous approach (``os.getpid() + 90000``) could collide with
+    ``os.getppid()`` on Windows CI where PID values are non-sequential.
+    """
+    excluded = {os.getpid(), os.getppid()}
+    base = 900000  # start high to avoid real PIDs
+    result = []
+    candidate = base
+    while len(result) < count:
+        if candidate not in excluded:
+            result.append(candidate)
+        candidate += 1
+    return result
+
+
 class TestMatchWindows:
     """Unit tests for the _match_windows helper that excludes the calling
     process and prioritizes process-name matches over title-only matches."""
@@ -525,7 +542,7 @@ class TestMatchWindows:
         from naturo.cli.app_cmd import _match_windows
 
         own_pid = os.getpid()
-        safe_pid = own_pid + 90000
+        safe_pid = _safe_pids(1)[0]
         windows = [
             _FakeWindow("feishu", "Feishu Chat", safe_pid),
             _FakeWindow("cmd", "naturo app switch feishu", own_pid),
@@ -539,7 +556,7 @@ class TestMatchWindows:
         from naturo.cli.app_cmd import _match_windows
 
         parent_pid = os.getppid()
-        safe_pid = os.getpid() + 90000
+        safe_pid = _safe_pids(1)[0]
         windows = [
             _FakeWindow("feishu", "Feishu Chat", safe_pid),
             _FakeWindow("bash", "naturo app switch feishu", parent_pid),
@@ -552,9 +569,7 @@ class TestMatchWindows:
         """Process-name matches appear before title-only matches."""
         from naturo.cli.app_cmd import _match_windows
 
-        # Use PIDs that cannot collide with the test runner's own PID/PPID
-        safe_pid_a = os.getpid() + 90000
-        safe_pid_b = os.getpid() + 90001
+        safe_pid_a, safe_pid_b = _safe_pids(2)
         windows = [
             _FakeWindow("explorer", "feishu download folder", safe_pid_a),
             _FakeWindow("feishu", "Feishu Main Window", safe_pid_b),
@@ -568,13 +583,13 @@ class TestMatchWindows:
         """When nothing matches, an empty list is returned."""
         from naturo.cli.app_cmd import _match_windows
 
-        windows = [_FakeWindow("notepad", "Untitled - Notepad", os.getpid() + 90002)]
+        windows = [_FakeWindow("notepad", "Untitled - Notepad", _safe_pids(1)[0])]
         assert _match_windows(windows, "feishu") == []
 
     def test_case_insensitive_matching(self):
         """Matching is case-insensitive."""
         from naturo.cli.app_cmd import _match_windows
 
-        windows = [_FakeWindow("Feishu", "FEISHU Chat", os.getpid() + 90003)]
+        windows = [_FakeWindow("Feishu", "FEISHU Chat", _safe_pids(1)[0])]
         matched = _match_windows(windows, "feishu")
         assert len(matched) == 1
