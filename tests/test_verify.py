@@ -497,7 +497,8 @@ class TestCaptureBeforeState:
         backend = MagicMock(spec=[])
         focus_data = {"foreground_hwnd": 123}
 
-        with patch("naturo.verify._capture_focus_state", return_value=focus_data):
+        with patch("naturo.verify._capture_focus_state", return_value=focus_data), \
+             patch("naturo.verify._capture_ui_texts", return_value={}):
             state = capture_before_state(backend, action="click")
 
         assert state["focus"] == focus_data
@@ -521,7 +522,7 @@ class TestCaptureBeforeState:
         with patch(
             "naturo.verify._capture_focus_state",
             side_effect=Exception("error"),
-        ):
+        ), patch("naturo.verify._capture_ui_texts", return_value={}):
             state = capture_before_state(backend, action="click")
 
         assert state["focus"] is None
