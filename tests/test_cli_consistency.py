@@ -117,8 +117,8 @@ def test_hidden_stubs_return_error_exit_code():
         # ["list", "screens"],  # Implemented in Phase 5A
         # ["list", "apps"],  # Now delegates to app list (#114)
         ["list", "permissions"],
-        ["capture", "video"],
-        ["capture", "watch"],
+        # ["capture", "video"],  # Removed in PR #325 (capture is now flat)
+        # ["capture", "watch"],  # Removed in PR #325
     ]
     for args in hidden_stubs:
         # Plain mode: exit code must be non-zero

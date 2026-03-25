@@ -74,17 +74,17 @@ def _mock_capture_result(path: str, w: int = 200, h: int = 100):
 class TestCaptureLiveHelpFlags:
     def test_element_flag_exists(self):
         runner = CliRunner()
-        result = runner.invoke(main, ["capture", "live", "--help"])
+        result = runner.invoke(main, ["capture", "--help"])
         assert "--element" in result.output
 
     def test_region_flag_exists(self):
         runner = CliRunner()
-        result = runner.invoke(main, ["capture", "live", "--help"])
+        result = runner.invoke(main, ["capture", "--help"])
         assert "--region" in result.output
 
     def test_padding_flag_exists(self):
         runner = CliRunner()
-        result = runner.invoke(main, ["capture", "live", "--help"])
+        result = runner.invoke(main, ["capture", "--help"])
         assert "--padding" in result.output
 
 
@@ -108,7 +108,7 @@ class TestRegionValidation:
 
     def test_invalid_region_format(self, png_200x100):
         result = self._run(
-            ["capture", "live", "--region", "100,50", "--no-snapshot", "--json"],
+            ["capture", "--region", "100,50", "--no-snapshot", "--json"],
             png_200x100,
         )
         data = json.loads(result.output)
@@ -117,7 +117,7 @@ class TestRegionValidation:
 
     def test_invalid_region_nonnumeric(self, png_200x100):
         result = self._run(
-            ["capture", "live", "--region", "x,y,w,h", "--no-snapshot", "--json"],
+            ["capture", "--region", "x,y,w,h", "--no-snapshot", "--json"],
             png_200x100,
         )
         data = json.loads(result.output)
@@ -125,7 +125,7 @@ class TestRegionValidation:
 
     def test_valid_region_crop(self, png_200x100):
         result = self._run(
-            ["capture", "live", "--region", "10,10,80,40", "--no-snapshot", "--json"],
+            ["capture", "--region", "10,10,80,40", "--no-snapshot", "--json"],
             png_200x100,
         )
         if "MISSING_DEPENDENCY" in result.output:
@@ -140,7 +140,7 @@ class TestRegionValidation:
 
     def test_region_with_padding(self, png_200x100):
         result = self._run(
-            ["capture", "live", "--region", "10,10,50,50", "--padding", "5",
+            ["capture", "--region", "10,10,50,50", "--padding", "5",
              "--no-snapshot", "--json"],
             png_200x100,
         )
@@ -180,7 +180,7 @@ class TestElementRefCrop:
                 mock_resolve.return_value = None
                 mock_resolve_el.return_value = None
 
-            args = ["capture", "live", "--element", element_ref, "--no-snapshot"]
+            args = ["capture", "--element", element_ref, "--no-snapshot"]
             if json_output:
                 args.append("--json")
             return runner.invoke(main, args)
@@ -227,7 +227,7 @@ class TestElementRefCrop:
             be.list_monitors.return_value = []
             mock_be.return_value = be
             result = runner.invoke(main, [
-                "capture", "live", "--element", "e1", "--padding", "5",
+                "capture", "--element", "e1", "--padding", "5",
                 "--no-snapshot", "--json",
             ])
 

@@ -228,6 +228,17 @@ def app_list(ctx, show_all, json_output):
 
     # Default: list windows (replaces backend.list_apps with filtered backend.list_windows)
     # This unifies `app list` and `window list` output formats (#274)
+    # Require desktop session (#305)
+    from naturo.cli.interaction import _check_desktop_session
+    try:
+        _check_desktop_session()
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
     from naturo.errors import NaturoError
     try:
         from naturo.backends.base import get_backend
@@ -574,6 +585,17 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         json_output: If True, output as JSON.
     """
     from naturo.detect import detect
+    from naturo.cli.interaction import _check_desktop_session
+
+    # Require desktop session (#305)
+    try:
+        _check_desktop_session()
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
 
     try:
         from naturo.backends.base import get_backend

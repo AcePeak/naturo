@@ -232,7 +232,7 @@ class TestCaptureLiveDPI:
         with patch("naturo.cli.core._get_backend", return_value=mock_backend), \
              patch("naturo.cli.core.platform") as mock_plat:
             mock_plat.system.return_value = "Windows"
-            result = runner.invoke(capture, ["live", "--json", "--no-snapshot"])
+            result = runner.invoke(capture, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
         data = json.loads(result.output.strip())
         assert data["success"] is True
@@ -249,7 +249,7 @@ class TestCaptureLiveDPI:
         with patch("naturo.cli.core._get_backend", return_value=backend), \
              patch("naturo.cli.core.platform") as mock_plat:
             mock_plat.system.return_value = "Windows"
-            result = runner.invoke(capture, ["live", "--json", "--no-snapshot"])
+            result = runner.invoke(capture, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
         data = json.loads(result.output.strip())
         assert data["scale_factor"] == 1.0
