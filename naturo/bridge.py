@@ -392,6 +392,15 @@ class NaturoCore:
         self._lib = self._load(lib_path)
         self._setup_signatures()
 
+    def _bind(self, name: str, restype, argtypes) -> None:
+        """Bind a single DLL function, skip silently if not exported."""
+        try:
+            fn = getattr(self._lib, name)
+            fn.restype = restype
+            fn.argtypes = argtypes
+        except AttributeError:
+            pass  # Function not in this DLL version — will raise at call time
+
     def _setup_signatures(self) -> None:
         """Configure ctypes function signatures for all exported functions."""
         # Version
@@ -440,11 +449,8 @@ class NaturoCore:
         self._lib.naturo_mouse_click.restype = ctypes.c_int
         self._lib.naturo_mouse_click.argtypes = [ctypes.c_int, ctypes.c_int]
 
-        self._lib.naturo_mouse_down.restype = ctypes.c_int
-        self._lib.naturo_mouse_down.argtypes = [ctypes.c_int]
-
-        self._lib.naturo_mouse_up.restype = ctypes.c_int
-        self._lib.naturo_mouse_up.argtypes = [ctypes.c_int]
+        self._bind("naturo_mouse_down", ctypes.c_int, [ctypes.c_int])
+        self._bind("naturo_mouse_up", ctypes.c_int, [ctypes.c_int])
 
         self._lib.naturo_mouse_scroll.restype = ctypes.c_int
         self._lib.naturo_mouse_scroll.argtypes = [ctypes.c_int, ctypes.c_int]
