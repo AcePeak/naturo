@@ -565,10 +565,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     names, and bounding rectangles.  Results are stored in a snapshot so
     subsequent commands can reference elements by ID.
 
-    Use --backend msaa for legacy applications (MFC, VB6, Delphi) that
-    don't expose UIAutomation elements. Use --backend ia2 for IA2-enabled
-    applications (Firefox, Thunderbird, LibreOffice). Use --backend auto to
-    try UIA first, then IA2, then MSAA automatically.
+    By default, --backend auto cascades through UIA → MSAA → Win32 to maximize
+    coverage for legacy apps (VB6, MFC, ActiveX). Use explicit backends only
+    when auto fails or for IA2-enabled apps (Firefox, Thunderbird, LibreOffice).
 
     Use --cascade to progressively try multiple providers (UIA → CDP → AI vision).
     This maximizes coverage for Electron apps (Feishu, Slack, VS Code, etc.)
@@ -955,8 +954,10 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
 
     Supports fuzzy name matching, role filtering, and combined queries.
     Use --ai for natural language element finding powered by AI vision.
-    Use --backend msaa for legacy applications that lack UIA support.
-    Use --backend ia2 for IA2-enabled apps (Firefox, Thunderbird, LibreOffice).
+    
+    By default, --backend auto cascades through UIA → MSAA → Win32 to maximize
+    coverage for legacy apps (VB6, MFC, ActiveX). Use explicit backends only
+    when auto fails or for IA2-enabled apps (Firefox, Thunderbird, LibreOffice).
 
     \b
     Examples:
