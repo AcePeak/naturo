@@ -1132,46 +1132,89 @@ class WindowsBackend(Backend):
             )
             afh_pid_val = afh_pid.value
 
-            # Enumerate child windows, find one owned by a different process.
+            # Strategy 1: Use FindWindowExW to find CoreWindow directly.
+            # This is more reliable than EnumChildWindows because
+            # GetWindowThreadProcessId on CoreWindow always returns the
+            # real app PID, even in schtask sessions.
+            FindWindowExW = user32.FindWindowExW
+            FindWindowExW.argtypes = [
+                wintypes.HWND, wintypes.HWND,
+                wintypes.LPCWSTR, wintypes.LPCWSTR,
+            ]
+            FindWindowExW.restype = wintypes.HWND
+
+            core_hwnd = FindWindowExW(
+                wintypes.HWND(afh_hwnd), None,
+                "Windows.UI.Core.CoreWindow", None,
+            )
+            if core_hwnd:
+                core_pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(core_hwnd, ctypes.byref(core_pid))
+                if core_pid.value != afh_pid_val and core_pid.value != 0:
+                    logger.debug(
+                        "UWP CoreWindow found: hwnd=%s pid=%d (afh=%d)",
+                        core_hwnd, core_pid.value, afh_pid_val,
+                    )
+                    pid = core_pid.value
+                    exe_path = self._get_process_exe_path(pid)
+                    return pid, exe_path
+
+            # Strategy 2: Enumerate all child windows and find one with
+            # a different PID (fallback for WinUI 3 / non-CoreWindow apps).
             children = self._find_uwp_content_children(afh_hwnd)
+            logger.debug(
+                "UWP child PID resolution: AFH hwnd=%s pid=%d, children=%d",
+                afh_hwnd, afh_pid_val, len(children),
+            )
             for child_hwnd in children:
                 child_pid = ctypes.wintypes.DWORD()
                 user32.GetWindowThreadProcessId(
                     wintypes.HWND(child_hwnd), ctypes.byref(child_pid),
                 )
                 if child_pid.value != afh_pid_val and child_pid.value != 0:
-                    # Found the real app process — get its exe path.
-                    import os
                     pid = child_pid.value
-                    exe_path = None
-                    try:
-                        import psutil  # type: ignore[import-untyped]
-                        proc = psutil.Process(pid)
-                        exe_path = proc.exe()
-                    except Exception:
-                        try:
-                            # Fallback: QueryFullProcessImageNameW
-                            kernel32 = ctypes.windll.kernel32
-                            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-                            h = kernel32.OpenProcess(
-                                PROCESS_QUERY_LIMITED_INFORMATION, False, pid,
-                            )
-                            if h:
-                                buf = ctypes.create_unicode_buffer(1024)
-                                size = wintypes.DWORD(1024)
-                                if kernel32.QueryFullProcessImageNameW(
-                                    h, 0, buf, ctypes.byref(size),
-                                ):
-                                    exe_path = buf.value
-                                kernel32.CloseHandle(h)
-                        except Exception:
-                            pass
+                    exe_path = self._get_process_exe_path(pid)
                     return pid, exe_path
 
         except Exception as exc:
             logger.debug("UWP child PID resolution failed: %s", exc)
 
         return None, None
+
+    @staticmethod
+    def _get_process_exe_path(pid: int) -> Optional[str]:
+        """Get the executable path for a process by PID.
+
+        Tries psutil first, then falls back to Win32 QueryFullProcessImageNameW.
+
+        Args:
+            pid: Process ID.
+
+        Returns:
+            Full executable path, or None if resolution fails.
+        """
+        try:
+            import psutil  # type: ignore[import-untyped]
+            return psutil.Process(pid).exe()
+        except Exception:
+            pass
+        try:
+            import ctypes
+            from ctypes import wintypes
+            kernel32 = ctypes.windll.kernel32
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            h = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+            if h:
+                try:
+                    buf = ctypes.create_unicode_buffer(1024)
+                    size = wintypes.DWORD(1024)
+                    if kernel32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
+                        return buf.value
+                finally:
+                    kernel32.CloseHandle(h)
+        except Exception:
+            pass
+        return None
 
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
