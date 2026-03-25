@@ -588,6 +588,67 @@ class TestAppInspectAppFlag:
         assert "5678" in result.output
 
 
+class TestAppInspectHwndResolution:
+    """Tests for app inspect hwnd resolution for UWP apps (fixes #335).
+
+    UWP apps like Notepad have their top-level window owned by
+    ApplicationFrameHost.exe, not the app process itself. The inspect
+    command must resolve the hwnd via the backend so that UIA probes
+    receive the correct window handle.
+    """
+
+    def test_inspect_passes_resolved_hwnd_to_detect(self):
+        """app inspect should resolve hwnd via backend and pass to detect()."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+        from unittest.mock import patch, MagicMock, call
+
+        runner = CliRunner()
+        mock_proc = MagicMock(pid=22124, name="Notepad.exe", path="")
+        mock_result = DetectionResult(
+            pid=22124, exe="Notepad.exe", app_name="Notepad.exe",
+            frameworks=[], methods=[],
+        )
+
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = 0x1234AB
+
+        with patch("naturo.process.find_process", return_value=mock_proc):
+            with patch("naturo.detect.detect", return_value=mock_result) as mock_detect:
+                with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+                    result = runner.invoke(app_inspect, ["notepad", "--json"])
+
+        assert result.exit_code == 0
+        # Verify detect was called with the resolved hwnd
+        mock_detect.assert_called_once()
+        _, kwargs = mock_detect.call_args
+        assert kwargs.get("hwnd") == 0x1234AB
+
+    def test_inspect_graceful_when_hwnd_resolution_fails(self):
+        """app inspect should still work when backend hwnd resolution fails."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+        from unittest.mock import patch, MagicMock
+
+        runner = CliRunner()
+        mock_proc = MagicMock(pid=22124, name="Notepad.exe", path="")
+        mock_result = DetectionResult(
+            pid=22124, exe="Notepad.exe", app_name="Notepad.exe",
+            frameworks=[], methods=[],
+        )
+
+        with patch("naturo.process.find_process", return_value=mock_proc):
+            with patch("naturo.detect.detect", return_value=mock_result) as mock_detect:
+                with patch("naturo.backends.base.get_backend", side_effect=RuntimeError("no backend")):
+                    result = runner.invoke(app_inspect, ["notepad", "--json"])
+
+        assert result.exit_code == 0
+        # hwnd should be None when resolution fails
+        mock_detect.assert_called_once()
+        _, kwargs = mock_detect.call_args
+        assert kwargs.get("hwnd") is None
+
+
 class TestUwpFrameworkDetection:
     """Tests for UWP app framework detection fallback (fixes #257).
 
