@@ -542,6 +542,52 @@ class TestAppInspectPidValidation:
         assert "PROCESS_NOT_FOUND" in result.output or "No process found" in result.output
 
 
+class TestAppInspectAppFlag:
+    """Tests for --app flag on app inspect (#289)."""
+
+    def test_app_flag_accepted(self):
+        """--app should be accepted as alias for positional NAME."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+        from unittest.mock import patch, MagicMock
+
+        runner = CliRunner()
+        mock_proc = MagicMock(pid=1234, name="notepad.exe", path="C:\\notepad.exe")
+
+        mock_result = DetectionResult(
+            pid=1234, exe="notepad.exe", app_name="notepad",
+            frameworks=[], methods=[],
+        )
+
+        with patch("naturo.process.find_process", return_value=mock_proc):
+            with patch("naturo.detect.detect", return_value=mock_result):
+                result = runner.invoke(app_inspect, ["--app", "notepad", "--json"])
+
+        assert result.exit_code == 0
+        assert "1234" in result.output
+
+    def test_positional_still_works(self):
+        """Positional NAME should still work as before."""
+        from click.testing import CliRunner
+        from naturo.cli.app_cmd import app_inspect
+        from unittest.mock import patch, MagicMock
+
+        runner = CliRunner()
+        mock_proc = MagicMock(pid=5678, name="calc.exe", path="C:\\calc.exe")
+
+        mock_result = DetectionResult(
+            pid=5678, exe="calc.exe", app_name="calc",
+            frameworks=[], methods=[],
+        )
+
+        with patch("naturo.process.find_process", return_value=mock_proc):
+            with patch("naturo.detect.detect", return_value=mock_result):
+                result = runner.invoke(app_inspect, ["calc", "--json"])
+
+        assert result.exit_code == 0
+        assert "5678" in result.output
+
+
 class TestUwpFrameworkDetection:
     """Tests for UWP app framework detection fallback (fixes #257).
 

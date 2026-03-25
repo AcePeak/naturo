@@ -460,12 +460,13 @@ def app_find(ctx, name, pid, json_output):
 
 @click.command("inspect")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--pid", type=int, help="Inspect by process ID")
 @click.option("--all", "scan_all", is_flag=True, help="Scan all visible windows")
 @click.option("--quick", is_flag=True, help="Fast probe — stop at first available method")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_inspect(ctx, name, pid, scan_all, quick, json_output):
+def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
     """Probe an application and report available interaction methods.
 
     Detects which UI framework the app uses (Electron, WPF, Qt, etc.)
@@ -474,11 +475,16 @@ def app_inspect(ctx, name, pid, scan_all, quick, json_output):
     \b
     Examples:
       naturo app inspect notepad
+      naturo app inspect --app notepad
       naturo app inspect --pid 12345
       naturo app inspect --all
       naturo app inspect chrome --quick --json
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # Accept --app as alias for positional NAME (#289)
+    if not name and app_name:
+        name = app_name
 
     from naturo.detect import detect, DetectionResult
     from naturo.detect.models import ProbeStatus
