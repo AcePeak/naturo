@@ -338,6 +338,31 @@ class TestVerifyClickUiTextFallback:
 
         assert result.status == VerifyStatus.UNKNOWN
 
+    def test_empty_before_ui_texts_still_triggers_capture(self):
+        """Empty dict before_ui_texts should still trigger post-capture (#270).
+
+        Previously ``if before_ui_texts:`` treated ``{}`` as falsy and
+        skipped the fallback.  With the fix (``is not None``), an empty
+        pre-capture still runs post-capture and can detect new text.
+        """
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+
+        with patch("naturo.verify._capture_focus_state") as mock_focus, \
+             patch("naturo.verify._capture_ui_texts") as mock_texts:
+            mock_focus.return_value = focus.copy()
+            # Pre-capture was empty, but post-capture finds new text
+            mock_texts.return_value = {"uia:50004:CalculatorResults": "7"}
+            result = verify_click(
+                backend,
+                before_focus=focus,
+                before_ui_texts={},
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.VERIFIED
+        assert result.method == "ui_text_diff"
+
     def test_ui_text_capture_error_handled_gracefully(self):
         """UI text capture fails → falls through to UNKNOWN, no crash."""
         backend = MagicMock(spec=[])

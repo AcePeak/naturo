@@ -335,7 +335,7 @@ def verify_click(
     # Focus unchanged — try UI text comparison as fallback (#263).
     # This catches cases like UWP Calculator where button clicks update
     # a display element without changing focus.
-    if before_ui_texts:
+    if before_ui_texts is not None:
         try:
             after_ui_texts = _capture_ui_texts(
                 backend, app=app, window_title=window_title, hwnd=hwnd,
@@ -578,9 +578,13 @@ def _capture_uia_child_names(
 ) -> dict[str, str]:
     """Capture UIA element names for a window's direct children.
 
-    Lightweight alternative to full tree traversal — only walks depth=2
-    children and collects Name properties.  Used as fallback for UWP apps
-    where Win32 ``GetWindowTextW`` returns nothing on child windows.
+    Uses ``TreeScope_Descendants`` to walk all descendant elements and
+    collect their Name properties.  Used as fallback for UWP apps where
+    Win32 ``GetWindowTextW`` returns nothing on child windows.
+
+    Previous depth=2 approach missed UWP display elements (e.g.,
+    Calculator's CalculatorResults) that sit at depth 3+ under the
+    ApplicationFrameHost window (#270).
 
     The UIA scan runs in a daemon thread with a timeout to prevent hangs
     on headless CI runners or unresponsive UIA providers.
@@ -611,48 +615,24 @@ def _capture_uia_child_names(
                 result_holder["texts"] = texts
                 return
 
-            # TreeScope_Children = 2
+            # TreeScope_Descendants = 4 — walk all descendants to capture
+            # deeply-nested display elements in UWP/XAML apps (#270).
             true_cond = uia.CreateTrueCondition()
-            children = root.FindAll(2, true_cond)
-            if not children:
+            descendants = root.FindAll(4, true_cond)
+            if not descendants:
                 result_holder["texts"] = texts
                 return
 
-            count = min(children.Length, max_elements)
+            count = min(descendants.Length, max_elements)
             for i in range(count):
-                child = children.GetElement(i)
-                name = child.CurrentName or ""
+                elem = descendants.GetElement(i)
+                name = elem.CurrentName or ""
                 if not name:
                     continue
-                aid = child.CurrentAutomationId or ""
-                ctrl_type = child.CurrentControlType
+                aid = elem.CurrentAutomationId or ""
+                ctrl_type = elem.CurrentControlType
                 key = f"uia:{ctrl_type}:{aid}" if aid else f"uia:{ctrl_type}:{name}"
                 texts[key] = name
-
-                # Also scan one more level (grandchildren) for display elements
-                try:
-                    grandchildren = child.FindAll(2, true_cond)
-                    if grandchildren:
-                        gc_count = min(grandchildren.Length, max_elements - len(texts))
-                        for j in range(gc_count):
-                            gc = grandchildren.GetElement(j)
-                            gc_name = gc.CurrentName or ""
-                            if not gc_name:
-                                continue
-                            gc_aid = gc.CurrentAutomationId or ""
-                            gc_ctrl = gc.CurrentControlType
-                            gc_key = (
-                                f"uia:{gc_ctrl}:{gc_aid}" if gc_aid
-                                else f"uia:{gc_ctrl}:{gc_name}"
-                            )
-                            texts[gc_key] = gc_name
-                            if len(texts) >= max_elements:
-                                break
-                except Exception:
-                    pass
-
-                if len(texts) >= max_elements:
-                    break
 
         except Exception as exc:
             logger.debug("UIA child name capture failed: %s", exc)
