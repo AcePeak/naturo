@@ -185,9 +185,15 @@ class TestBUG028DepthValidation:
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    def test_see_depth_11(self, runner):
-        result = runner.invoke(main, ["see", "--depth", "11"])
+    def test_see_depth_51(self, runner):
+        """see --depth max is 50 (was 10, raised in 51a6bc3)."""
+        result = runner.invoke(main, ["see", "--depth", "51"])
         assert result.exit_code != 0
+
+    def test_see_depth_11_accepted(self, runner):
+        """see --depth 11 is valid after limit was raised to 50."""
+        result = runner.invoke(main, ["see", "--depth", "11"])
+        assert "must be between" not in (result.output or "")
 
     def test_find_depth_20_accepted(self, runner):
         """Issue #284: find should accept depth > 10 (default is 20)."""
