@@ -18,6 +18,7 @@ import pytest
 pytestmark = [
     pytest.mark.ui,
     pytest.mark.e2e,
+    pytest.mark.desktop,
     pytest.mark.skipif(
         platform.system() != "Windows",
         reason="End-to-end tests require Windows with desktop session",

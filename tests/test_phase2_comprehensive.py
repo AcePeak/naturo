@@ -596,6 +596,7 @@ class TestProductUX:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Functional input tests require Windows with desktop session",
@@ -649,6 +650,7 @@ class TestMouseInputFunctional:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Functional input tests require Windows with desktop session",
@@ -713,6 +715,7 @@ class TestKeyboardInputFunctional:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Performance tests require Windows with desktop session",
@@ -752,11 +755,11 @@ class TestPerformanceFunctional:
 
 @pytest.mark.ui
 @pytest.mark.e2e
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="E2E tests require Windows with desktop session",
 )
-@pytest.mark.ui
 class TestE2EWorkflows:
     """Windows-only E2E workflow tests (R-PD-005, R-PD-006).
 
@@ -827,6 +830,7 @@ class TestElementInspectionMethods:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Element inspection tests require Windows",

@@ -406,6 +406,7 @@ class TestKeyHotkeyParsing:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Functional input tests require Windows with desktop session",
@@ -502,6 +503,7 @@ class TestPhase2FunctionalWindows:
 
 @pytest.mark.ui
 @pytest.mark.e2e
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="E2E tests require Windows with desktop session",

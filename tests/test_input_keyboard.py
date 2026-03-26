@@ -334,6 +334,7 @@ class TestHotkeyParsing:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Keyboard functional tests require Windows with desktop session",

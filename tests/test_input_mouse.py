@@ -411,6 +411,7 @@ class TestClickButtonMapping:
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Mouse functional tests require Windows with desktop session",
