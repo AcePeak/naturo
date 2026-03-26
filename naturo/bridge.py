@@ -10,6 +10,7 @@ import ctypes
 import json
 import os
 import platform
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +28,28 @@ def _decode_native(raw: bytes) -> str:
         import locale
         encoding = locale.getpreferredencoding(False) or "cp936"
         return raw.decode(encoding, errors="replace")
+
+
+def _safe_json_loads(s: str):
+    """Parse JSON with fallback repair for invalid Unicode escapes from C++ DLL.
+
+    Some C++ DLL output contains unpaired surrogate escapes (e.g. \\uD800)
+    which are invalid JSON. This function catches the error and repairs
+    the string by removing orphaned surrogates before retrying.
+    """
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        # Remove unpaired high surrogates (not followed by a low surrogate)
+        repaired = re.sub(
+            r'\\ud[89a-f][0-9a-f]{2}(?!\\u)', '', s, flags=re.IGNORECASE
+        )
+        # Remove orphaned low surrogates (not preceded by a high surrogate)
+        repaired = re.sub(
+            r'(?<!\\ud[89a-f][0-9a-f]{2})\\ud[c-f][0-9a-f]{2}',
+            '', repaired, flags=re.IGNORECASE,
+        )
+        return json.loads(repaired)
 
 
 @dataclass
@@ -789,7 +812,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "list_windows")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return [
             WindowInfo(
                 hwnd=w["hwnd"],
@@ -824,7 +847,7 @@ class NaturoCore:
         if rc != 0:
             raise NaturoCoreError(rc, "get_window_info")
 
-        w = json.loads(_decode_native(buf.value))
+        w = _safe_json_loads(_decode_native(buf.value))
         return WindowInfo(
             hwnd=w["hwnd"],
             title=w["title"],
@@ -865,7 +888,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "get_element_tree")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def find_element(
@@ -899,7 +922,7 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "find_element")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def get_element_value(
@@ -953,7 +976,7 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "get_element_value")
 
-        return json.loads(_decode_native(buf.value))
+        return _safe_json_loads(_decode_native(buf.value))
 
     # ── Phase 2: Mouse Input ─────────────────────────
 
@@ -1204,7 +1227,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "msaa_get_element_tree")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def msaa_find_element(
@@ -1241,7 +1264,7 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "msaa_find_element")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     # ── Phase 5B.2: IAccessible2 ─────────────────────
@@ -1292,7 +1315,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "ia2_get_element_tree")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def ia2_find_element(
@@ -1330,7 +1353,7 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "ia2_find_element")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     # ── JAB (Java Access Bridge) ─────────────────────
@@ -1381,7 +1404,7 @@ class NaturoCore:
         if count < 0:
             raise NaturoCoreError(count, "jab_get_element_tree")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
 
     def jab_find_element(
@@ -1418,5 +1441,5 @@ class NaturoCore:
         if rc < 0:
             raise NaturoCoreError(rc, "jab_find_element")
 
-        data = json.loads(_decode_native(buf.value))
+        data = _safe_json_loads(_decode_native(buf.value))
         return _parse_element(data)
