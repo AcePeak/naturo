@@ -112,6 +112,56 @@ class TestFindProcess:
         assert result is not None
         assert result.pid == 100
 
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_require_interactive_skips_session_0(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """With require_interactive=True, session 0 processes are skipped
+        entirely instead of being used as a fallback (#350)."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),  # Session 0 only
+        ]
+        mock_console.return_value = 1
+        mock_proc_session.return_value = 0  # Only in Session 0
+        result = find_process(name="notepad", require_interactive=True)
+        assert result is None, "Should skip session 0 when require_interactive=True"
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_require_interactive_returns_console_session_process(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """With require_interactive=True, still returns processes in the
+        active console session."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),  # Session 0
+            ProcessInfo(pid=200, name="Notepad.exe"),  # Session 1 (console)
+        ]
+        mock_console.return_value = 1
+        mock_proc_session.side_effect = lambda pid: 0 if pid == 100 else 1
+        result = find_process(name="notepad", require_interactive=True)
+        assert result is not None
+        assert result.pid == 200, "Should return console session process"
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_require_interactive_no_effect_when_session_unknown(
+        self, mock_list, mock_console, mock_proc_session
+    ):
+        """When console session cannot be determined, require_interactive
+        has no effect (falls back to first match)."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),
+        ]
+        mock_console.return_value = -1  # Can't determine console session
+        result = find_process(name="notepad", require_interactive=True)
+        assert result is not None
+        assert result.pid == 100
+
 
 class TestSessionHelpers:
     """Tests for session ID helper functions."""
@@ -135,6 +185,34 @@ class TestIsRunning:
     def test_not_running(self, mock_find):
         mock_find.return_value = None
         assert is_running("nonexistent") is False
+
+
+class TestLaunchAppSessionGuard:
+    """Tests for launch_app session 0 guard (#351)."""
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    def test_launch_rejects_non_interactive_session(self, mock_sys):
+        """launch_app should raise NoDesktopSessionError in non-interactive
+        sessions on Windows to prevent spawning invisible processes (#351)."""
+        with patch("naturo.cli.interaction._is_current_session_interactive",
+                    return_value=False):
+            from naturo.errors import NoDesktopSessionError
+            with pytest.raises(NoDesktopSessionError):
+                launch_app(name="notepad")
+
+    @patch("naturo.process.platform.system", return_value="Darwin")
+    def test_launch_no_session_guard_on_macos(self, mock_sys):
+        """Session guard should not apply on macOS."""
+        with patch("naturo.process.subprocess.Popen") as mock_popen:
+            mock_proc = MagicMock()
+            mock_proc.pid = 1234
+            mock_proc.wait.return_value = 0
+            mock_popen.return_value = mock_proc
+            with patch("naturo.process.find_process",
+                        return_value=ProcessInfo(pid=1234, name="Notes")):
+                # Should not raise NoDesktopSessionError
+                result = launch_app(name="Notes")
+                assert result is not None
 
 
 class TestLaunchApp:

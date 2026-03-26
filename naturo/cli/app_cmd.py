@@ -536,8 +536,31 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
 
     if name and not pid:
         from naturo.process import find_process
-        proc = find_process(name=name)
+        proc = find_process(name=name, require_interactive=True)
         if not proc:
+            # Check if the process exists but only in session 0 (#350)
+            session0_proc = find_process(name=name)
+            if session0_proc:
+                msg = (
+                    f"Process '{name}' found (PID {session0_proc.pid}) but it is "
+                    f"running in a non-interactive session (session 0).  "
+                    f"It has no visible windows on the desktop.  "
+                    f"Connect via RDP or Console to interact with desktop apps."
+                )
+                if json_output:
+                    click.echo(json.dumps({
+                        "success": False,
+                        "error": {
+                            "code": "NO_DESKTOP_SESSION",
+                            "message": msg,
+                            "pid": session0_proc.pid,
+                            "session": 0,
+                        },
+                    }, indent=2))
+                else:
+                    _safe_echo(f"Error: {msg}", err=True)
+                sys.exit(1)
+                return
             msg = f"No running process found matching '{name}'"
             if json_output:
                 click.echo(_json_error_str("PROCESS_NOT_FOUND", msg))
@@ -602,11 +625,24 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         sys.exit(1)
         return
 
+    # Filter out session 0 (non-interactive) processes (#350).
+    # These are invisible on the desktop and produce misleading results.
+    import platform as _platform
+    _filter_session0 = False
+    _console_session = -1
+    if _platform.system() == "Windows":
+        from naturo.process import _get_console_session_id, _get_process_session_id
+        _console_session = _get_console_session_id()
+        _filter_session0 = _console_session >= 0
+
     results = []
     seen_keys = set()
 
     for w in windows:
         if not w.is_visible or w.is_minimized:
+            continue
+        # Skip session 0 processes — they have no visible desktop UI (#350)
+        if _filter_session0 and _get_process_session_id(w.pid) == 0:
             continue
         # Deduplicate by (PID, title) to keep distinct UWP windows (#252)
         key = (w.pid, w.title)

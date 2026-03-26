@@ -187,6 +187,7 @@ class TestBUG013TimeoutExpired:
             raise subprocess.TimeoutExpired(cmd, 10)
 
         with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.cli.interaction._is_current_session_interactive", return_value=True), \
              patch("naturo.process.subprocess.run", side_effect=mock_run), \
              patch("naturo.process.subprocess.Popen") as mock_popen:
             with pytest.raises(AppNotFoundError) as exc_info:

@@ -139,6 +139,8 @@ def _get_process_session_id(pid: int) -> int:
 def find_process(
     name: str | None = None,
     pid: int | None = None,
+    *,
+    require_interactive: bool = False,
 ) -> ProcessInfo | None:
     """Find a running process by name or PID.
 
@@ -149,6 +151,10 @@ def find_process(
     Args:
         name: Process name (case-insensitive substring match).
         pid: Process ID.
+        require_interactive: When True, skip session 0 processes entirely
+            instead of falling back to them.  Use this for operations that
+            need a visible desktop process (e.g. ``app inspect``,
+            ``app launch`` readiness checks).  (#350)
 
     Returns:
         ProcessInfo if found, None otherwise.
@@ -174,6 +180,14 @@ def find_process(
     for proc in processes:
         if name_lower not in proc.name.lower():
             continue
+
+        # Session-aware filtering (#350): when require_interactive is True
+        # and we can determine session IDs, skip session 0 processes entirely.
+        if require_interactive and console_session >= 0:
+            proc_session = _get_process_session_id(proc.pid)
+            if proc_session == 0:
+                continue  # Skip non-interactive services session
+
         if first_match is None:
             first_match = proc
         # If we can determine sessions, prefer the console session
@@ -277,6 +291,10 @@ def launch_app(
 ) -> ProcessInfo:
     """Launch an application.
 
+    On Windows, verifies that the current session is interactive before
+    launching.  SSH sessions spawn processes in session 0 (invisible),
+    which creates orphaned processes and misleads callers (#351).
+
     Args:
         name: Application name (resolved via system mechanisms).
         path: Explicit executable path.
@@ -290,11 +308,26 @@ def launch_app(
 
     Raises:
         AppNotFoundError: If the application cannot be found or launched.
+        NoDesktopSessionError: If running in a non-interactive session on
+            Windows (e.g. SSH without desktop).
         TimeoutError: If wait_until_ready times out.
     """
     launch_target = path or name
     if not launch_target:
         raise AppNotFoundError("(no name or path provided)")
+
+    # Guard: prevent launching GUI apps in non-interactive sessions (#351).
+    # SSH sessions spawn processes in session 0 (invisible on the desktop),
+    # creating orphaned processes that accumulate over time.
+    if platform.system() == "Windows":
+        from naturo.cli.interaction import _is_current_session_interactive
+        if not _is_current_session_interactive():
+            from naturo.errors import NoDesktopSessionError
+            raise NoDesktopSessionError(
+                "Cannot launch GUI applications in a non-interactive session "
+                "(SSH/service).  Processes would be spawned in session 0 "
+                "(invisible on the desktop).  Connect via RDP or Console instead."
+            )
 
     cmd_args = args or []
     system = platform.system()
