@@ -982,7 +982,10 @@ class WindowsBackend(Backend):
             # (e.g. CalculatorApp.exe).  When we matched a non-frame
             # process, check for an ApplicationFrameHost window with the
             # same title and prefer it — its element tree is complete.
-            best_proc = best_window.process_name.lower()
+            # Extract basename for comparison — process_name may be a
+            # full path (e.g. "C:\...\CalculatorApp.exe")
+            import os as _os
+            best_proc = _os.path.basename(best_window.process_name).lower()
             if best_proc.endswith(".exe"):
                 best_proc = best_proc[:-4]
             if best_proc != "applicationframehost":
@@ -993,7 +996,7 @@ class WindowsBackend(Backend):
                 # UIA trees.
                 afh_candidates = []
                 for w in windows:
-                    frame_proc = w.process_name.lower()
+                    frame_proc = _os.path.basename(w.process_name).lower()
                     if frame_proc.endswith(".exe"):
                         frame_proc = frame_proc[:-4]
                     if (
@@ -1139,6 +1142,7 @@ class WindowsBackend(Backend):
 
         # UWP/ApplicationFrameHost fixup: prefer frame windows when available
         # (same logic as _resolve_hwnd, but applied to all matches)
+        import os as _os
         fixed_hwnds = []
         for hwnd in hwnds:
             # Find the WindowInfo for this hwnd
@@ -1147,7 +1151,7 @@ class WindowsBackend(Backend):
                 fixed_hwnds.append(hwnd)
                 continue
 
-            proc = w_info.process_name.lower()
+            proc = _os.path.basename(w_info.process_name).lower()
             if proc.endswith(".exe"):
                 proc = proc[:-4]
 
@@ -1155,7 +1159,7 @@ class WindowsBackend(Backend):
                 # Check if there's a frame window with same title
                 frame_hwnd = None
                 for m in matches:
-                    frame_proc = m[3].process_name.lower()
+                    frame_proc = _os.path.basename(m[3].process_name).lower()
                     if frame_proc.endswith(".exe"):
                         frame_proc = frame_proc[:-4]
                     if (
