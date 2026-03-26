@@ -34,7 +34,38 @@ def _has_desktop_session() -> bool:
 
 
 def _find_process_by_name(name: str) -> Optional[int]:
-    """Find a running process by name, return PID or None."""
+    """Find a running process by name in the current desktop session, return PID or None.
+
+    Filters out Session 0 (Services) processes which have no GUI and would cause
+    UIA detection to fail. Prefers Session 1+ (Console/RDP) processes.
+    See GitHub issue #389 for details.
+
+    Args:
+        name: Executable image name (e.g. "Notepad.exe").
+
+    Returns:
+        PID of a matching process in an interactive session, or None.
+    """
+    try:
+        # Use SESSION ne 0 to exclude Services session processes (no GUI)
+        result = subprocess.run(
+            [
+                "tasklist", "/FI", f"IMAGENAME eq {name}",
+                "/FI", "SESSION ne 0",
+                "/FO", "CSV", "/NH",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        for line in result.stdout.strip().splitlines():
+            parts = line.strip('"').split('","')
+            if len(parts) >= 2 and parts[0].lower() == name.lower():
+                return int(parts[1])
+    except Exception:
+        pass
+
+    # Fallback: try without session filter (older Windows versions may not support it)
     try:
         result = subprocess.run(
             ["tasklist", "/FI", f"IMAGENAME eq {name}", "/FO", "CSV", "/NH"],
