@@ -986,6 +986,12 @@ class WindowsBackend(Backend):
             if best_proc.endswith(".exe"):
                 best_proc = best_proc[:-4]
             if best_proc != "applicationframehost":
+                # (#394) Collect ALL AFH windows with matching title, then
+                # prefer one that actually has a CoreWindow child (live UI).
+                # Stale AFH windows (e.g., from schtasks-launched instances)
+                # may linger without a CoreWindow child, producing empty
+                # UIA trees.
+                afh_candidates = []
                 for w in windows:
                     frame_proc = w.process_name.lower()
                     if frame_proc.endswith(".exe"):
@@ -995,8 +1001,30 @@ class WindowsBackend(Backend):
                         and w.title == best_window.title
                         and w.handle != best_window.handle
                     ):
-                        best_window = w
-                        break
+                        afh_candidates.append(w)
+
+                if afh_candidates:
+                    # Prefer AFH window with a CoreWindow child
+                    chosen_afh = None
+                    for afh_w in afh_candidates:
+                        children = self._find_uwp_content_hwnd(afh_w.handle)
+                        if children:
+                            chosen_afh = afh_w
+                            logger.debug(
+                                "UWP fixup: AFH hwnd=%s has %d content "
+                                "children, selecting it",
+                                afh_w.handle, len(children),
+                            )
+                            break
+                    if chosen_afh is None:
+                        # No AFH has content children — fall back to first
+                        chosen_afh = afh_candidates[0]
+                        logger.debug(
+                            "UWP fixup: no AFH has content children, "
+                            "falling back to first AFH hwnd=%s",
+                            chosen_afh.handle,
+                        )
+                    best_window = chosen_afh
 
             return best_window.handle
 
