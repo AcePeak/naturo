@@ -839,6 +839,18 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "height": el.height,
                     "children": [to_dict(c, parent_ref=display_id) for c in el.children],
                 }
+                # (#365) Mark zero-bounds elements as offscreen
+                if el.width == 0 and el.height == 0:
+                    d["offscreen"] = True
+                # (#372) Add text preview for Document/Edit role elements
+                if el.role.lower() in ("document", "edit", "text"):
+                    text_value = el.value or ""
+                    if text_value:
+                        # Truncate to 100 chars for preview
+                        preview = text_value[:100]
+                        if len(text_value) > 100:
+                            preview += "..."
+                        d["text_preview"] = preview
                 # (#295) Always use naturo ref for parent, never raw
                 # AutomationId — keeps a single consistent ID space.
                 if parent_ref:
@@ -1083,9 +1095,56 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
             max_results=limit,
         )
 
+        # (#369) Store snapshot with refs so users can `naturo click e3` after find
+        from naturo.snapshot import get_snapshot_manager
+        from naturo.models.snapshot import UIElement
+
+        mgr = get_snapshot_manager()
+        snapshot_id = mgr.create_snapshot()
+
+        ui_map = {}
+        _ref_seq = [0]
+        ref_map = {}
+        # Build a mapping from backend element id → eN ref
+        _element_id_to_ref = {}
+
+        import re as _re_mod
+
+        def _flatten_for_find(el, parent_id=None):
+            _ref_seq[0] += 1
+            ref = f"e{_ref_seq[0]}"
+            _element_id_to_ref[id(el)] = ref
+            _raw_id = str(el.id) if el.id else None
+            if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
+                _raw_id = None
+            child_refs = []
+            for child in el.children:
+                child_refs.append(_flatten_for_find(child, parent_id=ref))
+            ui_map[ref] = UIElement(
+                id=ref,
+                element_id=f"element_{ref}",
+                role=el.role,
+                title=el.name,
+                label=el.name,
+                value=el.value,
+                identifier=_raw_id,
+                frame=(el.x, el.y, el.width, el.height),
+                is_actionable=getattr(el, "is_actionable", False),
+                parent_id=parent_id,
+                children=child_refs,
+                keyboard_shortcut=getattr(el, "keyboard_shortcut", None),
+            )
+            ref_map[ref] = el.id
+            return ref
+
+        _flatten_for_find(bridge_tree)
+        mgr.store_detection_result(snapshot_id, ui_map)
+        mgr.store_ref_map(snapshot_id, ref_map)
+
         if json_output:
             data = [
                 {
+                    "ref": _element_id_to_ref.get(id(r.element), r.element.id),
                     "id": r.element.id,
                     "role": r.element.role,
                     "name": r.element.name,
@@ -1099,7 +1158,12 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
                 }
                 for r in results
             ]
-            click.echo(json_module.dumps({"success": True, "elements": data, "count": len(data)}, indent=2))
+            click.echo(json_module.dumps({
+                "success": True,
+                "elements": data,
+                "count": len(data),
+                "snapshot_id": snapshot_id,
+            }, indent=2))
         else:
             if not results:
                 click.echo(f"No elements found matching: {query}")
@@ -1107,13 +1171,16 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
 
             for i, r in enumerate(results):
                 el = r.element
+                ref = _element_id_to_ref.get(id(el), "?")
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f"({el.x},{el.y} {el.width}x{el.height})"
                 shortcut = f" [{el.keyboard_shortcut}]" if el.keyboard_shortcut else ""
-                click.echo(f"  {i}. [{el.role}]{name_str} {pos_str}{shortcut}")
+                click.echo(f"  {ref}. [{el.role}]{name_str} {pos_str}{shortcut}")
                 click.echo(f"     {r.breadcrumb_str}")
 
             click.echo(f"\n{len(results)} element(s) found.")
+            click.echo(f"Snapshot: {snapshot_id}")
+            click.echo("Tip: use 'naturo click e<N>' to interact with a found element.")
 
     except Exception as e:
         if json_output:
@@ -1591,18 +1658,25 @@ def learn(topic):
 
 @click.command()
 @click.argument("positional_refs", nargs=-1)
+@click.option("--on", "on_ref", help="Target element ref (eN) to highlight")
+@click.option("--ref", "-r", "ref_option", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--app", "-a", help="Application name (partial match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--depth", "-d", type=int, default=30, help="Tree depth for element discovery")
-@click.option("--ref", "-r", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--duration", type=float, default=5.0, help="Highlight duration in seconds")
-def highlight(positional_refs, app, hwnd, depth, ref, duration):
+@click.option(
+    "--backend", "-b",
+    type=click.Choice(["uia", "win32"]),
+    default="uia",
+    help="Highlight backend: uia (default, uses UIA element tree from snapshot), win32 (Win32 HWND enumeration)",
+)
+def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, backend):
     """Highlight UI elements on screen with colored borders and labels.
 
-    Draws colored rectangles around Win32 child windows with their
-    ref ID (eN) and name. Useful for identifying which element to target.
+    By default uses the UIA element tree from the most recent snapshot
+    (or captures a fresh one). Refs match those from 'naturo see'.
 
-    Uses Win32 HWND enumeration — works on VB6/ActiveX apps where UIA fails.
+    Use --backend win32 for VB6/ActiveX apps where UIA fails.
 
     \b
     Examples:
@@ -1611,21 +1685,36 @@ def highlight(positional_refs, app, hwnd, depth, ref, duration):
         naturo highlight --app EnterprisePortal           # Highlight all elements
         naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs (option)
         naturo highlight e5 e10 --app notepad             # Multiple positional refs
+        naturo highlight --on e5 --app notepad            # Using --on
         naturo highlight --app notepad --duration 10      # Show for 10 seconds
+        naturo highlight --app legacy --backend win32     # Win32 HWND fallback
     """
     be = _get_backend()
     handle = be._resolve_hwnd(app=app, hwnd=hwnd)
 
-    from naturo.bridge import highlight_elements
-    # Merge positional refs and --ref option refs
-    all_refs = list(positional_refs) + list(ref)
+    # Merge positional refs, --on ref, and --ref option refs
+    all_refs = list(positional_refs) + list(ref_option)
+    if on_ref:
+        all_refs.append(on_ref)
     refs_list = all_refs if all_refs else None
-    click.echo(f"Highlighting elements for {duration}s... (switch to the target window)")
 
-    import time
-    time.sleep(1.5)  # Give user time to switch windows
-
-    highlight_elements(hwnd=handle, depth=depth, duration=duration, refs=refs_list)
+    if backend == "win32":
+        # Legacy Win32 HWND enumeration fallback
+        from naturo.bridge import highlight_elements
+        click.echo(f"Highlighting elements (win32) for {duration}s... (switch to the target window)")
+        import time
+        time.sleep(1.5)
+        highlight_elements(hwnd=handle, depth=depth, duration=duration, refs=refs_list)
+    else:
+        # UIA mode: use snapshot element tree (#364)
+        from naturo.bridge import highlight_elements_uia
+        click.echo(f"Highlighting elements (uia) for {duration}s... (switch to the target window)")
+        import time
+        time.sleep(1.5)
+        highlight_elements_uia(
+            backend=be, app=app, hwnd=handle, depth=depth,
+            duration=duration, refs=refs_list,
+        )
     click.echo("Done.")
 
 

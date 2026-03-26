@@ -523,7 +523,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
               verify, see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
 
-    QUERY is optional text to find and click on. Use --on, --id, or --coords
+    QUERY is optional text or eN ref to find and click on. Use --on, --id, or --coords
     for alternative targeting.
 
     Input modes (Windows-specific):
@@ -537,6 +537,9 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
       naturo click --coords 500 300 --right
       naturo click --id "button_ok"
     """
+    # --ref is a hidden deprecated alias for --on (#381)
+    if ref_alias and not on_text:
+        on_text = ref_alias
     backend = _get_backend(json_output)
 
     # --ref is a hidden deprecated alias for --on (#381)
@@ -1212,6 +1215,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
                 )
                 return
         else:
+            # Text-based element lookup via backend
             try:
                 elem = backend.find_element(on_element)
                 if elem:
@@ -1229,7 +1233,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
                 return
         try:
             backend.click(click_x, click_y, button="left", input_mode=input_mode)
-            time.sleep(0.1)
+            time.sleep(0.1)  # Brief pause for focus to settle
         except Exception as exc:
             _json_err(f"Failed to click target element: {exc}", json_output)
             return
