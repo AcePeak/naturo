@@ -1004,16 +1004,19 @@ class WindowsBackend(Backend):
                         afh_candidates.append(w)
 
                 if afh_candidates:
-                    # Prefer AFH window with a CoreWindow child
+                    # (#394 v2) Prefer AFH window with a CoreWindow or
+                    # DesktopWindowXamlSource child — these host the actual
+                    # app UI.  Stale AFH windows may have title bar and
+                    # input sink children but no content window, yielding
+                    # empty UIA trees.
                     chosen_afh = None
                     for afh_w in afh_candidates:
-                        children = self._find_uwp_content_hwnd(afh_w.handle)
-                        if children:
+                        if self._afh_has_content_window(afh_w.handle):
                             chosen_afh = afh_w
                             logger.debug(
-                                "UWP fixup: AFH hwnd=%s has %d content "
-                                "children, selecting it",
-                                afh_w.handle, len(children),
+                                "UWP fixup: AFH hwnd=%s has content "
+                                "window (CoreWindow/XAML), selecting it",
+                                afh_w.handle,
                             )
                             break
                     if chosen_afh is None:
@@ -1377,6 +1380,61 @@ class WindowsBackend(Backend):
         except Exception:
             pass
         return None
+
+    @staticmethod
+    def _afh_has_content_window(afh_hwnd: int) -> bool:
+        """Check if an ApplicationFrameHost window has a content child.
+
+        A "content child" is a ``Windows.UI.Core.CoreWindow`` (classic UWP)
+        or ``DesktopWindowXamlSource`` (WinUI 3) — these host the actual
+        app UI.  Stale AFH windows may only have title bar and input sink
+        children, which do NOT contain actionable UI elements.
+
+        Args:
+            afh_hwnd: Handle of the ApplicationFrameHost top-level window.
+
+        Returns:
+            True if the AFH has at least one content window child.
+        """
+        import sys
+        if sys.platform != "win32":
+            return False
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            GetClassNameW = user32.GetClassNameW
+            GetClassNameW.argtypes = [
+                wintypes.HWND, ctypes.c_wchar_p, ctypes.c_int,
+            ]
+            GetClassNameW.restype = ctypes.c_int
+
+            _CONTENT_CLASSES = {
+                "windows.ui.core.corewindow",
+                "desktopwindowxamlsource",
+            }
+
+            found = [False]
+
+            WNDENUMPROC = ctypes.WINFUNCTYPE(
+                wintypes.BOOL, wintypes.HWND, wintypes.LPARAM,
+            )
+
+            def _enum_cb(hwnd, _lparam):
+                cls_buf = ctypes.create_unicode_buffer(256)
+                GetClassNameW(hwnd, cls_buf, 256)
+                if cls_buf.value.lower() in _CONTENT_CLASSES:
+                    found[0] = True
+                    return False  # stop enumeration
+                return True
+
+            user32.EnumChildWindows(
+                wintypes.HWND(afh_hwnd), WNDENUMPROC(_enum_cb), 0,
+            )
+            return found[0]
+        except Exception:
+            return False
 
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
