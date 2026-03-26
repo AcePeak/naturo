@@ -477,6 +477,149 @@ def enumerate_child_windows(hwnd: int, depth: int = 10) -> Optional[ElementInfo]
     return root
 
 
+def highlight_elements_uia(
+    backend,
+    app: Optional[str] = None,
+    hwnd: int = 0,
+    depth: int = 30,
+    duration: float = 5.0,
+    refs: Optional[list] = None,
+) -> None:
+    """Highlight UI elements using the UIA element tree from snapshot/see.
+
+    Refs match those assigned by ``naturo see`` (sequential DFS e1, e2, ...).
+    Falls back to capturing a fresh element tree if no recent snapshot exists.
+
+    Args:
+        backend: The platform backend instance.
+        app: Application name filter.
+        hwnd: Parent window handle.
+        depth: Max depth for element tree.
+        duration: How long to show highlights (seconds).
+        refs: Optional list of specific refs to highlight (e.g. ['e5', 'e10']).
+              If None, highlights all elements.
+    """
+    import platform
+    import time
+
+    if platform.system() != "Windows":
+        return
+
+    import ctypes
+    from ctypes import wintypes
+
+    # Try to get elements from most recent snapshot first
+    elements = []  # list of (ref, name, role, x, y, w, h)
+
+    from naturo.snapshot import get_snapshot_manager
+    mgr = get_snapshot_manager()
+
+    # Check if there's a recent snapshot with elements
+    _found_snapshot = False
+    try:
+        snaps = mgr.list_snapshots()
+        if snaps:
+            latest = snaps[-1]
+            snap = mgr.get_snapshot(latest.id)
+            if snap.ui_map:
+                _found_snapshot = True
+                for ref_key, el in snap.ui_map.items():
+                    if refs is not None and ref_key not in refs:
+                        continue
+                    ex, ey, ew, eh = el.frame
+                    if ew <= 0 or eh <= 0:
+                        continue
+                    label = el.title or el.role
+                    if len(label) > 20:
+                        label = label[:18] + ".."
+                    elements.append((ref_key, label, el.role, ex, ey, ew, eh))
+    except Exception:
+        pass
+
+    # If no recent snapshot, capture a fresh element tree
+    if not _found_snapshot:
+        try:
+            tree = backend.get_element_tree(
+                app=app, hwnd=hwnd, depth=depth, backend="uia",
+            )
+            if tree:
+                counter = [0]
+
+                def _collect_uia(el):
+                    counter[0] += 1
+                    ref = f"e{counter[0]}"
+                    if el.width > 0 and el.height > 0:
+                        if refs is None or ref in refs:
+                            label = el.name or el.role
+                            if len(label) > 20:
+                                label = label[:18] + ".."
+                            elements.append((ref, label, el.role, el.x, el.y, el.width, el.height))
+                    for child in el.children:
+                        _collect_uia(child)
+
+                _collect_uia(tree)
+        except Exception:
+            pass
+
+    if not elements:
+        return
+
+    # Draw highlights using GDI (same rendering as highlight_elements)
+    user32 = ctypes.windll.user32
+    gdi32 = ctypes.windll.gdi32
+
+    COLORS = [
+        0x0000FF,  # Red
+        0x00FF00,  # Green
+        0xFF0000,  # Blue
+        0x00FFFF,  # Yellow
+        0xFF00FF,  # Magenta
+        0xFFFF00,  # Cyan
+    ]
+
+    hdc = user32.GetDC(None)
+    font = gdi32.CreateFontW(
+        14, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 0, 0, "Consolas"
+    )
+
+    try:
+        for flash in range(3):
+            for i, (ref, label, role, ex, ey, ew, eh) in enumerate(elements):
+                color = COLORS[i % len(COLORS)]
+                pen = gdi32.CreatePen(0, 2, color)
+                old_pen = gdi32.SelectObject(hdc, pen)
+                old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
+
+                gdi32.Rectangle(hdc, ex, ey, ex + ew, ey + eh)
+
+                gdi32.SelectObject(hdc, old_brush)
+                label_text = f" {ref}: {label} "
+
+                gdi32.SetBkColor(hdc, color)
+                gdi32.SetTextColor(hdc, 0xFFFFFF)
+                old_font = gdi32.SelectObject(hdc, font)
+
+                text_buf = ctypes.create_unicode_buffer(label_text)
+                gdi32.TextOutW(hdc, ex + 1, ey + 1, text_buf, len(label_text))
+
+                gdi32.SelectObject(hdc, old_font)
+                gdi32.SelectObject(hdc, old_pen)
+                gdi32.DeleteObject(pen)
+
+            time.sleep(0.8)
+
+            for _, _, _, ex, ey, ew, eh in elements:
+                r = wintypes.RECT(ex - 3, ey - 3, ex + ew + 3, ey + eh + 3)
+                user32.InvalidateRect(None, ctypes.byref(r), True)
+            user32.UpdateWindow(user32.GetDesktopWindow())
+
+            time.sleep(0.4)
+    finally:
+        gdi32.DeleteObject(font)
+        user32.ReleaseDC(None, hdc)
+        user32.InvalidateRect(None, None, True)
+
+
 class NaturoCoreError(Exception):
     """Error raised when a naturo_core function fails.
 

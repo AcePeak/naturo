@@ -942,8 +942,9 @@ class TestAppWindowCommands:
         assert data["success"] is True
         assert data["action"] == "focus"
 
+    @patch("naturo.cli.interaction._check_desktop_session")
     @patch("naturo.backends.base.get_backend")
-    def test_app_list_shows_windows(self, mock_get, runner, mock_window):
+    def test_app_list_shows_windows(self, mock_get, _mock_desktop, runner, mock_window):
         """T170 – app list shows detailed window list (--windows removed in #329)."""
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]
@@ -951,8 +952,9 @@ class TestAppWindowCommands:
         result = runner.invoke(main, ["app", "list"])
         assert result.exit_code == 0
 
+    @patch("naturo.cli.interaction._check_desktop_session")
     @patch("naturo.backends.base.get_backend")
-    def test_app_list_json(self, mock_get, runner, mock_window):
+    def test_app_list_json(self, mock_get, _mock_desktop, runner, mock_window):
         """T170 – app list --json returns structured data."""
         backend = MagicMock()
         backend.list_windows.return_value = [mock_window]

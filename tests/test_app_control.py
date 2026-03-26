@@ -395,6 +395,7 @@ class TestAppControlFunctionalWindows:
         if apps:
             assert "name" in apps[0] or hasattr(apps[0], "name")
 
+    @pytest.mark.desktop
     def test_cli_app_list_runs(self, runner):
         """T158 – naturo app list runs on Windows."""
         result = runner.invoke(main, ["app", "list"])

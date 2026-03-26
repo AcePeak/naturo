@@ -57,7 +57,7 @@ npx naturo mcp start
 naturo --version
 
 # Capture a screenshot
-naturo capture live --path screen.png
+naturo capture -o screen.png
 
 # List open windows
 naturo list windows
@@ -200,7 +200,7 @@ naturo type --paste --file data.txt        # Read file → paste
 
 ## Snapshot System
 
-Every `see` and `capture live` call automatically persists a **snapshot** — a
+Every `see` and `capture` call automatically persists a **snapshot** — a
 directory under `~/.naturo/snapshots/` containing the screenshot and full UI
 element map.
 
