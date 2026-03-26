@@ -115,6 +115,12 @@ class TestPressCommandRegistration:
         assert result.exit_code == 0
         assert "--delay" in result.output
 
+    def test_press_has_on_option(self, runner):
+        """press --on option exists for element targeting (fixes #375)."""
+        result = runner.invoke(main, ["press", "--help"])
+        assert result.exit_code == 0
+        assert "--on" in result.output
+
 
 class TestPressJsonError:
     """Press command returns JSON error when KEY is missing (fixes #123)."""

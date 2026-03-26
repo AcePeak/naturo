@@ -395,8 +395,13 @@ class TestAppControlFunctionalWindows:
         if apps:
             assert "name" in apps[0] or hasattr(apps[0], "name")
 
+    @pytest.mark.desktop
     def test_cli_app_list_runs(self, runner):
-        """T158 – naturo app list runs on Windows."""
+        """T158 – naturo app list runs on Windows (requires desktop session).
+
+        Skipped automatically in SSH/service sessions via the ``desktop``
+        marker and the ``_skip_desktop_tests`` autouse fixture (#379).
+        """
         result = runner.invoke(main, ["app", "list"])
         assert result.exit_code == 0
 

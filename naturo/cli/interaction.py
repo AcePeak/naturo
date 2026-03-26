@@ -60,7 +60,7 @@ def _post_action_see(
     window_title: str | None,
     hwnd: int | None,
     json_output: bool,
-    depth: int = 3,
+    depth: int = 7,
 ) -> dict | None:
     """Run UI inspection after an interaction and return snapshot data.
 
@@ -495,6 +495,7 @@ def _auto_route(
 @click.command("click")
 @click.argument("query", required=False)
 @click.option("--on", "on_text", help="Target element (eN ref or text label)")
+@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
 @click.option("--double", is_flag=True, help="Double-click")
@@ -517,7 +518,7 @@ def _auto_route(
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
+def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app, pid,
               window_title, hwnd, wait_for, input_mode, method,
               verify, see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
@@ -537,6 +538,10 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
       naturo click --id "button_ok"
     """
     backend = _get_backend(json_output)
+
+    # --ref is a hidden deprecated alias for --on (#381)
+    if ref_alias and not on_text:
+        on_text = ref_alias
 
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, pid, method, json_output)
@@ -770,6 +775,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 @click.option("--file", "file_path", type=click.Path(), help="Read text from file (use with --paste)")
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste", show_default=True)
 @click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
+@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
@@ -786,7 +792,7 @@ def click_cmd(query, on_text, element_id, coords, double, right, app, pid,
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
-             delete, clear, paste_mode, file_path, restore, on_element, app,
+             delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app,
              window_title, hwnd, input_mode, method, verify, see_after, settle,
              json_output):
     """Type text with configurable speed and profile.
@@ -810,6 +816,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type "hello" --on e42               # click e42 then type
       naturo type "hello" --on e42 --app feishu  # target app + element
     """
+    # --ref is a hidden deprecated alias for --on (#381)
+    if ref_alias and not on_element:
+        on_element = ref_alias
     # Handle --file: read content from file
     if file_path:
         import os
@@ -1133,6 +1142,8 @@ def _is_combo(key_str: str) -> bool:
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
 @click.option("--hold-duration", type=float, default=None, help="Hold duration for combos (ms)")
+@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
+@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
@@ -1147,7 +1158,7 @@ def _is_combo(key_str: str) -> bool:
 @_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
+def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -1161,6 +1172,9 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
       naturo press ctrl+a ctrl+c          # sequential combos
       naturo press alt+f4
     """
+    # --ref is a hidden deprecated alias for --on (#381)
+    if ref_alias and not on_element:
+        on_element = ref_alias
     if not keys:
         _json_err("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, ctrl+c).",
                   json_output, code="INVALID_INPUT")
@@ -1180,11 +1194,51 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
+    # --on: resolve element ref and click to focus before pressing (#375)
+    if on_element:
+        import re as _re
+        if _re.fullmatch(r"e\d+", on_element):
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
+            resolved = mgr.resolve_ref(on_element)
+            if resolved:
+                click_x, click_y = resolved[0], resolved[1]
+            else:
+                _json_err(
+                    f"Element ref '{on_element}' not found. Run 'naturo see' first to "
+                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+                    json_output,
+                    code="REF_NOT_FOUND",
+                )
+                return
+        else:
+            try:
+                elem = backend.find_element(on_element)
+                if elem:
+                    click_x = elem.x + elem.width // 2
+                    click_y = elem.y + elem.height // 2
+                else:
+                    _json_err(
+                        f"Element '{on_element}' not found",
+                        json_output,
+                        code="ELEMENT_NOT_FOUND",
+                    )
+                    return
+            except Exception as exc:
+                _json_err(str(exc), json_output)
+                return
+        try:
+            backend.click(click_x, click_y, button="left", input_mode=input_mode)
+            time.sleep(0.1)
+        except Exception as exc:
+            _json_err(f"Failed to click target element: {exc}", json_output)
+            return
+
     # (#230) Focus target window before sending key input.
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
     # Session-aware: _resolve_hwnd now prefers interactive session windows.
-    if (app or window_title or hwnd):
+    if (app or window_title or hwnd) and not on_element:
         import platform as _plat
         if _plat.system() == "Windows":
             try:
@@ -1224,6 +1278,7 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
             _before_state = capture_before_state(
                 backend,
                 action="press",
+                ref=on_element if on_element else None,
                 app=app,
                 window_title=window_title,
                 hwnd=hwnd,
@@ -1284,6 +1339,9 @@ def press(keys, count, delay, hold_duration, app, window_title, hwnd, input_mode
             result_data["count"] = count
     else:
         result_data = {"action": "pressed", "sequence": list(keys), "count": count}
+
+    if on_element:
+        result_data["target"] = on_element
 
     if route_info:
         result_data["routing"] = route_info
@@ -1416,6 +1474,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 )
 @click.option("--amount", "-a", type=int, default=3, help="Scroll amount (notches)", show_default=True)
 @click.option("--on", "on_text", help="Element text or eN ref to scroll on")
+@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Element ID to scroll on")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Coordinates to scroll at")
 @click.option("--smooth", is_flag=True, help="Smooth scrolling (Phase 3)")
@@ -1427,7 +1486,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @_method_option
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
+def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
            smooth, delay, app, window_title, hwnd, method, see_after, settle, json_output):
     """Scroll in a direction.
 
@@ -1440,6 +1499,9 @@ def scroll(direction_arg, direction_option, amount, on_text, element_id, coords,
       naturo scroll --on e3 down --amount 5
       naturo scroll --coords 500 300 down
     """
+    # --ref is a hidden deprecated alias for --on (#381)
+    if ref_alias and not on_text:
+        on_text = ref_alias
     direction = direction_arg or direction_option or "down"
     if amount < 1:
         _json_err(f"--amount must be >= 1, got {amount}", json_output, code="INVALID_INPUT")

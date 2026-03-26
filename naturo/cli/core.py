@@ -1590,12 +1590,13 @@ def learn(topic):
 
 
 @click.command()
+@click.argument("positional_refs", nargs=-1)
 @click.option("--app", "-a", help="Application name (partial match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--depth", "-d", type=int, default=30, help="Tree depth for element discovery")
 @click.option("--ref", "-r", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--duration", type=float, default=5.0, help="Highlight duration in seconds")
-def highlight(app, hwnd, depth, ref, duration):
+def highlight(positional_refs, app, hwnd, depth, ref, duration):
     """Highlight UI elements on screen with colored borders and labels.
 
     Draws colored rectangles around Win32 child windows with their
@@ -1603,17 +1604,22 @@ def highlight(app, hwnd, depth, ref, duration):
 
     Uses Win32 HWND enumeration — works on VB6/ActiveX apps where UIA fails.
 
+    \b
     Examples:
 
-        naturo highlight --app EnterprisePortal          # Highlight all elements
-        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs
+        naturo highlight e11 --app notepad               # Highlight specific ref (positional)
+        naturo highlight --app EnterprisePortal           # Highlight all elements
+        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs (option)
+        naturo highlight e5 e10 --app notepad             # Multiple positional refs
         naturo highlight --app notepad --duration 10      # Show for 10 seconds
     """
     be = _get_backend()
     handle = be._resolve_hwnd(app=app, hwnd=hwnd)
 
     from naturo.bridge import highlight_elements
-    refs_list = list(ref) if ref else None
+    # Merge positional refs and --ref option refs
+    all_refs = list(positional_refs) + list(ref)
+    refs_list = all_refs if all_refs else None
     click.echo(f"Highlighting elements for {duration}s... (switch to the target window)")
 
     import time
