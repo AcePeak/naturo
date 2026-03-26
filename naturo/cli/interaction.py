@@ -1068,6 +1068,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         try:
             from naturo.verify import verify_type, skip_result
             _before_value = _before_state.get("value") if _before_state else None
+            _before_ui_texts = _before_state.get("ui_texts") if _before_state else None
             _verification = verify_type(
                 backend,
                 text=text,
@@ -1076,6 +1077,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 window_title=window_title,
                 hwnd=hwnd,
                 before_value=_before_value,
+                before_ui_texts=_before_ui_texts,
                 paste_mode=paste_mode,
             )
         except Exception as exc:

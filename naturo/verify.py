@@ -111,6 +111,7 @@ def verify_type(
     window_title: Optional[str] = None,
     hwnd: Optional[int] = None,
     before_value: Optional[str] = None,
+    before_ui_texts: Optional[dict[str, str]] = None,
     paste_mode: bool = False,
     settle_ms: int = 150,
 ) -> VerificationResult:
@@ -130,6 +131,10 @@ def verify_type(
         window_title: Window title filter.
         hwnd: Window handle filter.
         before_value: Element value captured before the action.
+        before_ui_texts: Mapping of element identifiers to their text/value
+            captured before the action. Used as fallback when ValuePattern
+            comparison fails (e.g., WinUI 3 apps where ValuePattern doesn't
+            reflect typed text). See ``_capture_ui_texts``.
         paste_mode: Whether paste mode was used.
         settle_ms: Milliseconds to wait for UI to settle before verification.
 
@@ -211,14 +216,44 @@ def verify_type(
                     elapsed_ms=elapsed,
                 )
         else:
-            # Value unchanged → silent failure detected!
+            # Value unchanged via ValuePattern — try UI text diff fallback
+            # (#398) Some apps (Win11 Notepad WinUI 3, RichEditTextBlock)
+            # don't expose typed text through UIA ValuePattern, causing
+            # false negatives. Fall back to comparing child window texts
+            # and UIA element names (same approach as verify_click #263).
+            if before_ui_texts is not None:
+                try:
+                    after_ui_texts = _capture_ui_texts(
+                        backend, app=app, window_title=window_title, hwnd=hwnd,
+                    )
+                    if after_ui_texts and after_ui_texts != before_ui_texts:
+                        elapsed = (time.monotonic() - start) * 1000
+                        return VerificationResult(
+                            status=VerifyStatus.VERIFIED,
+                            detail=(
+                                "UI text changed after typing "
+                                "(ValuePattern unchanged but window text updated)"
+                            ),
+                            method="ui_text_diff",
+                            before=before_ui_texts,
+                            after=after_ui_texts,
+                            elapsed_ms=elapsed,
+                        )
+                except Exception as exc:
+                    logger.debug("Type UI text fallback failed: %s", exc)
+
+            # (#398) If even the UI text fallback shows no change, report
+            # UNKNOWN instead of FAILED. The ValuePattern may not work for
+            # certain app frameworks, so a "no change detected" is not
+            # definitive evidence of failure — it's inconclusive.
+            elapsed = (time.monotonic() - start) * 1000
             return VerificationResult(
-                status=VerifyStatus.FAILED,
+                status=VerifyStatus.UNKNOWN,
                 detail=(
                     f"Element value unchanged after type operation. "
-                    f"Text '{text[:50]}' was not typed into the target element. "
-                    f"Possible causes: wrong window focused, element not editable, "
-                    f"or running in a non-interactive session."
+                    f"Text '{text[:50]}' may not have been typed, or the app "
+                    f"framework does not expose typed text via UIA ValuePattern. "
+                    f"Consider using screenshot verification for confirmation."
                 ),
                 method="value_compare",
                 before=before_value,
@@ -803,16 +838,17 @@ def capture_before_state(
         logger.debug("Pre-action focus capture failed: %s", exc)
         state["focus"] = None
 
-    # (#263) For click actions, also capture UI texts for fallback verification.
-    # This enables detecting display changes that don't involve focus shifts
-    # (e.g., UWP Calculator buttons update the display without focus change).
-    if action == "click":
+    # (#263, #398) For click and type actions, capture UI texts for fallback
+    # verification. For clicks, this detects display changes without focus
+    # shifts. For type, this catches apps where ValuePattern doesn't reflect
+    # typed text (e.g., Win11 Notepad WinUI 3 RichEditTextBlock).
+    if action in ("click", "type"):
         try:
             state["ui_texts"] = _capture_ui_texts(
                 backend, app=app, window_title=window_title, hwnd=hwnd,
             )
         except Exception as exc:
-            logger.debug("Pre-click UI text capture failed: %s", exc)
+            logger.debug("Pre-%s UI text capture failed: %s", action, exc)
             state["ui_texts"] = None
 
     return state

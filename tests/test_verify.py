@@ -95,8 +95,13 @@ class TestVerifyType:
         assert result.status == VerifyStatus.VERIFIED
         assert result.verified is True
 
-    def test_failed_when_value_unchanged(self):
-        """Value unchanged after typing → FAILED (silent failure)."""
+    def test_unknown_when_value_unchanged(self):
+        """Value unchanged after typing → UNKNOWN (inconclusive, not FAILED).
+
+        (#398) Changed from FAILED to UNKNOWN because some app frameworks
+        (Win11 Notepad WinUI 3) don't expose typed text via ValuePattern.
+        Reporting FAILED would be a false negative.
+        """
         backend = MagicMock()
         backend.get_element_value.return_value = {"value": "original"}
 
@@ -106,8 +111,8 @@ class TestVerifyType:
             before_value="original",
             settle_ms=0,
         )
-        assert result.status == VerifyStatus.FAILED
-        assert result.verified is False
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.verified is None
         assert "unchanged" in result.detail.lower()
 
     def test_verified_when_value_changed_but_text_not_found(self):
@@ -210,6 +215,48 @@ class TestVerifyType:
             settle_ms=0,
         )
         assert result.elapsed_ms >= 0
+
+
+    def test_verified_via_ui_text_fallback_when_value_unchanged(self):
+        """(#398) Value unchanged but UI text changed → VERIFIED via fallback.
+
+        Win11 Notepad WinUI 3 doesn't expose typed text via ValuePattern.
+        The UI text diff fallback detects the change via GetWindowText/UIA names.
+        """
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": "original"}
+
+        before_ui_texts = {"child:12345": ""}
+        after_ui_texts = {"child:12345": "Hello"}
+
+        with patch("naturo.verify._capture_ui_texts", return_value=after_ui_texts):
+            result = verify_type(
+                backend,
+                text="Hello",
+                before_value="original",
+                before_ui_texts=before_ui_texts,
+                settle_ms=0,
+            )
+        assert result.status == VerifyStatus.VERIFIED
+        assert result.method == "ui_text_diff"
+
+    def test_unknown_when_value_and_ui_texts_both_unchanged(self):
+        """(#398) Value AND UI text both unchanged → UNKNOWN (not FAILED)."""
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": "original"}
+
+        same_texts = {"child:12345": "original"}
+
+        with patch("naturo.verify._capture_ui_texts", return_value=same_texts):
+            result = verify_type(
+                backend,
+                text="Hello",
+                before_value="original",
+                before_ui_texts=same_texts,
+                settle_ms=0,
+            )
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.verified is None
 
 
 class TestVerifyClick:
@@ -448,15 +495,15 @@ class TestCaptureBeforeStateUiTexts:
         assert state["focus"] == focus_data
         assert state["ui_texts"] == ui_texts
 
-    def test_type_does_not_capture_ui_texts(self):
-        """Before-state for type should NOT capture UI texts."""
+    def test_type_captures_ui_texts_for_fallback(self):
+        """(#398) Before-state for type now captures UI texts for fallback verification."""
         backend = MagicMock()
         backend.get_element_value.return_value = {"value": "text"}
 
         with patch("naturo.verify._capture_focus_state", return_value={}):
             state = capture_before_state(backend, action="type")
 
-        assert "ui_texts" not in state
+        assert "ui_texts" in state
 
     def test_click_handles_ui_texts_error(self):
         """UI text capture failure → ui_texts=None, still works."""
@@ -609,8 +656,13 @@ class TestVerificationIntegration:
         )
         assert result.verified is True
 
-    def test_full_type_verify_failure_flow(self):
-        """Simulate silent failure: value stays the same → FAILED."""
+    def test_full_type_verify_inconclusive_flow(self):
+        """Value unchanged after typing → UNKNOWN (inconclusive).
+
+        (#398) Changed from FAILED to UNKNOWN. When ValuePattern reports
+        no change, it could be a real silent failure OR the app framework
+        doesn't expose typed text. We report UNKNOWN to avoid false negatives.
+        """
         backend = MagicMock()
         backend.get_element_value.return_value = {"value": "unchanged"}
 
@@ -623,7 +675,8 @@ class TestVerificationIntegration:
             before_value=before.get("value"),
             settle_ms=0,
         )
-        assert result.verified is False
+        assert result.verified is None
+        assert result.status == VerifyStatus.UNKNOWN
 
     def test_to_dict_includes_all_fields_for_json_output(self):
         """Verified result should serialize cleanly for JSON output."""
