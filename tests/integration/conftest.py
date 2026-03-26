@@ -93,18 +93,28 @@ def notepad_app(has_desktop) -> Generator[int, None, None]:
     if proc is None:
         pytest.skip("Could not launch Notepad")
 
-    pid = proc.pid
-    yield pid
+    # Windows 11 UWP Notepad: launcher PID differs from the actual Notepad process.
+    # Look up the real process the same way calculator_app handles UWP apps.
+    time.sleep(1)
+    actual_pid = _find_process_by_name("Notepad.exe")
+    if actual_pid is None:
+        actual_pid = proc.pid
 
-    # Teardown: kill Notepad
+    yield actual_pid
+
+    # Teardown: kill Notepad (by image name for UWP, fallback to proc handle)
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "Notepad.exe"],
+            capture_output=True,
+            timeout=5,
+        )
+    except Exception:
+        pass
     try:
         proc.terminate()
-        proc.wait(timeout=5)
     except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
+        pass
 
 
 @pytest.fixture(scope="module")

@@ -40,6 +40,7 @@ _DESKTOP_REQUIRED_COMMANDS = {
     ("taskbar",),
     ("menu-inspect",),
     ("dialog",),
+    ("highlight",),
     ("list", "apps"),
     ("list", "screens"),
 }
