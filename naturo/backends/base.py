@@ -50,6 +50,8 @@ class MonitorInfo:
     scale_factor: float   # DPI scale factor (1.0 = 100%, 1.5 = 150%, 2.0 = 200%)
     dpi: int              # Effective DPI (96 = 100%)
     work_area: Optional[dict] = None  # {"x": int, "y": int, "width": int, "height": int}
+    model_name: Optional[str] = None  # Human-readable monitor name (#359)
+    device_path: Optional[str] = None  # Device path / ID (#359)
 
 
 @dataclass

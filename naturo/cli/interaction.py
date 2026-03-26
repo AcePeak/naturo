@@ -60,7 +60,7 @@ def _post_action_see(
     window_title: str | None,
     hwnd: int | None,
     json_output: bool,
-    depth: int = 3,
+    depth: int = 7,
 ) -> dict | None:
     """Run UI inspection after an interaction and return snapshot data.
 
