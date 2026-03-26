@@ -395,6 +395,13 @@ def windows(app, pid, json_output):
         backend = _get_backend(json_output)
         win_list = backend.list_windows()
 
+        # Exclude own process and parent (terminal) to avoid matching
+        # the terminal running the command (#358)
+        import os as _os
+        _own_pid = _os.getpid()
+        _parent_pid = _os.getppid()
+        win_list = [w for w in win_list if w.pid not in (_own_pid, _parent_pid)]
+
         # Apply filters
         if app:
             app_lower = app.lower()
