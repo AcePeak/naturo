@@ -1706,13 +1706,14 @@ def learn(topic):
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--depth", "-d", type=int, default=30, help="Tree depth for element discovery")
 @click.option("--duration", type=float, default=5.0, help="Highlight duration in seconds")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "-b",
     type=click.Choice(["uia", "win32"]),
     default="uia",
     help="Highlight backend: uia (default, uses UIA element tree from snapshot), win32 (Win32 HWND enumeration)",
 )
-def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, backend):
+def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, json_output, backend):
     """Highlight UI elements on screen with colored borders and labels.
 
     By default uses the UIA element tree from the most recent snapshot
@@ -1731,8 +1732,15 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, b
         naturo highlight --app notepad --duration 10      # Show for 10 seconds
         naturo highlight --app legacy --backend win32     # Win32 HWND fallback
     """
-    be = _get_backend()
-    handle = be._resolve_hwnd(app=app, hwnd=hwnd)
+    import json as _json
+    be = _get_backend(json_output)
+    try:
+        handle = be._resolve_hwnd(app=app, hwnd=hwnd)
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("WINDOW_NOT_FOUND", str(exc)))
+            raise SystemExit(1)
+        raise
 
     # Merge positional refs, --on ref, and --ref option refs
     all_refs = list(positional_refs) + list(ref_option)
@@ -1740,24 +1748,43 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, b
         all_refs.append(on_ref)
     refs_list = all_refs if all_refs else None
 
-    if backend == "win32":
-        # Legacy Win32 HWND enumeration fallback
-        from naturo.bridge import highlight_elements
-        click.echo(f"Highlighting elements (win32) for {duration}s... (switch to the target window)")
-        import time
-        time.sleep(1.5)
-        highlight_elements(hwnd=handle, depth=depth, duration=duration, refs=refs_list)
+    try:
+        if backend == "win32":
+            # Legacy Win32 HWND enumeration fallback
+            from naturo.bridge import highlight_elements
+            if not json_output:
+                click.echo(f"Highlighting elements (win32) for {duration}s... (switch to the target window)")
+            import time
+            time.sleep(1.5)
+            highlight_elements(hwnd=handle, depth=depth, duration=duration, refs=refs_list)
+        else:
+            # UIA mode: use snapshot element tree (#364)
+            from naturo.bridge import highlight_elements_uia
+            if not json_output:
+                click.echo(f"Highlighting elements (uia) for {duration}s... (switch to the target window)")
+            import time
+            time.sleep(1.5)
+            highlight_elements_uia(
+                backend=be, app=app, hwnd=handle, depth=depth,
+                duration=duration, refs=refs_list,
+            )
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("HIGHLIGHT_ERROR", str(exc)))
+            raise SystemExit(1)
+        raise
+
+    if json_output:
+        result = {
+            "success": True,
+            "backend": backend,
+            "duration": duration,
+            "hwnd": handle,
+            "refs": refs_list,
+        }
+        click.echo(_json.dumps(result))
     else:
-        # UIA mode: use snapshot element tree (#364)
-        from naturo.bridge import highlight_elements_uia
-        click.echo(f"Highlighting elements (uia) for {duration}s... (switch to the target window)")
-        import time
-        time.sleep(1.5)
-        highlight_elements_uia(
-            backend=be, app=app, hwnd=handle, depth=depth,
-            duration=duration, refs=refs_list,
-        )
-    click.echo("Done.")
+        click.echo("Done.")
 
 
 @click.command(hidden=True)
