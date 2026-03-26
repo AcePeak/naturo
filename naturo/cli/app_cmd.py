@@ -204,28 +204,6 @@ def app_list(ctx, show_all, json_output):
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
-    if show_all:
-        # Legacy behavior: list all processes via tasklist/ps
-        from naturo.process import list_apps as list_all_processes
-        apps = list_all_processes()
-        if json_output:
-            click.echo(json.dumps({
-                "success": True,
-                "apps": [
-                    {"pid": a.pid, "name": a.name, "path": a.path, "is_running": a.is_running}
-                    for a in apps
-                ],
-                "count": len(apps),
-            }, indent=2))
-        else:
-            if not apps:
-                click.echo("No running processes found")
-            else:
-                for a in apps:
-                    _safe_echo(f"  {a.pid:>8}  {a.name}")
-                click.echo(f"\n{len(apps)} processes")
-        return
-
     # Default: list windows (replaces backend.list_apps with filtered backend.list_windows)
     # This unifies `app list` and `window list` output formats (#274)
     from naturo.errors import NaturoError
@@ -276,8 +254,16 @@ def app_list(ctx, show_all, json_output):
         sys.exit(1)
         return
 
+    # --all: append processes that have no visible windows (#355)
+    background_apps = []
+    if show_all:
+        from naturo.process import list_apps as list_all_processes
+        all_procs = list_all_processes()
+        window_pids = {w.pid for w in windows}
+        background_apps = [a for a in all_procs if a.pid not in window_pids]
+
     if json_output:
-        click.echo(json.dumps({
+        result = {
             "success": True,
             "windows": [
                 {
@@ -293,16 +279,28 @@ def app_list(ctx, show_all, json_output):
                 for w in windows
             ],
             "count": len(windows),
-        }, indent=2))
+        }
+        if show_all:
+            result["background_processes"] = [
+                {"pid": a.pid, "name": a.name, "path": a.path}
+                for a in background_apps
+            ]
+            result["total_count"] = len(windows) + len(background_apps)
+        click.echo(json.dumps(result, indent=2))
     else:
-        if not windows:
+        if not windows and not background_apps:
             click.echo("No running applications with visible windows found")
         else:
             # Format: PID  HWND  process_name  title
             # Align with window list output for consistency
             for w in windows:
                 _safe_echo(f"  {w.pid:>8}  {w.handle:>10}  {w.process_name:<20}  {w.title}")
-            click.echo(f"\n{len(windows)} applications")
+            if background_apps:
+                click.echo(f"\n  --- Background processes (no visible windows) ---")
+                for a in background_apps:
+                    _safe_echo(f"  {a.pid:>8}  {'':>10}  {a.name}")
+            total = len(windows) + len(background_apps)
+            click.echo(f"\n{len(windows)} applications, {len(background_apps)} background processes" if show_all else f"\n{len(windows)} applications")
 
 
 @click.command("hide", hidden=True)
