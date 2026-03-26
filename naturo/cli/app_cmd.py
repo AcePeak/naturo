@@ -563,7 +563,10 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
     from naturo.detect.models import ProbeStatus
 
     if scan_all:
-        _inspect_all_windows(quick, json_output)
+        # (#395) Default to quick mode for --all to avoid timeouts
+        # with many open windows.  Users can still run individual
+        # inspect calls without --quick for full detection.
+        _inspect_all_windows(quick=True, json_output=json_output)
         return
 
     if not name and pid is None:
@@ -703,7 +706,8 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         _console_session = _get_console_session_id()
         _filter_session0 = _console_session >= 0
 
-    results = []
+    # Build deduplicated list of windows to inspect
+    targets = []
     seen_keys = set()
 
     for w in windows:
@@ -717,8 +721,11 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
         if key in seen_keys:
             continue
         seen_keys.add(key)
+        targets.append(w)
 
-        result = detect(
+    def _inspect_one(w):
+        """Inspect a single window (thread-safe)."""
+        return detect(
             pid=w.pid,
             exe=w.process_name,
             hwnd=w.handle,
@@ -726,7 +733,22 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
             use_cache=False,  # Different windows may have different results
             quick=quick,
         )
-        results.append(result)
+
+    # (#395) Run inspections in parallel to avoid cumulative timeout
+    # with many open windows.  Cap workers to avoid overwhelming the
+    # OS with concurrent UIA/COM calls.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    max_workers = min(len(targets), 4)
+    results = []
+    if max_workers > 0:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(_inspect_one, w): w for w in targets}
+            for future in as_completed(futures):
+                try:
+                    results.append(future.result())
+                except Exception:
+                    pass  # skip windows that fail detection
 
     if json_output:
         click.echo(json.dumps({
