@@ -951,7 +951,7 @@ class NaturoCore:
         Raises:
             NaturoCoreError: On error (invalid args, COM failure, etc.).
         """
-        buf_size = 8192
+        buf_size = 4 * 1024 * 1024  # 4MB for large documents (e.g. Win11 Notepad TextPattern)
         buf = ctypes.create_string_buffer(buf_size)
 
         aid_bytes = automation_id.encode("utf-8") if automation_id else None

@@ -897,7 +897,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                 hr = txp->get_DocumentRange(&range);
                 if (SUCCEEDED(hr) && range) {
                     BSTR text = NULL;
-                    hr = range->GetText(4096, &text);
+                    hr = range->GetText(1048576, &text);  // 1MB for large documents (#374)
                     if (SUCCEEDED(hr) && text) {
                         value = json_escape(text);
                         SysFreeString(text);
