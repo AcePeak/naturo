@@ -677,6 +677,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     value=None,
                     x=0, y=0, width=0, height=0,
                     children=[],
+                    properties={},
                 )
                 for h, subtree in window_trees:
                     # Wrap each window tree with a "Window" group node
