@@ -944,6 +944,15 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             backend.hotkey("ctrl", "a")
             backend.press_key("delete")
         elif delete:
+            import warnings
+            warnings.warn(
+                "naturo type --delete is deprecated and will be removed in a "
+                "future release. Use --clear instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            # Behave like --clear: select all then delete (#371)
+            backend.hotkey("ctrl", "a")
             backend.press_key("delete")
 
         # Determine if UIA-based input should be attempted (#226).
