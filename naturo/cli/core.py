@@ -140,7 +140,7 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
     if path is None:
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        app_label = (app or "screen").lower().replace(" ", "-")
+        app_label = (app or window_title or "screen").lower().replace(" ", "-")
         path = f"naturo-{app_label}-{timestamp}.{fmt}"
 
     try:
