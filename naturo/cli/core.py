@@ -463,7 +463,8 @@ def screens(json_output):
     """List connected screens/monitors.
 
     Shows monitor index, resolution, position, DPI scale factor, and
-    whether the monitor is the primary display.
+    whether the monitor is the primary display.  On Windows, shows the
+    human-readable monitor model name when available (#359).
     """
     try:
         backend = _get_backend(json_output)
@@ -472,9 +473,12 @@ def screens(json_output):
         if json_output:
             items = []
             for m in monitors:
+                # (#359) Use model_name as 'name', keep device path separate
+                display_name = getattr(m, "model_name", None) or m.name
                 item = {
                     "index": m.index,
-                    "name": m.name,
+                    "name": display_name,
+                    "device_path": getattr(m, "device_path", None) or m.name,
                     "x": m.x,
                     "y": m.y,
                     "width": m.width,
@@ -488,18 +492,26 @@ def screens(json_output):
                 items.append(item)
             click.echo(json_module.dumps({"success": True, "monitors": items}, indent=2))
         else:
+            from naturo.cli.table import print_table
+
             if not monitors:
                 click.echo("No monitors detected.")
                 return
-            click.echo(f"{'Index':<8} {'Resolution':<16} {'Position':<16} {'Scale':<8} {'DPI':<6} {'Primary'}")
-            click.echo("-" * 72)
+
+            headers = ["Index", "Name", "Resolution", "Position", "Scale", "DPI", "Primary"]
+            rows = []
             for m in monitors:
+                display_name = getattr(m, "model_name", None) or m.name
                 res = f"{m.width}x{m.height}"
                 pos = f"({m.x}, {m.y})"
                 primary = "✓" if m.is_primary else ""
                 scale = f"{m.scale_factor}x"
-                click.echo(f"{m.index:<8} {res:<16} {pos:<16} {scale:<8} {m.dpi:<6} {primary}")
-            click.echo(f"\n{len(monitors)} monitor(s) found.")
+                rows.append([str(m.index), display_name, res, pos, scale, str(m.dpi), primary])
+
+            print_table(
+                headers, rows,
+                count_label=f"{len(monitors)} monitor(s) found.",
+            )
     except NotImplementedError:
         msg = f"Monitor listing is not supported on {platform.system()} yet."
         if json_output:
@@ -557,6 +569,8 @@ def permissions(json_output):
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
               help="Coverage target (0.0–1.0) before trying next provider (default: 0 = UIA only)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.option("--visible-only", is_flag=True,
+              help="Hide offscreen elements (zero-bounds) from output (#365)")
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto"]),
@@ -564,7 +578,7 @@ def permissions(json_output):
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX)",
 )
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
-        cascade, fill_gaps, show_stats, coverage_target, json_output, backend):
+        cascade, fill_gaps, show_stats, coverage_target, json_output, visible_only, backend):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -827,6 +841,16 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 raw_id = str(el.id) if el.id else ""
                 automation_id = raw_id if raw_id and not _re_local.fullmatch(r"e\d+", raw_id) else ""
 
+                # (#365) Detect offscreen (zero-bounds) elements
+                is_offscreen = (el.x == 0 and el.y == 0
+                                and el.width == 0 and el.height == 0)
+
+                children = [to_dict(c, parent_ref=display_id) for c in el.children]
+
+                # (#365) --visible-only: skip offscreen elements
+                if visible_only and is_offscreen:
+                    return None
+
                 d = {
                     "id": display_id,
                     "automation_id": automation_id,
@@ -837,8 +861,21 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "y": el.y,
                     "width": el.width,
                     "height": el.height,
-                    "children": [to_dict(c, parent_ref=display_id) for c in el.children],
+                    "children": [c for c in children if c is not None],
                 }
+
+                # (#365) Mark offscreen elements
+                if is_offscreen:
+                    d["offscreen"] = True
+
+                # (#372) Value preview for Document/Edit role elements
+                props = getattr(el, "properties", {})
+                _vp = props.get("value_preview")
+                if _vp is not None:
+                    d["value_preview"] = _vp
+                    if props.get("value_length") is not None:
+                        d["value_length"] = props["value_length"]
+
                 # (#295) Always use naturo ref for parent, never raw
                 # AutomationId — keeps a single consistent ID space.
                 if parent_ref:
@@ -846,7 +883,6 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # Keep deprecated "parent_id" as alias for backward compat
                 if parent_ref:
                     d["parent_id"] = parent_ref
-                props = getattr(el, "properties", {})
                 if props.get("keyboard_shortcut"):
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
@@ -883,12 +919,31 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 """Print element tree with short element refs."""
                 _ref_counter[0] += 1
                 ref = f"e{_ref_counter[0]}"
+
+                # (#365) Detect offscreen (zero-bounds) elements
+                is_offscreen = (el.x == 0 and el.y == 0
+                                and el.width == 0 and el.height == 0)
+
+                # (#365) --visible-only: skip offscreen elements
+                if visible_only and is_offscreen:
+                    for child in el.children:
+                        print_tree(child, indent)
+                    return
+
                 prefix = "  " * indent
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
                 source_str = f" [{props['source']}]" if props.get("source") else ""
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}")
+                offscreen_str = " [offscreen]" if is_offscreen else ""
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}")
+
+                # (#372) Show value preview for Document/Edit role elements
+                _vp = props.get("value_preview")
+                if _vp:
+                    preview_prefix = "  " * (indent + 1)
+                    click.echo(f"{preview_prefix}» {_vp}")
+
                 for child in el.children:
                     print_tree(child, indent + 1)
 
@@ -1590,12 +1645,13 @@ def learn(topic):
 
 
 @click.command()
+@click.argument("positional_refs", nargs=-1)
 @click.option("--app", "-a", help="Application name (partial match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--depth", "-d", type=int, default=30, help="Tree depth for element discovery")
 @click.option("--ref", "-r", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--duration", type=float, default=5.0, help="Highlight duration in seconds")
-def highlight(app, hwnd, depth, ref, duration):
+def highlight(positional_refs, app, hwnd, depth, ref, duration):
     """Highlight UI elements on screen with colored borders and labels.
 
     Draws colored rectangles around Win32 child windows with their
@@ -1603,17 +1659,22 @@ def highlight(app, hwnd, depth, ref, duration):
 
     Uses Win32 HWND enumeration — works on VB6/ActiveX apps where UIA fails.
 
+    \b
     Examples:
 
-        naturo highlight --app EnterprisePortal          # Highlight all elements
-        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs
+        naturo highlight e11 --app notepad               # Highlight specific ref (positional)
+        naturo highlight --app EnterprisePortal           # Highlight all elements
+        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs (option)
+        naturo highlight e5 e10 --app notepad             # Multiple positional refs
         naturo highlight --app notepad --duration 10      # Show for 10 seconds
     """
     be = _get_backend()
     handle = be._resolve_hwnd(app=app, hwnd=hwnd)
 
     from naturo.bridge import highlight_elements
-    refs_list = list(ref) if ref else None
+    # Merge positional refs and --ref option refs
+    all_refs = list(positional_refs) + list(ref)
+    refs_list = all_refs if all_refs else None
     click.echo(f"Highlighting elements for {duration}s... (switch to the target window)")
 
     import time

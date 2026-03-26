@@ -57,7 +57,8 @@ def _safe_echo(text: str, **kwargs) -> None:
 
 
 @click.command("launch")
-@click.argument("name")
+@click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--path", help="Explicit executable path")
 @click.option("--wait-until-ready", is_flag=True, help="Wait for app to create a window")
 @click.option("--timeout", type=float, default=30.0, help="Timeout for wait-until-ready")
@@ -65,9 +66,19 @@ def _safe_echo(text: str, **kwargs) -> None:
 @click.option("--args", multiple=True, help="Arguments to pass to the application")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_launch(ctx, name, path, wait_until_ready, timeout, no_focus, args, json_output):
+def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, args, json_output):
     """Launch an application by name or path."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
+    if not name and not path:
+        msg = "Specify application name or --path"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
 
     from naturo.process import launch_app
     from naturo.errors import NaturoError
@@ -105,12 +116,13 @@ def app_launch(ctx, name, path, wait_until_ready, timeout, no_focus, args, json_
 @click.command("quit")
 @click.argument("name", required=False, default=None)
 @click.option("--name", "name_option", hidden=True, help="Application name (deprecated, use positional)")
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--force", is_flag=True, help="Force kill immediately")
 @click.option("--timeout", type=float, default=10.0, help="Graceful shutdown timeout")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_quit(ctx, name, name_option, pid, force, timeout, json_output):
+def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output):
     """Quit an application gracefully (or force kill).
 
     NAME is the application name to quit.
@@ -123,9 +135,11 @@ def app_quit(ctx, name, name_option, pid, force, timeout, json_output):
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
-    # Support --name for backward compatibility
+    # Support --name for backward compatibility, --app for consistency
     if not name and name_option:
         name = name_option
+    if not name and app_name:
+        name = app_name
 
     if not name and pid is None:
         msg = "Specify application name or --pid"
@@ -154,14 +168,25 @@ def app_quit(ctx, name, name_option, pid, force, timeout, json_output):
 
 
 @click.command("relaunch")
-@click.argument("name")
+@click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--wait-until-ready", is_flag=True, default=True, help="Wait for app (default: on)")
 @click.option("--timeout", type=float, default=30.0, help="Timeout in seconds")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_relaunch(ctx, name, wait_until_ready, timeout, json_output):
+def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output):
     """Quit and relaunch an application."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
+    if not name:
+        msg = "Specify application name"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
 
     from naturo.process import relaunch_app
     from naturo.errors import NaturoError
@@ -300,19 +325,27 @@ def app_list(ctx, show_all, json_output):
             result["total_count"] = len(windows) + len(background_apps)
         click.echo(json.dumps(result, indent=2))
     else:
+        from naturo.cli.table import print_table
+
         if not windows and not background_apps:
             click.echo("No running applications with visible windows found")
         else:
-            # Format: PID  HWND  process_name  title
-            # Align with window list output for consistency
+            headers = ["PID", "HWND", "Process", "Title"]
+            rows = []
             for w in windows:
-                _safe_echo(f"  {w.pid:>8}  {w.handle:>10}  {w.process_name:<20}  {w.title}")
+                title = w.title[:40] if len(w.title) > 40 else w.title
+                rows.append([str(w.pid), str(w.handle), w.process_name, title])
+
             if background_apps:
-                click.echo(f"\n  --- Background processes (no visible windows) ---")
                 for a in background_apps:
-                    _safe_echo(f"  {a.pid:>8}  {'':>10}  {a.name}")
-            total = len(windows) + len(background_apps)
-            click.echo(f"\n{len(windows)} applications, {len(background_apps)} background processes" if show_all else f"\n{len(windows)} applications")
+                    rows.append([str(a.pid), "", a.name, "(background)"])
+
+            count_label = (
+                f"{len(windows)} applications, {len(background_apps)} background processes"
+                if show_all
+                else f"{len(windows)} applications"
+            )
+            print_table(headers, rows, count_label=count_label)
 
 
 @click.command("hide", hidden=True)
@@ -786,20 +819,24 @@ def _handle_generic_error(exc, json_output):
 
 @click.command("focus")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_focus(ctx, name, window_title, hwnd, json_output):
+def app_focus(ctx, name, app_name, window_title, hwnd, json_output):
     """Focus an application window (bring to foreground).
 
     \b
     Examples:
       naturo app focus feishu
+      naturo app focus --app feishu
       naturo app focus feishu --window "群聊"
       naturo app focus --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -821,21 +858,25 @@ def app_focus(ctx, name, window_title, hwnd, json_output):
 
 @click.command("close")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--force", is_flag=True, help="Force terminate the process")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_close(ctx, name, window_title, hwnd, force, json_output):
+def app_close(ctx, name, app_name, window_title, hwnd, force, json_output):
     """Close an application window (graceful or forced).
 
     \b
     Examples:
       naturo app close notepad
+      naturo app close --app notepad
       naturo app close feishu --window "群聊"
       naturo app close --hwnd 12345 --force
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
