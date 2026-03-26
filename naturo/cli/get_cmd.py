@@ -122,10 +122,19 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
                 msg += f" (ref={ref})"
             if automation_id:
                 msg += f" (automation_id={automation_id})"
+            if role:
+                msg += f" (role={role})"
+            suggested = (
+                "Run 'naturo see' to inspect available elements and their "
+                "actual roles.  Note: some apps use different role names "
+                "than expected (e.g. Notepad uses 'Document' instead of "
+                "'Edit' for its text area)."
+            )
             emit_error(
                 "ELEMENT_NOT_FOUND",
                 msg,
                 json_output,
+                suggested_action=suggested,
             )
 
         if json_output:

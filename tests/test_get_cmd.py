@@ -435,3 +435,80 @@ class TestGetElementValueBridge:
 
         with pytest.raises(NaturoCoreError):
             core.get_element_value(hwnd=0, automation_id="test")
+
+
+class TestRoleAliasFallback:
+    """Tests for role alias fallback in get_element_value (#352)."""
+
+    def test_edit_falls_back_to_document(self):
+        """When role='Edit' fails, should try 'Document' as alias (#352).
+
+        Win11 Notepad's text editor uses role 'Document', not 'Edit'.
+        """
+        from unittest.mock import patch, MagicMock, call
+
+        mock_core = MagicMock()
+        # First call with role='Edit' returns None (not found)
+        # Second call with role='Document' returns a result
+        mock_core.get_element_value.side_effect = [
+            None,  # role='Edit' → not found
+            {"value": "Hello", "role": "Document", "name": "Text Editor",
+             "pattern": "TextPattern", "automation_id": "", "x": 0, "y": 0,
+             "width": 800, "height": 600},  # role='Document' → found
+        ]
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(role="Edit", hwnd=12345)
+
+        assert result is not None
+        assert result["role"] == "Document"
+        assert result["value"] == "Hello"
+        # Should have been called twice: once with Edit, once with Document
+        assert mock_core.get_element_value.call_count == 2
+
+    def test_no_fallback_when_first_role_succeeds(self):
+        """When the initial role lookup succeeds, no alias fallback needed."""
+        from unittest.mock import patch, MagicMock
+
+        mock_core = MagicMock()
+        mock_core.get_element_value.return_value = {
+            "value": "Hello", "role": "Edit", "name": "Search",
+            "pattern": "ValuePattern", "automation_id": "txtSearch",
+            "x": 0, "y": 0, "width": 200, "height": 30,
+        }
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(role="Edit", hwnd=12345)
+
+        assert result is not None
+        assert result["role"] == "Edit"
+        # Only called once — no fallback needed
+        assert mock_core.get_element_value.call_count == 1
+
+    def test_no_alias_fallback_with_automation_id(self):
+        """Role alias fallback should not trigger when automation_id is set."""
+        from unittest.mock import patch, MagicMock
+
+        mock_core = MagicMock()
+        mock_core.get_element_value.return_value = None  # Not found
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(
+                role="Edit", automation_id="txtMissing", hwnd=12345,
+            )
+
+        assert result is None
+        # Only one call — no alias fallback because automation_id is set
+        assert mock_core.get_element_value.call_count == 1

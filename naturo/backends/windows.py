@@ -1685,6 +1685,29 @@ class WindowsBackend(Backend):
             name=resolved_name,
         )
 
+        # (#352) Role alias fallback: when an explicit role search fails,
+        # try common aliases.  Win11 Notepad uses "Document" for its text
+        # editor, but users naturally try "Edit".  This maps between roles
+        # that serve similar purposes in different app frameworks.
+        if result is None and resolved_role and not resolved_aid:
+            _ROLE_ALIASES: dict[str, list[str]] = {
+                "Edit": ["Document", "RichEdit20W"],
+                "Document": ["Edit", "RichEdit20W"],
+                "RichEdit20W": ["Edit", "Document"],
+                "Text": ["StaticText"],
+                "StaticText": ["Text"],
+            }
+            aliases = _ROLE_ALIASES.get(resolved_role, [])
+            for alias_role in aliases:
+                result = core.get_element_value(
+                    hwnd=target_hwnd,
+                    automation_id=resolved_aid,
+                    role=alias_role,
+                    name=resolved_name,
+                )
+                if result is not None:
+                    break
+
         # (#229) Fallback: if UIA lookup returned None but we have snapshot
         # data from the ref, return the snapshot metadata so the caller gets
         # at least role/name/bounds instead of ELEMENT_NOT_FOUND.
