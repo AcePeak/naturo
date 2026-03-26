@@ -55,6 +55,7 @@ def test_see_has_depth_option(runner):
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     platform.system() != "Windows",
     reason="Functional CLI tests require Windows",

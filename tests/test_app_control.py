@@ -420,6 +420,7 @@ def _window_management_implemented():
     platform.system() != "Windows" or not _window_management_implemented(),
     reason="E2E app control tests require Windows with implemented window management methods",
 )
+@pytest.mark.desktop
 @pytest.mark.skipif(
     os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true",
     reason="Requires interactive desktop session (not available in CI)",
