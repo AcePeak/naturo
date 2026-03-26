@@ -148,7 +148,12 @@ def _is_actionable(el: ElementInfo) -> bool:
         "listitem", "menuitem", "tab", "link", "hyperlink",
         "slider", "spinbutton", "scrollbar", "treeitem",
     }
-    return el.role.lower() in actionable_roles
+    if el.role.lower() not in actionable_roles:
+        return False
+    # Zero-bounds elements are offscreen/unrendered — not interactable
+    if el.width == 0 and el.height == 0:
+        return False
+    return True
 
 
 def _search_recursive(
