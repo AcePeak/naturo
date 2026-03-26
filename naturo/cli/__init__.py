@@ -44,6 +44,7 @@ from naturo.cli.ai import mcp
 from naturo.cli.extensions import excel
 
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
+from naturo.cli.setup_cmd import setup
 
 
 def _patch_json_flag(cmd) -> None:
@@ -152,6 +153,9 @@ main.add_command(excel)
 
 # ── Config / Credentials ────────────────────────
 main.add_command(_config_cmd_group, "config")
+
+# ── Setup ───────────────────────────────────────
+main.add_command(setup)
 
 # Replace stub app subcommands with working implementations
 app.add_command(app_launch, "launch")

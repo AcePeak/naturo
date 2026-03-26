@@ -372,10 +372,17 @@ jobs:
           fi
           ls -la naturo/bin/
 
-      - name: Build wheel and sdist
+      - name: Build platform wheel and sdist
+        shell: bash
         run: |
-          pip install build
-          python -m build
+          pip install build wheel setuptools
+          # Build sdist (platform-independent)
+          python -m build --sdist
+          # Build wheel then retag as platform-specific (contains Windows DLL)
+          python -m build --wheel
+          # Retag the wheel from py3-none-any to py3-none-win_amd64
+          python -m wheel tags --platform-tag win_amd64 --remove dist/*.whl
+          ls -la dist/
 
       - name: Publish to PyPI
         env:
@@ -385,11 +392,16 @@ jobs:
           pip install twine
           twine upload dist/*
 
+      - name: Copy DLL for release upload
+        shell: bash
+        run: |
+          # Copy the bare DLL to dist/ so `naturo setup` can download it directly
+          cp naturo/bin/naturo_core.dll dist/naturo_core.dll
+          ls -la dist/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-artifacts/**/*
-            dist/*.whl
-            dist/*.tar.gz
+            dist/*
           generate_release_notes: true

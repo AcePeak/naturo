@@ -682,12 +682,13 @@ class NaturoCore:
                 message=(
                     f"Native library {lib_name} not found. "
                     f"This command requires the naturo_core native engine.\n"
-                    f"Install the pre-built wheel: pip install naturo\n"
+                    f"Run `naturo setup` to download it automatically.\n"
                     f"Or set NATURO_CORE_PATH to the library location.\n"
                     f"Searched: {env_path}, {pkg_lib}, {cwd_lib}, system PATH"
                 ),
                 suggested_action=(
-                    "Install naturo with the native library: pip install naturo. "
+                    "Run `naturo setup` to download the native library. "
+                    "Or install the pre-built wheel: pip install naturo. "
                     "Commands that don't need the native engine (--help, --version, "
                     "chrome, electron, mcp, learn) will work without it."
                 ),
