@@ -215,6 +215,10 @@ class TestLaunchAppSessionGuard:
                 assert result is not None
 
 
+@patch(
+    "naturo.cli.interaction._is_current_session_interactive",
+    return_value=True,
+)
 class TestLaunchApp:
     """Tests for launch_app.
 
@@ -222,6 +226,10 @@ class TestLaunchApp:
     subprocess.Popen.  We must mock both to prevent subprocess.run from using
     the mocked Popen internally (which causes ValueError on Python 3.14+
     because MagicMock.communicate() doesn't return a proper (stdout, stderr)).
+
+    The class-level patch on ``_is_current_session_interactive`` ensures the
+    session guard introduced in #351 doesn't raise ``NoDesktopSessionError``
+    when tests run under SSH or non-interactive sessions (fixes #362).
     """
 
     @staticmethod
@@ -232,7 +240,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_by_name(self, mock_popen, mock_run):
+    def test_launch_by_name(self, mock_popen, mock_run, _mock_session):
         mock_proc = MagicMock()
         mock_proc.pid = 5678
         mock_proc.wait.return_value = 0
@@ -247,7 +255,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_by_path(self, mock_popen, mock_run):
+    def test_launch_by_path(self, mock_popen, mock_run, _mock_session):
         mock_proc = MagicMock()
         mock_proc.pid = 1234
         mock_proc.wait.return_value = 0
@@ -262,13 +270,13 @@ class TestLaunchApp:
             info = launch_app(path="/usr/bin/ls")
         assert info.pid == 1234
 
-    def test_launch_no_name_or_path(self):
+    def test_launch_no_name_or_path(self, _mock_session):
         with pytest.raises(AppNotFoundError):
             launch_app()
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_file_not_found(self, mock_popen, mock_run):
+    def test_launch_file_not_found(self, mock_popen, mock_run, _mock_session):
         mock_run.return_value = self._make_run_result(returncode=1)
         mock_popen.side_effect = FileNotFoundError("not found")
         with pytest.raises(AppNotFoundError):
@@ -276,7 +284,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_nonexistent_app_returns_error(self, mock_popen, mock_run):
+    def test_launch_nonexistent_app_returns_error(self, mock_popen, mock_run, _mock_session):
         """BUG-013: launch should fail for apps that don't exist (exit code != 0)."""
         mock_proc = MagicMock()
         mock_proc.pid = 31584
@@ -290,7 +298,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_timeout_expired_raises_app_not_found(self, mock_popen, mock_run):
+    def test_launch_timeout_expired_raises_app_not_found(self, mock_popen, mock_run, _mock_session):
         """BUG-013/018: subprocess.TimeoutExpired must be caught, not leaked as traceback."""
         import subprocess
         mock_popen.side_effect = subprocess.TimeoutExpired(cmd="start /wait", timeout=10)
@@ -302,7 +310,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_wait_until_ready(self, mock_popen, mock_run):
+    def test_launch_wait_until_ready(self, mock_popen, mock_run, _mock_session):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = None  # still running
@@ -315,7 +323,7 @@ class TestLaunchApp:
 
     @patch("naturo.process.subprocess.run")
     @patch("naturo.process.subprocess.Popen")
-    def test_launch_wait_process_exits(self, mock_popen, mock_run):
+    def test_launch_wait_process_exits(self, mock_popen, mock_run, _mock_session):
         mock_proc = MagicMock()
         mock_proc.pid = 9999
         mock_proc.poll.return_value = 1  # exited
