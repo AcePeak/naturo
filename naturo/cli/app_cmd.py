@@ -208,6 +208,18 @@ def app_list(ctx, show_all, json_output):
     # This unifies `app list` and `window list` output formats (#274)
     from naturo.errors import NaturoError
     try:
+        # Check for interactive desktop session before listing (#373)
+        from naturo.cli.interaction import _check_desktop_session
+        try:
+            _check_desktop_session()
+        except Exception as exc:
+            if json_output:
+                click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+            else:
+                _safe_echo(f"Error: {exc}", err=True)
+            sys.exit(1)
+            return
+
         from naturo.backends.base import get_backend
         backend = get_backend()
         windows = backend.list_windows()
