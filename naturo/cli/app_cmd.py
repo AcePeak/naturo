@@ -325,19 +325,27 @@ def app_list(ctx, show_all, json_output):
             result["total_count"] = len(windows) + len(background_apps)
         click.echo(json.dumps(result, indent=2))
     else:
+        from naturo.cli.table import print_table
+
         if not windows and not background_apps:
             click.echo("No running applications with visible windows found")
         else:
-            # Format: PID  HWND  process_name  title
-            # Align with window list output for consistency
+            headers = ["PID", "HWND", "Process", "Title"]
+            rows = []
             for w in windows:
-                _safe_echo(f"  {w.pid:>8}  {w.handle:>10}  {w.process_name:<20}  {w.title}")
+                title = w.title[:40] if len(w.title) > 40 else w.title
+                rows.append([str(w.pid), str(w.handle), w.process_name, title])
+
             if background_apps:
-                click.echo(f"\n  --- Background processes (no visible windows) ---")
                 for a in background_apps:
-                    _safe_echo(f"  {a.pid:>8}  {'':>10}  {a.name}")
-            total = len(windows) + len(background_apps)
-            click.echo(f"\n{len(windows)} applications, {len(background_apps)} background processes" if show_all else f"\n{len(windows)} applications")
+                    rows.append([str(a.pid), "", a.name, "(background)"])
+
+            count_label = (
+                f"{len(windows)} applications, {len(background_apps)} background processes"
+                if show_all
+                else f"{len(windows)} applications"
+            )
+            print_table(headers, rows, count_label=count_label)
 
 
 @click.command("hide", hidden=True)

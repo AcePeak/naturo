@@ -463,7 +463,8 @@ def screens(json_output):
     """List connected screens/monitors.
 
     Shows monitor index, resolution, position, DPI scale factor, and
-    whether the monitor is the primary display.
+    whether the monitor is the primary display.  On Windows, shows the
+    human-readable monitor model name when available (#359).
     """
     try:
         backend = _get_backend(json_output)
@@ -472,9 +473,12 @@ def screens(json_output):
         if json_output:
             items = []
             for m in monitors:
+                # (#359) Use model_name as 'name', keep device path separate
+                display_name = getattr(m, "model_name", None) or m.name
                 item = {
                     "index": m.index,
-                    "name": m.name,
+                    "name": display_name,
+                    "device_path": getattr(m, "device_path", None) or m.name,
                     "x": m.x,
                     "y": m.y,
                     "width": m.width,
@@ -488,18 +492,26 @@ def screens(json_output):
                 items.append(item)
             click.echo(json_module.dumps({"success": True, "monitors": items}, indent=2))
         else:
+            from naturo.cli.table import print_table
+
             if not monitors:
                 click.echo("No monitors detected.")
                 return
-            click.echo(f"{'Index':<8} {'Resolution':<16} {'Position':<16} {'Scale':<8} {'DPI':<6} {'Primary'}")
-            click.echo("-" * 72)
+
+            headers = ["Index", "Name", "Resolution", "Position", "Scale", "DPI", "Primary"]
+            rows = []
             for m in monitors:
+                display_name = getattr(m, "model_name", None) or m.name
                 res = f"{m.width}x{m.height}"
                 pos = f"({m.x}, {m.y})"
                 primary = "✓" if m.is_primary else ""
                 scale = f"{m.scale_factor}x"
-                click.echo(f"{m.index:<8} {res:<16} {pos:<16} {scale:<8} {m.dpi:<6} {primary}")
-            click.echo(f"\n{len(monitors)} monitor(s) found.")
+                rows.append([str(m.index), display_name, res, pos, scale, str(m.dpi), primary])
+
+            print_table(
+                headers, rows,
+                count_label=f"{len(monitors)} monitor(s) found.",
+            )
     except NotImplementedError:
         msg = f"Monitor listing is not supported on {platform.system()} yet."
         if json_output:
@@ -556,6 +568,7 @@ def permissions(json_output):
               help="Show per-provider recognition statistics after output")
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
               help="Coverage target (0.0–1.0) before trying next provider (default: 0 = UIA only)")
+@click.option("--visible-only", is_flag=True, help="Hide offscreen/zero-bounds elements")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -564,7 +577,7 @@ def permissions(json_output):
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX)",
 )
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
-        cascade, fill_gaps, show_stats, coverage_target, json_output, backend):
+        cascade, fill_gaps, show_stats, coverage_target, visible_only, json_output, backend):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -827,6 +840,16 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 raw_id = str(el.id) if el.id else ""
                 automation_id = raw_id if raw_id and not _re_local.fullmatch(r"e\d+", raw_id) else ""
 
+                # (#365) Zero-bounds elements are offscreen
+                _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
+
+                # (#365) --visible-only: skip offscreen elements entirely
+                if visible_only and _is_offscreen:
+                    return None
+
+                children_raw = [to_dict(c, parent_ref=display_id) for c in el.children]
+                children = [c for c in children_raw if c is not None]
+
                 d = {
                     "id": display_id,
                     "automation_id": automation_id,
@@ -837,20 +860,18 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "y": el.y,
                     "width": el.width,
                     "height": el.height,
-                    "children": [to_dict(c, parent_ref=display_id) for c in el.children],
+                    "children": children,
                 }
-                # (#365) Mark zero-bounds elements as offscreen
-                if el.width == 0 and el.height == 0:
+
+                # (#365) Mark offscreen elements
+                if _is_offscreen:
                     d["offscreen"] = True
-                # (#372) Add text preview for Document/Edit role elements
-                if el.role.lower() in ("document", "edit", "text"):
-                    text_value = el.value or ""
-                    if text_value:
-                        # Truncate to 100 chars for preview
-                        preview = text_value[:100]
-                        if len(text_value) > 100:
-                            preview += "..."
-                        d["text_preview"] = preview
+
+                # (#372) Value preview for Document/Edit/Text elements
+                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+                    d["value_preview"] = el.value[:100]
+                    d["value_length"] = len(el.value)
+
                 # (#295) Always use naturo ref for parent, never raw
                 # AutomationId — keeps a single consistent ID space.
                 if parent_ref:
@@ -858,11 +879,14 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # Keep deprecated "parent_id" as alias for backward compat
                 if parent_ref:
                     d["parent_id"] = parent_ref
-                props = getattr(el, "properties", {})
                 if props.get("keyboard_shortcut"):
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
                     d["source"] = props["source"]
+                # (#372) Text preview for Document/Edit elements
+                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+                    d["value_preview"] = el.value[:100]
+                    d["value_length"] = len(el.value)
                 return d
             out = to_dict(tree)
             if snapshot_id:
@@ -895,12 +919,33 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 """Print element tree with short element refs."""
                 _ref_counter[0] += 1
                 ref = f"e{_ref_counter[0]}"
+
+                # (#365) Zero-bounds = offscreen
+                _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
+
+                # (#365) --visible-only: skip offscreen elements
+                if visible_only and _is_offscreen:
+                    for child in el.children:
+                        print_tree(child, indent)
+                    return
+
                 prefix = "  " * indent
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
                 source_str = f" [{props['source']}]" if props.get("source") else ""
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}")
+                offscreen_str = " [offscreen]" if _is_offscreen else ""
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}")
+
+                # (#372) Show text preview for Document/Edit elements
+                _vp = props.get("value_preview")
+                if _vp:
+                    click.echo(f"{prefix}  » {_vp}")
+                elif el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+                    preview = el.value[:100].replace("\n", "\\n").replace("\r", "")
+                    suffix = "…" if len(el.value) > 100 else ""
+                    click.echo(f"{prefix}  » {preview}{suffix}")
+
                 for child in el.children:
                     print_tree(child, indent + 1)
 

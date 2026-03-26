@@ -1548,8 +1548,27 @@ class WindowsBackend(Backend):
         # Post-process: assign sequential IDs and fill parent_id
         populate_hierarchy(result)
 
+        # (#372) Roles that should include a text value preview
+        _PREVIEW_ROLES = {"Document", "Edit", "Text"}
+
         def convert(el) -> BaseElementInfo:
             """Convert bridge ElementInfo to backend ElementInfo."""
+            props = {
+                k: v for k, v in {
+                    "parent_id": el.parent_id,
+                    "keyboard_shortcut": el.keyboard_shortcut,
+                }.items() if v is not None
+            }
+
+            # (#372) Add value preview for Document/Edit/Text elements
+            if el.role in _PREVIEW_ROLES and el.value:
+                full_text = el.value
+                preview = full_text[:100]
+                if len(full_text) > 100:
+                    preview += "…"
+                props["value_preview"] = preview
+                props["value_length"] = len(full_text)
+
             return BaseElementInfo(
                 id=el.id,
                 role=el.role,
@@ -1560,12 +1579,7 @@ class WindowsBackend(Backend):
                 width=el.width,
                 height=el.height,
                 children=[convert(c) for c in el.children],
-                properties={
-                    k: v for k, v in {
-                        "parent_id": el.parent_id,
-                        "keyboard_shortcut": el.keyboard_shortcut,
-                    }.items() if v is not None
-                },
+                properties=props,
             )
 
         return convert(result)
