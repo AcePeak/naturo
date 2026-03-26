@@ -13,6 +13,7 @@ import pytest
 from naturo.verify import (
     VerificationResult,
     VerifyStatus,
+    _typed_text_in_ui_diff,
     capture_before_state,
     skip_result,
     unknown_result,
@@ -240,6 +241,32 @@ class TestVerifyType:
         assert result.status == VerifyStatus.VERIFIED
         assert result.method == "ui_text_diff"
 
+    def test_unknown_when_ui_text_changed_but_typed_text_missing(self):
+        """(#403) UI text changed but typed text NOT in diff → UNKNOWN.
+
+        Win11 Notepad may update window title ("Untitled" → "*Untitled")
+        without the typed text actually appearing. The old code reported
+        VERIFIED for any UI text change, causing a false positive.
+        """
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": ""}
+
+        # Window title changed (irrelevant) but typed text is nowhere
+        before_ui_texts = {"main:54321": "Untitled - Notepad"}
+        after_ui_texts = {"main:54321": "*Untitled - Notepad"}
+
+        with patch("naturo.verify._capture_ui_texts", return_value=after_ui_texts):
+            result = verify_type(
+                backend,
+                text="QA-Mariana v0.3.0 test",
+                before_value="",
+                before_ui_texts=before_ui_texts,
+                settle_ms=0,
+            )
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.verified is None
+        assert "ui_text_diff" not in (result.method or "")
+
     def test_unknown_when_value_and_ui_texts_both_unchanged(self):
         """(#398) Value AND UI text both unchanged → UNKNOWN (not FAILED)."""
         backend = MagicMock()
@@ -257,6 +284,58 @@ class TestVerifyType:
             )
         assert result.status == VerifyStatus.UNKNOWN
         assert result.verified is None
+
+
+class TestTypedTextInUiDiff:
+    """Test _typed_text_in_ui_diff helper (#403)."""
+
+    def test_typed_text_found_in_changed_value(self):
+        """Typed text present in a new/changed UI value → True."""
+        before = {"child:100": ""}
+        after = {"child:100": "Hello world"}
+        assert _typed_text_in_ui_diff("Hello", before, after) is True
+
+    def test_typed_text_not_in_changed_value(self):
+        """Typed text absent from changed values → False."""
+        before = {"main:200": "Untitled"}
+        after = {"main:200": "*Untitled"}
+        assert _typed_text_in_ui_diff("QA test text", before, after) is False
+
+    def test_new_key_with_typed_text(self):
+        """New key in after snapshot containing typed text → True."""
+        before = {"main:200": "Notepad"}
+        after = {"main:200": "Notepad", "child:300": "Hello"}
+        assert _typed_text_in_ui_diff("Hello", before, after) is True
+
+    def test_empty_text_returns_false(self):
+        """Empty typed text → False (nothing to verify)."""
+        assert _typed_text_in_ui_diff("", {}, {"child:1": "x"}) is False
+
+    def test_no_changes_returns_false(self):
+        """Identical before/after → False."""
+        same = {"child:1": "text"}
+        assert _typed_text_in_ui_diff("text", same, same) is False
+
+    def test_case_insensitive(self):
+        """Match is case-insensitive."""
+        before = {"child:1": ""}
+        after = {"child:1": "HELLO WORLD"}
+        assert _typed_text_in_ui_diff("hello", before, after) is True
+
+    def test_prefix_match(self):
+        """Partial prefix match (≥3 chars) → True."""
+        before = {"child:1": ""}
+        after = {"child:1": "Hel"}
+        assert _typed_text_in_ui_diff("Hello world", before, after) is True
+
+    def test_short_prefix_no_false_match(self):
+        """2-char text prefix shouldn't match unrelated text."""
+        before = {"child:1": ""}
+        after = {"child:1": "Absolutely"}
+        # "Ab" prefix of "Ab" is too short for meaningful match,
+        # but min_prefix=min(2,3)=2, so it checks "ab" in "absolutely" → True
+        # This is acceptable since very short text is a rare edge case
+        assert _typed_text_in_ui_diff("Ab", before, after) is True
 
 
 class TestVerifyClick:

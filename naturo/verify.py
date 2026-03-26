@@ -227,18 +227,39 @@ def verify_type(
                         backend, app=app, window_title=window_title, hwnd=hwnd,
                     )
                     if after_ui_texts and after_ui_texts != before_ui_texts:
-                        elapsed = (time.monotonic() - start) * 1000
-                        return VerificationResult(
-                            status=VerifyStatus.VERIFIED,
-                            detail=(
-                                "UI text changed after typing "
-                                "(ValuePattern unchanged but window text updated)"
-                            ),
-                            method="ui_text_diff",
-                            before=before_ui_texts,
-                            after=after_ui_texts,
-                            elapsed_ms=elapsed,
+                        # (#403) Only report VERIFIED if the typed text
+                        # actually appears in one of the changed values.
+                        # Without this check, irrelevant text changes
+                        # (e.g., window title "Untitled" → "*Untitled")
+                        # cause false positives — the verification engine
+                        # claims typing succeeded when the editor is empty.
+                        typed_found = _typed_text_in_ui_diff(
+                            text, before_ui_texts, after_ui_texts,
                         )
+                        elapsed = (time.monotonic() - start) * 1000
+                        if typed_found:
+                            return VerificationResult(
+                                status=VerifyStatus.VERIFIED,
+                                detail=(
+                                    "Typed text confirmed in UI text diff "
+                                    "(ValuePattern unchanged but text found "
+                                    "in window content)"
+                                ),
+                                method="ui_text_diff",
+                                before=before_ui_texts,
+                                after=after_ui_texts,
+                                elapsed_ms=elapsed,
+                            )
+                        else:
+                            # UI text changed but typed text not found —
+                            # likely title bar or irrelevant element.
+                            # Report UNKNOWN, not VERIFIED (#403).
+                            logger.debug(
+                                "UI text changed but typed text %r not "
+                                "found in changed values — likely "
+                                "irrelevant change (title bar, etc.)",
+                                text[:50],
+                            )
                 except Exception as exc:
                     logger.debug("Type UI text fallback failed: %s", exc)
 
@@ -516,6 +537,57 @@ def verify_press(
 
 
 # ── Focus state capture ──────────────────────────────────────────────────────
+
+
+def _typed_text_in_ui_diff(
+    text: str,
+    before: dict[str, str],
+    after: dict[str, str],
+) -> bool:
+    """Check whether typed text appears in any changed UI text value.
+
+    Compares before/after UI text snapshots and checks if the typed text
+    (or a significant prefix) appears in any value that is new or changed.
+    This prevents false positives from irrelevant text changes such as
+    window title updates (e.g., "Untitled" → "*Untitled").
+
+    Args:
+        text: The text that was typed.
+        before: UI text snapshot before the action.
+        after: UI text snapshot after the action.
+
+    Returns:
+        True if the typed text (or prefix ≥ 3 chars) appears in a changed
+        value; False otherwise.
+    """
+    if not text:
+        return False
+
+    # Collect values that are new or changed
+    changed_values: list[str] = []
+    for key, val in after.items():
+        if key not in before or before[key] != val:
+            changed_values.append(val)
+
+    if not changed_values:
+        return False
+
+    # Check if typed text appears in any changed value.
+    # Use case-insensitive comparison and also check for a prefix
+    # (typing may be partially completed before verification).
+    text_lower = text.lower()
+    min_prefix = min(len(text), 3)  # At least 3 chars to avoid spurious matches
+
+    for val in changed_values:
+        val_lower = val.lower()
+        # Full text match
+        if text_lower in val_lower:
+            return True
+        # Prefix match (at least min_prefix chars)
+        if min_prefix > 0 and text_lower[:min_prefix] in val_lower:
+            return True
+
+    return False
 
 
 def _capture_ui_texts(
