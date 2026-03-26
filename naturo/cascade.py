@@ -393,6 +393,26 @@ def run_cascade(
                 tagged = _tag_source(tree, pname)
                 flat = _flatten(tagged)
                 elements_count = len(flat)
+
+                # (#394) A tree with only a root node and zero children is
+                # not useful — likely a UWP/WinUI app where the backend
+                # could not reach the real UI.  Record it but keep trying
+                # the next provider instead of accepting it immediately.
+                if not tree.children:
+                    logger.info(
+                        "Provider %s returned root-only tree (0 children), "
+                        "trying next provider...", pname,
+                    )
+                    stats.providers.append(ProviderStat(
+                        name=pname, elements=elements_count,
+                        elapsed_ms=elapsed, status="empty_tree",
+                    ))
+                    # Keep as fallback in case no provider does better
+                    if root_tree is None:
+                        root_tree = tagged
+                        window_area = _window_area(tree)
+                    continue
+
                 stats.providers.append(ProviderStat(
                     name=pname, elements=elements_count, elapsed_ms=elapsed, status="ok"
                 ))

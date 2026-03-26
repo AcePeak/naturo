@@ -204,12 +204,14 @@ class TestUwpElementTreeFallback:
         assert len(result.children) == 1
 
     def test_fallback_returns_original_when_no_children_found(self, backend):
-        """When all child HWNDs also return empty, keep original result."""
+        """When all child HWNDs also return empty (including deeper retry), keep original result."""
         empty_root = _make_element(role="Pane", name="", children=[])
         child_empty = _make_element(role="Pane", name="", children=[])
+        child_empty_deeper = _make_element(role="Pane", name="", children=[])
 
+        # 3 calls: AFH(depth=3), child@depth=3, child@depth=6 (deeper retry)
         backend._core.get_element_tree = MagicMock(
-            side_effect=[empty_root, child_empty],
+            side_effect=[empty_root, child_empty, child_empty_deeper],
         )
         backend._resolve_hwnd = MagicMock(return_value=100)
         backend._is_afh_window = MagicMock(return_value=True)
@@ -222,6 +224,8 @@ class TestUwpElementTreeFallback:
         # Should return original empty result (post-processed)
         assert result is not None
         assert result.children == []
+        # 3 calls: AFH + child@orig_depth + child@deeper_depth
+        assert backend._core.get_element_tree.call_count == 3
 
     def test_fallback_with_no_child_windows(self, backend):
         """When AFH has no child windows at all, return original result."""
@@ -238,6 +242,54 @@ class TestUwpElementTreeFallback:
 
         assert result is not None
         assert backend._core.get_element_tree.call_count == 1
+
+    def test_uwp_fallback_retries_deeper_depth(self, backend):
+        """When all child HWNDs return empty at original depth, retry with deeper depth (#394)."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        child_empty_shallow = _make_element(role="Pane", name="", children=[])
+        # Deeper traversal reveals content
+        rich_root = _make_element(
+            role="Window", name="Calculator",
+            children=[_make_element(role="Button", name="1")],
+        )
+
+        # Calls: AFH(depth=7) → empty, child(depth=7) → empty, child(depth=14) → rich
+        backend._core.get_element_tree = MagicMock(
+            side_effect=[empty_root, child_empty_shallow, rich_root],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", depth=7, backend="uia")
+
+        assert result is not None
+        assert result.role == "Window"
+        assert len(result.children) == 1
+        # 3 calls: AFH, child@depth=7, child@depth=14
+        assert backend._core.get_element_tree.call_count == 3
+
+    def test_uwp_fallback_no_deeper_retry_when_depth_already_high(self, backend):
+        """Should not retry deeper when depth is already >= 15."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        child_empty = _make_element(role="Pane", name="", children=[])
+
+        backend._core.get_element_tree = MagicMock(
+            side_effect=[empty_root, child_empty],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", depth=20, backend="uia")
+
+        # Only 2 calls: AFH + child (no deeper retry since depth=20 >= 15)
+        assert backend._core.get_element_tree.call_count == 2
+
 
 class TestClickElementUia:
     """Tests for click_element_uia UWP click fallback (#248)."""
@@ -259,6 +311,33 @@ class TestClickElementUia:
         with patch.object(backend, "_init_comtypes_uia", side_effect=ImportError("no comtypes")):
             result = backend.click_element_uia(x=100, y=200)
         assert result is False
+
+
+class TestMsaaUwpFallback:
+    """Tests for MSAA UWP child window fallback (#394)."""
+
+    def test_msaa_uwp_fallback_retries_with_child_hwnds(self, backend):
+        """MSAA backend should also try child HWNDs for AFH windows."""
+        empty_root = _make_element(role="Pane", name="", children=[])
+        rich_root = _make_element(
+            role="Window", name="Calculator",
+            children=[_make_element(role="Button", name="1")],
+        )
+
+        backend._core.msaa_get_element_tree = MagicMock(
+            side_effect=[empty_root, rich_root],
+        )
+        backend._resolve_hwnd = MagicMock(return_value=100)
+        backend._is_afh_window = MagicMock(return_value=True)
+
+        with patch.object(type(backend), "_find_uwp_content_hwnd",
+                          return_value=[200]):
+            with patch("naturo.backends.windows.populate_hierarchy"):
+                result = backend.get_element_tree(app="calc", backend="msaa")
+
+        assert result is not None
+        assert result.role == "Window"
+        assert len(result.children) == 1
 
 
 class TestWinui3DesktopWindowXamlSource:

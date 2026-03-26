@@ -1475,14 +1475,45 @@ class WindowsBackend(Backend):
                             "HWND %s", len(child_result.children), child_hwnd,
                         )
                         return child_result
+
+                # (#394) WinUI 3 apps may need deeper traversal.
+                # Retry child HWNDs with increased depth if original
+                # depth was low and yielded nothing.
+                if depth < 15:
+                    deeper = min(depth * 2, 20)
+                    logger.debug(
+                        "UWP fallback: retrying children with depth=%d "
+                        "(was %d)", deeper, depth,
+                    )
+                    for child_hwnd in child_hwnds:
+                        child_result = get_tree_fn(child_hwnd, deeper)
+                        if child_result is not None and child_result.children:
+                            logger.info(
+                                "UWP fallback (depth=%d): found %d children "
+                                "via child HWND %s",
+                                deeper, len(child_result.children), child_hwnd,
+                            )
+                            return child_result
             return current_result
 
         if backend == "jab":
             result = core.jab_get_element_tree(hwnd=handle, depth=depth)
+            result = _try_uwp_children(
+                result,
+                lambda h, d: core.jab_get_element_tree(hwnd=h, depth=d),
+            )
         elif backend == "ia2":
             result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
+            result = _try_uwp_children(
+                result,
+                lambda h, d: core.ia2_get_element_tree(hwnd=h, depth=d),
+            )
         elif backend == "msaa":
             result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
+            result = _try_uwp_children(
+                result,
+                lambda h, d: core.msaa_get_element_tree(hwnd=h, depth=d),
+            )
         elif backend == "win32":
             # Pure Win32 HWND enumeration (VB6/ActiveX fallback)
             from naturo.bridge import enumerate_child_windows

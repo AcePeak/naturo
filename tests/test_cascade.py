@@ -155,7 +155,10 @@ class TestRunCascade:
         assert result.tree.properties.get("source") == "uia"
 
     def test_stats_recorded(self):
-        tree = _make_el(id="root", w=1000, h=600)
+        tree = _make_el(
+            id="root", w=1000, h=600,
+            children=[_make_el(id="btn")],
+        )
         be = _make_backend(tree)
 
         result = run_cascade(be, backend_name="uia")
@@ -191,6 +194,51 @@ class TestRunCascade:
 
         assert result.tree is not None
         assert call_count[0] >= 2  # tried at least uia and msaa
+
+    def test_auto_skips_empty_tree_provider(self):
+        """When a provider returns root-only tree (0 children), cascade should
+        continue to next provider instead of stopping (#394)."""
+        empty_root = _make_el(id="root", role="Pane", name="", children=[])
+        rich_tree = _make_el(
+            id="root", role="Window", name="Calculator",
+            children=[_make_el(id="btn", role="Button", name="1")],
+        )
+
+        call_count = [0]
+
+        def get_tree(*args, **kwargs):
+            b = kwargs.get("backend", "uia")
+            call_count[0] += 1
+            if b == "uia":
+                return empty_root
+            if b == "msaa":
+                return rich_tree
+            return None
+
+        be = MagicMock()
+        be.get_element_tree.side_effect = get_tree
+
+        result = run_cascade(be, backend_name="auto")
+
+        assert result.tree is not None
+        assert len(result.tree.children) == 1
+        assert call_count[0] >= 2
+        # Check that UIA was recorded as empty_tree
+        uia_stat = next(p for p in result.stats.providers if p.name == "uia")
+        assert uia_stat.status == "empty_tree"
+
+    def test_empty_tree_kept_as_fallback_when_no_provider_works(self):
+        """When all providers return empty trees, keep the first one as fallback."""
+        empty_root = _make_el(id="root", role="Pane", name="", children=[])
+
+        be = MagicMock()
+        be.get_element_tree.return_value = empty_root
+
+        result = run_cascade(be, backend_name="auto")
+
+        # Should still return the root (as fallback), not None
+        assert result.tree is not None
+        assert result.tree.children == []
 
     def test_stats_to_dict(self):
         tree = _make_el(id="root", w=1000, h=600)
