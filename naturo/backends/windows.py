@@ -778,29 +778,46 @@ class WindowsBackend(Backend):
             properties={},
         )
 
-    # Common app aliases for cross-locale matching.
-    # Maps lowercase alias → set of lowercase patterns to match against
-    # process names (without .exe) and window titles.
+    # Cross-locale alias map for --app matching (#469).
+    # Maps lowercase alias → set of lowercase process-name stems that
+    # should be considered a match.  Values must be English process names
+    # (without .exe) since Windows process names are always in English.
     _APP_ALIASES: dict[str, set[str]] = {
-        "calculator": {"calc", "calculatorapp", "计算器"},
-        "calc": {"calc", "calculatorapp", "计算器"},
-        "计算器": {"calc", "calculatorapp", "calculator"},
-        "notepad": {"notepad", "记事本"},
-        "记事本": {"notepad", "记事本"},
-        "settings": {"systemsettings", "设置"},
-        "设置": {"systemsettings", "settings"},
-        "paint": {"mspaint", "画图"},
-        "画图": {"mspaint", "paint"},
-        "explorer": {"explorer", "文件资源管理器", "file explorer"},
-        "file explorer": {"explorer", "文件资源管理器"},
-        "文件资源管理器": {"explorer", "file explorer"},
-        "edge": {"msedge", "microsoft edge"},
-        "task manager": {"taskmgr", "任务管理器"},
-        "任务管理器": {"taskmgr", "task manager"},
-        "command prompt": {"cmd", "命令提示符"},
-        "命令提示符": {"cmd", "command prompt"},
-        "terminal": {"windowsterminal", "终端"},
-        "终端": {"windowsterminal", "terminal"},
+        # Calculator
+        "calculator": {"calc", "calculatorapp"},
+        "calc": {"calc", "calculatorapp"},
+        "计算器": {"calc", "calculatorapp"},
+        # Notepad
+        "notepad": {"notepad"},
+        "记事本": {"notepad"},
+        # Settings
+        "settings": {"systemsettings"},
+        "设置": {"systemsettings"},
+        # Paint
+        "paint": {"mspaint"},
+        "画图": {"mspaint"},
+        # File Explorer
+        "explorer": {"explorer"},
+        "file explorer": {"explorer"},
+        "文件资源管理器": {"explorer"},
+        # Edge
+        "edge": {"msedge"},
+        "microsoft edge": {"msedge"},
+        # Task Manager
+        "task manager": {"taskmgr"},
+        "任务管理器": {"taskmgr"},
+        # Command Prompt
+        "command prompt": {"cmd"},
+        "命令提示符": {"cmd"},
+        # Terminal
+        "terminal": {"windowsterminal"},
+        "终端": {"windowsterminal"},
+        # WordPad
+        "wordpad": {"wordpad"},
+        "写字板": {"wordpad"},
+        # Snipping Tool / Screen Sketch
+        "snipping tool": {"snippingtool", "screensketch"},
+        "截图工具": {"snippingtool", "screensketch"},
     }
 
     @staticmethod
