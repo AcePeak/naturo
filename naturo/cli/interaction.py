@@ -17,6 +17,7 @@ def _find_element_by_text_fallback(
     app: Optional[str] = None,
     hwnd: Optional[int] = None,
     window_title: Optional[str] = None,
+    pid: Optional[int] = None,
 ):
     """Fallback element search when C++ exact UIA Name match fails.
 
@@ -47,7 +48,7 @@ def _find_element_by_text_fallback(
 
     try:
         tree = backend.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, depth=5,
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid, depth=5,
         )
     except Exception as exc:
         logger.debug("Fallback tree search failed to get tree: %s", exc)
@@ -732,9 +733,9 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
             ctypes.windll.user32.SetForegroundWindow(_snapshot_hwnd)
         except Exception as exc:
             logger.debug("Snapshot HWND focus failed (hwnd=%s): %s", _snapshot_hwnd, exc)
-    elif _uia_method and (app or hwnd) and hasattr(backend, "focus_element_uia"):
+    elif _uia_method and (app or hwnd or pid) and hasattr(backend, "focus_element_uia"):
         try:
-            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
+            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
             if _target_hwnd:
                 # Detect if target is a UWP app (#248)
                 if hasattr(backend, "_is_applicationframehost"):
@@ -758,6 +759,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 app=app,
                 window_title=window_title,
                 hwnd=hwnd,
+                pid=pid,
             )
         except Exception as exc:
             logger.debug("Pre-click state capture failed: %s", exc)
@@ -794,6 +796,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 fallback = _find_element_by_text_fallback(
                     backend, target_id,
                     app=app, hwnd=hwnd, window_title=window_title,
+                    pid=pid,
                 )
                 if fallback is None:
                     raise
@@ -913,6 +916,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
 @click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -928,7 +932,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
-             delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app,
+             delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
              window_title, hwnd, input_mode, method, verify, see_after, settle,
              json_output):
     """Type text with configurable speed and profile.
@@ -992,12 +996,12 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # without focusing first, type silently sends to the wrong window.
     # Session-aware: _resolve_hwnd now prefers interactive session windows.
     _focused_hwnd = None
-    if (app or window_title or hwnd) and not on_element:
+    if (app or window_title or hwnd or pid) and not on_element:
         import platform as _plat
         if _plat.system() == "Windows":
             try:
                 _target_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title, hwnd=hwnd,
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
                 if _target_hwnd:
                     _focused_hwnd = _target_hwnd
@@ -1087,6 +1091,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 app=app,
                 window_title=window_title,
                 hwnd=hwnd,
+                pid=pid,
             )
         except Exception as exc:
             logger.debug("Pre-type state capture failed: %s", exc)
@@ -1155,10 +1160,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                         _target_role = elem.role
 
             # Resolve HWND from --app
-            if app or window_title or hwnd:
+            if app or window_title or hwnd or pid:
                 try:
                     _target_hwnd = backend._resolve_hwnd(
-                        app=app, window_title=window_title, hwnd=hwnd
+                        app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                     )
                 except Exception:
                     _target_hwnd = 0
@@ -1325,6 +1330,7 @@ def _is_combo(key_str: str) -> bool:
 @click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -1338,7 +1344,7 @@ def _is_combo(key_str: str) -> bool:
 @_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
+def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -1419,12 +1425,12 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
     # Session-aware: _resolve_hwnd now prefers interactive session windows.
-    if (app or window_title or hwnd) and not on_element:
+    if (app or window_title or hwnd or pid) and not on_element:
         import platform as _plat
         if _plat.system() == "Windows":
             try:
                 _target_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title, hwnd=hwnd,
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
                 if _target_hwnd:
                     import ctypes
@@ -1463,6 +1469,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
                 app=app,
                 window_title=window_title,
                 hwnd=hwnd,
+                pid=pid,
             )
         except Exception as exc:
             logger.debug("Pre-press state capture failed: %s", exc)

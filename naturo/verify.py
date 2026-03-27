@@ -596,6 +596,7 @@ def _capture_ui_texts(
     app: Optional[str] = None,
     window_title: Optional[str] = None,
     hwnd: Optional[int] = None,
+    pid: Optional[int] = None,
     max_children: int = 50,
 ) -> dict[str, str]:
     """Capture a lightweight snapshot of child window texts for diff.
@@ -626,7 +627,7 @@ def _capture_ui_texts(
     # Without a target (app/window_title/hwnd), the text diff is
     # unreliable (we'd snapshot random foreground windows) and the
     # Win32/COM calls can hang on headless environments.
-    if not (app or window_title or hwnd):
+    if not (app or window_title or hwnd or pid):
         return texts
 
     try:
@@ -643,7 +644,7 @@ def _capture_ui_texts(
         if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
             try:
                 target_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title,
+                    app=app, window_title=window_title, pid=pid,
                 )
             except Exception:
                 pass
@@ -866,6 +867,7 @@ def capture_before_state(
     app: Optional[str] = None,
     window_title: Optional[str] = None,
     hwnd: Optional[int] = None,
+    pid: Optional[int] = None,
 ) -> dict:
     """Capture pre-action state for verification.
 
@@ -878,6 +880,7 @@ def capture_before_state(
         app: Application name filter.
         window_title: Window title filter.
         hwnd: Window handle filter.
+        pid: Process ID filter (#471).
 
     Returns:
         Dict with captured state. Pass to the verify_* function's
@@ -918,6 +921,7 @@ def capture_before_state(
         try:
             state["ui_texts"] = _capture_ui_texts(
                 backend, app=app, window_title=window_title, hwnd=hwnd,
+                pid=pid,
             )
         except Exception as exc:
             logger.debug("Pre-%s UI text capture failed: %s", action, exc)

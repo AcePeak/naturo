@@ -722,8 +722,8 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     tree.children.append(window_node)
             else:
                 tree = be.get_element_tree(
-                    app=app, window_title=window_title, hwnd=hwnd, depth=depth,
-                    backend=backend,
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                    depth=depth, backend=backend,
                 )
 
         if tree is None:
