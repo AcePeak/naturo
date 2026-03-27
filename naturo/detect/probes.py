@@ -403,7 +403,6 @@ def _find_afh_content_children(parent_hwnd: int) -> List[int]:
 
     try:
         import ctypes
-        from ctypes import wintypes
 
         user32 = ctypes.WinDLL("user32", use_last_error=True)
 
