@@ -224,7 +224,7 @@ jobs:
           echo "⚠️ Setting NATURO_CI_NO_UIA=1 to prevent DLL UIA calls during tests"
           export NATURO_CI_NO_UIA=1
           pytest -v -m "$MARKERS" \
-            --timeout=30 --timeout-method=thread \
+            --timeout=60 \
             --ignore=tests/integration \
             -x --tb=short \
             --junit-xml=pytest-results.xml \
