@@ -8,7 +8,7 @@ on every command invocation. Cache is invalidated when:
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from naturo.detect.models import DetectionResult

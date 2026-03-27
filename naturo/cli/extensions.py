@@ -1,6 +1,7 @@
 """Windows-specific extensions: excel, java, sap."""
 import json as json_module
 import sys
+from typing import Any
 
 import click
 from naturo.cli.fuzzy_group import FuzzyGroup

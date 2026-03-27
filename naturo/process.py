@@ -13,7 +13,6 @@ import signal
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from naturo.errors import AppNotFoundError, TimeoutError
 
@@ -46,7 +45,6 @@ def _list_processes() -> list[ProcessInfo]:
 
     if system == "Windows":
         try:
-            import ctypes
             # Use tasklist /FO CSV for simple parsing
             # Force UTF-8 encoding to handle Unicode process names (e.g. Chinese)
             result = subprocess.run(

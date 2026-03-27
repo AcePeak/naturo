@@ -10,8 +10,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
-from naturo.backends.base import Backend, ElementInfo, WindowInfo, get_backend
-from naturo.errors import ErrorCode, TimeoutError
+from naturo.backends.base import Backend, ElementInfo, get_backend
 
 
 @dataclass

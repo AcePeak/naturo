@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
-from naturo.providers.base import VisionProvider, VisionResult, get_vision_provider
+from naturo.providers.base import VisionProvider, get_vision_provider
 from naturo.vision import identify_element
 
 logger = logging.getLogger(__name__)

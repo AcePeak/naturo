@@ -56,8 +56,8 @@ def diff(ctx, snapshots, window_title, interval, json_output):
         sys.exit(1)
         return
 
-    from naturo.diff import diff_trees, TreeDiff
-    from naturo.backends.base import get_backend, ElementInfo
+    from naturo.diff import diff_trees
+    from naturo.backends.base import get_backend
     from naturo.errors import NaturoError, WindowNotFoundError
 
     try:
@@ -83,8 +83,8 @@ def diff(ctx, snapshots, window_title, interval, json_output):
             # Snapshot-based diff
             from naturo.snapshot import SnapshotManager
             mgr = SnapshotManager()
-            snap1 = mgr.get_snapshot(snapshots[0])
-            snap2 = mgr.get_snapshot(snapshots[1])
+            _snap1 = mgr.get_snapshot(snapshots[0])
+            _snap2 = mgr.get_snapshot(snapshots[1])
 
             # For snapshot diff, we'd need the element trees stored in snapshots
             # This is a placeholder — real impl would extract trees from snapshot data

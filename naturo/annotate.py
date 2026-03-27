@@ -51,7 +51,7 @@ def annotate_screenshot(
         FileNotFoundError: If the screenshot file does not exist.
     """
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image, ImageDraw, ImageFont  # noqa: F401
     except ImportError:
         raise ImportError(
             "Pillow is required for annotated screenshots. "

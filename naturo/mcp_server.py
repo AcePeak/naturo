@@ -6,13 +6,10 @@ capture, inspect, click, type, find elements, manage windows/apps.
 from __future__ import annotations
 
 import functools
-import json
 import logging
 import os
-import sys
 import base64
-import traceback
-from typing import Optional
+from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -1113,7 +1110,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             temp_path = f.name
         try:
-            result = backend.capture_window(window_title=window_title, output_path=temp_path)
+            backend.capture_window(window_title=window_title, output_path=temp_path)
             manager.store_screenshot(snapshot_id, temp_path, metadata={
                 "window_title": window_title or "foreground",
             })
@@ -1254,6 +1251,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, dialogs list, and count.
         """
+        backend = _get_backend()
         dialogs = backend.detect_dialogs(app=app, hwnd=hwnd)
         return {
             "success": True,
@@ -1279,6 +1277,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with dialog title and button clicked.
         """
+        backend = _get_backend()
         from naturo.dialog import _ACCEPT_BUTTONS
 
         dialogs = backend.detect_dialogs(app=app, hwnd=hwnd)
@@ -1329,6 +1328,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with dialog title and button clicked.
         """
+        backend = _get_backend()
         from naturo.dialog import _DISMISS_BUTTONS
 
         dialogs = backend.detect_dialogs(app=app, hwnd=hwnd)
@@ -1381,6 +1381,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with dialog title and button clicked.
         """
+        backend = _get_backend()
         result = backend.dialog_click_button(button=button, app=app, hwnd=hwnd)
         return {"success": True, **result}
 
@@ -1406,6 +1407,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with dialog title, text entered, and optional accept button.
         """
+        backend = _get_backend()
         result = backend.dialog_set_input(text=text, app=app, hwnd=hwnd)
         response = {"success": True, **result}
 
@@ -1435,6 +1437,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             Dict with success, items list (name, hwnd, is_active, is_pinned),
             and count.
         """
+        backend = _get_backend()
         items = backend.taskbar_list()
         return {"success": True, "items": items, "count": len(items)}
 
@@ -1452,6 +1455,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, name of clicked item, and click coordinates.
         """
+        backend = _get_backend()
         result = backend.taskbar_click(name=name)
         return {"success": True, **result}
 
@@ -1469,6 +1473,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, icons list (name, tooltip, is_visible), and count.
         """
+        backend = _get_backend()
         icons = backend.tray_list()
         return {"success": True, "icons": icons, "count": len(icons)}
 
@@ -1493,6 +1498,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, icon name, tooltip, button used, and coordinates.
         """
+        backend = _get_backend()
         result = backend.tray_click(name=name, button=button, double=double_click)
         return {"success": True, **result}
 
@@ -1510,6 +1516,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, desktops list, and count.
         """
+        backend = _get_backend()
         desktops = backend.virtual_desktop_list()
         return {"success": True, "desktops": desktops, "count": len(desktops)}
 
@@ -1527,6 +1534,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, switched desktop index and name.
         """
+        backend = _get_backend()
         result = backend.virtual_desktop_switch(index)
         return {"success": True, **result}
 
@@ -1544,6 +1552,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, new desktop index, name, and id.
         """
+        backend = _get_backend()
         result = backend.virtual_desktop_create(name=name)
         return {"success": True, **result}
 
@@ -1562,6 +1571,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, closed desktop index and name.
         """
+        backend = _get_backend()
         result = backend.virtual_desktop_close(index=index)
         return {"success": True, **result}
 
@@ -1585,6 +1595,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         Returns:
             Dict with success, window handle, target desktop index and name.
         """
+        backend = _get_backend()
         result = backend.virtual_desktop_move_window(
             desktop_index=desktop_index,
             app=app,

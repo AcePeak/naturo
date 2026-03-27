@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-import platform
 import sys
-import time as _time
 
 import click
 
@@ -187,7 +185,7 @@ def _post_action_see(
             for child in el.children:
                 _print_tree(child, indent + 1)
 
-        click.echo(f"\n--- UI snapshot (updated) ---")
+        click.echo("\n--- UI snapshot (updated) ---")
         _print_tree(tree)
         click.echo(f"Snapshot: {snapshot_id}")
         return {"id": snapshot_id}
@@ -281,7 +279,6 @@ def _is_current_session_interactive() -> bool:
         WTSConnected = 1  # user connected but not yet logged in — still desktop
 
         wtsapi32 = ctypes.windll.wtsapi32  # type: ignore[attr-defined]
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
 
         buf = ctypes.wintypes.LPWSTR()
         bytes_returned = ctypes.wintypes.DWORD(0)
@@ -1708,8 +1705,6 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         "steps": steps, "duration": duration,
     })
 
-    from_str = f"{from_label} ({fx}, {fy})" if from_label else f"({fx}, {fy})"
-    to_str = f"{to_label} ({tx}, {ty})" if to_label else f"({tx}, {ty})"
     result = {
         "action": "dragged",
         "from": [fx, fy],

@@ -11,7 +11,6 @@ import json
 import os
 import platform
 import re
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -244,7 +243,6 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
     from ctypes import wintypes
     import platform
     import time
-    import threading
 
     if platform.system() != "Windows":
         return
@@ -350,7 +348,6 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
                 old_font = gdi32.SelectObject(hdc, font)
 
                 # Draw label at top-left of element
-                text_bytes = label_text.encode("utf-16-le") + b"\x00\x00"
                 text_buf = ctypes.create_unicode_buffer(label_text)
                 gdi32.TextOutW(hdc, rect.left + 1, rect.top + 1, text_buf, len(label_text))
 

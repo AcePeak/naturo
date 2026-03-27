@@ -12,7 +12,7 @@ from __future__ import annotations
 import platform
 import re
 import subprocess
-from typing import Any, Optional
+from typing import Any
 
 from naturo.errors import NaturoError
 
