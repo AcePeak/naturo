@@ -23,18 +23,18 @@
 - 📌 **Taskbar & Tray** — List and click taskbar items and system tray icons
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
-- 🍎 **macOS Support** — Full Peekaboo CLI wrapper (capture, click, type, window management, and more)
+- 🍎 **macOS Support** — Peekaboo CLI wrapper (requires [Peekaboo](https://github.com/steipete/Peekaboo) installed)
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
-## System Requirements
+## Platform Support
 
-| Platform | Requirement |
-|----------|-------------|
-| **Windows** | Windows 10+ (officially supported) |
-| | Windows 7 SP1+ (best-effort, basic features only) |
-| **Python** | 3.9+ |
-| **macOS** | macOS 13+ with [Peekaboo](https://github.com/steipete/Peekaboo) installed |
-| **Linux** | Not yet supported |
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **Windows 10/11** | ✅ Full support | Primary platform. All features available. |
+| **Windows 7 SP1+** | ⚠️ Best-effort | Basic features only, no UIAutomation v3. |
+| **macOS 13+** | ⚠️ Partial | Requires [Peekaboo](https://github.com/steipete/Peekaboo) installed. Wraps Peekaboo CLI for capture, click, type, window management. |
+| **Linux** | 🚧 Coming soon | Backend is a placeholder. Not usable yet. |
+| **Python** | 3.9+ | Required for all platforms. |
 
 > **Why Windows 10+?** UIAutomation v2/v3 APIs (caching, virtualized controls) require Windows 8+. Windows 7 has been out of support since January 2020. Most enterprise customers have migrated to Windows 10/11.
 
@@ -57,7 +57,7 @@ naturo mcp start
 naturo --version
 
 # Capture a screenshot
-naturo capture -o screen.png
+naturo capture --path screen.png
 
 # List open windows
 naturo list windows
@@ -80,21 +80,14 @@ naturo press ctrl+s
 # Find element
 naturo find "Edit:filename"
 
-# Window management (deprecated — prefer `naturo app ...` equivalents)
-naturo window focus --app "Notepad"      # → naturo app switch "Notepad"
-naturo window close --app "Chrome" --force
-naturo window minimize --hwnd 12345      # → naturo app hide "Notepad"
-naturo window move --app "Notepad" --x 0 --y 0
-naturo window resize --app "Notepad" --width 1920 --height 1080
-naturo window set-bounds --app "Chrome" --x 0 --y 0 --width 960 --height 1080
-
-# App control
+# App management
 naturo app launch "notepad"
-naturo app quit "notepad"
+naturo app switch "notepad"
 naturo app quit "chrome" --force
-naturo app switch "chrome"
 naturo app hide "notepad"
 naturo app unhide "notepad"
+naturo app inspect "notepad"             # Probe frameworks (UIA, CDP, MSAA...)
+naturo app relaunch "notepad"
 
 # Dialog handling
 naturo dialog detect                       # Detect active dialogs
@@ -123,55 +116,56 @@ naturo type --paste --file data.txt        # Read file → paste
 
 ## CLI Commands
 
+### See (observe the desktop)
+
 | Command | Description | Since |
 |---------|-------------|-------|
-| `--version` | Show version info | 0.1.0 |
 | `capture` | Screenshot screen/window | 0.1.0 |
-| `list` | List windows/processes | 0.1.0 |
 | `see` | Inspect UI element tree | 0.1.0 |
-| `snapshot list` | List stored snapshots | 0.1.0 |
-| `snapshot clean` | Remove old snapshots | 0.1.0 |
-| `find` | Search UI elements (fuzzy) | 0.1.0 |
-| `get` | Read element properties (text, value, state) | 0.1.0 |
-| `highlight` | Visual overlay showing all actionable elements | 0.1.0 |
-| `menu-inspect` | List app menu structure | 0.1.0 |
+| `find` | Search UI elements (fuzzy match) | 0.1.0 |
+| `get` | Read element properties (text, value, state) | 0.2.1 |
+| `highlight` | Visual overlay showing all actionable elements | 0.3.0 |
+| `list windows` | List open windows | 0.1.0 |
+| `list apps` | List running applications | 0.1.0 |
+| `list screens` | List monitors and resolutions | 0.1.0 |
+| `diff` | Compare two UI snapshots | 0.1.1 |
+| `menu-inspect` | List app menu structure with shortcuts | 0.1.0 |
+
+### Act (interact with the desktop)
+
+| Command | Description | Since |
+|---------|-------------|-------|
 | `click` | Click element/coordinates | 0.1.0 |
-| `type` | Type text | 0.1.0 |
-| `press` | Press key combination | 0.1.0 |
-| `hotkey` | Press keyboard shortcut (deprecated — use `press`) | 0.1.0 |
+| `type` | Type text (supports `--paste` for clipboard) | 0.1.0 |
+| `press` | Press key combination (e.g., `ctrl+s`) | 0.1.0 |
 | `scroll` | Scroll mouse wheel | 0.1.0 |
 | `drag` | Drag from/to coordinates | 0.1.0 |
 | `move` | Move mouse cursor | 0.1.0 |
-| `type --paste` | Paste text via clipboard (Ctrl+V) | 0.2.0 |
-| `wait` | Wait for element/window | 0.1.0 |
+| `wait` | Wait for element/window to appear | 0.1.0 |
+
+### App management
+
+| Command | Description | Since |
+|---------|-------------|-------|
 | `app launch` | Launch application | 0.1.0 |
-| `app quit` | Quit application | 0.1.0 |
+| `app quit` | Quit application (supports `--force`) | 0.1.0 |
+| `app switch` | Switch to application | 0.1.0 |
 | `app list` | List running applications | 0.1.0 |
 | `app find` | Find application by name | 0.1.0 |
 | `app hide` | Minimize all app windows | 0.1.0 |
 | `app unhide` | Restore all app windows | 0.1.0 |
-| `app switch` | Switch to application | 0.1.0 |
-| `app inspect` | Probe app frameworks and interaction methods | 0.1.0 |
-| `app relaunch` | Restart an application | 0.1.0 |
-| `window focus` | Focus a window (deprecated — use `app switch`) | 0.1.0 |
-| `window close` | Close a window (deprecated — use `app quit`) | 0.1.0 |
-| `window minimize` | Minimize a window (deprecated — use `app hide`) | 0.1.0 |
-| `window maximize` | Maximize a window (deprecated) | 0.1.0 |
-| `window restore` | Restore a window (deprecated — use `app unhide`) | 0.1.0 |
-| `window move` | Move a window (deprecated) | 0.1.0 |
-| `window resize` | Resize a window (deprecated) | 0.1.0 |
-| `window set-bounds` | Set position + size (deprecated) | 0.1.0 |
-| `window list` | List windows with filters (deprecated — use `app list`) | 0.1.0 |
-| `mcp start` | Start MCP server | 0.1.0 |
-| `mcp install` | Install MCP server configuration | 0.1.0 |
-| `mcp tools` | List available MCP tools | 0.1.0 |
-| `config` | View/set naturo configuration | 0.1.0 |
+| `app inspect` | Probe app frameworks (UIA, CDP, MSAA...) | 0.3.0 |
+| `app relaunch` | Restart an application | 0.3.0 |
+
+### System
+
+| Command | Description | Since |
+|---------|-------------|-------|
 | `dialog detect` | Detect active system dialogs | 0.1.0 |
 | `dialog accept` | Accept (OK/Yes) a dialog | 0.1.0 |
 | `dialog dismiss` | Dismiss (Cancel/No) a dialog | 0.1.0 |
 | `dialog click-button` | Click specific dialog button | 0.1.0 |
 | `dialog type` | Type in dialog input field | 0.1.0 |
-
 | `taskbar list` | List taskbar items | 0.1.0 |
 | `taskbar click` | Click taskbar item | 0.1.0 |
 | `tray list` | List system tray icons | 0.1.0 |
@@ -182,14 +176,24 @@ naturo type --paste --file data.txt        # Read file → paste
 | `desktop close` | Close a virtual desktop | 0.1.0 |
 | `desktop move-window` | Move window to another desktop | 0.1.0 |
 
-| `diff` | Compare two UI snapshots or window states | 0.1.1 |
-| `excel open` | Open Excel workbook | 0.1.1 |
+### Tools
+
+| Command | Description | Since |
+|---------|-------------|-------|
+| `snapshot list` | List stored snapshots | 0.1.0 |
+| `snapshot clean` | Remove old snapshots | 0.1.0 |
+| `mcp start` | Start MCP server | 0.1.0 |
+| `mcp install` | Install MCP server configuration | 0.3.0 |
+| `mcp tools` | List available MCP tools | 0.3.0 |
+| `config` | View/set naturo configuration | 0.3.0 |
+| `excel open` | Open Excel workbook (Windows only) | 0.1.1 |
 | `excel read` | Read cells from worksheet | 0.1.1 |
 | `excel write` | Write values to cells | 0.1.1 |
 | `excel list-sheets` | List worksheets in workbook | 0.1.1 |
 | `excel run-macro` | Execute VBA macro | 0.1.1 |
 | `excel info` | Show workbook metadata | 0.1.1 |
 
+> **Deprecated:** `window *` commands still work but print a deprecation warning. Use `app *` equivalents instead. `hotkey` is deprecated in favor of `press`.
 
 ## Snapshot System
 
