@@ -17,7 +17,7 @@ NOT_IMPLEMENTED_RE = re.compile(r"Not implemented yet", re.IGNORECASE)
 _DESKTOP_REQUIRED_COMMANDS = {
     ("see",),
     ("scroll",),
-    ("capture"),
+    ("capture",),
     ("app", "list"),
     ("app", "focus"),
     ("app", "close"),
@@ -141,6 +141,7 @@ def test_hidden_stubs_return_error_exit_code():
         )
 
 
+@pytest.mark.desktop
 def test_list_apps_delegates_to_app_list():
     """list apps should delegate to app list, not return NOT_IMPLEMENTED (#114)."""
     import json

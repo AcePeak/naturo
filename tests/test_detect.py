@@ -485,6 +485,7 @@ class TestFindMainWindowUwp:
         from naturo.detect.probes import _find_main_window
         assert _find_main_window(pid=12345) is None
 
+    @pytest.mark.desktop
     def test_frame_hosts_pid_helper(self):
         """_frame_hosts_pid should detect child windows with matching PID."""
         if platform.system() != "Windows":
