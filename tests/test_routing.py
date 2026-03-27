@@ -95,9 +95,10 @@ class TestResolveMethodNoTarget:
 class TestResolveMethodWithApp:
     """Tests for resolve_method with app name resolution."""
 
+    @patch("naturo.routing._find_pid_by_window_title", return_value=None)
     @patch("naturo.process.find_process")
-    def test_app_not_found_falls_back_to_vision(self, mock_find):
-        """When app is not found, falls back to vision."""
+    def test_app_not_found_falls_back_to_vision(self, mock_find, mock_title):
+        """When app is not found by process name or window title, falls back to vision."""
         mock_find.return_value = None
         result = resolve_method(app="NonExistentApp")
         assert result.method == "vision"
@@ -157,6 +158,65 @@ class TestResolveMethodWithApp:
         result = resolve_method(app="CrashApp")
         assert result.method == "vision"
         assert result.source == "auto"
+
+
+class TestResolveMethodWindowTitleFallback:
+    """(#430) Tests for window title fallback when process name doesn't match."""
+
+    @patch("naturo.detect.chain.detect")
+    @patch("naturo.routing._find_pid_by_window_title", return_value=5678)
+    @patch("naturo.process.find_process", return_value=None)
+    def test_window_title_fallback_resolves_pid(
+        self, mock_find, mock_title, mock_detect
+    ):
+        """When process name fails but window title matches, resolve PID."""
+        mock_method = MagicMock()
+        mock_method.method.value = "uia"
+        mock_method.confidence = 0.9
+
+        mock_framework = MagicMock()
+        mock_framework.framework_type.value = "win32"
+
+        mock_result = MagicMock()
+        mock_result.best_method.return_value = mock_method
+        mock_result.frameworks = [mock_framework]
+        mock_detect.return_value = mock_result
+
+        result = resolve_method(app="计算器")
+        assert result.pid == 5678
+        assert result.method == "uia"
+        assert result.source == "auto"
+        mock_title.assert_called_once_with("计算器")
+
+    @patch("naturo.routing._find_pid_by_window_title", return_value=None)
+    @patch("naturo.process.find_process", return_value=None)
+    def test_window_title_also_fails_falls_back_to_vision(
+        self, mock_find, mock_title
+    ):
+        """When both process name and window title fail, fall back to vision."""
+        result = resolve_method(app="不存在的应用")
+        assert result.method == "vision"
+        assert result.source == "auto"
+
+    @patch("naturo.routing._find_pid_by_window_title")
+    @patch("naturo.process.find_process")
+    def test_process_found_skips_window_title(self, mock_find, mock_title):
+        """When process name matches, window title lookup is not attempted."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 1234
+        mock_proc.name = "notepad.exe"
+        mock_find.return_value = mock_proc
+
+        # Mock detect to return something
+        with patch("naturo.detect.chain.detect") as mock_detect:
+            mock_result = MagicMock()
+            mock_result.best_method.return_value = None
+            mock_result.frameworks = []
+            mock_detect.return_value = mock_result
+
+            resolve_method(app="notepad")
+
+        mock_title.assert_not_called()
 
 
 class TestResolveMethodWithPid:

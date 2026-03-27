@@ -1,19 +1,23 @@
 # Dev Status
-Last updated: 2026-03-27T18:30Z
-Session: Fix click/press exit code 2 on successful operations (#426)
+Last updated: 2026-03-27T14:30Z
+Session: Merge 6 PRs, fix 2 new P1 bugs (#441, #440), enable auto-merge on remaining PRs
 
 ## This Session
-- Issue worked on: #426 — PR #429 created, marked status:done
-- Tests: 1767 passed, 362 skipped, 0 failed
-- PRs: #429 created (fix: click/press/type return exit 0 for inconclusive verification)
-- Root cause: `sys.exit(2)` for UNKNOWN verification status made exit code 2 the common case for successful click/press operations
+- Merged 6 PRs: #429 (exit code 2), #434 (Chinese titles), #435 (CI markers), #436 (duplicate PyPI), #437 (HWND test), #438 (lifecycle test)
+- Issue #441 (P1, bug) — PR #443 created: Restore internal focus to editor after menu close. `focus_element_uia` now falls back to finding first Edit/Document control when called with only hwnd. Added UIA focus to `type_cmd` (was missing).
+- Issue #440 (P1, bug) — PR #444 created: Prefer larger window over popup menu in HWND resolution. Changed tie-breaking from "shorter title" to "larger window area".
+- Enabled auto-merge (squash) on PRs #433, #439, #443, #444
+- Tests: 1829 passed, 0 failed (non-Windows suite)
+- PRs: 6 merged, 4 open (#433, #439, #443, #444)
 
 ## Current State
-- Earliest open milestone: v0.3.1 (2 issues: #425 P0 Chinese IME, #426 P1 exit code — #426 fixed in PR #429)
-- CI: green (local)
-- Open PRs by me: #429
+- Earliest open milestone: v0.3.1
+- CI: PRs #433 and #439 have Windows DLL tests cancelled (timeout) — auto-merge enabled, awaiting re-run
+- Open PRs by me: #433 (IME fix), #439 (Codecov), #443 (focus after menu), #444 (popup HWND)
+- Remaining backlog P1 issues without PRs: #420 (README docs), #413 (comparison table), #361 (stable ID), #312 (hybrid mode)
 
 ## Next Session Should
-- Check if PR #429 has review feedback — address it
-- If merged, tackle #425 (P0: type silent failure on Chinese IME) — needs IME detection + fallback strategy
-- If #425 needs Windows testing, pick from P1 backlog: #410 (CI marker filtering), #408 (duplicate PyPI publishing)
+- Check if PRs #443 and #444 merged via auto-merge
+- Investigate PRs #433 and #439 Windows test timeout — may need to re-trigger or split the changes
+- Work on remaining P1 issues: #420 (README clarification) is a good-first-issue/docs task
+- If all v0.3.1 milestone issues are done, advance to next milestone

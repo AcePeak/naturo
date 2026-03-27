@@ -259,8 +259,8 @@ jobs:
       - name: Install package
         run: pip install -e ".[dev]"
 
-      - name: Run tests (skip DLL tests)
-        run: pytest -v
+      - name: Run tests (skip Windows/desktop tests)
+        run: pytest -v -m "not ui and not integration and not desktop and not windows"
 
   test-python-macos:
     name: Python Tests (macOS)
@@ -276,8 +276,8 @@ jobs:
       - name: Install package
         run: pip install -e ".[dev]"
 
-      - name: Run tests
-        run: pytest -v -m "not ui"
+      - name: Run tests (skip Windows/desktop tests)
+        run: pytest -v -m "not ui and not integration and not desktop and not windows"
 
   notify:
     name: Feishu Notification
@@ -400,13 +400,9 @@ jobs:
           pip install build
           python -m build
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          pip install twine
-          twine upload dist/*
+      # (#408) PyPI publishing removed — handled by publish.yml
+      # (triggered by the release: published event below).
+      # This avoids duplicate publishes and HTTP 409 conflicts.
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
