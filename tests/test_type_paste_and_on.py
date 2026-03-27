@@ -192,7 +192,7 @@ class TestTypePasteFallbackOnIME:
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", side_effect=mock_verify_type), \
-             patch("naturo.cli.interaction._capture_before_state", return_value=None):
+             patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello World", "--json", "--verify"])
 
         data = json.loads(result.output)
@@ -221,7 +221,7 @@ class TestTypePasteFallbackOnIME:
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", return_value=failed_result), \
-             patch("naturo.cli.interaction._capture_before_state", return_value=None):
+             patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello", "--paste", "--json", "--verify"])
 
         # Should exit with code 1 (verification failure) — no second attempt
@@ -244,7 +244,7 @@ class TestTypePasteFallbackOnIME:
         with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", return_value=success_result), \
-             patch("naturo.cli.interaction._capture_before_state", return_value=None):
+             patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello", "--json", "--verify"])
 
         data = json.loads(result.output)
