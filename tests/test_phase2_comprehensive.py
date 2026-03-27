@@ -786,20 +786,40 @@ class TestE2EWorkflows:
         """T039: Window lifecycle: launch notepad → appears in list → close → disappears."""
         import subprocess
 
-        # (#446) Track the specific window by PID instead of comparing
-        # global window counts — orphan Notepad windows from other tests
-        # caused false failures.
+        # (#472) Record existing Notepad windows BEFORE launch so we can
+        # identify the new one even if orphan windows exist from other tests.
+        pre_hwnds = {
+            w.handle for w in core.list_windows()
+            if "notepad" in w.process_name.lower()
+        }
+
         proc = subprocess.Popen(["notepad.exe"])
         try:
-            time.sleep(1.5)
+            # (#472) Poll for the window to appear instead of a fixed sleep.
+            # On busy CI runners, 1.5s is sometimes not enough.  Also handle
+            # the case where Windows re-launches Notepad under a child PID
+            # by falling back to process-name matching for new HWNDs.
+            our_hwnd = None
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                for w in core.list_windows():
+                    if w.pid == proc.pid:
+                        our_hwnd = w.handle
+                        break
+                    # Fallback: new Notepad window not seen before launch
+                    if (
+                        "notepad" in w.process_name.lower()
+                        and w.handle not in pre_hwnds
+                    ):
+                        our_hwnd = w.handle
+                        break
+                if our_hwnd is not None:
+                    break
+                time.sleep(0.3)
 
-            # Verify our Notepad appears (match by PID)
-            our_windows = [
-                w for w in core.list_windows()
-                if w.pid == proc.pid
-            ]
-            assert len(our_windows) >= 1, (
-                f"Notepad (PID {proc.pid}) should appear in window list"
+            assert our_hwnd is not None, (
+                f"Notepad (PID {proc.pid}) should appear in window list "
+                f"within 10s"
             )
 
         finally:
@@ -811,7 +831,7 @@ class TestE2EWorkflows:
             while time.monotonic() < deadline:
                 remaining = [
                     w for w in core.list_windows()
-                    if w.pid == proc.pid
+                    if w.handle == our_hwnd
                 ]
                 if not remaining:
                     break
@@ -819,12 +839,12 @@ class TestE2EWorkflows:
             else:
                 remaining = [
                     w for w in core.list_windows()
-                    if w.pid == proc.pid
+                    if w.handle == our_hwnd
                 ]
 
             assert not remaining, (
-                f"Notepad (PID {proc.pid}) should disappear from list "
-                f"after termination, but {len(remaining)} window(s) remain"
+                f"Notepad window (HWND {our_hwnd}) should disappear "
+                f"after termination, but still visible"
             )
 
     def test_drag_from_a_to_b(self, backend):
