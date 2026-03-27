@@ -150,6 +150,15 @@ main.add_command(excel)
 
 
 
+# ── Help alias ─────────────────────────────────
+# Users naturally try `naturo help` (like git/docker). Redirect to --help.
+@main.command("help", hidden=True)
+@click.pass_context
+def help_cmd(ctx):
+    """Show help information (alias for --help)."""
+    click.echo(ctx.parent.get_help())
+
+
 # ── Config / Credentials ────────────────────────
 main.add_command(_config_cmd_group, "config")
 
