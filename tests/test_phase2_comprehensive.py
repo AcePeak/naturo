@@ -786,43 +786,45 @@ class TestE2EWorkflows:
         """T039: Window lifecycle: launch notepad → appears in list → close → disappears."""
         import subprocess
 
-        # Initial window count
-        initial_windows = [w for w in core.list_windows() if "notepad" in w.process_name.lower()]
-
-        # Launch notepad
+        # (#446) Track the specific window by PID instead of comparing
+        # global window counts — orphan Notepad windows from other tests
+        # caused false failures.
         proc = subprocess.Popen(["notepad.exe"])
         try:
             time.sleep(1.5)
 
-            # Verify it appears
-            windows = [w for w in core.list_windows() if "notepad" in w.process_name.lower()]
-            assert len(windows) > len(initial_windows), "Notepad should appear in window list"
+            # Verify our Notepad appears (match by PID)
+            our_windows = [
+                w for w in core.list_windows()
+                if w.pid == proc.pid
+            ]
+            assert len(our_windows) >= 1, (
+                f"Notepad (PID {proc.pid}) should appear in window list"
+            )
 
         finally:
-            # Close it
             proc.terminate()
             proc.wait(timeout=5)
 
-            # Poll until the window disappears (stale handles may linger
-            # briefly after process exit, especially on CI runners)
+            # Poll until our specific window disappears
             deadline = time.monotonic() + 5.0
             while time.monotonic() < deadline:
-                final_windows = [
+                remaining = [
                     w for w in core.list_windows()
-                    if "notepad" in w.process_name.lower()
+                    if w.pid == proc.pid
                 ]
-                if len(final_windows) <= len(initial_windows):
+                if not remaining:
                     break
                 time.sleep(0.3)
             else:
-                final_windows = [
+                remaining = [
                     w for w in core.list_windows()
-                    if "notepad" in w.process_name.lower()
+                    if w.pid == proc.pid
                 ]
 
-            assert len(final_windows) <= len(initial_windows), (
-                f"Notepad should disappear from list: "
-                f"initial={len(initial_windows)}, final={len(final_windows)}"
+            assert not remaining, (
+                f"Notepad (PID {proc.pid}) should disappear from list "
+                f"after termination, but {len(remaining)} window(s) remain"
             )
 
     def test_drag_from_a_to_b(self, backend):
