@@ -1,25 +1,25 @@
 # Dev Status
-Last updated: 2026-03-27T12:42Z
-Session: Fix 4 issues — IME type failure, Chinese app matching, CI markers, PyPI duplicate
+Last updated: 2026-03-27T13:22Z
+Session: Fix PR #434 lint, close 3 issues (#427, #428, #409), enable auto-merge on all PRs
 
 ## This Session
-- Issue #425 (P0) — PR #433 created: Suspend IME during SendInput + paste fallback for Chinese/CJK IME
-- Issue #430 (P1) — PR #434 created: Window title fallback in routing for Chinese app names
-- Issue #410 (P1) — PR #435 created: Consistent test marker filtering on Ubuntu/macOS CI
-- Issue #408 (P1) — PR #436 created: Remove duplicate PyPI publish from build.yml
-- PR #429 (from last session): CI green, no review comments, mergeable_state=blocked (needs approval)
-- Tests: 28 passed (routing + type tests), 8 skipped (Windows-only)
-- PRs: #433, #434, #435, #436 created with auto-merge enabled
+- PR #434 (fixes #430): Fixed mypy lint failure — added `type: ignore[attr-defined]` for Windows-only ctypes.windll calls. Pushed fix.
+- Issue #427 (P1, CI) — PR #437 created: Assert HWND uniqueness instead of PID in multi-window Notepad test (Win11 tabs share 1 PID)
+- Issue #428 (P2, CI) — PR #438 created: Replace fixed sleep with polling loop for window disappearance in lifecycle test
+- Issue #409 (P1, task) — PR #439 created: Add pytest-cov + Codecov upload to all 3 CI jobs, badge in README
+- Enabled auto-merge (squash) on PRs #429, #433, #434, #435, #436, #437, #438, #439
+- Tests: 26 passed (routing), all lint/ruff clean
+- PRs: #437, #438, #439 created; #434 lint fix pushed
 
 ## Current State
-- Earliest open milestone: v0.3.1
-- CI: green (all PRs passing)
-- Open PRs by me: #429, #433, #434, #435, #436
-- Remaining P0: #367 (hybrid tree — large feature), #21 (Naturobot engine — large)
-- Remaining P1: #427 (CI flaky test), #409 (code coverage), #420 (docs), #413 (comparison table), #361 (stable ID), #312 (hybrid mode)
+- Earliest open milestone: v0.3.1 — all issues now have PRs, awaiting CI + merge
+- CI: green on #429, #435, #436; #434 re-pushed (awaiting new CI run); #433 had Windows tests cancelled (may need retry)
+- Open PRs by me: #429, #433, #434, #435, #436, #437, #438, #439 (8 total, all with auto-merge)
+- v0.3.1 issues with PRs: #425→#433, #426→#429, #427→#437, #428→#438, #408→#436, #409→#439, #410→#435
 
 ## Next Session Should
-- Check if PRs #429, #433-#436 have review feedback — address immediately
-- If merged, tackle #427 (P1: CI flaky test — test_multi_window_list_all)
-- Then #409 (P1: add code coverage reporting)
-- If time permits, #420 (docs: README Linux/macOS status) or #413 (comparison table)
+- Check if any PRs have merged via auto-merge — if so, v0.3.1 may be closeable
+- Check PR #433 (IME fix) — Windows tests were cancelled, may need re-trigger or investigation
+- If v0.3.1 is clear, advance to next milestone
+- Address any review feedback on open PRs
+- Look at #430 (backlog, P1) — PR #434 covers this, ensure it merges
