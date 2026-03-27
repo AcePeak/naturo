@@ -202,23 +202,30 @@ jobs:
 
       - name: Collect tests (dry run)
         shell: bash
-        timeout-minutes: 3
+        timeout-minutes: 2
         run: |
           echo "Collecting tests to detect import-phase hangs..."
-          pytest --collect-only -q -m "not ui and not integration" 2>&1 | tail -5
+          MARKERS="not ui and not integration and not desktop"
+          pytest --collect-only -q -m "$MARKERS" \
+            --ignore=tests/integration \
+            2>&1 | tail -10
 
       - name: Run all tests
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
-          # Always skip desktop/UI tests on CI — GitHub Actions Windows runners
-          # have unreliable desktop sessions (explorer.exe may run but UIA segfaults).
-          # Desktop tests are covered by QA on robot-compile (real desktop).
+          # Skip ALL desktop/UI/integration tests on GitHub Actions Windows runners.
+          # These runners have no reliable desktop session — UIA calls segfault or hang.
+          #
+          # Desktop tests run on the self-hosted runner (desktop-tests.yml).
           # See docs/DECISIONS.md "GitHub Actions Windows Runner"
           MARKERS="not ui and not integration and not desktop"
-          echo "⚠️ Skipping desktop-dependent tests on CI (covered by QA on robot-compile)"
+          echo "⚠️ Skipping desktop-dependent tests on CI (covered by self-hosted runner)"
+          echo "⚠️ Setting NATURO_CI_NO_UIA=1 to prevent DLL UIA calls during tests"
+          export NATURO_CI_NO_UIA=1
           pytest -v -m "$MARKERS" \
             --timeout=30 --timeout-method=thread \
+            --ignore=tests/integration \
             -x --tb=short \
             --junit-xml=pytest-results.xml \
             -p no:cacheprovider \
@@ -226,6 +233,7 @@ jobs:
           echo "EXIT_CODE=$?" >> pytest-output.txt
         env:
           PYTEST_TIMEOUT: "30"
+          NATURO_CI_NO_UIA: "1"
 
       - name: Upload test artifacts
         if: always()
