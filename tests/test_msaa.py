@@ -348,6 +348,7 @@ class TestMSAARoleMapping:
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-only")
+@pytest.mark.desktop
 class TestMSAALiveIntegration:
     """Live MSAA tests that require a Windows desktop session.
 
