@@ -743,51 +743,13 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             mgr = get_snapshot_manager(session=session)
             snapshot_id = mgr.create_snapshot()
 
-            # Flatten element tree into ui_map and build ref→element mapping
-            # (BUG-071: sequential refs e1, e2, ... for click integration)
-            ui_map = {}
-            _ref_seq = [0]
-            ref_map = {}  # "e1" → element_id (backend id)
+            # Flatten element tree into ui_map and build ref→element mapping.
+            # (#456) eN refs are now hash-based (stable across snapshots) instead
+            # of sequential.  The same element gets the same eN even if the tree
+            # changes between snapshots (e.g. Calculator display update after Clear).
+            from naturo.refs import assign_stable_refs
 
-            import re as _re_mod
-
-            def _flatten(el, parent_id=None):
-                _ref_seq[0] += 1
-                ref = f"e{_ref_seq[0]}"
-                props = getattr(el, "properties", {})
-                # (#229) Only store identifier if it's a real UIA AutomationId,
-                # not a tree-assigned sequential ID like "e1", "e2", etc.
-                # populate_hierarchy assigns "eN" to elements with empty ids,
-                # so we must filter those out to avoid false AutomationId lookups.
-                _raw_id = str(el.id) if el.id else None
-                if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
-                    _raw_id = None  # Tree-assigned, not a real AutomationId
-                # (#237) Always use the sequential ref as canonical key in
-                # ui_map.  Multiple elements can share the same UIA
-                # AutomationId (e.g. Notepad status bar texts), so using
-                # el.id as key caused overwrites and duplicate display IDs.
-                # The original AutomationId is preserved in `identifier`.
-                child_refs = []
-                for child in el.children:
-                    child_refs.append(_flatten(child, parent_id=ref))
-                ui_map[ref] = UIElement(
-                    id=ref,
-                    element_id=f"element_{ref}",
-                    role=el.role,
-                    title=el.name,
-                    label=el.name,
-                    value=el.value,
-                    identifier=_raw_id,
-                    frame=(el.x, el.y, el.width, el.height),
-                    is_actionable=getattr(el, "is_actionable", False),
-                    parent_id=parent_id,
-                    children=child_refs,
-                    keyboard_shortcut=props.get("keyboard_shortcut"),
-                )
-                ref_map[ref] = el.id
-                return ref
-
-            _flatten(tree)
+            ui_map, ref_map = assign_stable_refs(tree, UIElement)
             mgr.store_detection_result(snapshot_id, ui_map)
             # Persist ref mapping so click/type can resolve e<N> refs
             mgr.store_ref_map(snapshot_id, ref_map)
@@ -1149,42 +1111,13 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         mgr = get_snapshot_manager()
         snapshot_id = mgr.create_snapshot()
 
-        ui_map = {}
-        _ref_seq = [0]
-        ref_map = {}
-        # Build a mapping from backend element id → eN ref
-        _element_id_to_ref = {}
+        # (#456) Use stable hash-based refs (same as `see` command)
+        from naturo.refs import assign_stable_refs
 
-        import re as _re_mod
-
-        def _flatten_for_find(el, parent_id=None):
-            _ref_seq[0] += 1
-            ref = f"e{_ref_seq[0]}"
-            _element_id_to_ref[id(el)] = ref
-            _raw_id = str(el.id) if el.id else None
-            if _raw_id and _re_mod.fullmatch(r"e\d+", _raw_id):
-                _raw_id = None
-            child_refs = []
-            for child in el.children:
-                child_refs.append(_flatten_for_find(child, parent_id=ref))
-            ui_map[ref] = UIElement(
-                id=ref,
-                element_id=f"element_{ref}",
-                role=el.role,
-                title=el.name,
-                label=el.name,
-                value=el.value,
-                identifier=_raw_id,
-                frame=(el.x, el.y, el.width, el.height),
-                is_actionable=getattr(el, "is_actionable", False),
-                parent_id=parent_id,
-                children=child_refs,
-                keyboard_shortcut=getattr(el, "keyboard_shortcut", None),
-            )
-            ref_map[ref] = el.id
-            return ref
-
-        _flatten_for_find(bridge_tree)
+        _element_id_to_ref: dict[int, str] = {}
+        ui_map, ref_map = assign_stable_refs(
+            bridge_tree, UIElement, element_obj_to_ref=_element_id_to_ref,
+        )
         mgr.store_detection_result(snapshot_id, ui_map)
         mgr.store_ref_map(snapshot_id, ref_map)
 
