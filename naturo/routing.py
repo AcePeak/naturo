@@ -81,23 +81,23 @@ def _find_pid_by_window_title(name: str) -> int | None:
         result_pid: int | None = None
 
         # Callback type for EnumWindows
-        WNDENUMPROC = ctypes.WINFUNCTYPE(
+        WNDENUMPROC = ctypes.WINFUNCTYPE(  # type: ignore[attr-defined]
             ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM
         )
 
         def _enum_cb(hwnd: int, _lparam: int) -> bool:
             nonlocal result_pid
-            if not ctypes.windll.user32.IsWindowVisible(hwnd):
+            if not ctypes.windll.user32.IsWindowVisible(hwnd):  # type: ignore[attr-defined]
                 return True
-            length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+            length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)  # type: ignore[attr-defined]
             if length == 0:
                 return True
             buf = ctypes.create_unicode_buffer(length + 1)
-            ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
+            ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)  # type: ignore[attr-defined]
             title_lower = buf.value.lower()
             if name_lower == title_lower or name_lower in title_lower:
                 pid = ctypes.wintypes.DWORD()
-                ctypes.windll.user32.GetWindowThreadProcessId(
+                ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
                     hwnd, ctypes.byref(pid)
                 )
                 if pid.value:
@@ -105,7 +105,7 @@ def _find_pid_by_window_title(name: str) -> int | None:
                     return False  # Stop enumeration
             return True
 
-        ctypes.windll.user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+        ctypes.windll.user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)  # type: ignore[attr-defined]
         return result_pid
 
     except Exception as exc:
