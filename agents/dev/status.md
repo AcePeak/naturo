@@ -1,27 +1,27 @@
 # Dev Status
-Last updated: 2026-03-27T18:35:00Z
-Session: v0.3.1 bug fixes — stable element refs, flaky test, app filter contamination
+Last updated: 2026-03-27T19:20:00Z
+Session: PR merges, click performance optimization (#448)
 
 ## This Session
-- PR #461 (fixes #455) — UIA probe UWP fallback: **merged** (CI green)
-- PR #462 (fixes #449) — foreground window tie-breaking: **merged** (CI green)
-- Issue #456 (P1) — Element IDs shift between snapshots: PR #466 created (hash-based stable eN refs)
-- Issue #446 (P1) — Flaky test_window_lifecycle: PR #467 created and **merged** (track by PID, not global count)
-- Issue #465 (P2) — --app filter matches wrong process: PR #468 created (reject title-only matches)
-- Tests: 1887 passed, 489 skipped, 0 failed
-- PRs merged: #461, #462, #467 | PRs pending CI: #466, #468
+- PR #468 (fixes #465) — --app rejects title-only matches: **merged** (8383d49)
+- PR #466 (fixes #456) — stable hash-based element refs: branch updated, CI re-running (previously cancelled Windows DLL test)
+- Issue #448 (P2) — click via eN refs 13x slower: PR #470 created (skip auto-routing for cached refs, use snapshot HWND for focus)
+- Tests: 1836 passed, 547 skipped, 0 failed
+- PRs merged: #468 | PRs pending CI: #466, #470
 
 ## Open PRs by Me
-- #466 — fix: stable hash-based element refs (fixes #456) — Windows CI running, all other checks green
-- #468 — fix: --app rejects title-only matches (fixes #465) — CI running
+- #466 — fix: stable hash-based element refs (fixes #456) — CI re-running after branch update, 5/6 checks green, Windows DLL test in progress
+- #470 — fix: skip auto-routing for eN ref clicks (fixes #448) — CI just started
 
 ## Current State
-- Earliest open milestone: v0.3.1 (1 remaining issue: #448 — click 13x slower than pywinauto)
+- Earliest open milestone: v0.3.1 (2 issues: #312 P1 hybrid mode, #448 P2 click perf)
 - CI: green on main
-- Issues fixed this session: #455, #449, #456, #446, #465
+- Issues addressed this session: #465 (merged), #448 (PR created)
+- #448 is partially fixed — routing skip saves ~0.7s/click, but full parity with pywinauto requires batch/daemon mode
 
 ## Next Session Should
-- Merge PRs #466 and #468 once CI is green
-- Investigate #448 (click performance — 13x slower than pywinauto) — this is the last v0.3.1 issue
-- If #448 is too large, triage and create sub-issues for incremental improvements
+- Check CI on PRs #466 and #470 — merge if green, fix if failing
+- Enable auto-merge on #466 and #470 once CI passes
 - Address any review feedback on open PRs
+- Investigate #312 (Win32+UIA hybrid mode) — P1 in v0.3.1, requires Windows C++ DLL work
+- If #312 is too large for one session, break into sub-issues
