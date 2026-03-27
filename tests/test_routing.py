@@ -252,6 +252,53 @@ class TestResolveMethodWithPid:
         assert result.pid == 9999
 
 
+class TestResolveMethodAliasResolution:
+    """(#474) Tests for Chinese alias resolution via find_process aliases."""
+
+    @patch("naturo.detect.chain.detect")
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_chinese_notepad_resolves_via_alias(self, mock_list, _mock_session,
+                                                 mock_detect):
+        """resolve_method(app='记事本') finds notepad.exe via alias (#474)."""
+        from naturo.process import ProcessInfo
+        mock_list.return_value = [
+            ProcessInfo(pid=1234, name="notepad.exe"),
+        ]
+        mock_method = MagicMock()
+        mock_method.method.value = "uia"
+        mock_method.confidence = 0.9
+        mock_result = MagicMock()
+        mock_result.best_method.return_value = mock_method
+        mock_result.frameworks = []
+        mock_detect.return_value = mock_result
+
+        result = resolve_method(app="记事本")
+        assert result.pid == 1234, "Should resolve 记事本 → notepad.exe"
+        assert result.method == "uia"
+
+    @patch("naturo.detect.chain.detect")
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_chinese_calculator_resolves_via_alias(self, mock_list,
+                                                    _mock_session, mock_detect):
+        """resolve_method(app='计算器') finds CalculatorApp.exe via alias."""
+        from naturo.process import ProcessInfo
+        mock_list.return_value = [
+            ProcessInfo(pid=5678, name="CalculatorApp.exe"),
+        ]
+        mock_method = MagicMock()
+        mock_method.method.value = "uia"
+        mock_method.confidence = 0.8
+        mock_result = MagicMock()
+        mock_result.best_method.return_value = mock_method
+        mock_result.frameworks = []
+        mock_detect.return_value = mock_result
+
+        result = resolve_method(app="计算器")
+        assert result.pid == 5678, "Should resolve 计算器 → CalculatorApp.exe"
+
+
 class TestResolveMethodEdgeCases:
     """Edge cases and integration scenarios."""
 
