@@ -116,13 +116,11 @@ MenuItem(name, shortcut?, submenu?, enabled, checked)
 | Category | Peekaboo (macOS) | Naturo | Notes |
 |----------|-----------------|--------|-------|
 | **Core** | capture, list, see | capture, list, see, find, menu-inspect | Full parity + extensions |
-| **Interaction** | click, type, press, hotkey, scroll, drag, move, paste, swipe | click, type, press, hotkey, scroll, drag, move, paste | swipe → N/A |
-| **System** | app, window, menu, menubar, clipboard, dialog, dock, space, open | app, window, menu, clipboard, dialog, open, taskbar, tray, desktop | Platform equivalents |
-| **AI** | agent | agent | Same concept |
+| **Interaction** | click, type, press, hotkey, scroll, drag, move, swipe | click, type, press, hotkey, scroll, drag, move | swipe N/A; paste merged into type --paste |
+| **System** | app, window, menu, menubar, dialog, dock, space | app, window, dialog, taskbar, tray, desktop | Platform equivalents |
 | **MCP** | mcp | mcp | Same protocol |
 | **Snapshot** | (internal) | snapshot list / snapshot clean | Phase 1.5 |
-| **Extensions** | — | excel, java, sap, registry, service | Windows-only (for now) |
-| **Guides** | learn, tools | learn, tools | Full parity |
+| **Other** | — | wait, diff, get, config | Naturo extensions |
 
 ### Windows-Specific Parameters
 

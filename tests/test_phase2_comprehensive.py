@@ -524,6 +524,7 @@ class TestCLIExitCodes:
         result = runner.invoke(main, ["move"])
         assert result.exit_code != 0
 
+    @pytest.mark.skip(reason="paste CLI command removed in v0.2.0, use 'type --paste'")
     def test_paste_missing_text_nonzero(self, runner):
         """T299: paste with no text exits non-zero."""
         result = runner.invoke(main, ["paste"])

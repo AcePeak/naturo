@@ -7,7 +7,6 @@ Tests are organized by category:
 """
 
 from __future__ import annotations
-import pytest; pytestmark = pytest.mark.skip(reason="CLI command removed in v0.2.0")
 
 import json
 import platform
@@ -130,6 +129,7 @@ class TestClipboardCLIOptions:
         assert result.exit_code != 0
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestBUG044JsonOnClickValidation:
     """BUG-044: Click parameter validation must respect --json mode."""
 
@@ -207,6 +207,7 @@ def _clipboard_accessible():
     not _clipboard_accessible(),
     reason="Clipboard functional tests require Windows with interactive desktop session",
 )
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestClipboardFunctionalWindows:
     """T140-T146 – Windows functional clipboard tests."""
 

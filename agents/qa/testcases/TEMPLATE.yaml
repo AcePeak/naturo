@@ -1,0 +1,27 @@
+# Test Case Template — copy this to create new test cases
+# File naming: <category>/<short-name>.yaml (e.g. regression/type-chinese-ime.yaml)
+
+id: TC-XXXX
+title: "Short description of what this tests"
+status: active          # active | retired | blocked
+category: regression    # regression | e2e | exploratory
+priority: P0            # P0 | P1 | P2
+source_issue: null      # GitHub issue number that spawned this test (e.g. 425)
+created: 2026-03-27
+last_run: null
+consecutive_passes: 0   # Reset to 0 on any failure; retire after 5 consecutive passes if issue is closed
+
+preconditions:
+  - "naturo is installed and in PATH"
+  # Add any app or state requirements
+
+steps:
+  - description: "Step 1 description"
+    command: "naturo <command>"
+    expect: "Expected outcome — what to verify in screenshot or output"
+  - description: "Step 2 description"
+    command: "naturo capture --app <app> -o /tmp/tc-xxxx.png"
+    expect: "Screenshot shows <expected visual state>"
+
+pass_criteria: "All steps produce expected results AND screenshot confirms visual state"
+fail_action: "File or update GitHub issue with failure details"

@@ -1,0 +1,109 @@
+name: Desktop Tests (Self-Hosted)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Pytest marker filter (e.g., "desktop", "integration", "e2e")'
+        required: false
+        default: 'desktop or integration'
+
+jobs:
+  desktop-tests:
+    name: Desktop + Integration Tests (Real Windows)
+    runs-on: [self-hosted, windows-desktop]
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify desktop session
+        shell: powershell
+        run: |
+          $session = query session | Select-String "Active"
+          if (-not $session) {
+            Write-Error "No active desktop session found. Tests require an interactive desktop."
+            exit 1
+          }
+          Write-Host "Desktop session active: $session"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          pip install -e ".[dev,mcp,annotate,windows]"
+
+      - name: Build and install C++ core
+        shell: bash
+        run: |
+          cmake -B build -S core -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          mkdir -p naturo/bin
+          cp build/bin/Release/naturo_core.dll naturo/bin/ 2>/dev/null || true
+          ls -la naturo/bin/
+
+      - name: Run desktop tests
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          FILTER="${{ github.event.inputs.test_filter || 'desktop or integration' }}"
+          echo "Running tests with marker filter: $FILTER"
+          python -m pytest tests/ \
+            -v \
+            -m "$FILTER" \
+            --timeout=30 \
+            --timeout-method=thread \
+            --tb=short \
+            -x \
+            --junit-xml=desktop-test-results.xml \
+            2>&1 | tee desktop-test-output.txt
+          echo "Exit code: $?"
+
+      - name: Run full E2E tests
+        if: success()
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          python -m pytest tests/ \
+            -v \
+            -m "e2e" \
+            --timeout=60 \
+            --timeout-method=thread \
+            --tb=short \
+            --junit-xml=e2e-test-results.xml \
+            2>&1 | tee e2e-test-output.txt || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-results
+          path: |
+            desktop-test-results.xml
+            e2e-test-results.xml
+            desktop-test-output.txt
+            e2e-test-output.txt
+          retention-days: 14
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Desktop Test Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f desktop-test-output.txt ]; then
+            PASSED=$(grep -c "PASSED" desktop-test-output.txt || echo 0)
+            FAILED=$(grep -c "FAILED" desktop-test-output.txt || echo 0)
+            SKIPPED=$(grep -c "SKIPPED" desktop-test-output.txt || echo 0)
+            echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "- Skipped: $SKIPPED" >> $GITHUB_STEP_SUMMARY
+          fi

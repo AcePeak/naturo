@@ -44,10 +44,10 @@
 pip install naturo
 ```
 
-Or via npm (MCP server shortcut):
+Or start the MCP server directly:
 
 ```bash
-npx naturo mcp start
+naturo mcp start
 ```
 
 ## Quick Start
@@ -63,7 +63,7 @@ naturo capture -o screen.png
 naturo list windows
 
 # Inspect UI tree
-naturo see --window-title "Notepad" --depth 5
+naturo see --window "Notepad" --depth 5
 
 # Click an element
 naturo click "Button:Save"
@@ -75,15 +75,15 @@ naturo type "Hello, World!"
 naturo type "Hello" --input-mode hardware
 
 # Press key combo
-naturo hotkey ctrl+s
+naturo press ctrl+s
 
 # Find element
 naturo find "Edit:filename"
 
-# Window management
-naturo window focus --app "Notepad"
+# Window management (deprecated — prefer `naturo app ...` equivalents)
+naturo window focus --app "Notepad"      # → naturo app switch "Notepad"
 naturo window close --app "Chrome" --force
-naturo window minimize --hwnd 12345
+naturo window minimize --hwnd 12345      # → naturo app hide "Notepad"
 naturo window move --app "Notepad" --x 0 --y 0
 naturo window resize --app "Notepad" --width 1920 --height 1080
 naturo window set-bounds --app "Chrome" --x 0 --y 0 --width 960 --height 1080
@@ -132,11 +132,13 @@ naturo type --paste --file data.txt        # Read file → paste
 | `snapshot list` | List stored snapshots | 0.1.0 |
 | `snapshot clean` | Remove old snapshots | 0.1.0 |
 | `find` | Search UI elements (fuzzy) | 0.1.0 |
+| `get` | Read element properties (text, value, state) | 0.1.0 |
+| `highlight` | Visual overlay showing all actionable elements | 0.1.0 |
 | `menu-inspect` | List app menu structure | 0.1.0 |
 | `click` | Click element/coordinates | 0.1.0 |
 | `type` | Type text | 0.1.0 |
 | `press` | Press key combination | 0.1.0 |
-| `hotkey` | Press keyboard shortcut | 0.1.0 |
+| `hotkey` | Press keyboard shortcut (deprecated — use `press`) | 0.1.0 |
 | `scroll` | Scroll mouse wheel | 0.1.0 |
 | `drag` | Drag from/to coordinates | 0.1.0 |
 | `move` | Move mouse cursor | 0.1.0 |
@@ -149,16 +151,21 @@ naturo type --paste --file data.txt        # Read file → paste
 | `app hide` | Minimize all app windows | 0.1.0 |
 | `app unhide` | Restore all app windows | 0.1.0 |
 | `app switch` | Switch to application | 0.1.0 |
-| `window focus` | Focus a window | 0.1.0 |
-| `window close` | Close a window | 0.1.0 |
-| `window minimize` | Minimize a window | 0.1.0 |
-| `window maximize` | Maximize a window | 0.1.0 |
-| `window restore` | Restore a window | 0.1.0 |
-| `window move` | Move a window | 0.1.0 |
-| `window resize` | Resize a window | 0.1.0 |
-| `window set-bounds` | Set position + size | 0.1.0 |
-| `window list` | List windows with filters | 0.1.0 |
+| `app inspect` | Probe app frameworks and interaction methods | 0.1.0 |
+| `app relaunch` | Restart an application | 0.1.0 |
+| `window focus` | Focus a window (deprecated — use `app switch`) | 0.1.0 |
+| `window close` | Close a window (deprecated — use `app quit`) | 0.1.0 |
+| `window minimize` | Minimize a window (deprecated — use `app hide`) | 0.1.0 |
+| `window maximize` | Maximize a window (deprecated) | 0.1.0 |
+| `window restore` | Restore a window (deprecated — use `app unhide`) | 0.1.0 |
+| `window move` | Move a window (deprecated) | 0.1.0 |
+| `window resize` | Resize a window (deprecated) | 0.1.0 |
+| `window set-bounds` | Set position + size (deprecated) | 0.1.0 |
+| `window list` | List windows with filters (deprecated — use `app list`) | 0.1.0 |
 | `mcp start` | Start MCP server | 0.1.0 |
+| `mcp install` | Install MCP server configuration | 0.1.0 |
+| `mcp tools` | List available MCP tools | 0.1.0 |
+| `config` | View/set naturo configuration | 0.1.0 |
 | `dialog detect` | Detect active system dialogs | 0.1.0 |
 | `dialog accept` | Accept (OK/Yes) a dialog | 0.1.0 |
 | `dialog dismiss` | Dismiss (Cancel/No) a dialog | 0.1.0 |
@@ -175,21 +182,7 @@ naturo type --paste --file data.txt        # Read file → paste
 | `desktop close` | Close a virtual desktop | 0.1.0 |
 | `desktop move-window` | Move window to another desktop | 0.1.0 |
 
-| `chrome title` | Get page title | 0.1.0 |
-| `chrome html` | Get page/element HTML | 0.1.0 |
-| `chrome version` | Show Chrome version info | 0.1.0 |
-| `registry get` | Read registry value | 0.1.0 |
-| `registry set` | Write registry value | 0.1.0 |
-| `registry list` | List subkeys/values | 0.1.0 |
-| `registry delete` | Delete key/value | 0.1.0 |
-| `registry search` | Search registry | 0.1.0 |
-| `service list` | List Windows services | 0.1.0 |
-| `service start` | Start a service | 0.1.0 |
-| `service stop` | Stop a service | 0.1.0 |
-| `service restart` | Restart a service | 0.1.0 |
-| `service status` | Query service status | 0.1.0 |
 | `diff` | Compare two UI snapshots or window states | 0.1.1 |
-| `learn` | Show usage guides and tutorials | 0.1.0 |
 | `excel open` | Open Excel workbook | 0.1.1 |
 | `excel read` | Read cells from worksheet | 0.1.1 |
 | `excel write` | Write values to cells | 0.1.1 |

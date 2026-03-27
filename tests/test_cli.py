@@ -389,7 +389,6 @@ def _has_desktop_session() -> bool:
 
 
 @pytest.mark.desktop
-@pytest.mark.desktop
 @pytest.mark.parametrize("cmd,expected_exit", [
     pytest.param(["capture"], 0, marks=pytest.mark.skipif(platform.system() != "Windows", reason="capture live needs desktop session")),
 ])

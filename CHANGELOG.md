@@ -5,6 +5,23 @@ All notable changes to Naturo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-03-27
+
+### Added
+- **Framework detection chain** — CDP → UIA → MSAA → JAB → IA2 → Vision auto-detection
+- **`naturo app inspect`** — probe app and report available interaction methods (`--all` for all windows)
+- **Auto-routing for action commands** — click/type/press/find dispatched through optimal channel
+- **`--method` override flag** — explicit channel selection for any action command
+- **`--quick` mode** — fast probe that skips slow framework checks
+- **Element ref caching system** — temporary eN → coordinates cache with TTL
+- **Post-action verification engine** — `--verify/--no-verify` on type/click/press
+- **Unified Selector format specification** ([design doc](design/UNIFIED_SELECTOR.md))
+- **MCP tools for app inspect**
+- **Per-PID detection cache** with TTL
+
+### Tests
+- Integration tests across framework types
+
 ## [0.2.1] — 2026-03-23
 
 ### Added

@@ -515,6 +515,7 @@ class TestCDPErrorTypes:
 # ── CLI tests ─────────────────────────────────────────────────
 
 
+@pytest.mark.skip(reason="chrome CLI command removed in v0.2.0")
 class TestChromeCLI:
     """Test chrome CLI subcommands."""
 

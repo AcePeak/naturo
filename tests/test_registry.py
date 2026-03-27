@@ -1,4 +1,3 @@
-import pytest; pytestmark = pytest.mark.skip(reason="CLI command removed in v0.2.0")  # noqa: E402
 """Tests for Windows Registry CLI commands and backend.
 
 Tests use mocked winreg module to work on all platforms.
@@ -196,6 +195,7 @@ class TestFormatValue:
 # ── CLI tests ───────────────────────────────────────────────────────────────
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistryGetCLI:
     """Test 'naturo registry get' CLI command."""
 
@@ -275,6 +275,7 @@ class TestRegistryGetCLI:
         assert data["error"]["code"] == "PERMISSION_DENIED"
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistrySetCLI:
     """Test 'naturo registry set' CLI command."""
 
@@ -350,6 +351,7 @@ class TestRegistrySetCLI:
         assert data["error"]["code"] == "PERMISSION_DENIED"
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistryListCLI:
     """Test 'naturo registry list' CLI command."""
 
@@ -419,6 +421,7 @@ class TestRegistryListCLI:
         assert data["error"]["code"] == "REGISTRY_NOT_FOUND"
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistryDeleteCLI:
     """Test 'naturo registry delete' CLI command."""
 
@@ -488,6 +491,7 @@ class TestRegistryDeleteCLI:
         assert data["error"]["code"] == "REGISTRY_NOT_FOUND"
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistrySearchCLI:
     """Test 'naturo registry search' CLI command."""
 
@@ -561,6 +565,7 @@ class TestRegistrySearchCLI:
         assert data["error"]["code"] == "INVALID_INPUT"
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistryHelpAndStructure:
     """Test CLI help and command structure."""
 
@@ -601,6 +606,7 @@ class TestRegistryHelpAndStructure:
         assert "registry" in result.output
 
 
+@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestRegistryJSONConsistency:
     """Test JSON output format consistency."""
 
