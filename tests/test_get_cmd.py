@@ -512,3 +512,190 @@ class TestRoleAliasFallback:
         assert result is None
         # Only one call — no alias fallback because automation_id is set
         assert mock_core.get_element_value.call_count == 1
+
+
+# ── --all flag tests (issue #382) ────────────────────────────────────────────
+
+class TestGetAllFlag:
+    """Tests for the ``naturo get --all`` flag."""
+
+    def _make_tree(self):
+        """Build a mock element tree with multiple buttons and edits."""
+        from naturo.backends.base import ElementInfo
+        return ElementInfo(
+            id="e0", role="Window", name="Test App", value=None,
+            x=0, y=0, width=800, height=600,
+            children=[
+                ElementInfo(
+                    id="e1", role="Button", name="Save", value=None,
+                    x=10, y=10, width=80, height=30, children=[], properties={},
+                ),
+                ElementInfo(
+                    id="e2", role="Edit", name="Username", value="alice",
+                    x=10, y=50, width=200, height=25, children=[], properties={},
+                ),
+                ElementInfo(
+                    id="e3", role="Button", name="Cancel", value=None,
+                    x=100, y=10, width=80, height=30, children=[], properties={},
+                ),
+                ElementInfo(
+                    id="e4", role="Edit", name="Password", value="***",
+                    x=10, y=80, width=200, height=25, children=[], properties={},
+                ),
+                ElementInfo(
+                    id="e5", role="Button", name="Help", value=None,
+                    x=200, y=10, width=80, height=30, children=[], properties={},
+                ),
+            ],
+            properties={},
+        )
+
+    def test_all_buttons_json(self):
+        """--all --role Button returns array of all buttons."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--role", "Button", "--all",
+            ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert isinstance(data, list)
+        assert len(data) == 3
+        names = [el["name"] for el in data]
+        assert "Save" in names
+        assert "Cancel" in names
+        assert "Help" in names
+
+    def test_all_edits_json(self):
+        """--all --role Edit returns array of all edit fields."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--role", "Edit", "--all",
+            ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) == 2
+        assert data[0]["value"] == "alice"
+        assert data[1]["value"] == "***"
+
+    def test_all_by_name_json(self):
+        """--all --name with substring match."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--name", "Save", "--all",
+            ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) == 1
+        assert data[0]["name"] == "Save"
+        assert data[0]["role"] == "Button"
+
+    def test_all_plain_text(self):
+        """--all in plain text mode shows numbered list."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "get", "--role", "Button", "--all",
+            ])
+
+        assert result.exit_code == 0
+        assert "3 matching element(s)" in result.output
+        assert "Save" in result.output
+        assert "Cancel" in result.output
+        assert "Help" in result.output
+
+    def test_all_no_matches_json(self):
+        """--all with no matching role returns empty array."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--role", "ComboBox", "--all",
+            ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data == []
+
+    def test_all_no_matches_plain(self):
+        """--all with no matches exits with error in plain mode."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "get", "--role", "ComboBox", "--all",
+            ])
+
+        assert result.exit_code != 0
+        assert "No elements found" in result.output
+
+    def test_all_requires_role_or_name(self):
+        """--all without --role or --name shows error."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["get", "--all"])
+        assert result.exit_code != 0
+
+    def test_all_with_app_filter(self):
+        """--all --app passes app to get_element_tree."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--role", "Button", "--all",
+                "--app", "notepad",
+            ])
+
+        assert result.exit_code == 0
+        mock.get_element_tree.assert_called_once_with(
+            app="notepad", window_title=None, hwnd=None,
+            depth=20, backend="auto",
+        )
+
+    def test_all_includes_bounds(self):
+        """--all JSON output includes bounding rect."""
+        tree = self._make_tree()
+        mock = MagicMock()
+        mock.get_element_tree.return_value = tree
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "get", "--role", "Button", "--all",
+            ])
+
+        data = json.loads(result.output)
+        first = data[0]
+        assert "x" in first
+        assert "y" in first
+        assert "width" in first
+        assert "height" in first
