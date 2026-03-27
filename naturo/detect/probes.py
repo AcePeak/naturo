@@ -379,10 +379,72 @@ def _find_cdp_debug_port(pid: int) -> Optional[int]:
     return None
 
 
+def _find_afh_content_children(parent_hwnd: int) -> List[int]:
+    """Enumerate content child HWNDs of an ApplicationFrameHost window.
+
+    UWP and WinUI 3 apps render their UI inside child windows of an
+    ApplicationFrameHost top-level window.  This function checks whether
+    ``parent_hwnd`` is an ApplicationFrameWindow and, if so, returns
+    its child HWNDs ordered by priority: known UWP/WinUI content classes
+    first (CoreWindow, DesktopWindowXamlSource), then remaining visible
+    children.
+
+    On non-Windows platforms or for non-AFH windows, returns an empty list.
+
+    Args:
+        parent_hwnd: Top-level window handle to inspect.
+
+    Returns:
+        List of child HWNDs to probe, ordered by priority (best first).
+        Empty if the window is not an AFH window or has no children.
+    """
+    if platform.system() != "Windows":
+        return []
+
+    try:
+        import ctypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        # Check if parent_hwnd is an ApplicationFrameWindow
+        cls_buf = ctypes.create_unicode_buffer(256)
+        user32.GetClassNameW(parent_hwnd, cls_buf, 256)
+        if cls_buf.value != "ApplicationFrameWindow":
+            return []
+
+        # Known UWP/WinUI content window classes (priority order)
+        _CONTENT_CLASSES = {
+            "windows.ui.core.corewindow",
+            "desktopwindowxamlsource",
+        }
+
+        priority_children: List[int] = []
+        other_children: List[int] = []
+
+        child = user32.FindWindowExW(parent_hwnd, None, None, None)
+        while child:
+            child_cls = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(child, child_cls, 256)
+            if child_cls.value.lower() in _CONTENT_CLASSES:
+                priority_children.append(child)
+            elif user32.IsWindowVisible(child):
+                other_children.append(child)
+            child = user32.FindWindowExW(parent_hwnd, child, None, None)
+
+        return priority_children + other_children
+
+    except Exception as exc:
+        logger.debug("Failed to enumerate AFH children for HWND %s: %s", parent_hwnd, exc)
+        return []
+
+
 def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[InteractionMethod]:
     """Probe for UI Automation availability.
 
-    Checks if the process window is accessible via UIA.
+    Checks if the process window is accessible via UIA.  For UWP apps
+    hosted by ApplicationFrameHost, the top-level AFH window may return
+    an empty UIA tree; in that case we enumerate child windows and probe
+    each one (#455).
 
     Args:
         pid: Process ID.
@@ -413,11 +475,31 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                 capabilities=capabilities,
                 confidence=0.95,
             )
-        else:
-            logger.debug(
-                "UIA probe via native DLL returned empty tree for PID %d (hwnd=%s)",
-                pid, target_hwnd,
-            )
+
+        # (#455) UWP/WinUI apps: the AFH top-level window may yield an
+        # empty UIA tree.  Enumerate child windows and retry — the real
+        # UI lives inside a CoreWindow or DesktopWindowXamlSource child.
+        child_hwnds = _find_afh_content_children(target_hwnd)
+        for child_hwnd in child_hwnds:
+            tree = core.get_element_tree(hwnd=child_hwnd, depth=1)
+            if tree is not None:
+                logger.debug(
+                    "UIA probe succeeded via AFH child HWND %s (parent %s)",
+                    child_hwnd, target_hwnd,
+                )
+                capabilities = ["click", "type", "find", "tree", "screenshot"]
+                return InteractionMethod(
+                    method=InteractionMethodType.UIA,
+                    priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                    status=ProbeStatus.AVAILABLE,
+                    capabilities=capabilities,
+                    confidence=0.95,
+                )
+
+        logger.debug(
+            "UIA probe via native DLL returned empty tree for PID %d (hwnd=%s)",
+            pid, target_hwnd,
+        )
     except Exception as exc:
         logger.debug("UIA probe via native DLL failed for PID %d: %s", pid, exc)
 
