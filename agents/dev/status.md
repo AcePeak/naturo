@@ -1,23 +1,28 @@
 # Dev Status
-Last updated: 2026-03-27T14:30Z
-Session: Merge 6 PRs, fix 2 new P1 bugs (#441, #440), enable auto-merge on remaining PRs
+Last updated: 2026-03-27T15:20:00Z
+Session: Hybrid tree + get --all
 
 ## This Session
-- Merged 6 PRs: #429 (exit code 2), #434 (Chinese titles), #435 (CI markers), #436 (duplicate PyPI), #437 (HWND test), #438 (lifecycle test)
-- Issue #441 (P1, bug) — PR #443 created: Restore internal focus to editor after menu close. `focus_element_uia` now falls back to finding first Edit/Document control when called with only hwnd. Added UIA focus to `type_cmd` (was missing).
-- Issue #440 (P1, bug) — PR #444 created: Prefer larger window over popup menu in HWND resolution. Changed tie-breaking from "shorter title" to "larger window area".
-- Enabled auto-merge (squash) on PRs #433, #439, #443, #444
-- Tests: 1829 passed, 0 failed (non-Windows suite)
-- PRs: 6 merged, 4 open (#433, #439, #443, #444)
+- Issue #367 (P0) — Hybrid tree with per-node backend selection: PR #450 created
+- Issue #382 (P2) — get: add --all flag: PR #451 created
+- Tests: 1796 passed, 393 skipped, 0 failed
+- PRs: #450 created (hybrid tree), #451 created (get --all), both auto-merge enabled
+
+## Open PRs by Me
+- #450 — feat: hybrid tree (fixes #367) — CI pending, auto-merge enabled
+- #451 — feat: get --all (fixes #382) — CI pending, auto-merge enabled
+- #444 — fix: HWND resolution (fixes #440) — CI green, blocked (needs review)
+- #443 — fix: focus after menu (fixes #441) — CI green, blocked (needs review)
+- #439 — feat: Codecov (fixes #409) — CI failing (Windows hang, needs #445 merge + rebase)
+- #433 — fix: IME type (fixes #425) — CI failing (same, needs rebase)
 
 ## Current State
-- Earliest open milestone: v0.3.1
-- CI: PRs #433 and #439 have Windows DLL tests cancelled (timeout) — auto-merge enabled, awaiting re-run
-- Open PRs by me: #433 (IME fix), #439 (Codecov), #443 (focus after menu), #444 (popup HWND)
-- Remaining backlog P1 issues without PRs: #420 (README docs), #413 (comparison table), #361 (stable ID), #312 (hybrid mode)
+- Earliest open milestone: v0.3.1 (3 issues remaining: #312 P1, #313 P2, #411 P2)
+- CI: green on main
+- #445 (Orc-Mycelium CI fix) is green, blocked — once merged, #439 and #433 need rebase
 
 ## Next Session Should
-- Check if PRs #443 and #444 merged via auto-merge
-- Investigate PRs #433 and #439 Windows test timeout — may need to re-trigger or split the changes
-- Work on remaining P1 issues: #420 (README clarification) is a good-first-issue/docs task
-- If all v0.3.1 milestone issues are done, advance to next milestone
+- Check if #450 and #451 merged — if CI failed, fix
+- Rebase #439 and #433 after #445 merges
+- Pick #312 (P1, Win32+UIA hybrid) or #313 (P2, highlight all) from v0.3.1
+- #312 is closely related to #367 — may be partially addressed, assess overlap
