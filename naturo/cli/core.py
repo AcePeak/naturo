@@ -133,7 +133,7 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         if json_output:
             click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
     # Resolve output path: use --path if given, else timestamped name
@@ -388,7 +388,7 @@ def windows(app, pid, json_output):
         if json_output:
             click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
     try:
@@ -620,7 +620,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         if json_output:
             click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
     try:
@@ -672,7 +672,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     if json_output:
                         click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
                     else:
-                        click.echo(msg)
+                        click.echo(f"Error: {msg}", err=True)
                     raise SystemExit(1)
 
                 # Get element tree for each window
@@ -690,7 +690,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     if json_output:
                         click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
                     else:
-                        click.echo(msg)
+                        click.echo(f"Error: {msg}", err=True)
                     raise SystemExit(1)
 
                 # Merge into a single root: create a virtual root node
@@ -731,7 +731,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             if json_output:
                 click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
             else:
-                click.echo(msg)
+                click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
 
         snapshot_id = None
@@ -1099,7 +1099,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         if json_output:
             click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
     try:
@@ -1110,7 +1110,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
             if json_output:
                 click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
             else:
-                click.echo(msg)
+                click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
 
         from naturo.search import search_elements
@@ -1363,7 +1363,7 @@ def menu_inspect(app, flat, json_output):
         if json_output:
             click.echo(_json_error_str("PLATFORM_ERROR", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
     try:
@@ -1395,7 +1395,7 @@ def menu_inspect(app, flat, json_output):
             if json_output:
                 click.echo(_json_error_str("NO_MENU_ITEMS", msg))
             else:
-                click.echo(msg)
+                click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
 
         if json_output:
@@ -1435,7 +1435,7 @@ def menu_inspect(app, flat, json_output):
         if json_output:
             click.echo(_json_error_str("NOT_SUPPORTED", msg))
         else:
-            click.echo(msg)
+            click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
     except Exception as e:
         if json_output:

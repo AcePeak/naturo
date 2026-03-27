@@ -154,7 +154,7 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval, json_out
                 click.echo(f"Window '{window_title}' appeared after {result.wait_time:.1f}s")
         else:
             target = element or gone or window_title
-            click.echo(f"Timeout after {result.wait_time:.1f}s waiting for '{target}'", err=True)
+            click.echo(f"Error: Timeout after {result.wait_time:.1f}s waiting for '{target}'", err=True)
             sys.exit(1)
 
         for w in result.warnings:
