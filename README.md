@@ -23,18 +23,17 @@
 - 📌 **Taskbar & Tray** — List and click taskbar items and system tray icons
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
-- 🍎 **macOS Support** — Full Peekaboo CLI wrapper (capture, click, type, window management, and more)
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
-## System Requirements
+## Platform Support
 
-| Platform | Requirement |
-|----------|-------------|
-| **Windows** | Windows 10+ (officially supported) |
-| | Windows 7 SP1+ (best-effort, basic features only) |
-| **Python** | 3.9+ |
-| **macOS** | macOS 13+ with [Peekaboo](https://github.com/steipete/Peekaboo) installed |
-| **Linux** | Not yet supported |
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **Windows 10/11** | ✅ Full support | Primary platform. All features available. |
+| **Windows 7 SP1+** | ⚠️ Best-effort | Basic features only, no UIAutomation v3. |
+| **macOS 13+** | ⚠️ Partial | Requires [Peekaboo](https://github.com/steipete/Peekaboo) installed. Wraps Peekaboo CLI for capture, click, type, window management. |
+| **Linux** | 🚧 Coming soon | Backend is a placeholder. Not usable yet. Track progress: [v0.5.0 milestone issues](https://github.com/AcePeak/naturo/issues?q=label%3Alinux). |
+| **Python** | 3.9+ | Required for all platforms. |
 
 > **Why Windows 10+?** UIAutomation v2/v3 APIs (caching, virtualized controls) require Windows 8+. Windows 7 has been out of support since January 2020. Most enterprise customers have migrated to Windows 10/11.
 
