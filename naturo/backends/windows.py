@@ -870,15 +870,16 @@ class WindowsBackend(Backend):
 
         Matching strategy (BUG-069/BUG-070):
 
-        When ``app`` is provided, matches against **process name first** (with
-        ``.exe`` suffix stripped), then falls back to window title.  When
+        When ``app`` is provided, matches against **process name and aliases
+        only** (``.exe`` suffix stripped).  Title matching is not used for
+        ``--app`` to prevent cross-process contamination (#465).  When
         ``window_title`` is provided, matches against window title only.
 
-        Scoring (higher = better match):
+        Scoring for ``--app`` (higher = better match):
           4 — exact process-name match  (e.g. ``explorer`` == ``explorer.exe``)
           3 — process-name substring    (e.g. ``expl`` in ``explorer.exe``)
-          2 — exact title match         (e.g. ``notepad`` == ``Notepad``)
-          1 — title substring           (e.g. ``note`` in ``Untitled - Notepad``)
+        Alias matches (e.g. ``calculator`` → ``calculatorapp``) use the same
+        scores as direct process-name matches.
 
         Session awareness (#230): When multiple windows match with equal
         scores, windows in the active console session are strongly preferred
@@ -947,23 +948,21 @@ class WindowsBackend(Backend):
                     score = 4  # exact process name
                 elif search_lower in proc_stem:
                     score = 3  # substring in process name
-                # Title fallback (lower priority) — BUT skip for terminal processes
-                # (#315: cmd/powershell titles include the running command, causing
-                # false matches like "naturo see --app SomeApp" matching the cmd window)
-                elif proc_stem not in ("cmd", "powershell", "conhost", "pwsh"):
-                    if search_lower == title_lower:
-                        score = 2  # exact title
-                    elif search_lower in title_lower:
-                        score = 1  # substring in title
+                # (#465) Title-only fallback removed from --app matching.
+                # When --app is used, we only match by process name or alias.
+                # Title-only matches caused cross-process contamination: e.g.
+                # --app notepad picking a Chrome window titled "help with notepad".
+                # Use --window-title for title-based matching.
+                #
                 # Alias matching: cross-locale app name resolution
                 if score == 0:
                     aliases = self._APP_ALIASES.get(search_lower, set())
                     for alias in aliases:
-                        if alias == proc_stem or alias == title_lower:
-                            score = 2  # alias match (same priority as exact title)
+                        if alias == proc_stem:
+                            score = 4  # alias → exact process name
                             break
-                        if alias in proc_stem or alias in title_lower:
-                            score = 1  # alias substring match
+                        if alias in proc_stem:
+                            score = 3  # alias → substring in process name
                             break
             else:
                 # --window-title: only match window title
@@ -1141,20 +1140,16 @@ class WindowsBackend(Backend):
                     score = 4
                 elif search_lower in proc_stem:
                     score = 3
-                # Title fallback
-                elif search_lower == title_lower:
-                    score = 2
-                elif search_lower in title_lower:
-                    score = 1
+                # (#465) No title fallback for --app (see _resolve_hwnd)
                 # Alias matching
                 if score == 0:
                     aliases = self._APP_ALIASES.get(search_lower, set())
                     for alias in aliases:
-                        if alias == proc_stem or alias == title_lower:
-                            score = 2
+                        if alias == proc_stem:
+                            score = 4
                             break
-                        if alias in proc_stem or alias in title_lower:
-                            score = 1
+                        if alias in proc_stem:
+                            score = 3
                             break
             else:
                 # --window-title: only match window title
