@@ -27,6 +27,33 @@ def _get_backend():
     return get_backend()
 
 
+def _collect_matching_elements(tree, role=None, name=None):
+    """Walk the element tree and collect all elements matching role/name.
+
+    Args:
+        tree: Root ElementInfo from get_element_tree.
+        role: Role filter (case-insensitive exact match). None matches any.
+        name: Name filter (case-insensitive substring). None matches any.
+
+    Returns:
+        List of matching ElementInfo nodes.
+    """
+    matches = []
+
+    def _walk(el, depth=0):
+        role_match = role is None or el.role.lower() == role.lower()
+        name_match = name is None or (
+            el.name and name.lower() in el.name.lower()
+        )
+        if role_match and name_match:
+            matches.append(el)
+        for child in el.children:
+            _walk(child, depth + 1)
+
+    _walk(tree)
+    return matches
+
+
 @click.command("get")
 @click.argument("target", required=False)
 @click.option("--ref", "-r", "ref", default=None,
@@ -37,6 +64,8 @@ def _get_backend():
               help="Element role filter (e.g. Edit, Button)")
 @click.option("--name", default=None,
               help="Element name filter")
+@click.option("--all", "-a", "get_all", is_flag=True, default=False,
+              help="Return all matching elements (requires --role or --name)")
 @click.option("--property", "-p", "prop", default=None,
               help="Return only a specific property (value, name, role, pattern)")
 @click.option("--app", default=None, help="Target application (name or partial match)")
@@ -49,12 +78,15 @@ def _get_backend():
 @click.option("--json", "-j", "json_output", is_flag=True, default=None,
               help="JSON output")
 @click.pass_context
-def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
+def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
             window_title, hwnd, json_output):
     """Read element text/value.
 
     Read the current value of a UI element. Accepts an element ref (e47),
     an AutomationId, or a role+name combination.
+
+    Use --all to return all matching elements instead of just the first.
+    Requires --role or --name to specify what to search for.
 
     \b
     Examples:
@@ -63,6 +95,8 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
       naturo get --aid txtSearch          # By AutomationId
       naturo get --role Edit --name Search # By role + name
       naturo get e47 -p value             # Just the value text
+      naturo get --role Button --app explorer --all -j  # All buttons
+      naturo get --role Edit --all        # All edit fields
     """
     # Inherit --json from parent group if not set explicitly
     if json_output is None:
@@ -87,6 +121,84 @@ def get_cmd(ctx, target, ref, automation_id, role, name, prop, app,
             if not automation_id:
                 automation_id = target
 
+    # ── --all mode: return all matching elements ─────────────────────────
+    if get_all:
+        if not role and not name:
+            emit_error(
+                "INVALID_INPUT",
+                "--all requires --role or --name to specify what to search for",
+                json_output,
+                suggested_action="Add --role (e.g. --role Button) or --name "
+                "to filter which elements to return.",
+            )
+
+        if platform.system() not in ("Windows",) and not _has_peekaboo():
+            emit_error(
+                "PLATFORM_ERROR",
+                "naturo get requires Windows (UIA patterns) or macOS (Peekaboo)",
+                json_output,
+            )
+
+        try:
+            backend = _get_backend()
+            tree = backend.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd,
+                depth=20, backend="auto",
+            )
+
+            if tree is None:
+                emit_error(
+                    "WINDOW_NOT_FOUND",
+                    "No window found for the specified target",
+                    json_output,
+                    suggested_action="Check that the application is running "
+                    "and visible.",
+                )
+
+            matches = _collect_matching_elements(tree, role=role, name=name)
+
+            if json_output:
+                output = []
+                for el in matches:
+                    output.append({
+                        "role": el.role,
+                        "name": el.name,
+                        "value": el.value,
+                        "x": el.x,
+                        "y": el.y,
+                        "width": el.width,
+                        "height": el.height,
+                    })
+                click.echo(json_module.dumps(output))
+            else:
+                if not matches:
+                    filters = []
+                    if role:
+                        filters.append(f"role={role}")
+                    if name:
+                        filters.append(f"name={name}")
+                    click.echo(f"No elements found matching {', '.join(filters)}")
+                    sys.exit(1)
+                click.echo(f"Found {len(matches)} matching element(s):\n")
+                for i, el in enumerate(matches, 1):
+                    header = f"  {i}. [{el.role}]"
+                    if el.name:
+                        header += f' "{el.name}"'
+                    header += f"  ({el.x},{el.y} {el.width}x{el.height})"
+                    click.echo(header)
+                    if el.value is not None:
+                        preview = el.value[:100]
+                        if len(el.value) > 100:
+                            preview += "…"
+                        click.echo(f"     Value: {preview}")
+
+        except NaturoError as exc:
+            emit_exception_error(exc, json_output)
+        except Exception as exc:
+            emit_exception_error(exc, json_output, fallback_code="UNKNOWN_ERROR")
+        return
+
+    # ── Single element mode (default) ────────────────────────────────────
     if not ref and not automation_id and not role and not name:
         emit_error(
             "INVALID_INPUT",

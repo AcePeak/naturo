@@ -8,10 +8,10 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from typing import Any, Optional
+from typing import Optional
 
 from naturo.backends.base import Backend, get_backend
-from naturo.errors import AIProviderUnavailableError, CaptureFailedError
+from naturo.errors import CaptureFailedError
 from naturo.providers.base import VisionProvider, VisionResult, get_vision_provider
 
 logger = logging.getLogger(__name__)
@@ -67,12 +67,12 @@ def describe_screen(
             image_path = temp_path
 
             if window_title:
-                result = backend.capture_window(
+                backend.capture_window(
                     window_title=window_title,
                     output_path=image_path,
                 )
             else:
-                result = backend.capture_screen(output_path=image_path)
+                backend.capture_screen(output_path=image_path)
 
             if context is None and window_title:
                 context = f"Screenshot of window: {window_title}"

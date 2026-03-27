@@ -31,6 +31,9 @@ from naturo.cascade import (
     _flatten,
     _rect_area,
     _tag_source,
+    _detect_backend_for_class,
+    _find_node_by_bounds,
+    build_hybrid_tree,
     run_cascade,
 )
 from naturo.cli import main
@@ -395,3 +398,314 @@ class TestSeeCascadeCLI:
         assert "Recognition Stats" in result.output
         assert "uia" in result.output
         assert "cdp" in result.output
+
+
+# ── Hybrid tree: _detect_backend_for_class ───────────────────────────────────
+
+
+class TestDetectBackendForClass:
+    def test_chrome_render_widget(self):
+        assert _detect_backend_for_class("Chrome_RenderWidgetHostHWND") == "cdp"
+
+    def test_chrome_widget_win(self):
+        assert _detect_backend_for_class("Chrome_WidgetWin_0") == "cdp"
+
+    def test_java_frame(self):
+        assert _detect_backend_for_class("SunAwtFrame") == "jab"
+
+    def test_java_dialog(self):
+        assert _detect_backend_for_class("SunAwtDialog") == "jab"
+
+    def test_java_prefixed(self):
+        assert _detect_backend_for_class("javax.swing.JFrame") == "jab"
+
+    def test_mozilla_window(self):
+        assert _detect_backend_for_class("MozillaWindowClass") == "ia2"
+
+    def test_regular_class_defaults_to_uia(self):
+        assert _detect_backend_for_class("Edit") == "uia"
+        assert _detect_backend_for_class("Button") == "uia"
+        assert _detect_backend_for_class("") == "uia"
+
+    def test_unknown_class_defaults_to_uia(self):
+        assert _detect_backend_for_class("CustomVB6Control42") == "uia"
+
+
+# ── Hybrid tree: _find_node_by_bounds ────────────────────────────────────────
+
+
+class TestFindNodeByBounds:
+    def test_finds_exact_match(self):
+        child = _make_el(id="child", x=100, y=100, w=200, h=150)
+        root = _make_el(id="root", x=0, y=0, w=1000, h=600, children=[child])
+
+        found = _find_node_by_bounds(root, 100, 100, 200, 150)
+        assert found is not None
+        assert found.id == "child"
+
+    def test_prefers_deeper_match(self):
+        grandchild = _make_el(id="gc", x=100, y=100, w=200, h=150)
+        child = _make_el(id="child", x=50, y=50, w=400, h=300, children=[grandchild])
+        root = _make_el(id="root", x=0, y=0, w=1000, h=600, children=[child])
+
+        found = _find_node_by_bounds(root, 100, 100, 200, 150)
+        assert found is not None
+        assert found.id == "gc"
+
+    def test_returns_none_for_zero_area(self):
+        root = _make_el(id="root", x=0, y=0, w=1000, h=600)
+        assert _find_node_by_bounds(root, 0, 0, 0, 0) is None
+
+    def test_returns_none_when_no_overlap(self):
+        child = _make_el(id="child", x=0, y=0, w=100, h=100)
+        root = _make_el(id="root", x=0, y=0, w=1000, h=600, children=[child])
+
+        # Target is far away from any node
+        found = _find_node_by_bounds(root, 900, 500, 50, 50)
+        # Root should still match since it contains the target
+        assert found is not None
+        assert found.id == "root"
+
+    def test_overlap_threshold(self):
+        """Node must overlap >= 50% of target area to match."""
+        child = _make_el(id="child", x=0, y=0, w=100, h=100)
+        root = _make_el(id="root", x=0, y=0, w=1000, h=600, children=[child])
+
+        # Only small overlap with child (10x100 = 1000 out of 200x100 = 20000 = 5%)
+        found = _find_node_by_bounds(root, 90, 0, 200, 100)
+        # Root covers it, child does not (overlap < 50%)
+        assert found is not None
+        assert found.id == "root"
+
+
+# ── Hybrid tree: build_hybrid_tree ───────────────────────────────────────────
+
+
+class TestBuildHybridTree:
+    def test_uia_only_when_no_win32_children(self):
+        """When no Win32 child HWNDs exist, returns the UIA tree as-is."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Notepad", w=800, h=600,
+            children=[_make_el(id="btn", role="Button", name="Save")],
+        )
+        be = MagicMock()
+        be.get_element_tree.return_value = uia_tree
+
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=[]):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        assert tree is not None
+        assert tree.properties.get("source") == "uia"
+        assert len(tree.children) == 1
+        assert tree.children[0].properties.get("source") == "uia"
+
+    def test_uia_failure_returns_none(self):
+        """When UIA fails, returns None."""
+        be = MagicMock()
+        be.get_element_tree.side_effect = Exception("COM error")
+
+        tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        assert tree is None
+        assert any(p.status == "error" for p in stats.providers)
+
+    def test_jab_enrichment_for_java_hwnd(self):
+        """Java HWND detected → JAB subtree attached to matching UIA node."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Eclipse", x=0, y=0, w=1000, h=600,
+            children=[
+                _make_el(id="pane", role="Pane", name="", x=100, y=100, w=800, h=400),
+            ],
+        )
+
+        jab_child1 = _make_el(id="jc1", role="PushButton", name="Run")
+        jab_child2 = _make_el(id="jc2", role="PushButton", name="Debug")
+        jab_tree = _make_el(
+            id="jab_root", role="Panel", name="Toolbar",
+            children=[jab_child1, jab_child2],
+        )
+
+        def get_tree_side_effect(**kwargs):
+            backend = kwargs.get("backend", "uia")
+            if backend == "uia":
+                return uia_tree
+            if backend == "jab":
+                return jab_tree
+            return None
+
+        be = MagicMock()
+        be.get_element_tree.side_effect = get_tree_side_effect
+
+        java_children = [
+            (99001, "SunAwtFrame", "Eclipse", (100, 100, 800, 400)),
+        ]
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=java_children):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        assert tree is not None
+        # The pane node should now have JAB children attached
+        pane = tree.children[0]
+        jab_children = [c for c in pane.children if c.properties.get("source") == "jab"]
+        assert len(jab_children) == 2
+        assert jab_children[0].name == "Run"
+        assert jab_children[1].name == "Debug"
+
+    def test_ia2_enrichment_for_mozilla_hwnd(self):
+        """Mozilla HWND detected → IA2 subtree attached."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Firefox", x=0, y=0, w=1200, h=800,
+            children=[
+                _make_el(id="moz", role="Pane", name="", x=0, y=50, w=1200, h=750),
+            ],
+        )
+
+        ia2_child = _make_el(id="ia2_doc", role="Document", name="Web Page")
+        ia2_tree = _make_el(
+            id="ia2_root", role="Application", name="Firefox",
+            children=[ia2_child],
+        )
+
+        def get_tree_side_effect(**kwargs):
+            if kwargs.get("backend") == "ia2":
+                return ia2_tree
+            return uia_tree
+
+        be = MagicMock()
+        be.get_element_tree.side_effect = get_tree_side_effect
+
+        moz_children = [
+            (88001, "MozillaWindowClass", "Firefox", (0, 50, 1200, 750)),
+        ]
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=moz_children):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        assert tree is not None
+        moz_node = tree.children[0]
+        ia2_children = [c for c in moz_node.children if c.properties.get("source") == "ia2"]
+        assert len(ia2_children) == 1
+        assert ia2_children[0].name == "Web Page"
+
+    def test_cdp_enrichment_for_electron_hwnd(self):
+        """Chrome_RenderWidgetHostHWND → CDP elements attached."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Feishu", x=0, y=0, w=1200, h=800,
+            children=[
+                _make_el(id="chrome", role="Pane", name="", x=50, y=50, w=1100, h=700),
+            ],
+        )
+
+        cdp_nav = _make_el(id="cdp_0", role="Link", name="Messages",
+                           x=60, y=100, w=100, h=30, props={"source": "cdp"})
+
+        be = MagicMock()
+        be.get_element_tree.return_value = uia_tree
+
+        electron_children = [
+            (77001, "Chrome_RenderWidgetHostHWND", "", (50, 50, 1100, 700)),
+        ]
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=electron_children), \
+             patch("naturo.cascade._try_cdp_for_hwnd", return_value=[cdp_nav]):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3, pid=9999)
+
+        assert tree is not None
+        chrome_node = tree.children[0]
+        cdp_children = [c for c in chrome_node.children if c.properties.get("source") == "cdp"]
+        assert len(cdp_children) == 1
+        assert cdp_children[0].name == "Messages"
+
+    def test_uia_class_skipped_in_enrichment(self):
+        """Regular Win32 classes (mapped to UIA) are skipped — UIA tree already covers them."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Notepad", x=0, y=0, w=800, h=600,
+            children=[_make_el(id="edit", role="Edit", name="", x=0, y=30, w=800, h=570)],
+        )
+
+        be = MagicMock()
+        be.get_element_tree.return_value = uia_tree
+
+        # Regular Edit class → should be "uia" → skipped in enrichment
+        win32_children = [
+            (55001, "Edit", "", (0, 30, 800, 570)),
+        ]
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=win32_children):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        assert tree is not None
+        # Only one child (the UIA Edit), nothing added
+        assert len(tree.children) == 1
+
+    def test_stats_include_all_providers(self):
+        """Stats should report UIA + win32_scan + any enrichment backends."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Test", x=0, y=0, w=1000, h=600,
+            children=[_make_el(id="pane", role="Pane", x=100, y=100, w=800, h=400)],
+        )
+
+        jab_tree = _make_el(
+            id="jab_root", role="Panel", name="Java",
+            children=[_make_el(id="jc1", role="PushButton", name="OK")],
+        )
+
+        def get_tree_side_effect(**kwargs):
+            if kwargs.get("backend") == "jab":
+                return jab_tree
+            return uia_tree
+
+        be = MagicMock()
+        be.get_element_tree.side_effect = get_tree_side_effect
+
+        java_children = [(99001, "SunAwtFrame", "Java App", (100, 100, 800, 400))]
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=java_children):
+            tree, stats = build_hybrid_tree(be, hwnd=12345, depth=3)
+
+        provider_names = [p.name for p in stats.providers]
+        assert "uia" in provider_names
+        assert "win32_scan" in provider_names
+        assert "jab" in provider_names
+
+
+# ── Hybrid tree: run_cascade with backend="hybrid" ──────────────────────────
+
+
+class TestRunCascadeHybrid:
+    def test_hybrid_backend_routes_to_build_hybrid_tree(self):
+        """backend_name='hybrid' should call build_hybrid_tree."""
+        uia_tree = _make_el(
+            id="root", role="Window", name="Test", w=800, h=600,
+            children=[_make_el(id="btn", role="Button", name="OK")],
+        )
+
+        be = MagicMock()
+        be.get_element_tree.return_value = uia_tree
+        be._resolve_hwnd.return_value = 12345
+
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=[]):
+            result = run_cascade(be, backend_name="hybrid")
+
+        assert result.tree is not None
+        assert result.primary_provider == "hybrid"
+        assert result.tree.properties.get("source") == "uia"
+
+    def test_hybrid_uses_provided_hwnd(self):
+        """When hwnd is provided, hybrid mode uses it directly."""
+        uia_tree = _make_el(id="root", role="Window", w=800, h=600)
+        be = MagicMock()
+        be.get_element_tree.return_value = uia_tree
+
+        with patch("naturo.cascade._get_hwnd_children_with_class", return_value=[]):
+            result = run_cascade(be, backend_name="hybrid", hwnd=99999)
+
+        assert result.tree is not None
+        # Should NOT have called _resolve_hwnd since hwnd was provided
+        be._resolve_hwnd.assert_not_called()
+
+    def test_hybrid_returns_error_on_hwnd_resolution_failure(self):
+        """When HWND resolution fails, returns error stats."""
+        be = MagicMock()
+        be._resolve_hwnd.side_effect = Exception("No window found")
+
+        result = run_cascade(be, backend_name="hybrid", app="nonexistent")
+
+        assert result.tree is None
+        assert result.primary_provider == "hybrid"
+        assert any(p.status == "error" for p in result.stats.providers)

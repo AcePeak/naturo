@@ -10,7 +10,7 @@ import functools
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Set, TypeVar
+from typing import Any, Callable, TypeVar
 
 from naturo.errors import ErrorCode, NaturoError
 

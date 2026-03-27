@@ -98,7 +98,6 @@ def snapshot_sessions(json_output: bool) -> None:
     Example:
         naturo snapshot sessions
     """
-    from pathlib import Path
     base = DEFAULT_STORAGE_ROOT
     sessions = []
     if base.exists():
@@ -155,8 +154,6 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
     # Determine which sessions to clean
     if session == "all":
         # Clean every session
-        from pathlib import Path
-        import shutil
         base = DEFAULT_STORAGE_ROOT
         if not base.exists():
             if json_output:

@@ -15,7 +15,7 @@ from naturo.backends.base import (
     MonitorInfo,
     CaptureResult,
 )
-from naturo.bridge import NaturoCore, NaturoCoreError, populate_hierarchy
+from naturo.bridge import NaturoCore, populate_hierarchy
 from naturo.errors import NaturoError
 from naturo.models.menu import MenuItem
 from typing import List, Optional
@@ -344,7 +344,8 @@ class WindowsBackend(Backend):
         Returns:
             CaptureResult with the output path and dimensions.
         """
-        import tempfile, os
+        import tempfile
+        import os
         core = self._ensure_core()
 
         # DLL writes BMP; use a temp file in a safe directory to avoid
@@ -401,7 +402,8 @@ class WindowsBackend(Backend):
         Returns:
             CaptureResult with the output path and dimensions.
         """
-        import tempfile, os
+        import tempfile
+        import os
         core = self._ensure_core()
         handle = hwnd if hwnd else 0
 
@@ -869,9 +871,9 @@ class WindowsBackend(Backend):
         over windows in Session 0 (the non-interactive services session).
         This prevents schtasks/remote contexts from targeting ghost windows.
 
-        Case-insensitive throughout.  Among equal scores the window whose
-        title is shortest wins (heuristic: less noise in the title ⇒ more
-        likely the "main" window).
+        Case-insensitive throughout.  Among equal scores the window with
+        the largest area wins (#440: popup menus are tiny top-level windows
+        that should not beat the main application window).
 
         Args:
             app: Application/process name to search for (case-insensitive,
@@ -962,7 +964,8 @@ class WindowsBackend(Backend):
             # Decision: pick this window if it has a higher score, or if
             # scores are equal but this window is in the console session
             # while the current best is not, or if all else is equal,
-            # prefer the shorter title (more likely the "main" window).
+            # prefer the larger window area (#440: popup menus are tiny
+            # top-level windows that should not beat the main window).
             if score > best_score:
                 best_score = score
                 best_session_bonus = in_console
@@ -972,9 +975,11 @@ class WindowsBackend(Backend):
                     # Same score but this one is in the interactive session
                     best_session_bonus = in_console
                     best_window = w
-                elif in_console == best_session_bonus and len(w.title) < len(best_window.title):
-                    # Same score and same session status — prefer shorter title
-                    best_window = w
+                elif in_console == best_session_bonus:
+                    w_area = w.width * w.height
+                    best_area = best_window.width * best_window.height
+                    if w_area > best_area:
+                        best_window = w
 
         if best_window is not None:
             # UWP/WinUI apps: the real UI tree lives under
@@ -1942,7 +1947,6 @@ class WindowsBackend(Backend):
             return False
 
         try:
-            import ctypes
             from ctypes import wintypes
             from comtypes import COMError  # type: ignore[import-untyped]
 
@@ -2037,7 +2041,6 @@ class WindowsBackend(Backend):
             # IUIAutomation interface
             from comtypes.gen.UIAutomationClient import (  # type: ignore[import-untyped]
                 IUIAutomation,
-                IUIAutomationElement,
                 TreeScope_Descendants,
                 UIA_NamePropertyId,
                 UIA_InvokePatternId,
@@ -2113,7 +2116,6 @@ class WindowsBackend(Backend):
         Returns:
             IUIAutomationElement if found, None otherwise.
         """
-        import ctypes
 
         if hwnd:
             root = uia.ElementFromHandle(hwnd)
@@ -2253,6 +2255,22 @@ class WindowsBackend(Backend):
         try:
             elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
                                           automation_id=automation_id, role=role)
+
+            # (#441) When called with only hwnd (no name/role/automationId),
+            # _find_uia_element returns None because there are no conditions.
+            # Fall back to finding the first Edit or Document control in the
+            # window — this restores keyboard focus to the main content area
+            # after menu interactions or other focus-stealing events.
+            if elem is None and hwnd and not name and not automation_id and not role:
+                root = uia.ElementFromHandle(hwnd)
+                for ctl_type_id in (50004, 50030):  # Edit, Document
+                    cond = uia.CreatePropertyCondition(
+                        mod.UIA_ControlTypePropertyId, ctl_type_id
+                    )
+                    elem = root.FindFirst(mod.TreeScope_Descendants, cond)
+                    if elem is not None:
+                        break
+
             if elem is None:
                 logger.debug("UIA SetFocus: element not found (name=%r, role=%r)", name, role)
                 return False
@@ -2493,7 +2511,7 @@ class WindowsBackend(Backend):
                     raise NaturoError("Failed to allocate clipboard memory")
                 ptr = kernel32.GlobalLock(h)
                 if not ptr:
-                    kernel32.GlobalFree = kernel32.GlobalFree  # noqa: keep ref
+                    kernel32.GlobalFree = kernel32.GlobalFree  # noqa: E731
                     raise NaturoError("Failed to lock clipboard memory")
                 ctypes.memmove(ptr, encoded, len(encoded))
                 kernel32.GlobalUnlock(h)
@@ -2665,7 +2683,6 @@ class WindowsBackend(Backend):
             List of MenuItem objects, or empty list if no native menu found.
         """
         import ctypes
-        from ctypes import wintypes
 
         user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
@@ -2904,14 +2921,11 @@ class WindowsBackend(Backend):
         """
         self._ensure_win32()
         import ctypes
-        from ctypes import wintypes
         from naturo.dialog import (
-            DialogInfo, DialogButton, DialogType, classify_dialog,
-            _ACCEPT_BUTTONS, _DISMISS_BUTTONS,
+            DialogInfo, DialogButton, classify_dialog,
         )
 
         user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
 
         # Get all visible top-level windows
         all_windows = self.list_windows()
@@ -2944,12 +2958,9 @@ class WindowsBackend(Backend):
                 is_dialog = True
 
             # Method 2: Check window style for DS_MODALFRAME (dialog style)
-            GWL_STYLE = -16
-            WS_DLGFRAME = 0x00400000
             GWL_EXSTYLE = -20
             WS_EX_DLGMODALFRAME = 0x00000001
 
-            style = user32.GetWindowLongW(win.handle, GWL_STYLE)
             ex_style = user32.GetWindowLongW(win.handle, GWL_EXSTYLE)
 
             if ex_style & WS_EX_DLGMODALFRAME:
@@ -2980,7 +2991,7 @@ class WindowsBackend(Backend):
                     tree, buttons, message_parts, has_edit_ref=[False],
                     edit_value_ref=[""], has_file_list_ref=[False],
                 )
-                has_edit = has_edit_ref = any(
+                has_edit = any(
                     el.role.lower() in ("edit", "combobox", "editable text")
                     for el in self._flatten_elements(tree)
                 )

@@ -231,7 +231,6 @@ def app_list(ctx, show_all, json_output):
 
     # Default: list windows (replaces backend.list_apps with filtered backend.list_windows)
     # This unifies `app list` and `window list` output formats (#274)
-    from naturo.errors import NaturoError
     try:
         # Check for interactive desktop session before listing (#373)
         from naturo.cli.interaction import _check_desktop_session
@@ -559,8 +558,7 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
     if not name and app_name:
         name = app_name
 
-    from naturo.detect import detect, DetectionResult
-    from naturo.detect.models import ProbeStatus
+    from naturo.detect import detect
 
     if scan_all:
         # (#395) Default to quick mode for --all to avoid timeouts

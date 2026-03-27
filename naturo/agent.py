@@ -12,7 +12,6 @@ while provider-specific implementations live in naturo/providers/.
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
@@ -115,7 +114,6 @@ class ToolExecutor:
 
     def _build_tool_map(self) -> dict[str, callable]:
         """Map tool names to backend methods."""
-        b = self.backend
         return {
             "click": self._click,
             "type_text": self._type_text,

@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-import platform
 import sys
-import time as _time
 
 import click
 
@@ -187,7 +185,7 @@ def _post_action_see(
             for child in el.children:
                 _print_tree(child, indent + 1)
 
-        click.echo(f"\n--- UI snapshot (updated) ---")
+        click.echo("\n--- UI snapshot (updated) ---")
         _print_tree(tree)
         click.echo(f"Snapshot: {snapshot_id}")
         return {"id": snapshot_id}
@@ -281,7 +279,6 @@ def _is_current_session_interactive() -> bool:
         WTSConnected = 1  # user connected but not yet logged in — still desktop
 
         wtsapi32 = ctypes.windll.wtsapi32  # type: ignore[attr-defined]
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
 
         buf = ctypes.wintypes.LPWSTR()
         bytes_returned = ctypes.wintypes.DWORD(0)
@@ -741,17 +738,9 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
-    # (#242) Exit code 2 for inconclusive click verification
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
@@ -882,6 +871,13 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
+                    # (#441) Also use UIA SetFocus to restore internal widget
+                    # focus (e.g. after menu open/close leaves focus on menu bar)
+                    if hasattr(backend, "focus_element_uia"):
+                        try:
+                            backend.focus_element_uia(hwnd=_target_hwnd)
+                        except Exception:
+                            pass
                     import time
                     time.sleep(0.15)  # Allow focus to settle
             except Exception as exc:
@@ -1101,6 +1097,51 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
+    # (#425) Auto-fallback to paste mode when verification detects silent
+    # failure and we used SendInput (not paste/UIA).  IME or other input
+    # interceptors may swallow keystrokes; clipboard paste bypasses them.
+    if (
+        _verification
+        and _verification.verified is False
+        and not paste_mode
+        and not _used_uia
+        and text is not None
+    ):
+        logger.debug("Type verification failed — retrying with paste mode (#425)")
+        try:
+            old_clip = ""
+            if restore:
+                try:
+                    old_clip = backend.clipboard_get()
+                except Exception:
+                    pass
+            backend.clipboard_set(text)
+            backend.hotkey("ctrl", "v")
+            if restore and old_clip:
+                import time
+                time.sleep(0.1)
+                backend.clipboard_set(old_clip)
+
+            # Re-verify after paste fallback
+            from naturo.verify import verify_type
+            _verification = verify_type(
+                backend,
+                text=text,
+                ref=on_element if on_element else None,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                before_value=_before_state.get("value") if _before_state else None,
+                before_ui_texts=_before_state.get("ui_texts") if _before_state else None,
+                paste_mode=True,
+            )
+            result_data["action"] = "pasted"
+            result_data["fallback"] = "paste_after_type_failure"
+            if _verification:
+                result_data.update(_verification.to_dict())
+        except Exception as exc:
+            logger.debug("Paste fallback also failed: %s", exc)
+
     # (#231) Exit with error if verification detected silent failure
     if _verification and _verification.verified is False:
         if json_output:
@@ -1118,19 +1159,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 click.echo(f"{k}: {v}")
             sys.exit(1)
 
-    # (#242) Exit code 2 (warning) when verification is inconclusive:
-    # success=true but verified=null means we can't confirm the action worked.
-    # Callers can distinguish 0 (confirmed), 1 (failed), 2 (inconclusive).
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
@@ -1387,17 +1418,9 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
-    # (#242) Exit code 2 for inconclusive press verification
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
@@ -1708,8 +1731,6 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         "steps": steps, "duration": duration,
     })
 
-    from_str = f"{from_label} ({fx}, {fy})" if from_label else f"({fx}, {fy})"
-    to_str = f"{to_label} ({tx}, {ty})" if to_label else f"({tx}, {ty})"
     result = {
         "action": "dragged",
         "from": [fx, fy],

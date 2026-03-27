@@ -47,6 +47,8 @@ dev = [
     "pytest>=7.0",
     "pytest-cov",
     "pytest-timeout",
+    "ruff>=0.4.0",
+    "mypy>=1.10",
 ]
 ai = [
     "anthropic>=0.20",
@@ -94,3 +96,52 @@ markers = [
     "integration: real-app integration tests (require Windows desktop + apps)",
     "desktop: tests that call native DLL/UIA APIs requiring an interactive desktop session",
 ]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",   # line length — handled by formatter, not linter
+    "E741",   # ambiguous variable name (l, O, I) — common in UI automation code
+    "W291",   # trailing whitespace
+    "W292",   # no newline at end of file
+    "W293",   # whitespace before ':'
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F841"]  # tests may import for side effects or assign for clarity
+"naturo/__init__.py" = ["F401"]  # re-exports
+
+[tool.mypy]
+python_version = "3.9"
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["tests/", "build/", "dist/"]
+# Phase 1: catch undefined names and import errors.
+# Platform-specific modules (Win32 APIs, ctypes.windll) are excluded below.
+# Tighten incrementally — see #407.
+disallow_untyped_defs = false
+check_untyped_defs = false
+warn_return_any = false
+no_implicit_optional = false
+
+[[tool.mypy.overrides]]
+module = [
+    "naturo.backends.windows",
+    "naturo.backends.linux",
+    "naturo.registry",
+    "naturo.bridge",
+    "naturo.cascade",
+    "naturo.detect.probes",
+    "naturo.detect.chain",
+    "naturo.detect.models",
+    "naturo.verify",
+    "naturo.process",
+    "naturo.mcp_server",
+    "naturo.agent",
+    "naturo.models.snapshot",
+]
+disable_error_code = ["attr-defined", "assignment", "arg-type", "union-attr", "call-arg", "override", "return-value", "valid-type"]

@@ -6,10 +6,9 @@ Supports recording start/stop, listing, and playback with speed control.
 from __future__ import annotations
 
 import json
-import os
 import time
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 

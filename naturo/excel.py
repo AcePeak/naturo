@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import platform
-from typing import Any, Optional
+from typing import Any
 
 from naturo.errors import NaturoError, ErrorCode, ErrorCategory
 

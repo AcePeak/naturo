@@ -74,7 +74,7 @@ body:
       placeholder: |
         - OS: Windows 11
         - Python: 3.14
-        - naturo version: 0.1.1
+        - naturo version: 0.3.0
         - Screen: 3840x2160, 150% DPI
     validations:
       required: true

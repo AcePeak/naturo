@@ -191,6 +191,60 @@ class TestFocusElementUia:
             )
             assert result is False
 
+    def test_hwnd_only_falls_back_to_edit_control(self, windows_backend):
+        """(#441) focus_element_uia with only hwnd finds first Edit control."""
+        mock_mod = MagicMock()
+        mock_mod.UIA_ControlTypePropertyId = 30003
+        mock_mod.TreeScope_Descendants = 4
+        mock_uia = MagicMock()
+        mock_edit_elem = MagicMock()
+        mock_root = MagicMock()
+        mock_uia.ElementFromHandle.return_value = mock_root
+        # FindFirst returns an Edit element for ctl_type_id 50004
+        mock_root.FindFirst.return_value = mock_edit_elem
+
+        with patch.object(windows_backend, "_init_comtypes_uia",
+                          return_value=(mock_uia, mock_mod)), \
+             patch.object(windows_backend, "_find_uia_element",
+                          return_value=None):
+            result = windows_backend.focus_element_uia(hwnd=12345)
+            assert result is True
+            mock_edit_elem.SetFocus.assert_called_once()
+            mock_uia.ElementFromHandle.assert_called_once_with(12345)
+
+    def test_hwnd_only_no_edit_returns_false(self, windows_backend):
+        """(#441) focus_element_uia with only hwnd returns False if no Edit/Document found."""
+        mock_mod = MagicMock()
+        mock_mod.UIA_ControlTypePropertyId = 30003
+        mock_mod.TreeScope_Descendants = 4
+        mock_uia = MagicMock()
+        mock_root = MagicMock()
+        mock_uia.ElementFromHandle.return_value = mock_root
+        mock_root.FindFirst.return_value = None  # No Edit or Document found
+
+        with patch.object(windows_backend, "_init_comtypes_uia",
+                          return_value=(mock_uia, mock_mod)), \
+             patch.object(windows_backend, "_find_uia_element",
+                          return_value=None):
+            result = windows_backend.focus_element_uia(hwnd=12345)
+            assert result is False
+
+    def test_hwnd_only_not_triggered_with_name(self, windows_backend):
+        """(#441) Edit fallback does NOT trigger when name is provided."""
+        mock_mod = MagicMock()
+        mock_uia = MagicMock()
+
+        with patch.object(windows_backend, "_init_comtypes_uia",
+                          return_value=(mock_uia, mock_mod)), \
+             patch.object(windows_backend, "_find_uia_element",
+                          return_value=None):
+            result = windows_backend.focus_element_uia(
+                hwnd=12345, name="nonexistent"
+            )
+            assert result is False
+            # Should NOT have tried ElementFromHandle fallback
+            mock_uia.ElementFromHandle.assert_not_called()
+
 
 class TestFindUiaElement:
     """Tests for _find_uia_element helper."""

@@ -13,7 +13,6 @@ Returns an InteractionMethod if the method is available, None otherwise.
 import logging
 import os
 import platform
-import sys
 from typing import List, Optional, Set
 
 from naturo.detect.models import (
@@ -346,8 +345,6 @@ def _find_cdp_debug_port(pid: int) -> Optional[int]:
         return None
 
     try:
-        import ctypes
-        from ctypes import wintypes
         import subprocess
 
         # Use wmic to get command line (most reliable on Windows)
@@ -630,7 +627,6 @@ def _find_main_window(pid: int) -> Optional[int]:
         from ctypes import wintypes
 
         user32 = ctypes.WinDLL("user32", use_last_error=True)
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
         found_hwnd = ctypes.c_void_p(0)
         frame_hwnds: list = []  # ApplicationFrameHost windows

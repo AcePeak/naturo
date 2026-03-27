@@ -418,7 +418,6 @@ def list_electron_apps() -> Dict[str, Any]:
     _require_windows()
 
     apps: List[Dict[str, Any]] = []
-    seen_exes: Dict[str, Dict[str, Any]] = {}  # exe_name -> first app entry
 
     # Get all running processes
     try:

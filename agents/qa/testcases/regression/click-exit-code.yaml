@@ -1,0 +1,33 @@
+id: TC-0002
+title: "naturo click/press returns exit code 2 on successful operations"
+status: active
+category: regression
+priority: P1
+source_issue: 426
+created: 2026-03-27
+last_run: 2026-03-27
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is available"
+
+steps:
+  - description: "Launch Calculator"
+    command: "naturo app launch calculator"
+    expect: "Calculator opens successfully"
+  - description: "Discover elements"
+    command: "naturo see --app calculator"
+    expect: "Element tree shows calculator buttons"
+  - description: "Click a button and check exit code"
+    command: "naturo click --app calculator --id <button_id>; echo \"EXIT_CODE=$?\""
+    expect: "Exit code is 0 (not 2) on successful click"
+  - description: "Press a key and check exit code"
+    command: "naturo press --app calculator Escape; echo \"EXIT_CODE=$?\""
+    expect: "Exit code is 0 (not 2) on successful press"
+  - description: "Clean up"
+    command: "naturo app quit calculator"
+    expect: "Calculator closes"
+
+pass_criteria: "Both click and press return exit code 0 on success"
+fail_action: "Update issue #426 with failure details"

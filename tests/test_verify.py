@@ -874,8 +874,8 @@ class TestGetElementValueProbing:
                 backend.get_element_value()
 
 
-class TestExitCodeWarning:
-    """Test #242: exit code 2 for inconclusive verification."""
+class TestVerificationStatusProperties:
+    """Test verification status properties (#242 / #426)."""
 
     def test_unknown_status_properties(self):
         """Unknown status should have verified=None and status=unknown."""
@@ -885,8 +885,87 @@ class TestExitCodeWarning:
         assert result.status.value == "unknown"
 
     def test_skipped_not_treated_as_unknown(self):
-        """Skipped results should not trigger exit code 2."""
+        """Skipped and unknown are distinct statuses."""
         result = skip_result("not applicable")
         assert result.verified is None
         assert result.status != VerifyStatus.UNKNOWN
         assert result.status.value == "skipped"
+
+
+class TestInconclusiveExitCode:
+    """Test #426: click/press/type must exit 0 even when verification is inconclusive.
+
+    When the action was performed but verification cannot confirm the effect
+    (UNKNOWN status), the exit code must be 0.  The ``verified: null`` field
+    in the output lets callers distinguish confirmed from inconclusive.
+    """
+
+    def _run_click_with_unknown_verification(self):
+        """Invoke click_cmd with mocked backend that yields UNKNOWN verification."""
+        from click.testing import CliRunner
+        from naturo.cli.interaction import click_cmd
+
+        mock_backend = MagicMock()
+        mock_backend.click.return_value = None
+        mock_backend.get_element_tree.return_value = {"elements": []}
+
+        unknown = VerificationResult(
+            status=VerifyStatus.UNKNOWN,
+            detail="No focus change detected after click.",
+            method="focus_check",
+        )
+
+        runner = CliRunner()
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value=None), \
+             patch("naturo.verify.capture_before_state", return_value=None), \
+             patch("naturo.verify.verify_click", return_value=unknown):
+            result = runner.invoke(click_cmd, ["--coords", "500", "300", "--json"])
+        return result
+
+    def test_click_inconclusive_exits_zero(self):
+        """click must exit 0 when verification is inconclusive (#426)."""
+        result = self._run_click_with_unknown_verification()
+        assert result.exit_code == 0, (
+            f"Expected exit code 0 for inconclusive click, got {result.exit_code}.\n"
+            f"Output: {result.output}"
+        )
+
+    def test_click_inconclusive_json_has_verified_null(self):
+        """click JSON output must include verified=null for inconclusive."""
+        import json as json_mod
+
+        result = self._run_click_with_unknown_verification()
+        parsed = json_mod.loads(result.output)
+        assert parsed["success"] is True
+        assert parsed["data"]["verified"] is None
+
+    def _run_press_with_unknown_verification(self):
+        """Invoke press with mocked backend that yields UNKNOWN verification."""
+        from click.testing import CliRunner
+        from naturo.cli.interaction import press
+
+        mock_backend = MagicMock()
+        mock_backend.press_key.return_value = None
+
+        unknown = VerificationResult(
+            status=VerifyStatus.UNKNOWN,
+            detail="No UI state change after navigation key(s) enter.",
+            method="focus_check",
+        )
+
+        runner = CliRunner()
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value=None), \
+             patch("naturo.verify.capture_before_state", return_value=None), \
+             patch("naturo.verify.verify_press", return_value=unknown):
+            result = runner.invoke(press, ["enter", "--json"])
+        return result
+
+    def test_press_inconclusive_exits_zero(self):
+        """press must exit 0 when verification is inconclusive (#426)."""
+        result = self._run_press_with_unknown_verification()
+        assert result.exit_code == 0, (
+            f"Expected exit code 0 for inconclusive press, got {result.exit_code}.\n"
+            f"Output: {result.output}"
+        )

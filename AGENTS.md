@@ -1,8 +1,35 @@
-# AGENTS.md — AI Agent Working Guide
+# AGENTS.md — Agent Registry & Working Guide
 
 ## Project: Naturo
 
 Windows desktop automation engine. C++ core + Python wrapper.
+Repo: https://github.com/AcePeak/naturo
+
+## Agent Registry & Naming Convention
+
+**Pattern**: `{Role}-{Name}`
+
+| Role | Theme | Examples |
+|------|-------|----------|
+| **Dev** | Celestial bodies | Dev-Sirius, Dev-Vega, Dev-Rigel |
+| **QA** | Earth's geography | QA-Mariana, QA-Everest, QA-Sahara |
+| **Orc** | Microscopic organisms | Orc-Mycelium, Orc-Tardigrade, Orc-Neuron |
+
+Every agent MUST know: its full name, its role, and which files to read on startup.
+
+## File Map
+
+| File | Dev reads | QA reads | Orc reads | Who maintains |
+|------|-----------|----------|-----------|---------------|
+| `AGENTS.md` | ✅ | ✅ | ✅ | Ace / Orc |
+| `agents/RULES.md` | ✅ | ✅ | ✅ | Ace |
+| `agents/VISION.md` | ✅ | ✅ | ✅ | Ace / Orc |
+| `agents/STATE.md` | ✅ | ✅ | ✅ writes | Orc (auto) |
+| `agents/dev/SOUL.md` | ✅ | | | Ace |
+| `agents/qa/SOUL.md` | | ✅ | | Ace |
+| `agents/orchestrator/dev-prompt.md` | ✅ | | | Ace / Orc |
+| `agents/orchestrator/qa-prompt.md` | | ✅ | | Ace / Orc |
+| `docs/ROADMAP.md` | ✅ | ✅ | ✅ | Dev / Orc |
 
 ## Language
 
@@ -14,7 +41,7 @@ Windows desktop automation engine. C++ core + Python wrapper.
 ## Code Style
 
 ### General
-- **Comments must be complete and meaningful.** Every public function, class, and module needs a docstring or header comment explaining what it does, its parameters, and return values.
+- Comments must be complete and meaningful. Every public function, class, and module needs a docstring or header comment explaining what it does, its parameters, and return values.
 - Avoid "TODO" without context — always include what needs to be done and why.
 - Self-documenting code is preferred, but complex logic requires inline comments.
 
@@ -53,14 +80,6 @@ Windows desktop automation engine. C++ core + Python wrapper.
 - Markers: `@pytest.mark.ui` for tests needing a desktop session
 - DLL tests: Use `@pytest.mark.skipif(platform.system() != "Windows")`
 
-## Review Roles
-
-Before merging, consider these perspectives:
-
-- **QA:** Test coverage? Edge cases? Error paths handled?
-- **PD:** Good UX? CLI intuitive? Docs clear?
-- **Security:** No credential leaks? Safe input? No privilege escalation?
-
 ## Commit Messages
 
 Use [conventional commits](https://www.conventionalcommits.org/):
@@ -77,19 +96,17 @@ chore: bump vcpkg dependencies
 
 **main is production. Never push directly to main.**
 
-### Workflow
-
 1. Create a feature branch from main:
    ```bash
    git checkout -b feat/capture-screen
    ```
-2. Develop with TDD (write tests → implement → refactor)
+2. Develop with TDD (write tests, implement, refactor)
 3. Push the branch and create a PR:
    ```bash
    git push origin feat/capture-screen
    gh pr create --title "feat: add screen capture API" --body "..."
    ```
-4. Wait for CI to pass (all 4 jobs must be green)
+4. Wait for CI to pass (all jobs must be green)
 5. Self-review with QA/PD/Security lenses
 6. Squash merge to main:
    ```bash
@@ -108,39 +125,15 @@ chore: bump vcpkg dependencies
 | `refactor/` | Code restructure | `refactor/backend-api` |
 
 ### Rules
-
 - **Squash merge only** — keeps main history clean, one commit per feature
 - **Delete branch after merge** — no stale branches
 - **CI must pass** before merge — no exceptions
 - **Commit early, commit often** on feature branches — messy is fine there
 - **main should always be deployable**
 
-## Build
-
-### C++ Core
-```bash
-cmake -B build -S core -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-ctest --test-dir build --build-config Release
-```
-
-### Python
-```bash
-pip install -e ".[dev]"
-pytest -v
-```
-
-## Test Plan
-
-All test cases are defined in `docs/TEST_PLAN.md`.
-- New features must reference which test IDs they cover
-- PRs must include the test ID coverage in the description
-- No phase is complete until all mapped test cases pass
-- Role-based acceptance tests (R-QA, R-PD, R-SEC, R-DEV) validate real-world scenarios from QA, Product, Security, and DevOps perspectives
-
 ## Feature Completeness Standard
 
-**Every feature change must ship with ALL of the following. No exceptions.**
+Every feature change must ship with ALL of the following. No exceptions.
 
 1. **Architecture** — Design doc or architecture notes updated (in `docs/`)
 2. **Implementation** — Code with complete comments and docstrings
@@ -160,6 +153,21 @@ Every observation command (capture, see, list) should persist results to `~/.nat
 ## Key Files
 
 - `core/include/naturo/exports.h` — Public C API (add new functions here)
-- `naturo/bridge.py` — Python ↔ DLL bridge (mirror new C functions)
-- `naturo/cli.py` — CLI commands (user-facing)
+- `naturo/bridge.py` — Python to DLL bridge (mirror new C functions)
+- `naturo/cli/` — CLI commands package (user-facing)
 - `.github/workflows/build.yml` — CI pipeline
+
+## Build
+
+### C++ Core
+```bash
+cmake -B build -S core -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+ctest --test-dir build --build-config Release
+```
+
+### Python
+```bash
+pip install -e ".[dev]"
+pytest -v
+```

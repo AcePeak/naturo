@@ -1,0 +1,145 @@
+name: QA Agent (Self-Hosted Desktop)
+
+on:
+  schedule:
+    - cron: '30 * * * *'   # Every hour at :30
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'QA focus area (e.g., "verify status:done issues", "E2E notepad test", "exploratory")'
+        required: false
+        default: ''
+
+jobs:
+  qa-agent:
+    name: QA Agent Round
+    runs-on: [self-hosted, windows-desktop]
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Environment self-check and auto-fix
+        shell: powershell
+        run: |
+          Write-Host "=== QA Agent Environment Check ==="
+
+          # 1. Desktop session
+          $session = query session 2>$null | Select-String "Active"
+          if ($session) {
+            Write-Host "[OK] Desktop session active"
+          } else {
+            Write-Host "[WARN] No active desktop session — UI tests may fail"
+          }
+
+          # 2. Python
+          $py = Get-Command python -ErrorAction SilentlyContinue
+          if ($py) {
+            $pyver = python --version 2>&1
+            Write-Host "[OK] Python: $pyver"
+          } else {
+            Write-Host "[FIX] Python not found, installing..."
+            winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements
+            $env:PATH += ";$env:LOCALAPPDATA\Programs\Python\Python312;$env:LOCALAPPDATA\Programs\Python\Python312\Scripts"
+          }
+
+          # 3. naturo
+          $naturoVer = naturo --version 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] naturo: $naturoVer"
+          } else {
+            Write-Host "[FIX] naturo not installed, installing..."
+            pip install -e ".[dev,windows]"
+          }
+
+          # 4. GitHub CLI
+          $gh = Get-Command gh -ErrorAction SilentlyContinue
+          if ($gh) {
+            $ghAuth = gh auth status 2>&1
+            Write-Host "[OK] GitHub CLI authenticated"
+          } else {
+            Write-Host "[FIX] gh CLI not found, installing..."
+            winget install GitHub.cli --accept-package-agreements --accept-source-agreements
+          }
+
+          # 5. Claude CLI
+          $claude = Get-Command claude -ErrorAction SilentlyContinue
+          if ($claude) {
+            Write-Host "[OK] Claude CLI found"
+          } else {
+            Write-Host "[FIX] Claude CLI not found, installing..."
+            npm install -g @anthropic-ai/claude-code
+          }
+
+          # 6. Update naturo to latest
+          git pull origin main --rebase 2>$null
+          pip install -e ".[dev,windows]" --quiet 2>$null
+
+          Write-Host "=== Environment check complete ==="
+
+      - name: Build C++ core (if needed)
+        shell: bash
+        run: |
+          if [ ! -f naturo/bin/naturo_core.dll ]; then
+            echo "Building C++ core..."
+            cmake -B build -S core -DCMAKE_BUILD_TYPE=Release
+            cmake --build build --config Release
+            mkdir -p naturo/bin
+            cp build/bin/Release/naturo_core.dll naturo/bin/ 2>/dev/null || true
+          else
+            echo "C++ core DLL already present"
+          fi
+
+      - name: Run QA Agent
+        shell: bash
+        timeout-minutes: 35
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        run: |
+          FOCUS="${{ github.event.inputs.focus }}"
+          TIMESTAMP=$(date +%Y%m%d-%H%M)
+
+          # Read the QA prompt from repo
+          QA_PROMPT=$(cat agents/orchestrator/qa-prompt.md)
+
+          # Append dynamic context
+          CONTEXT="
+          ## Session Context
+          - Timestamp: $TIMESTAMP
+          - Trigger: ${{ github.event_name }}
+          - Focus: ${FOCUS:-auto (follow standard QA workflow)}
+          - Runner: $(hostname)
+          - Desktop: $(query session 2>/dev/null | grep Active | head -1 || echo 'unknown')
+          "
+
+          echo "Starting QA Agent round at $TIMESTAMP..."
+
+          claude -p "${QA_PROMPT}${CONTEXT}" \
+            --allowedTools "Read,Bash,Glob,Grep,Agent" \
+            --max-turns 50 \
+            2>&1 | tee ".work/logs/qa-round-${TIMESTAMP}.log"
+
+          echo "QA Agent round complete."
+
+      - name: Upload QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-agent-log-${{ github.run_number }}
+          path: .work/logs/qa-round-*.log
+          retention-days: 30
+
+      - name: Commit QA status update
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "QA-Mariana"
+          git config user.email "qa-mariana@naturo.dev"
+          git add agents/qa/status.md .work/logs/ 2>/dev/null || true
+          git diff --cached --quiet || {
+            git commit -m "qa: update status after QA round [skip ci]"
+            git push origin main 2>/dev/null || true
+          }

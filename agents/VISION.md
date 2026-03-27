@@ -1,64 +1,38 @@
-# Naturo — 团队愿景
+# Naturo — Product Vision
 
-## 🎯 终极目标
-**成为 OpenClaw 生态上最好的 UI 自动化 Skill，GitHub 1K+ Star，最多用户使用。**
+## Ultimate Goal
 
-## 📈 阶段目标 & 角色演进
+**Become the best UI automation Skill in the OpenClaw ecosystem, 1K+ GitHub Stars, most-used tool.**
 
-### Stage 1: 质量关（当前 — Phase 3 完成）
-**目标**: Bug 清零，E2E 验收通过，代码可信赖
+## Stage Goals
 
-| 角色 | 职责 |
-|------|------|
-| **Dev** | 修复全部 Open bug，写回归测试 |
-| **QA** | 验证修复，做完整回归测试，E2E 验收 |
+### Stage 1: Quality Gate — COMPLETE
+**Goal**: Zero bugs, E2E acceptance passed, trustworthy code.
+**Status**: v0.3.0 released. All bugs verified. PyPI published. Repo is public.
 
-**完成标准**: bugs.md 全部 ✅ Verified，E2E 验收报告通过
+### Stage 2: AI Integration
+**Goal**: MCP Server usable, AI Agent can drive Windows applications end-to-end.
+**Completion criteria**: AI Agent can autonomously complete "open Notepad, type, save, close" full flow.
 
-### Stage 2: AI 集成（Phase 4）
-**目标**: MCP Server 可用，AI Agent 能端到端驱动 Windows 应用
+### Stage 3: Open Source Launch — PARTIALLY COMPLETE
+**Goal**: Launch impact, 200+ Stars in first week.
+**Completion criteria**: Repo public, PyPI installable, ClawHub installable, launch post published.
+**Status**: PyPI release done. Repo flipped to public. Launch post and marketing still pending.
 
-| 角色 | 职责 |
-|------|------|
-| **Core Dev** | MCP Server 实现，AI Vision pipeline |
-| **Integration Dev** | OpenClaw Skill 打磨，Agent 工作流测试 |
-| **DX Engineer**（QA 演进） | 安装体验、首次使用流畅度、错误信息可读性、文档准确性 |
+### Stage 4: Ecosystem Expansion
+**Goal**: 1K Stars, become the de facto standard.
+**Scope**: macOS/Linux backends, enterprise features, automation template library, tech blog posts, conference talks, community PR mentoring.
 
-**完成标准**: AI Agent 能自主完成"打开记事本→输入→保存→关闭"全流程
+## Key Levers for 1K Stars
 
-### Stage 3: 开源发布（Phase 5.1）
-**目标**: 首发冲击，第一周 200+ Star
+1. **"Peekaboo for Windows"** — Clear positioning leveraging an existing brand, value explained in one sentence
+2. **AI Agent Native** — MCP support is the biggest current demand, no competitor has achieved this
+3. **One great demo GIF** — Worth 1000 words of docs, README hero section must have it
+4. **Launch quality** — HN/Reddit only gives one launch opportunity, quality determines virality
+5. **Cross-platform** — Windows + macOS + Linux, one tool to unify desktop automation
 
-| 角色 | 职责 |
-|------|------|
-| **Core Dev** | PyPI 发布、standalone binary 打包、代码签名 |
-| **DocWriter** | README hero GIF、教程、对比文档 (vs PyAutoGUI/pywinauto) |
-| **Growth** | HN/Reddit/Twitter/LinkedIn 首发帖、demo 视频 |
-| **Community** | Issue 响应 (<24h)、PR review、Discussion 运营 |
+## Principles
 
-**完成标准**: 仓库 public，PyPI 可装，ClawHub 可装，首发帖发出
-
-### Stage 4: 生态扩展（Phase 5-9）
-**目标**: 1K Star，成为事实标准
-
-| 角色 | 职责 |
-|------|------|
-| **Core Dev** | macOS/Linux 后端、企业特性 |
-| **Ecosystem Dev** | 自动化模板库（Excel、SAP、企业应用） |
-| **Growth** | 技术博客、会议演讲、awesome-list 收录 |
-| **Community** | 社区 PR mentor、贡献者培育 |
-| **Outreach** | Peekaboo/OpenClaw 官方合作、跨社区推广 |
-
-## 🔑 1K Star 关键杠杆
-
-1. **"Peekaboo for Windows"** — 借势明确定位，一句话说清价值
-2. **AI Agent 原生** — MCP 支持是当下最大需求，没有竞品做到
-3. **一个好 demo GIF** — 顶 1000 字文档，README 首屏必须有
-4. **首发质量** — HN/Reddit 只有一次首发机会，质量决定传播
-5. **全平台** — Windows + macOS + Linux，一个工具统一桌面自动化
-
-## 📌 原则
-- 每个阶段的角色服务于该阶段目标，不提前也不滞后
-- 角色可以由同一个 agent 承担多个，也可以拆分
-- 质量永远优先于速度
-- 不做没有用户价值的功能
+- Quality always takes priority over speed
+- Never build features without user value
+- Each stage's work serves that stage's goals — not earlier, not later

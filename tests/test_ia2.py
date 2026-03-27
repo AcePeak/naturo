@@ -358,6 +358,7 @@ class TestCMakeIA2:
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-only")
+@pytest.mark.desktop
 class TestIA2LiveIntegration:
     """Live IA2 tests that require a Windows desktop session.
 

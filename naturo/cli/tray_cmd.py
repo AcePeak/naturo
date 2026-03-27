@@ -16,7 +16,6 @@ Examples:
 from __future__ import annotations
 
 import json as _json
-import sys
 
 import click as _click
 

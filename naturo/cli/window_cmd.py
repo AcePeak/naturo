@@ -11,7 +11,8 @@ from typing import Optional
 
 import click
 
-from naturo.cli.error_helpers import emit_error, emit_exception_error, json_error, json_error_from_exception
+from naturo.backends.base import get_backend as _get_backend_impl
+from naturo.cli.error_helpers import json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 
@@ -27,9 +28,6 @@ def _safe_echo(text: str, **kwargs) -> None:
     except UnicodeEncodeError:
         encoded = text.encode(sys.stdout.encoding or "utf-8", errors="replace")
         click.echo(encoded.decode(sys.stdout.encoding or "utf-8", errors="replace"), **kwargs)
-
-
-from naturo.backends.base import get_backend as _get_backend_impl
 
 
 def _get_backend():
@@ -374,7 +372,7 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
-    from naturo.errors import NaturoError, InvalidInputError
+    from naturo.errors import NaturoError
 
     if width is None or height is None:
         msg = "Missing required option: --width and --height are required"
