@@ -92,13 +92,18 @@ You are scheduled to run every hour. The next session starts whether you're done
 - **Never leave an issue half-done.** Finish current issue before starting the next.
 
 ### Before coding
-1. Assign yourself:
+1. **Always start from latest main:**
+   ```bash
+   git checkout main && git pull origin main
+   ```
+2. Assign yourself:
    ```bash
    gh issue edit N --add-assignee @me --add-label "status:in-progress"
    gh issue comment N --body "**[Dev-Sirius]** Starting work on this issue."
    ```
-2. Read the issue carefully. Understand the root cause, not just the symptom.
-3. Check related code. Read the files you'll need to change BEFORE changing them.
+3. Create branch from updated main: `git checkout -b fix/issue-N-short-desc`
+4. Read the issue carefully. Understand the root cause, not just the symptom.
+5. Check related code. Read the files you'll need to change BEFORE changing them.
 
 ### Coding
 1. Create a feature branch: `git checkout -b fix/issue-N-short-desc` (or `feat/` for features)
