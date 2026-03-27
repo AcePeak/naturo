@@ -146,7 +146,13 @@ Pick 1-2 apps for E2E testing. Rotate across rounds: Notepad → Calculator → 
    naturo capture --app <app> -o /tmp/qa-step-N.png
    ```
    Read the screenshot. Does it show what you expected? If not → bug.
-5. **Cleanup**: Close the app: `naturo app quit <app>`
+5. **Cleanup**: `naturo app quit <app>` — **ALWAYS close the app when done. Never leave apps running.**
+
+**CRITICAL: App lifecycle management**
+- Only have 1 test app open at a time. Close it before launching the next.
+- Before starting Phase 2, check what's already open: `naturo list apps`
+- If previous QA round left apps open, close them first: `naturo app quit <app>`
+- Never open more than 2 apps simultaneously unless specifically testing multi-app scenarios.
 
 ### Professional QA Checklist (check ALL every round):
 - Does `naturo see` return all visible elements?
@@ -179,7 +185,7 @@ Then spend 10-15 minutes genuinely BEING that user:
 - **AI Agent Builder**: Start MCP server (`naturo mcp start`), send tool calls as JSON, parse responses. Does it work end-to-end? Error responses clear?
 - **Enterprise RPA Dev**: Design a 10-step workflow for a real app. Run it. Does it survive step 5 without breaking? What happens when a window blocks the flow?
 - **Chinese User**: `naturo see --app 记事本`, `naturo type "你好世界"`, `naturo capture -o C:\Users\用户\test.png`. Anything break with Chinese?
-- **Power User**: Open Notepad, Calculator, Explorer, Browser, Paint, Settings, CMD, and Task Manager simultaneously. Run `naturo list apps`. All found? `naturo see --app notepad` — only notepad elements? Click an element — hits the right window?
+- **Power User**: Do NOT open 8 apps yourself. Instead, use whatever apps are ALREADY open on the desktop. Run `naturo list apps` to discover them. Test `--app` filter precision against the real desktop state. If fewer than 3 apps are open, launch 2-3 (max) for testing, then close them after.
 - **Accessibility User**: Unplug mouse (mentally). Can you complete see → find → click → type using only keyboard shortcuts and element IDs? Are element names screen-reader friendly?
 - **Scripter**: Write a 5-line script: launch app → see → find element → click → verify. Run it. Exit codes correct? Errors parseable?
 - **Skeptical Evaluator**: Install pywinauto too. Try automating the same Notepad task with both. Which is easier? What's naturo missing? Write your comparison as an issue suggestion.
