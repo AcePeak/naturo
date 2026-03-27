@@ -1098,6 +1098,51 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
+    # (#425) Auto-fallback to paste mode when verification detects silent
+    # failure and we used SendInput (not paste/UIA).  IME or other input
+    # interceptors may swallow keystrokes; clipboard paste bypasses them.
+    if (
+        _verification
+        and _verification.verified is False
+        and not paste_mode
+        and not _used_uia
+        and text is not None
+    ):
+        logger.debug("Type verification failed — retrying with paste mode (#425)")
+        try:
+            old_clip = ""
+            if restore:
+                try:
+                    old_clip = backend.clipboard_get()
+                except Exception:
+                    pass
+            backend.clipboard_set(text)
+            backend.hotkey("ctrl", "v")
+            if restore and old_clip:
+                import time
+                time.sleep(0.1)
+                backend.clipboard_set(old_clip)
+
+            # Re-verify after paste fallback
+            from naturo.verify import verify_type
+            _verification = verify_type(
+                backend,
+                text=text,
+                ref=on_element if on_element else None,
+                app=app,
+                window_title=window_title,
+                hwnd=hwnd,
+                before_value=_before_state.get("value") if _before_state else None,
+                before_ui_texts=_before_state.get("ui_texts") if _before_state else None,
+                paste_mode=True,
+            )
+            result_data["action"] = "pasted"
+            result_data["fallback"] = "paste_after_type_failure"
+            if _verification:
+                result_data.update(_verification.to_dict())
+        except Exception as exc:
+            logger.debug("Paste fallback also failed: %s", exc)
+
     # (#231) Exit with error if verification detected silent failure
     if _verification and _verification.verified is False:
         if json_output:
