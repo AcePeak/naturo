@@ -88,16 +88,17 @@ class TestMultiWindowChaos:
             )
 
             # Each should have valid fields
-            pids = set()
+            hwnds = set()
             for w in notepad_windows:
                 assert w.pid > 0
                 assert w.hwnd > 0
                 assert isinstance(w.title, str)
                 assert "notepad" in w.process_name.lower()
-                pids.add(w.pid)
+                hwnds.add(w.hwnd)
 
-            # Should have distinct PIDs for each process
-            assert len(pids) >= 3
+            # Each window must have a distinct HWND (even if PIDs are shared
+            # due to Windows 11 Notepad tabbed single-process architecture)
+            assert len(hwnds) >= 3
         finally:
             for p in procs:
                 _kill_process(p)
