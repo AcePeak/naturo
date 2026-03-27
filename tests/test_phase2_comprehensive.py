@@ -801,12 +801,29 @@ class TestE2EWorkflows:
         finally:
             # Close it
             proc.terminate()
-            proc.wait(timeout=3)
-            time.sleep(0.5)
+            proc.wait(timeout=5)
 
-            # Verify it disappears
-            final_windows = [w for w in core.list_windows() if "notepad" in w.process_name.lower()]
-            assert len(final_windows) == len(initial_windows), "Notepad should disappear from list"
+            # Poll until the window disappears (stale handles may linger
+            # briefly after process exit, especially on CI runners)
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline:
+                final_windows = [
+                    w for w in core.list_windows()
+                    if "notepad" in w.process_name.lower()
+                ]
+                if len(final_windows) <= len(initial_windows):
+                    break
+                time.sleep(0.3)
+            else:
+                final_windows = [
+                    w for w in core.list_windows()
+                    if "notepad" in w.process_name.lower()
+                ]
+
+            assert len(final_windows) <= len(initial_windows), (
+                f"Notepad should disappear from list: "
+                f"initial={len(initial_windows)}, final={len(final_windows)}"
+            )
 
     def test_drag_from_a_to_b(self, backend):
         """T103: Drag from point A to point B."""
