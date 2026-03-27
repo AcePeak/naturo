@@ -1,25 +1,30 @@
 # Dev Status
-Last updated: 2026-03-27T21:30:00Z
-Session: Fix P0 --pid bug (#471), fix P1 flaky CI test (#472)
+Last updated: 2026-03-27T22:30:00Z
+Session: Fix CI timeout, fix #474 (type --app alias), fix #478 (error format)
 
 ## This Session
-- Issue #471 (P0 bug) — --pid flag ignored: PR #475 created. Root cause: `_resolve_hwnd()` had no pid parameter, always returned foreground window. Added pid to _resolve_hwnd, get_element_tree, and all CLI call sites. Added --pid to type/press commands. 9 new tests.
-- Issue #472 (P1 bug) — flaky test_window_lifecycle: PR #476 created. Replaced fixed 1.5s sleep with 10s polling loop, added process-name fallback for PID mismatch, track by HWND for disappearance.
-- PRs #466 and #473 — attempted auto-merge but blocked by Windows DLL test timeout (cancelled after 25min on 20min timeout). All other CI checks green.
-- Tests: 1902 passed, 489 skipped, 0 failed
+- CI timeout fix: PR #477 created. Increased Windows DLL test job timeout from 20 to 35 minutes. All 4 previous PRs (#466, #473, #475, #476) were blocked by this.
+- Issue #474 (P1 bug) — type --app 记事本 silent failure: PR #479 created. Root cause: `find_process()` didn't use alias map for Chinese names. Fixed by adding `_LAUNCH_ALIASES` resolution to `find_process()`. 8 new tests.
+- Issue #478 (P2 bug) — error message format inconsistent: PR #480 created. Fixed 12 error paths in core.py and wait_cmd.py to use `Error:` prefix on stderr. 8 new tests.
+- Enabled auto-merge attempts on all PRs — blocked by CI checks still in progress.
+- Tests: 1902 passed, 305 skipped, 0 failed
 
 ## Open PRs by Me
-- #466 — fix: stable hash-based element refs (fixes #456) — CI green except Windows DLL timeout
-- #473 — fix: localized --app alias cleanup + tests (fixes #469) — CI green except Windows DLL timeout
-- #475 — fix: --pid flag passthrough (fixes #471) — CI running
-- #476 — fix: flaky test_window_lifecycle (fixes #472) — CI running
+- #466 — fix: stable hash-based element refs (fixes #456) — blocked by CI timeout (needs #477 first)
+- #473 — fix: localized --app alias cleanup (fixes #469) — blocked by CI timeout
+- #475 — fix: --pid flag passthrough (fixes #471) — blocked by CI timeout
+- #476 — fix: flaky test_window_lifecycle (fixes #472) — blocked by CI timeout
+- #477 — fix: CI Windows timeout 20→35min — CI in progress (Windows test running)
+- #479 — fix: find_process alias resolution (fixes #474) — CI in progress
+- #480 — fix: error message format (fixes #478) — CI in progress
 
 ## Current State
-- Earliest open milestone: v0.3.1 (#471, #472 — both now status:done with PRs)
-- CI: green on main; PRs blocked by Windows DLL test timeout (infrastructure issue, not code)
-- Key open issues: #21 (P0, Naturobot engine), #361 (P1, stable app/window ID), #312 (P1, Win32+UIA hybrid), #413 (P1, README comparison table)
+- Earliest open milestone: v0.3.1 — ALL issues now status:done with PRs
+- CI: blocked by Windows DLL timeout; PR #477 fixes this (waiting for CI)
+- v0.3.2 next: #361 (stable app/window ID system)
 
 ## Next Session Should
-- Check if PRs #466, #473, #475, #476 merged — if still blocked by Windows DLL timeout, investigate timeout increase or mark job as non-required
-- Pick next P1 issue: #361 (stable app/window ID) or #413 (README comparison table)
-- #21 (P0) is a large architectural issue — may need to break into sub-issues
+- Check if PR #477 (CI timeout) passed and merged — this unblocks all other PRs
+- Enable auto-merge on all PRs once CI is green
+- If PRs merged, start v0.3.2 work: #361 (stable app/window ID) — large feature
+- If PRs still blocked, investigate alternative CI fixes (mark Windows DLL as non-required?)
