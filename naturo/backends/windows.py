@@ -849,6 +849,20 @@ class WindowsBackend(Backend):
         except Exception:
             return -1
 
+    @staticmethod
+    def _get_foreground_hwnd() -> int:
+        """Get the currently focused foreground window handle.
+
+        Returns:
+            HWND of the foreground window, or 0 on failure.
+        """
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            return hwnd or 0
+        except Exception:
+            return 0
+
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
                       hwnd: Optional[int] = None) -> int:
@@ -870,6 +884,11 @@ class WindowsBackend(Backend):
         scores, windows in the active console session are strongly preferred
         over windows in Session 0 (the non-interactive services session).
         This prevents schtasks/remote contexts from targeting ghost windows.
+
+        Foreground preference (#449): When multiple windows match with equal
+        scores and session status, the foreground (focused) window is
+        preferred.  This ensures consecutive commands (``type`` then
+        ``capture``) target the same window deterministically.
 
         Case-insensitive throughout.  Among equal scores the window with
         the largest area wins (#440: popup menus are tiny top-level windows
@@ -903,11 +922,15 @@ class WindowsBackend(Backend):
         # Get console session for session-aware ranking (#230)
         console_session = self._get_console_session_id()
 
+        # Get foreground HWND for deterministic tie-breaking (#449)
+        fg_hwnd = self._get_foreground_hwnd()
+
         # --app → match process name first; --window-title → match title only
         match_process = app is not None
 
         best_score = 0
         best_session_bonus = False  # True if best_window is in console session
+        best_is_foreground = False  # True if best_window is the foreground window
         best_window = None
 
         for w in windows:
@@ -961,25 +984,38 @@ class WindowsBackend(Backend):
                 w_session = self._get_process_session_id(w.pid)
                 in_console = (w_session == console_session)
 
+            # (#449) Check if this window is the foreground window
+            is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
+
             # Decision: pick this window if it has a higher score, or if
             # scores are equal but this window is in the console session
-            # while the current best is not, or if all else is equal,
+            # while the current best is not.  Among equal score + session,
+            # prefer the foreground window (#449: consecutive commands
+            # should target the same window deterministically).  Finally,
             # prefer the larger window area (#440: popup menus are tiny
             # top-level windows that should not beat the main window).
             if score > best_score:
                 best_score = score
                 best_session_bonus = in_console
+                best_is_foreground = is_foreground
                 best_window = w
             elif score == best_score and best_window is not None:
                 if in_console and not best_session_bonus:
                     # Same score but this one is in the interactive session
                     best_session_bonus = in_console
+                    best_is_foreground = is_foreground
                     best_window = w
                 elif in_console == best_session_bonus:
-                    w_area = w.width * w.height
-                    best_area = best_window.width * best_window.height
-                    if w_area > best_area:
+                    # (#449) Prefer the foreground window for deterministic
+                    # resolution when multiple windows match equally.
+                    if is_foreground and not best_is_foreground:
+                        best_is_foreground = True
                         best_window = w
+                    elif is_foreground == best_is_foreground:
+                        w_area = w.width * w.height
+                        best_area = best_window.width * best_window.height
+                        if w_area > best_area:
+                            best_window = w
 
         if best_window is not None:
             # UWP/WinUI apps: the real UI tree lives under

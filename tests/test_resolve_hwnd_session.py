@@ -60,6 +60,7 @@ class TestResolveHwndSessionAwareness:
         backend._get_process_session_id = MagicMock(
             side_effect=lambda pid: 0 if pid == 100 else 1
         )
+        backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
         result = backend._resolve_hwnd(app="notepad")
@@ -89,6 +90,7 @@ class TestResolveHwndSessionAwareness:
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
         backend._get_console_session_id = MagicMock(return_value=-1)
         backend._get_process_session_id = MagicMock(return_value=-1)
+        backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
         result = backend._resolve_hwnd(app="notepad")
@@ -118,6 +120,7 @@ class TestResolveHwndSessionAwareness:
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
         backend._get_console_session_id = MagicMock(return_value=1)
         backend._get_process_session_id = MagicMock(return_value=1)
+        backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
         result = backend._resolve_hwnd(app="notepad")
@@ -150,10 +153,109 @@ class TestResolveHwndSessionAwareness:
         backend._get_process_session_id = MagicMock(
             side_effect=lambda pid: 1 if pid == 100 else 0
         )
+        backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
         result = backend._resolve_hwnd(app="notepad")
         # PID 200 has exact process name match (score 4),
         # PID 100 only has title substring (score 1).
         # Higher score wins regardless of session.
+        assert result == 2002
+
+
+class TestResolveHwndForegroundPreference:
+    """Verify _resolve_hwnd prefers the foreground window when scores are equal (#449)."""
+
+    def test_foreground_window_preferred_among_equal_matches(self):
+        """When multiple windows match identically, prefer the foreground one."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+
+        windows = [
+            WindowInfo(
+                handle=1001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=2002, title="Document - Notepad",
+                process_name="Notepad.exe", pid=200,
+                x=100, y=100, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        backend.list_windows = MagicMock(return_value=windows)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+        backend._get_console_session_id = MagicMock(return_value=1)
+        backend._get_process_session_id = MagicMock(return_value=1)
+        # Window 2002 is the foreground window
+        backend._get_foreground_hwnd = MagicMock(return_value=2002)
+        backend._APP_ALIASES = BackendClass._APP_ALIASES
+
+        result = backend._resolve_hwnd(app="notepad")
+        # Both match on process name (score 4), same session, same area.
+        # Foreground window (2002) should win.
+        assert result == 2002
+
+    def test_foreground_window_preferred_even_when_listed_first(self):
+        """Foreground preference works regardless of iteration order."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+
+        windows = [
+            WindowInfo(
+                handle=2002, title="Document - Notepad",
+                process_name="Notepad.exe", pid=200,
+                x=100, y=100, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=1001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        backend.list_windows = MagicMock(return_value=windows)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+        backend._get_console_session_id = MagicMock(return_value=1)
+        backend._get_process_session_id = MagicMock(return_value=1)
+        # Window 1001 is the foreground window (listed second)
+        backend._get_foreground_hwnd = MagicMock(return_value=1001)
+        backend._APP_ALIASES = BackendClass._APP_ALIASES
+
+        result = backend._resolve_hwnd(app="notepad")
+        # Foreground window 1001 should win even though it's listed second
+        assert result == 1001
+
+    def test_larger_area_still_wins_when_no_foreground(self):
+        """When no foreground match, area tie-breaker still works."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+
+        windows = [
+            WindowInfo(
+                handle=1001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=2002, title="Document - Notepad",
+                process_name="Notepad.exe", pid=200,
+                x=100, y=100, width=1200, height=800,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        backend.list_windows = MagicMock(return_value=windows)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+        backend._get_console_session_id = MagicMock(return_value=1)
+        backend._get_process_session_id = MagicMock(return_value=1)
+        # Foreground is some unrelated window
+        backend._get_foreground_hwnd = MagicMock(return_value=9999)
+        backend._APP_ALIASES = BackendClass._APP_ALIASES
+
+        result = backend._resolve_hwnd(app="notepad")
+        # Neither is foreground, so larger area (2002) wins
         assert result == 2002
