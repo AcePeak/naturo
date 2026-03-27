@@ -572,9 +572,9 @@ def permissions(json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto", "hybrid"]),
     default="auto",
-    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX)",
+    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
         cascade, fill_gaps, show_stats, coverage_target, visible_only, json_output, backend):
@@ -590,6 +590,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     applications (Firefox, Thunderbird, LibreOffice). Use --backend auto to
     try UIA first, then IA2, then MSAA automatically.
 
+    Use --backend hybrid for per-node backend selection — each node in the
+    tree picks the optimal backend based on its Win32 class (Electron→CDP,
+    Java→JAB, Mozilla→IA2, default→UIA).
+
     Use --cascade to progressively try multiple providers (UIA → CDP → AI vision).
     This maximizes coverage for Electron apps (Feishu, Slack, VS Code, etc.)
     that render content in a WebView.
@@ -600,6 +604,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
         naturo see --app feishu --cascade --stats      # Show provider breakdown
         naturo see --app feishu --backend auto         # Try all A11y backends
+        naturo see --app feishu --backend hybrid       # Per-node backend selection
     """
     # BUG-028: Validate --depth range (before platform check — input validation first)
     if depth < 1 or depth > 50:
@@ -623,7 +628,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
-        if cascade or backend == "auto":
+        if cascade or backend == "auto" or backend == "hybrid":
             # (#275) Auto-capture screenshot for cascade mode so AI vision
             # fallback can trigger when UIA tree is too shallow.
             cascade_screenshot = path
@@ -1019,9 +1024,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto", "hybrid"]),
     default="auto",
-    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX)",
+    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
 @click.option("--provider", "ai_provider",
               type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
