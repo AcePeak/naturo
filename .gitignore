@@ -47,3 +47,8 @@ naturo/bin/*.dll
 naturo/bin/*.so
 naturo/bin/*.dylib
 naturo-screen-*.png
+
+# Working directory debug artifacts
+.work/*.png
+.work/*.log
+.work/*.mjs
