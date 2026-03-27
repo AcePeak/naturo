@@ -55,6 +55,64 @@ class RoutingResult:
         }
 
 
+def _find_pid_by_window_title(name: str) -> int | None:
+    """Find a process PID by matching its window title.
+
+    Used as a fallback when ``find_process`` (process-name match) fails.
+    This handles localized app names (e.g. Chinese "计算器" for Calculator)
+    that are window titles, not process names (#430).
+
+    Args:
+        name: Window title to search for (case-insensitive, substring match).
+
+    Returns:
+        Process ID of the first matching window, or None.
+    """
+    import platform
+
+    if platform.system() != "Windows":
+        return None
+
+    try:
+        import ctypes
+        import ctypes.wintypes
+
+        name_lower = name.lower()
+        result_pid: int | None = None
+
+        # Callback type for EnumWindows
+        WNDENUMPROC = ctypes.WINFUNCTYPE(
+            ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM
+        )
+
+        def _enum_cb(hwnd: int, _lparam: int) -> bool:
+            nonlocal result_pid
+            if not ctypes.windll.user32.IsWindowVisible(hwnd):
+                return True
+            length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+            if length == 0:
+                return True
+            buf = ctypes.create_unicode_buffer(length + 1)
+            ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
+            title_lower = buf.value.lower()
+            if name_lower == title_lower or name_lower in title_lower:
+                pid = ctypes.wintypes.DWORD()
+                ctypes.windll.user32.GetWindowThreadProcessId(
+                    hwnd, ctypes.byref(pid)
+                )
+                if pid.value:
+                    result_pid = pid.value
+                    return False  # Stop enumeration
+            return True
+
+        ctypes.windll.user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+        return result_pid
+
+    except Exception as exc:
+        logger.debug("Window title PID lookup failed: %s", exc)
+        return None
+
+
 def resolve_method(
     app: Optional[str] = None,
     pid: Optional[int] = None,
@@ -103,12 +161,24 @@ def resolve_method(
                 resolved_name = proc.name
                 logger.debug("Resolved app %r → PID %d (%s)", app, proc.pid, proc.name)
             else:
-                logger.warning("App %r not found among running processes", app)
-                return RoutingResult(
-                    app_name=app,
-                    method="vision",
-                    source="auto",
-                )
+                # (#430) Process name didn't match — try window title.
+                # Chinese/localized app names (e.g. "计算器", "记事本") are
+                # window titles, not process names.  Fall back to window
+                # enumeration before giving up.
+                title_pid = _find_pid_by_window_title(app)
+                if title_pid is not None:
+                    resolved_pid = title_pid
+                    resolved_name = app
+                    logger.debug(
+                        "Resolved app %r via window title → PID %d", app, title_pid
+                    )
+                else:
+                    logger.warning("App %r not found among running processes", app)
+                    return RoutingResult(
+                        app_name=app,
+                        method="vision",
+                        source="auto",
+                    )
         except Exception as exc:
             logger.debug("Process resolution failed: %s", exc)
             return RoutingResult(
