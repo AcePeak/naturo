@@ -738,17 +738,9 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
-    # (#242) Exit code 2 for inconclusive click verification
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
@@ -1115,19 +1107,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 click.echo(f"{k}: {v}")
             sys.exit(1)
 
-    # (#242) Exit code 2 (warning) when verification is inconclusive:
-    # success=true but verified=null means we can't confirm the action worked.
-    # Callers can distinguish 0 (confirmed), 1 (failed), 2 (inconclusive).
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
@@ -1384,17 +1366,9 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, window_
         if snapshot_data and json_output:
             result_data["snapshot"] = snapshot_data
 
-    # (#242) Exit code 2 for inconclusive press verification
-    if _verification and _verification.verified is None and _verification.status.value == "unknown":
-        if json_output:
-            click.echo(json.dumps({"success": True, "data": result_data}))
-        else:
-            for k, v in result_data.items():
-                if k in _VERIFICATION_KEYS:
-                    continue
-                click.echo(f"{k}: {v}")
-        sys.exit(2)
-
+    # (#426) Inconclusive verification (verified=null) no longer causes
+    # exit code 2.  The action was performed — we just can't confirm the
+    # UI effect.  Callers can inspect ``verified`` in JSON output.
     _json_ok(result_data, json_output)
 
 
