@@ -30,9 +30,21 @@ gh pr list --author @me --state all --limit 5
 # Any PR reviews or comments I need to address?
 gh pr list --author @me --state open --json number,title,reviewDecision --jq '.[] | "#\(.number) \(.title) [\(.reviewDecision)]"'
 ```
-**If you have an open PR with review comments → address those FIRST before starting new work.**
-**If you have an open PR that's approved but not merged → it should auto-merge when CI passes. Check CI status.**
-**If you have an open PR stuck (CI failing) → fix the CI issue in that branch, push again.**
+**Handle open PRs BEFORE starting new work (in this priority order):**
+1. **PR has review comments** → address the feedback, push fixes to the same branch
+2. **PR CI is failing** → check the error, fix it in that branch, push again
+3. **PR CI passed but not merged** → enable auto-merge: `gh pr merge <number> --auto --squash`
+4. **PR has merge conflicts** → rebase onto latest main and force-push:
+   ```bash
+   git checkout <branch> && git fetch origin main && git rebase origin/main && git push --force-with-lease
+   ```
+5. **PR is clean and mergeable but auto-merge not set** → `gh pr merge <number> --auto --squash`
+
+**Also check ALL open PRs in the repo** (not just yours) — if any PR is stuck with CI green but not merged, help it:
+```bash
+gh pr list --state open --json number,title,author,mergeable,autoMergeRequest --jq '.[] | "#\(.number) [\(.author.login)] auto-merge:\(.autoMergeRequest != null) \(.title)"'
+```
+For any PR where auto-merge is not enabled and CI is green → `gh pr merge <number> --auto --squash`
 
 ### 0c. CI health check
 ```bash
