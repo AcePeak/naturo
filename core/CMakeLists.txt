@@ -32,6 +32,7 @@ if(WIN32)
         oleaut32
         psapi
         advapi32
+        imm32
     )
 endif()
 

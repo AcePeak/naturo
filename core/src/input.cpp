@@ -22,10 +22,13 @@
 
 #include "naturo/exports.h"
 #include <windows.h>
+#include <imm.h>
 #include <cstring>
 #include <cctype>
 #include <string>
 #include <vector>
+
+#pragma comment(lib, "imm32.lib")
 
 /* ── Helpers ──────────────────────────────────────── */
 
@@ -211,27 +214,76 @@ extern "C" NATURO_API int naturo_mouse_scroll(int delta, int horizontal) {
     return send_inputs(&inp, 1);
 }
 
+/* ── IME suspend / restore (#425) ────────────────── */
+
+/**
+ * @brief Suspend IME on the foreground window to prevent composition
+ *        interference during SendInput typing.
+ *
+ * Chinese/Japanese/Korean IMEs intercept SendInput keystrokes and route
+ * them through composition, causing silent failures or garbled text.
+ * Disassociating the IME context prevents this.
+ *
+ * @param[out] out_hwnd  Receives the foreground window handle.
+ * @return Previous IME context handle (pass to restore_ime), or NULL.
+ */
+static HIMC suspend_ime(HWND& out_hwnd) {
+    out_hwnd = GetForegroundWindow();
+    if (!out_hwnd) return NULL;
+
+    /* Cancel any in-progress composition before disassociating. */
+    HIMC hIMC = ImmGetContext(out_hwnd);
+    if (hIMC) {
+        ImmNotifyIME(hIMC, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
+        ImmReleaseContext(out_hwnd, hIMC);
+    }
+
+    /* Disassociate IME — window receives raw input until restored. */
+    return ImmAssociateContext(out_hwnd, NULL);
+}
+
+/**
+ * @brief Restore a previously suspended IME context.
+ * @param hwnd  Window handle from suspend_ime.
+ * @param prev  Previous context handle from suspend_ime.
+ */
+static void restore_ime(HWND hwnd, HIMC prev) {
+    if (hwnd && prev) {
+        ImmAssociateContext(hwnd, prev);
+    }
+}
+
 /* ── naturo_key_type ──────────────────────────────── */
 
 extern "C" NATURO_API int naturo_key_type(const char* text, int delay_ms) {
     if (!text) return -1;
 
+    /* Suspend IME to prevent composition interference (#425). */
+    HWND ime_hwnd = NULL;
+    HIMC saved_imc = suspend_ime(ime_hwnd);
+
     // Convert UTF-8 to UTF-16 for Unicode SendInput
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
-    if (wlen <= 0) return -1;
+    if (wlen <= 0) {
+        restore_ime(ime_hwnd, saved_imc);
+        return -1;
+    }
 
     std::vector<wchar_t> wtext((size_t)wlen);
     MultiByteToWideChar(CP_UTF8, 0, text, -1, wtext.data(), wlen);
 
+    int result = 0;
     for (int i = 0; i < wlen - 1; ++i) {  // -1 to skip null terminator
         INPUT seq[2] = {
             make_unicode_input((WORD)wtext[i], 0),
             make_unicode_input((WORD)wtext[i], KEYEVENTF_KEYUP),
         };
-        if (send_inputs(seq, 2) != 0) return -2;
+        if (send_inputs(seq, 2) != 0) { result = -2; break; }
         if (delay_ms > 0) Sleep((DWORD)delay_ms);
     }
-    return 0;
+
+    restore_ime(ime_hwnd, saved_imc);
+    return result;
 }
 
 /* ── naturo_key_press ─────────────────────────────── */
@@ -428,13 +480,21 @@ static WORD vk_to_scancode(WORD vk) {
 extern "C" NATURO_API int naturo_phys_key_type(const char* text, int delay_ms) {
     if (!text) return -1;
 
+    /* Suspend IME to prevent composition interference (#425). */
+    HWND ime_hwnd = NULL;
+    HIMC saved_imc = suspend_ime(ime_hwnd);
+
     // Convert UTF-8 to UTF-16
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
-    if (wlen <= 0) return -1;
+    if (wlen <= 0) {
+        restore_ime(ime_hwnd, saved_imc);
+        return -1;
+    }
 
     std::vector<wchar_t> wtext((size_t)wlen);
     MultiByteToWideChar(CP_UTF8, 0, text, -1, wtext.data(), wlen);
 
+    int result = 0;
     for (int i = 0; i < wlen - 1; ++i) {
         wchar_t ch = wtext[i];
 
@@ -446,7 +506,7 @@ extern "C" NATURO_API int naturo_phys_key_type(const char* text, int delay_ms) {
                 make_unicode_input((WORD)ch, 0),
                 make_unicode_input((WORD)ch, KEYEVENTF_KEYUP),
             };
-            if (send_inputs(seq, 2) != 0) return -2;
+            if (send_inputs(seq, 2) != 0) { result = -2; break; }
         } else {
             BYTE vk = LOBYTE(vk_result);
             BYTE shift_state = HIBYTE(vk_result);
@@ -458,7 +518,7 @@ extern "C" NATURO_API int naturo_phys_key_type(const char* text, int delay_ms) {
                     make_unicode_input((WORD)ch, 0),
                     make_unicode_input((WORD)ch, KEYEVENTF_KEYUP),
                 };
-                if (send_inputs(seq, 2) != 0) return -2;
+                if (send_inputs(seq, 2) != 0) { result = -2; break; }
             } else {
                 std::vector<INPUT> seq;
 
@@ -488,13 +548,15 @@ extern "C" NATURO_API int naturo_phys_key_type(const char* text, int delay_ms) {
                     seq.push_back(make_scancode_input(0x2A, KEYEVENTF_KEYUP));
                 }
 
-                if (send_inputs(seq.data(), (UINT)seq.size()) != 0) return -2;
+                if (send_inputs(seq.data(), (UINT)seq.size()) != 0) { result = -2; break; }
             }
         }
 
         if (delay_ms > 0) Sleep((DWORD)delay_ms);
     }
-    return 0;
+
+    restore_ime(ime_hwnd, saved_imc);
+    return result;
 }
 
 /* ── naturo_phys_key_press ────────────────────────── */
