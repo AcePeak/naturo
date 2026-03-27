@@ -475,6 +475,82 @@ class TestNativeCoreInit:
         probes_mod._native_core = None
 
 
+class TestProbeUiaUwpFallback:
+    """Tests for probe_uia UWP/AFH child window fallback (#455).
+
+    When UIA probe targets an ApplicationFrameHost window (UWP apps),
+    the native DLL may return None for the AFH top-level HWND.  The
+    probe should enumerate AFH child windows and retry each one.
+    """
+
+    def test_uia_probe_tries_afh_children_when_main_fails(self):
+        """probe_uia should try AFH child HWNDs when main HWND tree is None."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        if platform.system() == "Windows":
+            pytest.skip("This test mocks Windows APIs; run on non-Windows")
+
+        mock_core = MagicMock()
+        # Main HWND returns None, child HWND 0xABCD returns a tree
+        mock_core.get_element_tree.side_effect = lambda hwnd, depth: (
+            None if hwnd == 12345 else MagicMock()
+        )
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core):
+            with patch("naturo.detect.probes._find_main_window", return_value=12345):
+                with patch("naturo.detect.probes._find_afh_content_children", return_value=[0xABCD]):
+                    with patch("platform.system", return_value="Windows"):
+                        result = probes_mod.probe_uia(pid=1234, exe="notepad.exe")
+
+        assert result is not None
+        assert result.method == InteractionMethodType.UIA
+        assert result.status == ProbeStatus.AVAILABLE
+        # Should have tried main HWND first, then child
+        assert mock_core.get_element_tree.call_count == 2
+
+    def test_uia_probe_skips_afh_fallback_when_main_succeeds(self):
+        """probe_uia should not enumerate AFH children when main HWND succeeds."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        mock_core = MagicMock()
+        mock_core.get_element_tree.return_value = MagicMock()  # Main succeeds
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core):
+            with patch("naturo.detect.probes._find_main_window", return_value=12345):
+                with patch("naturo.detect.probes._find_afh_content_children") as mock_afh:
+                    with patch("platform.system", return_value="Windows"):
+                        result = probes_mod.probe_uia(pid=1234, exe="notepad.exe")
+
+        assert result is not None
+        mock_afh.assert_not_called()
+
+    def test_uia_probe_returns_none_when_all_afh_children_fail(self):
+        """probe_uia should fall through when all AFH children also return None."""
+        from unittest.mock import patch, MagicMock
+        import naturo.detect.probes as probes_mod
+
+        mock_core = MagicMock()
+        mock_core.get_element_tree.return_value = None  # All HWNDs fail
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core):
+            with patch("naturo.detect.probes._find_main_window", return_value=12345):
+                with patch("naturo.detect.probes._find_afh_content_children", return_value=[0xA, 0xB]):
+                    with patch("platform.system", return_value="Windows"):
+                        result = probes_mod.probe_uia(pid=1234, exe="notepad.exe")
+
+        # Should return None (both main and children failed), falling through to comtypes
+        assert result is None
+
+    def test_find_afh_content_children_returns_empty_on_non_windows(self):
+        """_find_afh_content_children should return [] on non-Windows."""
+        from naturo.detect.probes import _find_afh_content_children
+        if platform.system() == "Windows":
+            pytest.skip("Only tests non-Windows behavior")
+        assert _find_afh_content_children(12345) == []
+
+
 class TestFindMainWindowUwp:
     """Tests for _find_main_window UWP/ApplicationFrameHost support (#249)."""
 
