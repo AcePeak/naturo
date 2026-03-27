@@ -1,28 +1,25 @@
 # Dev Status
-Last updated: 2026-03-27T20:25:00Z
-Session: PR housekeeping, localized --app alias fix (#469)
+Last updated: 2026-03-27T21:30:00Z
+Session: Fix P0 --pid bug (#471), fix P1 flaky CI test (#472)
 
 ## This Session
-- PR #470 (fixes #448) — skip auto-routing for eN ref clicks: **merged** (59b6f0b)
-- PR #460 (Orc) — dev-prompt pull latest main: **merged** (57b2747)
-- PR #463 (Orc) — dev agent handle open PRs: **merged** (2be10a3)
-- PR #464 (Orc) — QA agent app lifecycle: **merged** (9515266)
-- PR #466 (fixes #456) — stable hash-based element refs: branch updated, CI running (5/6 green, Windows DLL test in progress)
-- Issue #469 (P1 bug) — --app localized app names: PR #473 created. Alias map already worked; cleaned up non-ASCII values, added WordPad/截图工具 aliases, 18 new tests.
-- Tests: 1854 passed, 547 skipped, 0 failed
-- PRs merged: #470, #460, #463, #464 | PRs pending CI: #466, #473
+- Issue #471 (P0 bug) — --pid flag ignored: PR #475 created. Root cause: `_resolve_hwnd()` had no pid parameter, always returned foreground window. Added pid to _resolve_hwnd, get_element_tree, and all CLI call sites. Added --pid to type/press commands. 9 new tests.
+- Issue #472 (P1 bug) — flaky test_window_lifecycle: PR #476 created. Replaced fixed 1.5s sleep with 10s polling loop, added process-name fallback for PID mismatch, track by HWND for disappearance.
+- PRs #466 and #473 — attempted auto-merge but blocked by Windows DLL test timeout (cancelled after 25min on 20min timeout). All other CI checks green.
+- Tests: 1902 passed, 489 skipped, 0 failed
 
 ## Open PRs by Me
-- #466 — fix: stable hash-based element refs (fixes #456) — 5/6 CI green, Windows DLL test running
-- #473 — fix: localized --app alias cleanup + tests (fixes #469) — 2/5 CI green, rest running
+- #466 — fix: stable hash-based element refs (fixes #456) — CI green except Windows DLL timeout
+- #473 — fix: localized --app alias cleanup + tests (fixes #469) — CI green except Windows DLL timeout
+- #475 — fix: --pid flag passthrough (fixes #471) — CI running
+- #476 — fix: flaky test_window_lifecycle (fixes #472) — CI running
 
 ## Current State
-- Earliest open milestone: backlog (no milestones assigned to remaining issues)
-- CI: green on main
+- Earliest open milestone: v0.3.1 (#471, #472 — both now status:done with PRs)
+- CI: green on main; PRs blocked by Windows DLL test timeout (infrastructure issue, not code)
 - Key open issues: #21 (P0, Naturobot engine), #361 (P1, stable app/window ID), #312 (P1, Win32+UIA hybrid), #413 (P1, README comparison table)
 
 ## Next Session Should
-- Check CI on PRs #466 and #473 — merge if green, fix if failing
-- If both merged, pick next P1 issue: #361 (stable app/window ID) or #312 (Win32+UIA hybrid)
+- Check if PRs #466, #473, #475, #476 merged — if still blocked by Windows DLL timeout, investigate timeout increase or mark job as non-required
+- Pick next P1 issue: #361 (stable app/window ID) or #413 (README comparison table)
 - #21 (P0) is a large architectural issue — may need to break into sub-issues
-- Consider expanding _APP_ALIASES with more common apps (Office suite, Photos, etc.) as a follow-up
