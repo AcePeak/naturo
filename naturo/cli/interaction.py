@@ -4,10 +4,112 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from typing import Optional
 
 import click
 
 logger = logging.getLogger(__name__)
+
+
+def _find_element_by_text_fallback(
+    backend,
+    text: str,
+    app: Optional[str] = None,
+    hwnd: Optional[int] = None,
+    window_title: Optional[str] = None,
+):
+    """Fallback element search when C++ exact UIA Name match fails.
+
+    Searches the target app's element tree for elements whose name matches
+    the query text.  This handles localized apps where the UIA Name differs
+    from the visible text rendered on screen (e.g. Calculator on Chinese
+    Windows has UIA Name "清除" but displays "C").  In such apps, the visual
+    label is often a child TextBlock element with the abbreviated text as
+    its UIA Name.
+
+    Matching priority:
+        1. Actionable element (Button, etc.) with exact name match
+        2. Any element with exact name match (e.g. child TextBlock)
+        3. Actionable element with substring name match
+
+    Args:
+        backend: The platform backend instance.
+        text: The text to search for.
+        app: Application name filter.
+        hwnd: Direct window handle.
+        window_title: Window title pattern.
+
+    Returns:
+        (x, y) center coordinates of the matched element, or None.
+    """
+    if not hasattr(backend, "get_element_tree"):
+        return None
+
+    try:
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, depth=5,
+        )
+    except Exception as exc:
+        logger.debug("Fallback tree search failed to get tree: %s", exc)
+        return None
+
+    if tree is None:
+        return None
+
+    from naturo.search import search_elements
+
+    matches = search_elements(
+        tree, text, actionable_only=False, max_results=50,
+    )
+    if not matches:
+        return None
+
+    query_lower = text.lower()
+
+    # Actionable control types (buttons, edits, etc.) that can be clicked.
+    _ACTIONABLE_ROLES = {
+        "button", "edit", "checkbox", "radiobutton", "combobox",
+        "listitem", "menuitem", "tab", "link", "hyperlink",
+        "slider", "spinbutton", "scrollbar", "treeitem",
+    }
+
+    exact_actionable = []
+    exact_any = []
+    substring_actionable = []
+
+    for m in matches:
+        el = m.element
+        # Skip zero-bounds (offscreen/unrendered) elements
+        if el.width == 0 and el.height == 0:
+            continue
+        name_lower = (el.name or "").lower()
+        is_actionable = el.role.lower() in _ACTIONABLE_ROLES
+        if name_lower == query_lower:
+            if is_actionable:
+                exact_actionable.append(el)
+            else:
+                exact_any.append(el)
+        elif is_actionable:
+            substring_actionable.append(el)
+
+    best = None
+    if exact_actionable:
+        best = exact_actionable[0]
+    elif exact_any:
+        best = exact_any[0]
+    elif substring_actionable:
+        best = substring_actionable[0]
+
+    if best is None:
+        return None
+
+    cx = best.x + best.width // 2
+    cy = best.y + best.height // 2
+    logger.info(
+        "Fallback tree search matched %r → [%s] %r at (%d, %d)",
+        text, best.role, best.name, cx, cy,
+    )
+    return (cx, cy)
 
 
 # ── --see flag (post-action UI snapshot) ─────────────────────────────────────
@@ -654,8 +756,23 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 )
                 return
         elif target_id:
-            backend.click(element_id=target_id, button=button, double=double,
-                          input_mode=input_mode)
+            try:
+                backend.click(element_id=target_id, button=button, double=double,
+                              input_mode=input_mode)
+            except Exception:
+                # (#442) Fallback: search the app's element tree when C++
+                # exact UIA Name match fails.  Handles localized apps where
+                # UIA Name differs from visible text (e.g. Calculator "C"
+                # button has UIA Name "清除").
+                fallback = _find_element_by_text_fallback(
+                    backend, target_id,
+                    app=app, hwnd=hwnd, window_title=window_title,
+                )
+                if fallback is None:
+                    raise
+                x, y = fallback
+                backend.click(x=x, y=y, button=button, double=double,
+                              input_mode=input_mode)
         else:
             # (#248) UWP apps: SendInput clicks don't reach content inside
             # ApplicationFrameHost.  Try UIA InvokePattern first for
