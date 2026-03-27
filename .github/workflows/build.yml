@@ -221,11 +221,22 @@ jobs:
             --timeout=30 --timeout-method=thread \
             -x --tb=short \
             --junit-xml=pytest-results.xml \
+            --cov=naturo --cov-report=xml --cov-report=term-missing \
             -p no:cacheprovider \
             2>&1 | tee pytest-output.txt
           echo "EXIT_CODE=$?" >> pytest-output.txt
         env:
           PYTEST_TIMEOUT: "30"
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: windows
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test artifacts
         if: always()
@@ -235,6 +246,7 @@ jobs:
           path: |
             pytest-output.txt
             pytest-results.xml
+            coverage.xml
           retention-days: 7
           if-no-files-found: ignore
 
@@ -260,7 +272,17 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run tests (skip Windows/desktop tests)
-        run: pytest -v -m "not ui and not integration and not desktop and not windows"
+        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: ubuntu
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-python-macos:
     name: Python Tests (macOS)
@@ -277,7 +299,17 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run tests (skip Windows/desktop tests)
-        run: pytest -v -m "not ui and not integration and not desktop and not windows"
+        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: macos
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   notify:
     name: Feishu Notification
