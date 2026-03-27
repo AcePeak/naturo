@@ -641,13 +641,6 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         on_text = ref_alias
     backend = _get_backend(json_output)
 
-    # --ref is a hidden deprecated alias for --on (#381)
-    if ref_alias and not on_text:
-        on_text = ref_alias
-
-    # Auto-routing: detect best interaction method for target app
-    route_info = _auto_route(app, pid, method, json_output)
-
     button = "right" if right else "left"
 
     # Resolve target coordinates or element_id
@@ -666,16 +659,30 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         _json_err("Specify --coords X Y, --id, or --on TEXT", json_output, code="INVALID_INPUT")
         return
 
-    # BUG-074: Resolve eN refs from the most recent `see` snapshot
+    # (#448) Resolve eN refs BEFORE auto-routing so we can skip the
+    # expensive framework detection chain when we already have cached
+    # coordinates from a recent snapshot.
     import re as _re
     _zero_bounds_element = None  # Track element for Invoke fallback (#137)
+    _ref_resolved = False  # True when eN ref resolved to coordinates
+    _snapshot_hwnd = None  # HWND from snapshot metadata for window focus
     if target_id and _re.fullmatch(r"e\d+", target_id):
         from naturo.snapshot import get_snapshot_manager
         mgr = get_snapshot_manager()
         resolved = mgr.resolve_ref(target_id)
         if resolved:
             x, y = resolved[0], resolved[1]
+            _snap_id = resolved[2]
             target_id = None  # use coordinates instead
+            _ref_resolved = True
+            # (#448) Retrieve the snapshot's stored HWND so we can focus
+            # the target window without re-enumerating processes.
+            try:
+                snapshot = mgr.get_snapshot(_snap_id)
+                if snapshot.window_handle:
+                    _snapshot_hwnd = snapshot.window_handle
+            except Exception:
+                pass
         else:
             # resolve_ref returns None for both "not found" and "zero-bounds".
             # Check resolve_ref_element to distinguish: if the element exists
@@ -701,11 +708,31 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 )
                 return
 
+    # (#448) Skip auto-routing when eN ref already resolved to cached
+    # coordinates — the framework detection chain is unnecessary since
+    # we'll use coordinate-based SendInput.
+    if _ref_resolved:
+        route_info = {}
+    else:
+        route_info = _auto_route(app, pid, method, json_output)
+
     # (#226) When UIA routing is active and --app is specified, ensure
     # the target window has focus via UIA before sending mouse input.
+    # (#448) When eN ref resolved, use the snapshot's stored HWND for
+    # focus instead of re-enumerating processes.
     _uia_method = route_info.get("method") == "uia" if route_info else False
     _is_uwp = False  # Track UWP apps for UIA click fallback (#248)
-    if _uia_method and (app or hwnd) and hasattr(backend, "focus_element_uia"):
+    if _ref_resolved and _snapshot_hwnd:
+        # Fast path: use cached HWND from snapshot for window focus
+        try:
+            import ctypes
+            SW_RESTORE = 9
+            if hasattr(backend, "_is_iconic") and backend._is_iconic(_snapshot_hwnd):
+                ctypes.windll.user32.ShowWindow(_snapshot_hwnd, SW_RESTORE)
+            ctypes.windll.user32.SetForegroundWindow(_snapshot_hwnd)
+        except Exception as exc:
+            logger.debug("Snapshot HWND focus failed (hwnd=%s): %s", _snapshot_hwnd, exc)
+    elif _uia_method and (app or hwnd) and hasattr(backend, "focus_element_uia"):
         try:
             _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
             if _target_hwnd:
