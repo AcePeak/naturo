@@ -2252,6 +2252,22 @@ class WindowsBackend(Backend):
         try:
             elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
                                           automation_id=automation_id, role=role)
+
+            # (#441) When called with only hwnd (no name/role/automationId),
+            # _find_uia_element returns None because there are no conditions.
+            # Fall back to finding the first Edit or Document control in the
+            # window — this restores keyboard focus to the main content area
+            # after menu interactions or other focus-stealing events.
+            if elem is None and hwnd and not name and not automation_id and not role:
+                root = uia.ElementFromHandle(hwnd)
+                for ctl_type_id in (50004, 50030):  # Edit, Document
+                    cond = uia.CreatePropertyCondition(
+                        mod.UIA_ControlTypePropertyId, ctl_type_id
+                    )
+                    elem = root.FindFirst(mod.TreeScope_Descendants, cond)
+                    if elem is not None:
+                        break
+
             if elem is None:
                 logger.debug("UIA SetFocus: element not found (name=%r, role=%r)", name, role)
                 return False

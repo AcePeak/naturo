@@ -871,6 +871,13 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
+                    # (#441) Also use UIA SetFocus to restore internal widget
+                    # focus (e.g. after menu open/close leaves focus on menu bar)
+                    if hasattr(backend, "focus_element_uia"):
+                        try:
+                            backend.focus_element_uia(hwnd=_target_hwnd)
+                        except Exception:
+                            pass
                     import time
                     time.sleep(0.15)  # Allow focus to settle
             except Exception as exc:
