@@ -30,11 +30,11 @@
 
 | Platform | Requirement |
 |----------|-------------|
-| **Windows** | Windows 10+ (officially supported) |
+| **Windows** | Windows 10+ (officially supported) | ✅ Full support
 | | Windows 7 SP1+ (best-effort, basic features only) |
 | **Python** | 3.9+ |
-| **macOS** | macOS 13+ with [Peekaboo](https://github.com/steipete/Peekaboo) installed |
-| **Linux** | Not yet supported |
+| **macOS** | ⚠️ Partial (requires Peekaboo) | macOS 13+ with [Peekaboo](https://github.com/steipete/Peekaboo) installed |
+| **Linux** | Not yet supported | 🚧 Coming soon
 
 > **Why Windows 10+?** UIAutomation v2/v3 APIs (caching, virtualized controls) require Windows 8+. Windows 7 has been out of support since January 2020. Most enterprise customers have migrated to Windows 10/11.
 
