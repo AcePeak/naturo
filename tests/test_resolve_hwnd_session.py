@@ -67,7 +67,7 @@ class TestResolveHwndSessionAwareness:
         assert result == 2002
 
     def test_falls_back_when_session_unknown(self):
-        """When console session is unknown, use title-length heuristic."""
+        """When console session is unknown, prefer larger window area (#440)."""
         BackendClass = _make_backend()
         backend = MagicMock(spec=BackendClass)
 
@@ -81,7 +81,7 @@ class TestResolveHwndSessionAwareness:
             WindowInfo(
                 handle=2002, title="Notepad",
                 process_name="Notepad.exe", pid=200,
-                x=100, y=100, width=800, height=600,
+                x=100, y=100, width=1200, height=800,
                 is_visible=True, is_minimized=False,
             ),
         ]
@@ -92,8 +92,37 @@ class TestResolveHwndSessionAwareness:
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
         result = backend._resolve_hwnd(app="notepad")
-        # Both match equally on process name; PID 200 has shorter title
+        # Both match equally on process name; PID 200 has larger area
         assert result == 2002
+
+    def test_popup_menu_not_selected_over_main_window(self):
+        """(#440) Popup menu (tiny window) should not beat main window."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+
+        windows = [
+            WindowInfo(
+                handle=3001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=300,
+                x=100, y=100, width=1536, height=534,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=3002, title="X",
+                process_name="Notepad.exe", pid=300,
+                x=500, y=200, width=38, height=46,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        backend.list_windows = MagicMock(return_value=windows)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+        backend._get_console_session_id = MagicMock(return_value=1)
+        backend._get_process_session_id = MagicMock(return_value=1)
+        backend._APP_ALIASES = BackendClass._APP_ALIASES
+
+        result = backend._resolve_hwnd(app="notepad")
+        # Main window (3001) has much larger area than popup (3002)
+        assert result == 3001
 
     def test_higher_score_wins_over_session(self):
         """A higher match score should win even if in Session 0."""

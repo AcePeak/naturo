@@ -871,9 +871,9 @@ class WindowsBackend(Backend):
         over windows in Session 0 (the non-interactive services session).
         This prevents schtasks/remote contexts from targeting ghost windows.
 
-        Case-insensitive throughout.  Among equal scores the window whose
-        title is shortest wins (heuristic: less noise in the title ⇒ more
-        likely the "main" window).
+        Case-insensitive throughout.  Among equal scores the window with
+        the largest area wins (#440: popup menus are tiny top-level windows
+        that should not beat the main application window).
 
         Args:
             app: Application/process name to search for (case-insensitive,
@@ -964,7 +964,8 @@ class WindowsBackend(Backend):
             # Decision: pick this window if it has a higher score, or if
             # scores are equal but this window is in the console session
             # while the current best is not, or if all else is equal,
-            # prefer the shorter title (more likely the "main" window).
+            # prefer the larger window area (#440: popup menus are tiny
+            # top-level windows that should not beat the main window).
             if score > best_score:
                 best_score = score
                 best_session_bonus = in_console
@@ -974,9 +975,11 @@ class WindowsBackend(Backend):
                     # Same score but this one is in the interactive session
                     best_session_bonus = in_console
                     best_window = w
-                elif in_console == best_session_bonus and len(w.title) < len(best_window.title):
-                    # Same score and same session status — prefer shorter title
-                    best_window = w
+                elif in_console == best_session_bonus:
+                    w_area = w.width * w.height
+                    best_area = best_window.width * best_window.height
+                    if w_area > best_area:
+                        best_window = w
 
         if best_window is not None:
             # UWP/WinUI apps: the real UI tree lives under
