@@ -80,21 +80,14 @@ naturo press ctrl+s
 # Find element
 naturo find "Edit:filename"
 
-# Window management (deprecated — prefer `naturo app ...` equivalents)
-naturo window focus --app "Notepad"      # → naturo app switch "Notepad"
-naturo window close --app "Chrome" --force
-naturo window minimize --hwnd 12345      # → naturo app hide "Notepad"
-naturo window move --app "Notepad" --x 0 --y 0
-naturo window resize --app "Notepad" --width 1920 --height 1080
-naturo window set-bounds --app "Chrome" --x 0 --y 0 --width 960 --height 1080
-
-# App control
+# App management
 naturo app launch "notepad"
-naturo app quit "notepad"
+naturo app switch "notepad"
 naturo app quit "chrome" --force
-naturo app switch "chrome"
 naturo app hide "notepad"
 naturo app unhide "notepad"
+naturo app inspect "notepad"             # Probe frameworks (UIA, CDP, MSAA...)
+naturo app relaunch "notepad"
 
 # Dialog handling
 naturo dialog detect                       # Detect active dialogs
