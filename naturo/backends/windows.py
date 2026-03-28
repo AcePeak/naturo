@@ -18,7 +18,7 @@ from naturo.backends.base import (
 from naturo.bridge import NaturoCore, populate_hierarchy
 from naturo.errors import NaturoError
 from naturo.models.menu import MenuItem
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -880,6 +880,36 @@ class WindowsBackend(Backend):
         except Exception:
             return 0
 
+    @staticmethod
+    def _get_window_class_name(hwnd: int) -> str:
+        """Get the window class name for a given HWND.
+
+        Used to identify special windows like Program Manager ("Progman")
+        which should be deprioritized during app resolution (#524).
+
+        Args:
+            hwnd: Window handle.
+
+        Returns:
+            Window class name, or empty string on failure.
+        """
+        try:
+            import ctypes
+            buf = ctypes.create_unicode_buffer(256)
+            ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+            return buf.value
+        except Exception:
+            return ""
+
+    # Window classes that represent the desktop shell rather than real
+    # application windows.  explorer.exe hosts both the desktop and File
+    # Explorer; when --app explorer is used, these should be deprioritized
+    # so actual File Explorer windows are preferred (#524).
+    _DESKTOP_SHELL_CLASSES: ClassVar[frozenset[str]] = frozenset({
+        "Progman",   # Program Manager (desktop icons)
+        "WorkerW",   # Desktop worker window (wallpaper layer)
+    })
+
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
                       hwnd: Optional[int] = None,
@@ -1025,6 +1055,17 @@ class WindowsBackend(Backend):
 
             if score == 0:
                 continue
+
+            # (#524) Desktop shell deprioritization: explorer.exe hosts both
+            # File Explorer and the desktop (Program Manager, class "Progman").
+            # When --app explorer is used, users expect File Explorer, not the
+            # desktop.  Detect shell windows by class name and reduce their
+            # score to 1, so any real File Explorer window (score 3-4) wins.
+            # If no File Explorer windows exist, the desktop still matches.
+            if match_process:
+                wclass = self._get_window_class_name(w.handle)
+                if wclass in self._DESKTOP_SHELL_CLASSES:
+                    score = 1  # demote desktop shell windows
 
             # Session-aware ranking (#230): prefer windows in the active
             # console session over windows in Session 0 (services session).
