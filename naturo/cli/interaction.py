@@ -1241,6 +1241,19 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                   json_output, code="INVALID_INPUT")
         return
 
+    # Interpret C-style escape sequences (\t, \n, \r, \\) in text so that
+    # shell-provided literal backslash+letter sequences become real whitespace
+    # characters.  File-sourced text (--file) already contains real characters,
+    # so skip processing for that path.
+    if text and not file_path:
+        text = (
+            text.replace("\\\\", "\x00")   # placeholder for literal backslash
+            .replace("\\t", "\t")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\x00", "\\")          # restore literal backslashes
+        )
+
     if wpm < 1:
         _json_err(f"--wpm must be >= 1, got {wpm}", json_output, code="INVALID_INPUT")
         return
