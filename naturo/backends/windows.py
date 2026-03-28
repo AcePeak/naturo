@@ -1948,6 +1948,16 @@ class WindowsBackend(Backend):
                 if result is not None:
                     break
 
+        # (#521) NameProperty fallback: if the C++ core found the element but
+        # no UIA pattern returned a value, use the element's Name property.
+        # This handles Text/Static elements (e.g. Calculator display) where
+        # the value is embedded in the UIA Name (e.g. "显示为 579").
+        if isinstance(result, dict) and result.get("value") is None:
+            elem_name = result.get("name")
+            if elem_name:
+                result["value"] = elem_name
+                result["pattern"] = "NameProperty"
+
         # (#229) Fallback: if UIA lookup returned None but we have snapshot
         # data from the ref, return the snapshot metadata so the caller gets
         # at least role/name/bounds instead of ELEMENT_NOT_FOUND.

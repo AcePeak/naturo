@@ -287,11 +287,12 @@ class TestGetCLI:
             hwnd=None,
         )
 
-    def test_get_null_value(self):
-        """Element with null value (no pattern support) shows proper message."""
+    def test_get_null_value_no_name(self):
+        """Element with null value and empty name shows 'no readable pattern'."""
         result_dict = _mock_backend_result()
         result_dict["value"] = None
         result_dict["pattern"] = None
+        result_dict["name"] = ""
         mock = _make_mock_backend(result=result_dict)
         runner = CliRunner()
 
@@ -512,6 +513,182 @@ class TestRoleAliasFallback:
         assert result is None
         # Only one call — no alias fallback because automation_id is set
         assert mock_core.get_element_value.call_count == 1
+
+
+class TestNamePropertyFallback:
+    """Tests for NameProperty fallback when no UIA pattern returns a value (#521)."""
+
+    def test_name_fallback_when_value_is_null(self):
+        """When C++ core returns value=null but name is set, use name as value."""
+        from unittest.mock import patch, MagicMock
+
+        mock_core = MagicMock()
+        mock_core.get_element_value.return_value = {
+            "value": None,
+            "pattern": None,
+            "role": "Text",
+            "name": "\u663e\u793a\u4e3a 579",
+            "automation_id": "CalculatorResults",
+            "x": 10, "y": 20, "width": 200, "height": 40,
+        }
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(
+                automation_id="CalculatorResults", hwnd=12345,
+            )
+
+        assert result is not None
+        assert result["value"] == "\u663e\u793a\u4e3a 579"
+        assert result["pattern"] == "NameProperty"
+
+    def test_no_name_fallback_when_value_is_set(self):
+        """When C++ core returns a real value, name fallback does not override."""
+        from unittest.mock import patch, MagicMock
+
+        mock_core = MagicMock()
+        mock_core.get_element_value.return_value = {
+            "value": "42",
+            "pattern": "ValuePattern",
+            "role": "Edit",
+            "name": "Amount",
+            "automation_id": "txtAmount",
+            "x": 10, "y": 20, "width": 200, "height": 30,
+        }
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(
+                automation_id="txtAmount", hwnd=12345,
+            )
+
+        assert result["value"] == "42"
+        assert result["pattern"] == "ValuePattern"
+
+    def test_no_name_fallback_when_name_is_empty(self):
+        """When both value and name are empty, no fallback occurs."""
+        from unittest.mock import patch, MagicMock
+
+        mock_core = MagicMock()
+        mock_core.get_element_value.return_value = {
+            "value": None,
+            "pattern": None,
+            "role": "Pane",
+            "name": "",
+            "automation_id": "",
+            "x": 0, "y": 0, "width": 100, "height": 100,
+        }
+
+        from naturo.backends.windows import WindowsBackend
+        backend = WindowsBackend.__new__(WindowsBackend)
+        backend._core = mock_core
+
+        with patch.object(backend, '_ensure_core', return_value=mock_core):
+            result = backend.get_element_value(
+                role="Pane", hwnd=12345,
+            )
+
+        assert result["value"] is None
+        assert result["pattern"] is None
+
+    def test_name_fallback_in_cli_plain_output(self):
+        """CLI shows the name-based value instead of 'no readable pattern'."""
+        result_dict = {
+            "value": "\u663e\u793a\u4e3a 579",
+            "pattern": "NameProperty",
+            "role": "Text",
+            "name": "\u663e\u793a\u4e3a 579",
+            "automation_id": "CalculatorResults",
+            "x": 10, "y": 20, "width": 200, "height": 40,
+        }
+        mock = _make_mock_backend(result=result_dict)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["get", "e15"])
+
+        assert result.exit_code == 0
+        assert "\u663e\u793a\u4e3a 579" in result.output
+        assert "NameProperty" in result.output
+        assert "no readable pattern" not in result.output
+
+
+class TestAppIdOption:
+    """Tests for the --app-id option on the get command (#522)."""
+
+    def test_app_id_resolves_to_hwnd(self):
+        """--app-id resolves to process_name and handle via app ID map."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_entry = MagicMock()
+        mock_entry.process_name = "Calculator.exe"
+        mock_entry.handle = 67890
+        mock_entry.pid = 1234
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = mock_entry
+
+        with _apply_patches(mock):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "get", "e15", "--app-id", "a1",
+                ])
+
+        assert result.exit_code == 0
+        mock.get_element_value.assert_called_once_with(
+            ref="e15",
+            automation_id=None,
+            role=None,
+            name=None,
+            app="Calculator.exe",
+            window_title=None,
+            hwnd=67890,
+        )
+
+    def test_app_id_not_found_error(self):
+        """--app-id with invalid ID shows error."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = None
+
+        with _apply_patches(mock):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "get", "e15", "--app-id", "a99",
+                ])
+
+        assert result.exit_code != 0
+
+    def test_app_id_not_found_json_error(self):
+        """--app-id with invalid ID in JSON mode shows structured error."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = None
+
+        with _apply_patches(mock):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "--json", "get", "e15", "--app-id", "a99",
+                ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "APP_ID_NOT_FOUND" in data["error"]["code"]
 
 
 # ── --all flag tests (issue #382) ────────────────────────────────────────────
