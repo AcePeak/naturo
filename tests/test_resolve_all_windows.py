@@ -171,3 +171,95 @@ class TestResolveAllWindows:
         # No app or window_title → empty list
         result = backend._resolve_hwnds()
         assert result == []
+
+    def test_resolve_hwnds_uwp_afh_fixup_searches_all_windows(self, monkeypatch):
+        """_resolve_hwnds AFH fixup must search ALL windows, not just scored matches.
+
+        Regression test for #559: UWP Calculator's CalculatorApp.exe window
+        matches via alias, but its ApplicationFrameHost.exe window (which
+        contains the actual UI tree) scores 0 for the search term "计算器".
+        The fixup must find the AFH window in the full window list.
+        """
+        backend = WindowsBackend()
+
+        calculator_app = WindowInfo(
+            handle=1000,
+            title="计算器",
+            process_name="CalculatorApp.exe",
+            pid=100,
+            x=0, y=0, width=400, height=600,
+            is_visible=True, is_minimized=False,
+        )
+        afh_calculator = WindowInfo(
+            handle=2000,
+            title="计算器",
+            process_name="ApplicationFrameHost.exe",
+            pid=200,
+            x=0, y=0, width=400, height=600,
+            is_visible=True, is_minimized=False,
+        )
+        notepad_window = WindowInfo(
+            handle=3000,
+            title="无标题 - 记事本",
+            process_name="notepad.exe",
+            pid=300,
+            x=0, y=0, width=800, height=600,
+            is_visible=True, is_minimized=False,
+        )
+
+        monkeypatch.setattr(backend, "list_windows",
+                            lambda: [calculator_app, afh_calculator, notepad_window])
+        monkeypatch.setattr(backend, "_get_console_session_id", lambda: 1)
+        monkeypatch.setattr(backend, "_get_process_session_id", lambda pid: 1)
+        # AFH window has a content child (CoreWindow)
+        monkeypatch.setattr(WindowsBackend, "_afh_has_content_window",
+                            staticmethod(lambda hwnd: hwnd == 2000))
+
+        result = backend._resolve_hwnds(app="计算器")
+        # Should return the AFH window (2000), not CalculatorApp (1000)
+        assert result == [2000]
+
+    def test_resolve_hwnds_uwp_afh_fixup_prefers_content_window(self, monkeypatch):
+        """AFH fixup in _resolve_hwnds should prefer AFH with content child.
+
+        When multiple AFH windows exist with the same title (e.g. stale
+        windows from schtasks), prefer the one with CoreWindow/XAML child.
+        """
+        backend = WindowsBackend()
+
+        calculator_app = WindowInfo(
+            handle=1000,
+            title="计算器",
+            process_name="CalculatorApp.exe",
+            pid=100,
+            x=0, y=0, width=400, height=600,
+            is_visible=True, is_minimized=False,
+        )
+        stale_afh = WindowInfo(
+            handle=2000,
+            title="计算器",
+            process_name="ApplicationFrameHost.exe",
+            pid=200,
+            x=0, y=0, width=400, height=600,
+            is_visible=True, is_minimized=False,
+        )
+        live_afh = WindowInfo(
+            handle=3000,
+            title="计算器",
+            process_name="ApplicationFrameHost.exe",
+            pid=201,
+            x=0, y=0, width=400, height=600,
+            is_visible=True, is_minimized=False,
+        )
+
+        monkeypatch.setattr(backend, "list_windows",
+                            lambda: [calculator_app, stale_afh, live_afh])
+        monkeypatch.setattr(backend, "_get_console_session_id", lambda: 1)
+        monkeypatch.setattr(backend, "_get_process_session_id", lambda pid: 1)
+        # Only live_afh (3000) has content child
+        monkeypatch.setattr(WindowsBackend, "_afh_has_content_window",
+                            staticmethod(lambda hwnd: hwnd == 3000))
+
+        result = backend._resolve_hwnds(app="计算器")
+        # Should pick the live AFH (3000), not the stale one (2000)
+        assert result == [3000]

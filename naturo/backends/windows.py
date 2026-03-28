@@ -1273,8 +1273,13 @@ class WindowsBackend(Backend):
         # Extract HWNDs
         hwnds = [m[3].handle for m in matches]
 
-        # UWP/ApplicationFrameHost fixup: prefer frame windows when available
-        # (same logic as _resolve_hwnd, but applied to all matches)
+        # UWP/ApplicationFrameHost fixup: prefer frame windows when available.
+        # Search ALL windows (not just scored matches) for AFH counterparts,
+        # matching the same logic as _resolve_hwnd (#559).  UWP apps like
+        # Calculator run under CalculatorApp.exe but their UI tree lives
+        # under the ApplicationFrameHost.exe window.  The AFH window may
+        # not score any points for the search term (e.g. "计算器") so we
+        # must search the full window list.
         import os as _os
         fixed_hwnds = []
         for hwnd in hwnds:
@@ -1289,21 +1294,31 @@ class WindowsBackend(Backend):
                 proc = proc[:-4]
 
             if proc != "applicationframehost":
-                # Check if there's a frame window with same title
-                frame_hwnd = None
-                for m in matches:
-                    frame_proc = _os.path.basename(m[3].process_name).lower()
+                # (#559) Search ALL windows for AFH with matching title,
+                # then prefer one with a CoreWindow child (live UI),
+                # mirroring _resolve_hwnd logic (#394).
+                afh_candidates = []
+                for w in windows:
+                    frame_proc = _os.path.basename(w.process_name).lower()
                     if frame_proc.endswith(".exe"):
                         frame_proc = frame_proc[:-4]
                     if (
                         frame_proc == "applicationframehost"
-                        and m[3].title == w_info.title
-                        and m[3].handle != hwnd
+                        and w.title == w_info.title
+                        and w.handle != hwnd
                     ):
-                        frame_hwnd = m[3].handle
-                        break
-                if frame_hwnd:
-                    fixed_hwnds.append(frame_hwnd)
+                        afh_candidates.append(w)
+
+                if afh_candidates:
+                    # Prefer AFH with content window (CoreWindow/XAML)
+                    chosen_afh = None
+                    for afh_w in afh_candidates:
+                        if self._afh_has_content_window(afh_w.handle):
+                            chosen_afh = afh_w
+                            break
+                    if chosen_afh is None:
+                        chosen_afh = afh_candidates[0]
+                    fixed_hwnds.append(chosen_afh.handle)
                 else:
                     fixed_hwnds.append(hwnd)
             else:
