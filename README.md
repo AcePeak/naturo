@@ -236,13 +236,30 @@ mirroring Peekaboo's validity window.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
-## vs Peekaboo
+## Comparison
+
+| Feature | naturo | PyAutoGUI | pywinauto | AutoIt | WinAppDriver |
+|---------|--------|-----------|-----------|--------|--------------|
+| **MCP Server** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ |
+| **AI Agent Ready** | ✅ JSON output, agent CLI | ❌ | ❌ | ❌ | ❌ |
+| **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP | None (image only) | UIA, Win32 | Win32 messages | UIA only |
+| **Auto-Detection** | ✅ Picks best framework per app | N/A | Manual backend choice | N/A | N/A |
+| **Element Tree** | ✅ Full hierarchy | ❌ | ✅ | ❌ | ✅ |
+| **Post-Action Verify** | ✅ Confirms actions took effect | ❌ | ❌ | ❌ | ❌ |
+| **Hardware Keyboard** | ✅ Scan codes (anti-cheat safe) | ❌ | ❌ | ✅ | ❌ |
+| **Image Matching** | Via AI vision | ✅ Built-in | ❌ | ✅ | ❌ |
+| **Screen Capture** | ✅ DirectX / GDI | ✅ | ❌ | ✅ | ❌ |
+| **Cross-Platform** | Windows + macOS | Win / Mac / Linux | Windows (+ Linux partial) | Windows only | Windows only |
+| **Language** | Python + C++ core | Python | Python | Custom script | C# / WebDriver |
+| **Maintained** | ✅ Active | ✅ Active | ⚠️ Slow | ⚠️ Slow | ❌ Deprecated |
+
+### vs Peekaboo (macOS)
 
 Naturo is the Windows counterpart to [Peekaboo](https://github.com/steipete/Peekaboo) (macOS).
 On macOS, Naturo wraps Peekaboo's CLI so you get one unified API across platforms.
 
-| Feature | Peekaboo (macOS) | Naturo (Windows) |
-|---------|-----------------|-----------------|
+| | Peekaboo (macOS) | Naturo (Windows) |
+|--|-----------------|-----------------|
 | UI Framework | Accessibility API | UIA + MSAA + IA2 + JAB |
 | Screen Capture | ScreenCaptureKit | DirectX / GDI |
 | Input | CGEvent | SendInput + Phys32 scan codes |
