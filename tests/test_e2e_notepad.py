@@ -46,6 +46,21 @@ def _launch_notepad():
     return subprocess.Popen(["notepad.exe"])
 
 
+def _is_notepad_window(w) -> bool:
+    """Check if a window belongs to Notepad (handles UWP/WinUI3 on Win11).
+
+    On Windows 11, UWP Notepad windows are hosted by ApplicationFrameHost.exe,
+    so process_name alone is insufficient.  Also match by window title (#534).
+    """
+    proc = w.process_name.lower()
+    if "notepad" in proc:
+        return True
+    # UWP: window owned by ApplicationFrameHost but titled "Notepad" or similar
+    if proc.startswith("applicationframehost") and "notepad" in w.title.lower():
+        return True
+    return False
+
+
 def _kill_process(proc):
     """Kill a process gracefully."""
     try:
@@ -79,7 +94,7 @@ class TestMultiWindowChaos:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
             ]
 
             # Should find at least our 3 notepad windows
@@ -93,7 +108,7 @@ class TestMultiWindowChaos:
                 assert w.pid > 0
                 assert w.hwnd > 0
                 assert isinstance(w.title, str)
-                assert "notepad" in w.process_name.lower()
+                assert _is_notepad_window(w)
                 hwnds.add(w.hwnd)
 
             # Each window must have a distinct HWND (even if PIDs are shared
@@ -120,7 +135,7 @@ class TestMultiWindowChaos:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
                 and w.is_visible
                 and not w.is_minimized
             ]
@@ -160,7 +175,7 @@ class TestMultiWindowChaos:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
                 and w.is_visible
                 and not w.is_minimized
             ]
@@ -193,7 +208,7 @@ class TestNotepadElements:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
                 and w.is_visible
             ]
             if not notepad_windows:
@@ -233,7 +248,7 @@ class TestNotepadElements:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
                 and w.is_visible
             ]
             if not notepad_windows:
@@ -280,7 +295,7 @@ class TestAIAgentPerspective:
             windows = core.list_windows()
             notepad_windows = [
                 w for w in windows
-                if "notepad" in w.process_name.lower()
+                if _is_notepad_window(w)
                 and w.is_visible
             ]
             if not notepad_windows:

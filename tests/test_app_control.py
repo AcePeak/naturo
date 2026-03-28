@@ -433,6 +433,16 @@ def _window_management_implemented():
 class TestAppLifecycleE2EWindows:
     """T039 – Window lifecycle E2E: launch → appears → close → disappears."""
 
+    @staticmethod
+    def _is_notepad_window(w) -> bool:
+        """Match Notepad windows including UWP/WinUI3 on Win11 (#534)."""
+        proc = w.process_name.lower()
+        if "notepad" in proc:
+            return True
+        if proc.startswith("applicationframehost") and "notepad" in w.title.lower():
+            return True
+        return False
+
     @pytest.mark.xfail(reason="window close/minimize not yet implemented", raises=NotImplementedError)
     def test_notepad_lifecycle(self):
         """T039 – launch notepad, verify in list, close, verify gone."""
@@ -448,7 +458,7 @@ class TestAppLifecycleE2EWindows:
             windows = backend.list_windows()
             notepad_wins = [
                 w for w in windows
-                if "notepad" in w.process_name.lower() and w.is_visible
+                if self._is_notepad_window(w) and w.is_visible
             ]
             assert len(notepad_wins) >= 1, "Notepad not found in window list after launch"
 
@@ -464,6 +474,14 @@ class TestAppLifecycleE2EWindows:
             assert len(still_open) == 0, "Notepad window still in list after close"
 
         finally:
+            # UWP Notepad: launcher PID differs from app PID, taskkill by name
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", "Notepad.exe"],
+                    capture_output=True, timeout=5,
+                )
+            except Exception:
+                pass
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
@@ -484,7 +502,7 @@ class TestAppLifecycleE2EWindows:
 
             windows = backend.list_windows()
             notepad = next(
-                (w for w in windows if "notepad" in w.process_name.lower() and w.is_visible),
+                (w for w in windows if self._is_notepad_window(w) and w.is_visible),
                 None
             )
             assert notepad is not None
@@ -502,6 +520,13 @@ class TestAppLifecycleE2EWindows:
             assert target is not None
 
         finally:
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", "Notepad.exe"],
+                    capture_output=True, timeout=5,
+                )
+            except Exception:
+                pass
             try:
                 proc.terminate()
                 proc.wait(timeout=3)

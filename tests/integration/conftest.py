@@ -167,20 +167,65 @@ def has_desktop():
     return True
 
 
+def _find_notepad_window_pid() -> Optional[int]:
+    """Find the PID of the process owning a visible Notepad window.
+
+    On Windows 11, UWP/WinUI3 Notepad is launched via a broker whose PID
+    differs from the window-owning process.  Instead of relying on tasklist
+    (which may return the broker PID), enumerate windows and find one whose
+    title contains "Notepad" (#534).
+
+    Returns:
+        PID of the Notepad window owner, or None.
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        found_pid = ctypes.c_ulong(0)
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def enum_callback(hwnd, lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(hwnd, buf, 256)
+            title = buf.value
+            if "notepad" in title.lower() and title.strip():
+                window_pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+                found_pid.value = window_pid.value
+                return False  # stop
+            return True
+
+        user32.EnumWindows(enum_callback, 0)
+        return found_pid.value or None
+    except Exception:
+        return None
+
+
 @pytest.fixture(scope="module")
 def notepad_app(has_desktop) -> Generator[int, None, None]:
     """Launch Notepad and yield its PID. Clean up on teardown.
 
     Notepad is a classic Win32 application — the baseline test target.
+    On Windows 11, the UWP/WinUI3 version uses a launcher PID that differs
+    from the window-owning process.  We resolve the actual PID by finding
+    the visible Notepad window (#534).
     """
     proc = _launch_app("notepad.exe", wait_seconds=2.0)
     if proc is None:
         pytest.skip("Could not launch Notepad")
 
-    # Windows 11 UWP Notepad: launcher PID differs from the actual Notepad process.
-    # Look up the real process the same way calculator_app handles UWP apps.
+    # (#534) Find the PID that owns the visible Notepad window.
+    # This handles UWP Notepad where the launcher PID differs from
+    # the actual window-owning process.
     time.sleep(1)
-    actual_pid = _find_process_by_name("Notepad.exe")
+    actual_pid = _find_notepad_window_pid()
+    if actual_pid is None:
+        # Fallback: try tasklist
+        actual_pid = _find_process_by_name("Notepad.exe")
     if actual_pid is None:
         actual_pid = proc.pid
 
