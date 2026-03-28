@@ -426,10 +426,6 @@ def _window_management_implemented():
     reason="E2E app control tests require Windows with implemented window management methods",
 )
 @pytest.mark.desktop
-@pytest.mark.skipif(
-    os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true",
-    reason="Requires interactive desktop session (not available in CI)",
-)
 class TestAppLifecycleE2EWindows:
     """T039 – Window lifecycle E2E: launch → appears → close → disappears."""
 
@@ -444,7 +440,7 @@ class TestAppLifecycleE2EWindows:
         return False
 
     @staticmethod
-    def _poll_for_notepad(backend, is_notepad_fn, timeout=10.0, interval=0.5):
+    def _poll_for_notepad(backend, is_notepad_fn, timeout=20.0, interval=0.5):
         """Poll for a visible Notepad window with retry (#560).
 
         UWP Notepad on Windows 11 launches through a broker process;
