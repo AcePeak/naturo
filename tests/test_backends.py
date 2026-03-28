@@ -12,6 +12,25 @@ def test_window_info_dataclass():
     assert w.handle == 12345
 
 
+def test_base_window_info_hwnd_alias():
+    """backends.base.WindowInfo.hwnd is an alias for .handle (#504)."""
+    w = WindowInfo(handle=99999, title="Test", process_name="test.exe",
+                   pid=42, x=0, y=0, width=100, height=100,
+                   is_visible=True, is_minimized=False)
+    assert w.hwnd == 99999
+    assert w.hwnd == w.handle
+
+
+def test_bridge_window_info_handle_alias():
+    """bridge.WindowInfo.handle is an alias for .hwnd (#504)."""
+    from naturo.bridge import WindowInfo as BridgeWindowInfo
+    w = BridgeWindowInfo(hwnd=88888, title="Bridge", process_name="b.exe",
+                         pid=7, x=10, y=20, width=200, height=300,
+                         is_visible=True, is_minimized=False)
+    assert w.handle == 88888
+    assert w.handle == w.hwnd
+
+
 def test_element_info_dataclass():
     e = ElementInfo(id="E1", role="Button", name="OK", value=None,
                     x=100, y=200, width=80, height=30, children=[], properties={})

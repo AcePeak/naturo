@@ -69,6 +69,8 @@ class WindowInfo:
         height: Window height in pixels.
         is_visible: Whether the window is visible.
         is_minimized: Whether the window is minimized (iconic).
+        handle: Alias for ``hwnd`` — matches the cross-platform
+            ``backends.base.WindowInfo.handle`` attribute (#504).
     """
     hwnd: int
     title: str
@@ -80,6 +82,11 @@ class WindowInfo:
     height: int
     is_visible: bool
     is_minimized: bool
+
+    @property
+    def handle(self) -> int:
+        """Alias for ``hwnd`` for cross-platform API compatibility (#504)."""
+        return self.hwnd
 
 
 @dataclass
