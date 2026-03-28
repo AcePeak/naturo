@@ -172,29 +172,42 @@ def find_process(
     # Name lookup: prefer interactive session processes (#230)
     assert name is not None
     name_lower = name.lower()
-    first_match: ProcessInfo | None = None
     console_session = _get_console_session_id()
 
-    for proc in processes:
-        if name_lower not in proc.name.lower():
-            continue
+    # Build search terms: direct name + alias-resolved names (#474)
+    search_terms = [name_lower]
+    aliases = _LAUNCH_ALIASES.get(name_lower, [])
+    for alias in aliases:
+        alias_lower = alias.lower()
+        if alias_lower not in search_terms:
+            search_terms.append(alias_lower)
 
-        # Session-aware filtering (#350): when require_interactive is True
-        # and we can determine session IDs, skip session 0 processes entirely.
-        if require_interactive and console_session >= 0:
-            proc_session = _get_process_session_id(proc.pid)
-            if proc_session == 0:
-                continue  # Skip non-interactive services session
+    first_match: ProcessInfo | None = None
 
-        if first_match is None:
-            first_match = proc
-        # If we can determine sessions, prefer the console session
-        if console_session >= 0:
-            proc_session = _get_process_session_id(proc.pid)
-            if proc_session == console_session:
-                return proc  # Found an interactive session match — use it
+    for term in search_terms:
+        for proc in processes:
+            if term not in proc.name.lower():
+                continue
 
-    return first_match  # Fallback to first match if no console session match
+            # Session-aware filtering (#350): when require_interactive is
+            # True and we can determine session IDs, skip session 0
+            # processes entirely.
+            if require_interactive and console_session >= 0:
+                proc_session = _get_process_session_id(proc.pid)
+                if proc_session == 0:
+                    continue  # Skip non-interactive services session
+
+            if first_match is None:
+                first_match = proc
+            # If we can determine sessions, prefer the console session
+            if console_session >= 0:
+                proc_session = _get_process_session_id(proc.pid)
+                if proc_session == console_session:
+                    return proc  # Found an interactive session match
+        if first_match is not None:
+            return first_match
+
+    return None
 
 
 def is_running(name: str) -> bool:

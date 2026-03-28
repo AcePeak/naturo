@@ -163,6 +163,81 @@ class TestFindProcess:
         assert result.pid == 100
 
 
+class TestFindProcessAliasResolution:
+    """Tests for alias-based process resolution (#474)."""
+
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_chinese_notepad_alias(self, mock_list, _mock_session):
+        """find_process('记事本') resolves to notepad.exe via alias."""
+        mock_list.return_value = [
+            ProcessInfo(pid=10, name="notepad.exe"),
+        ]
+        result = find_process(name="记事本")
+        assert result is not None
+        assert result.pid == 10
+
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_chinese_calculator_alias(self, mock_list, _mock_session):
+        """find_process('计算器') resolves to calc/calculatorapp via alias."""
+        mock_list.return_value = [
+            ProcessInfo(pid=20, name="CalculatorApp.exe"),
+        ]
+        result = find_process(name="计算器")
+        assert result is not None
+        assert result.pid == 20
+
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_chinese_paint_alias(self, mock_list, _mock_session):
+        """find_process('画图') resolves to mspaint.exe via alias."""
+        mock_list.return_value = [
+            ProcessInfo(pid=30, name="mspaint.exe"),
+        ]
+        result = find_process(name="画图")
+        assert result is not None
+        assert result.pid == 30
+
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_direct_match_preferred_over_alias(self, mock_list, _mock_session):
+        """Direct process name match should be tried before alias resolution."""
+        mock_list.return_value = [
+            ProcessInfo(pid=40, name="notepad.exe"),
+        ]
+        # "notepad" matches directly — should not need alias
+        result = find_process(name="notepad")
+        assert result is not None
+        assert result.pid == 40
+
+    @patch("naturo.process._get_console_session_id", return_value=-1)
+    @patch("naturo.process._list_processes")
+    def test_alias_no_match_returns_none(self, mock_list, _mock_session):
+        """When alias resolves but no process matches, returns None."""
+        mock_list.return_value = [
+            ProcessInfo(pid=50, name="python.exe"),
+        ]
+        result = find_process(name="记事本")
+        assert result is None
+
+    @patch("naturo.process._get_process_session_id")
+    @patch("naturo.process._get_console_session_id")
+    @patch("naturo.process._list_processes")
+    def test_alias_with_session_preference(self, mock_list, mock_console,
+                                           mock_proc_session):
+        """Alias-resolved match still respects session preference (#230)."""
+        mock_list.return_value = [
+            ProcessInfo(pid=100, name="Notepad.exe"),  # Session 0
+            ProcessInfo(pid=200, name="Notepad.exe"),  # Session 1
+        ]
+        mock_console.return_value = 1
+        mock_proc_session.side_effect = lambda pid: 0 if pid == 100 else 1
+        result = find_process(name="记事本")
+        assert result is not None
+        assert result.pid == 200, "Alias match should prefer interactive session"
+
+
 class TestSessionHelpers:
     """Tests for session ID helper functions."""
 
