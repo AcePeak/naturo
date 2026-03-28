@@ -253,3 +253,105 @@ class TestTypePasteFallbackOnIME:
         assert "fallback" not in data["data"]
         # Should NOT have used clipboard
         mock_backend.clipboard_set.assert_not_called()
+
+
+class TestTypeEscapeSequences:
+    """type should interpret C-style escape sequences (\\t, \\n, \\r, \\\\)."""
+
+    @_win_only
+    def test_type_tab_escape(self, runner):
+        """type 'A\\tB' should send text with real tab character."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        mock_backend.type_text.assert_called_once()
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "A\tB"
+
+    @_win_only
+    def test_type_newline_escape(self, runner):
+        """type 'Line1\\nLine2' should send text with real newline."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "Line1\nLine2"
+
+    @_win_only
+    def test_type_carriage_return_escape(self, runner):
+        """type 'A\\rB' should send text with real carriage return."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "A\rB"
+
+    @_win_only
+    def test_type_literal_backslash(self, runner):
+        """type 'path\\\\file' should produce single backslash."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, ["path\\\\file", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "path\\file"
+
+    @_win_only
+    def test_type_mixed_escapes(self, runner):
+        """type 'Col1\\tCol2\\nRow2' should handle mixed escapes."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"Col1\tCol2\nRow2", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "Col1\tCol2\nRow2"
+
+    @_win_only
+    def test_type_paste_mode_also_gets_escapes(self, runner):
+        """Escape sequences should also work in --paste mode."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+        mock_backend.clipboard_get.return_value = ""
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"A\tB", "--paste", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        # Clipboard should receive the processed text with real tab
+        mock_backend.clipboard_set.assert_called_once_with("A\tB")
