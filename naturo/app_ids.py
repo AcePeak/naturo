@@ -24,7 +24,7 @@ import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class AppIdMap:
         return self._root / f"{self._session}.json"
 
     def assign_ids(
-        self, windows: Sequence[object],
+        self, windows: Sequence[Any],
     ) -> Dict[str, AppIdEntry]:
         """Assign sequential IDs (a1, a2, ...) to a list of windows.
 
