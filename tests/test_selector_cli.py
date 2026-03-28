@@ -396,3 +396,146 @@ class TestMoveSelectorFlag:
         from naturo.cli.interaction import move
         result = runner.invoke(move, ["--help"])
         assert "--selector" in result.output
+
+
+class TestDragSelectorFlag:
+    """Tests for 'naturo drag --from-selector' and '--to-selector'."""
+
+    def test_drag_from_selector_to_selector(self, runner):
+        """Both --from-selector and --to-selector should resolve and drag."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-selector", 'app://*/Button[@name="Save"]',
+                "--to-selector", 'app://*/Edit[@automationid="txtContent"]',
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            mock_be.drag.assert_called_once()
+            call_kwargs = mock_be.drag.call_args[1]
+            # Save button center: x=100+80//2=140, y=200+30//2=215
+            assert call_kwargs["from_x"] == 140
+            assert call_kwargs["from_y"] == 215
+            # Edit center: x=10+400//2=210, y=50+300//2=200
+            assert call_kwargs["to_x"] == 210
+            assert call_kwargs["to_y"] == 200
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_drag_from_selector_to_coords(self, runner):
+        """--from-selector with --to-coords should work."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-selector", 'app://*/Button[@name="Save"]',
+                "--to-coords", "500", "300",
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            call_kwargs = mock_be.drag.call_args[1]
+            assert call_kwargs["from_x"] == 140
+            assert call_kwargs["from_y"] == 215
+            assert call_kwargs["to_x"] == 500
+            assert call_kwargs["to_y"] == 300
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_drag_from_selector_not_found(self, runner):
+        """--from-selector that matches nothing should emit error."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-selector", 'app://*/CheckBox[@name="Nonexistent"]',
+                "--to-coords", "500", "300",
+                "--json",
+            ])
+            assert result.exit_code != 0
+            assert "SELECTOR_NOT_FOUND" in result.output
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_drag_to_selector_not_found(self, runner):
+        """--to-selector that matches nothing should emit error."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-coords", "100", "100",
+                "--to-selector", 'app://*/CheckBox[@name="Nonexistent"]',
+                "--json",
+            ])
+            assert result.exit_code != 0
+            assert "SELECTOR_NOT_FOUND" in result.output
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_drag_from_selector_priority_over_coords(self, runner):
+        """--from-selector should take priority over --from-coords."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-selector", 'app://*/Button[@name="Save"]',
+                "--from-coords", "999", "999",
+                "--to-coords", "500", "300",
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            call_kwargs = mock_be.drag.call_args[1]
+            assert call_kwargs["from_x"] == 140  # Save button center, not 999
+            assert call_kwargs["from_y"] == 215
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_drag_selector_help(self, runner):
+        """drag --help should document --from-selector and --to-selector."""
+        from naturo.cli.interaction import drag
+        result = runner.invoke(drag, ["--help"])
+        assert "--from-selector" in result.output
+        assert "--to-selector" in result.output
+
+    def test_drag_selector_labels_in_json_output(self, runner):
+        """Selector strings should appear as from_ref/to_ref in JSON output."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import drag
+            result = runner.invoke(drag, [
+                "--from-selector", 'app://*/Button[@name="Save"]',
+                "--to-selector", 'app://*/Edit[@automationid="txtContent"]',
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            data = json.loads(result.output)["data"]
+            assert "from_ref" in data
+            assert "to_ref" in data
+            assert "Button" in data["from_ref"]
+            assert "Edit" in data["to_ref"]
+        finally:
+            for p in patches:
+                p.stop()

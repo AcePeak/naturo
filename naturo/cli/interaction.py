@@ -2082,8 +2082,26 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @click.command()
 @click.option("--from", "from_text", help="Source element text")
 @click.option("--from-coords", nargs=2, type=int, metavar="X Y", help="Source X Y coordinates")
+@click.option(
+    "--from-selector",
+    default=None,
+    help=(
+        "Unified selector for source element. "
+        'URI format: app://notepad.exe/Button[@name="Save"]. '
+        'XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>.'
+    ),
+)
 @click.option("--to", "to_text", help="Destination element text")
 @click.option("--to-coords", nargs=2, type=int, metavar="X Y", help="Destination X Y coordinates")
+@click.option(
+    "--to-selector",
+    default=None,
+    help=(
+        "Unified selector for destination element. "
+        'URI format: app://notepad.exe/ListItem[@name="Folder"]. '
+        'XML format: <selector app="notepad.exe"><node role="ListItem" name="Folder"/></selector>.'
+    ),
+)
 @click.option("--duration", type=float, default=0.5, help="Drag duration (seconds)", show_default=True)
 @click.option("--steps", type=int, default=10, help="Interpolation steps", show_default=True)
 @click.option("--modifiers", multiple=True, help="Modifier keys to hold (ctrl, shift, alt)")
@@ -2099,8 +2117,9 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def drag(from_text, from_coords, to_text, to_coords, duration, steps,
-         modifiers, profile, app, window_title, hwnd, method, json_output):
+def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
+         duration, steps, modifiers, profile, app, window_title, hwnd, method,
+         json_output):
     """Drag from one element/position to another.
 
     \b
@@ -2108,17 +2127,29 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
       naturo drag --from e5 --to e12
       naturo drag --from-coords 100 100 --to-coords 500 300
       naturo drag --from e5 --to-coords 500 300
+      naturo drag --from-selector 'app://*/ListItem[@name="File1"]' --to-selector 'app://*/TreeItem[@name="Folder"]'
     """
     # Resolve element refs (eN) from snapshot for --from and --to (#154)
     import re as _re
     from naturo.snapshot import get_snapshot_manager
+
+    backend = _get_backend(json_output)
 
     fx, fy = None, None
     tx, ty = None, None
     from_label = None
     to_label = None
 
-    if from_coords:
+    # Resolve source: --from-selector > --from-coords > --from (eN ref)
+    if from_selector:
+        resolved = _resolve_selector_target(
+            from_selector, backend, app, window_title, hwnd, None, json_output,
+        )
+        if resolved is None:
+            return
+        fx, fy = resolved
+        from_label = from_selector
+    elif from_coords:
         fx, fy = from_coords
     elif from_text and _re.fullmatch(r"e\d+", from_text):
         mgr = get_snapshot_manager()
@@ -2136,13 +2167,23 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
             return
     else:
         _json_err(
-            "Specify source: --from-coords X Y or --from eN (element ref from 'naturo see')",
+            "Specify source: --from-selector, --from-coords X Y, or --from eN "
+            "(element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
         return
 
-    if to_coords:
+    # Resolve destination: --to-selector > --to-coords > --to (eN ref)
+    if to_selector:
+        resolved = _resolve_selector_target(
+            to_selector, backend, app, window_title, hwnd, None, json_output,
+        )
+        if resolved is None:
+            return
+        tx, ty = resolved
+        to_label = to_selector
+    elif to_coords:
         tx, ty = to_coords
     elif to_text and _re.fullmatch(r"e\d+", to_text):
         mgr = get_snapshot_manager()
@@ -2160,7 +2201,8 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
             return
     else:
         _json_err(
-            "Specify destination: --to-coords X Y or --to eN (element ref from 'naturo see')",
+            "Specify destination: --to-selector, --to-coords X Y, or --to eN "
+            "(element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
@@ -2173,7 +2215,6 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
         _json_err(f"--duration must be >= 0, got {duration}", json_output, code="INVALID_INPUT")
         return
 
-    backend = _get_backend(json_output)
     duration_ms = int(duration * 1000)
 
     try:
