@@ -230,6 +230,70 @@ class Backend(ABC):
         """
         raise NotImplementedError
 
+    def toggle_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Optional[str]:
+        """Toggle a UI element via TogglePattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"CheckBox"``).
+            name: Element name.
+
+        Returns:
+            New toggle state string (``"On"``, ``"Off"``, or
+            ``"Indeterminate"``), or ``None`` if the element was not found
+            or does not support TogglePattern.
+        """
+        raise NotImplementedError
+
+    def select_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Select a UI element via SelectionItemPattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"ListItem"``, ``"RadioButton"``).
+            name: Element name.
+
+        Returns:
+            True if the element was selected, False otherwise.
+        """
+        raise NotImplementedError
+
+    def expand_collapse_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        expand: bool = True,
+    ) -> bool:
+        """Expand or collapse a UI element via ExpandCollapsePattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"ComboBox"``, ``"TreeItem"``).
+            name: Element name.
+            expand: True to expand, False to collapse.
+
+        Returns:
+            True if the operation succeeded, False otherwise.
+        """
+        raise NotImplementedError
+
     def click(self, x: int = None, y: int = None, element_id: str = None,
               button: str = "left", double: bool = False, input_mode: str = "normal") -> None:
         ...

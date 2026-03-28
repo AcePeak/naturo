@@ -2324,6 +2324,168 @@ class WindowsBackend(Backend):
             logger.debug("SetValue unexpected error: %s", exc)
             return False
 
+    def toggle_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Optional[str]:
+        """Toggle a UI element via UIA TogglePattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"CheckBox"``).
+            name: Element name.
+
+        Returns:
+            New toggle state string (``"On"``, ``"Off"``, or
+            ``"Indeterminate"``), or ``None`` if the element was not found
+            or does not support TogglePattern.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot use TogglePattern")
+            return None
+
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
+                                          automation_id=automation_id, role=role)
+            if elem is None:
+                logger.debug("Toggle: target element not found")
+                return None
+
+            pat_unk = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
+            if pat_unk is None:
+                logger.debug("Toggle: element does not support TogglePattern")
+                return None
+
+            tp = pat_unk.QueryInterface(mod.IUIAutomationTogglePattern)
+            tp.Toggle()
+
+            # Read new state: 0=Off, 1=On, 2=Indeterminate
+            state_map = {0: "Off", 1: "On", 2: "Indeterminate"}
+            new_state = state_map.get(tp.CurrentToggleState, "Unknown")
+            logger.info("Toggle: toggled element (name=%r) → %s", name, new_state)
+            return new_state
+
+        except (COMError, OSError, AttributeError) as exc:
+            logger.debug("Toggle failed: %s", exc)
+            return None
+        except Exception as exc:
+            logger.debug("Toggle unexpected error: %s", exc)
+            return None
+
+    def select_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Select a UI element via UIA SelectionItemPattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"ListItem"``, ``"RadioButton"``).
+            name: Element name.
+
+        Returns:
+            True if the element was selected, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot use SelectionItemPattern")
+            return False
+
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
+                                          automation_id=automation_id, role=role)
+            if elem is None:
+                logger.debug("Select: target element not found")
+                return False
+
+            pat_unk = elem.GetCurrentPattern(mod.UIA_SelectionItemPatternId)
+            if pat_unk is None:
+                logger.debug("Select: element does not support SelectionItemPattern")
+                return False
+
+            sp = pat_unk.QueryInterface(mod.IUIAutomationSelectionItemPattern)
+            sp.Select()
+            logger.info("Select: selected element (name=%r)", name)
+            return True
+
+        except (COMError, OSError, AttributeError) as exc:
+            logger.debug("Select failed: %s", exc)
+            return False
+        except Exception as exc:
+            logger.debug("Select unexpected error: %s", exc)
+            return False
+
+    def expand_collapse_element(
+        self,
+        hwnd: int = 0,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        expand: bool = True,
+    ) -> bool:
+        """Expand or collapse a UI element via UIA ExpandCollapsePattern.
+
+        Args:
+            hwnd: Window handle to scope the search.  0 = desktop root.
+            automation_id: UIA AutomationId.
+            role: Element role (e.g. ``"ComboBox"``, ``"TreeItem"``).
+            name: Element name.
+            expand: True to expand, False to collapse.
+
+        Returns:
+            True if the operation succeeded, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot use ExpandCollapsePattern")
+            return False
+
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
+                                          automation_id=automation_id, role=role)
+            if elem is None:
+                logger.debug("ExpandCollapse: target element not found")
+                return False
+
+            pat_unk = elem.GetCurrentPattern(mod.UIA_ExpandCollapsePatternId)
+            if pat_unk is None:
+                logger.debug("ExpandCollapse: element does not support ExpandCollapsePattern")
+                return False
+
+            ecp = pat_unk.QueryInterface(mod.IUIAutomationExpandCollapsePattern)
+            if expand:
+                ecp.Expand()
+                logger.info("ExpandCollapse: expanded element (name=%r)", name)
+            else:
+                ecp.Collapse()
+                logger.info("ExpandCollapse: collapsed element (name=%r)", name)
+            return True
+
+        except (COMError, OSError, AttributeError) as exc:
+            logger.debug("ExpandCollapse failed: %s", exc)
+            return False
+        except Exception as exc:
+            logger.debug("ExpandCollapse unexpected error: %s", exc)
+            return False
+
     def focus_element_uia(
         self,
         hwnd: int = 0,

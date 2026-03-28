@@ -1,0 +1,550 @@
+"""Tests for the ``naturo set`` CLI command and backend methods.
+
+Covers:
+- CLI argument parsing (ref, automation_id, role+name)
+- Value setting (ValuePattern)
+- Toggle mode (TogglePattern)
+- Select mode (SelectionItemPattern)
+- Expand/collapse mode (ExpandCollapsePattern)
+- JSON and plain text output modes
+- Error handling (missing target, missing value, failures)
+"""
+
+import json
+import platform
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
+
+import pytest
+from click.testing import CliRunner
+
+from naturo.cli import main
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _make_mock_backend(
+    set_value_result=True,
+    toggle_result="On",
+    select_result=True,
+    expand_result=True,
+):
+    """Create a mock backend with set/toggle/select/expand methods."""
+    mock = MagicMock()
+    mock.set_element_value.return_value = set_value_result
+    mock.toggle_element.return_value = toggle_result
+    mock.select_element.return_value = select_result
+    mock.expand_collapse_element.return_value = expand_result
+    return mock
+
+
+def _mock_resolve_identifiers(aid=None, role=None, name=None):
+    """Return a mock for _resolve_element_identifiers."""
+    def _resolve(ref, automation_id, r, n):
+        return (aid or automation_id, role or r, name or n)
+    return _resolve
+
+
+@contextmanager
+def _apply_patches(mock_backend, resolve_aid=None, resolve_role=None,
+                   resolve_name=None):
+    """Patch backend, platform, and ref resolution for set_cmd tests."""
+    resolver = _mock_resolve_identifiers(
+        aid=resolve_aid, role=resolve_role, name=resolve_name,
+    )
+    with patch("naturo.cli.set_cmd._get_backend", return_value=mock_backend), \
+         patch("naturo.cli.set_cmd._resolve_element_identifiers",
+               side_effect=resolver):
+        if platform.system() not in ("Windows",):
+            with patch("naturo.cli.set_cmd.platform") as mock_plat:
+                mock_plat.system.return_value = "Windows"
+                yield
+        else:
+            yield
+
+
+# ── Value Setting Tests ─────────────────────────────────────────────────────
+
+
+class TestSetValue:
+    """Tests for ``naturo set <target> <value>`` (ValuePattern)."""
+
+    def test_set_value_by_ref(self):
+        """Set value on element by ref in plain text mode."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e47", "hello world"])
+
+        assert result.exit_code == 0
+        assert "hello world" in result.output
+        mock.set_element_value.assert_called_once_with(
+            text="hello world",
+            hwnd=0,
+            name=None,
+            automation_id=None,
+            role=None,
+        )
+
+    def test_set_value_by_ref_json(self):
+        """Set value by ref with JSON output."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "set", "e47", "test"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "ok"
+        assert data["action"] == "set_value"
+        assert data["value"] == "test"
+        assert data["pattern"] == "ValuePattern"
+
+    def test_set_value_by_automation_id(self):
+        """Set value by AutomationId."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--aid", "txtSearch", "query",
+            ])
+
+        assert result.exit_code == 0
+        mock.set_element_value.assert_called_once_with(
+            text="query",
+            hwnd=0,
+            name=None,
+            automation_id="txtSearch",
+            role=None,
+        )
+
+    def test_set_value_by_role_and_name(self):
+        """Set value by role + name combination."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--role", "Edit", "--name", "Search", "test",
+            ])
+
+        assert result.exit_code == 0
+        mock.set_element_value.assert_called_once_with(
+            text="test",
+            hwnd=0,
+            name="Search",
+            automation_id=None,
+            role="Edit",
+        )
+
+    def test_set_value_with_app(self):
+        """Set value with --app flag resolves HWND."""
+        mock = _make_mock_backend()
+        mock._resolve_hwnd.return_value = 12345
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--aid", "txtField", "--app", "notepad", "hello",
+            ])
+
+        assert result.exit_code == 0
+        mock._resolve_hwnd.assert_called_once_with(
+            app="notepad", window_title=None,
+        )
+        mock.set_element_value.assert_called_once_with(
+            text="hello",
+            hwnd=12345,
+            name=None,
+            automation_id="txtField",
+            role=None,
+        )
+
+    def test_set_value_with_hwnd(self):
+        """Set value with explicit --hwnd."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--aid", "txtField", "--hwnd", "99999", "data",
+            ])
+
+        assert result.exit_code == 0
+        mock.set_element_value.assert_called_once_with(
+            text="data",
+            hwnd=99999,
+            name=None,
+            automation_id="txtField",
+            role=None,
+        )
+
+    def test_set_value_failure(self):
+        """Set value failure shows error."""
+        mock = _make_mock_backend(set_value_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--aid", "txtField", "test",
+            ])
+
+        assert result.exit_code != 0
+
+    def test_set_value_failure_json(self):
+        """Set value failure in JSON mode returns error format."""
+        mock = _make_mock_backend(set_value_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "set", "--aid", "txtField", "test",
+            ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "SET_VALUE_FAILED"
+
+    def test_set_target_as_automation_id(self):
+        """Non-ref target string treated as automation ID."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "txtSearch", "hello"])
+
+        assert result.exit_code == 0
+        mock.set_element_value.assert_called_once_with(
+            text="hello",
+            hwnd=0,
+            name=None,
+            automation_id="txtSearch",
+            role=None,
+        )
+
+    def test_set_msaa_ref(self):
+        """MSAA ref (m3) parsed correctly as ref."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "m3", "text"])
+
+        assert result.exit_code == 0
+        # m3 is a ref, so set_element_value is called without automation_id
+        # The ref resolution happens inside the command, but since we mock
+        # the backend directly, it passes through
+        mock.set_element_value.assert_called_once()
+
+
+# ── Toggle Tests ────────────────────────────────────────────────────────────
+
+
+class TestSetToggle:
+    """Tests for ``naturo set <target> --toggle`` (TogglePattern)."""
+
+    def test_toggle_by_ref(self):
+        """Toggle a checkbox by ref."""
+        mock = _make_mock_backend(toggle_result="On")
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e12", "--toggle"])
+
+        assert result.exit_code == 0
+        assert "On" in result.output
+        mock.toggle_element.assert_called_once_with(
+            hwnd=0,
+            automation_id=None,
+            role=None,
+            name=None,
+        )
+
+    def test_toggle_json(self):
+        """Toggle with JSON output."""
+        mock = _make_mock_backend(toggle_result="Off")
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "set", "e12", "--toggle"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "ok"
+        assert data["action"] == "toggle"
+        assert data["new_state"] == "Off"
+        assert data["pattern"] == "TogglePattern"
+
+    def test_toggle_by_automation_id(self):
+        """Toggle by AutomationId."""
+        mock = _make_mock_backend(toggle_result="On")
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "--aid", "chkRemember", "--toggle",
+            ])
+
+        assert result.exit_code == 0
+        mock.toggle_element.assert_called_once_with(
+            hwnd=0,
+            automation_id="chkRemember",
+            role=None,
+            name=None,
+        )
+
+    def test_toggle_failure(self):
+        """Toggle failure shows error."""
+        mock = _make_mock_backend(toggle_result=None)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e12", "--toggle"])
+
+        assert result.exit_code != 0
+
+    def test_toggle_failure_json(self):
+        """Toggle failure in JSON mode returns error format."""
+        mock = _make_mock_backend(toggle_result=None)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "set", "e12", "--toggle",
+            ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "TOGGLE_FAILED"
+
+
+# ── Select Tests ────────────────────────────────────────────────────────────
+
+
+class TestSetSelect:
+    """Tests for ``naturo set <target> --select`` (SelectionItemPattern)."""
+
+    def test_select_by_ref(self):
+        """Select a list item by ref."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e8", "--select"])
+
+        assert result.exit_code == 0
+        assert "Selected" in result.output
+        mock.select_element.assert_called_once_with(
+            hwnd=0,
+            automation_id=None,
+            role=None,
+            name=None,
+        )
+
+    def test_select_json(self):
+        """Select with JSON output."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "set", "e8", "--select"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "ok"
+        assert data["action"] == "select"
+        assert data["pattern"] == "SelectionItemPattern"
+
+    def test_select_failure(self):
+        """Select failure shows error."""
+        mock = _make_mock_backend(select_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e8", "--select"])
+
+        assert result.exit_code != 0
+
+    def test_select_failure_json(self):
+        """Select failure in JSON mode returns error format."""
+        mock = _make_mock_backend(select_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "set", "e8", "--select",
+            ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "SELECT_FAILED"
+
+
+# ── Expand/Collapse Tests ──────────────────────────────────────────────────
+
+
+class TestSetExpandCollapse:
+    """Tests for ``naturo set <target> --expand/--collapse``."""
+
+    def test_expand_by_ref(self):
+        """Expand a combo box by ref."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e5", "--expand"])
+
+        assert result.exit_code == 0
+        assert "Expanded" in result.output
+        mock.expand_collapse_element.assert_called_once_with(
+            hwnd=0,
+            automation_id=None,
+            role=None,
+            name=None,
+            expand=True,
+        )
+
+    def test_collapse_by_ref(self):
+        """Collapse a combo box by ref."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e5", "--collapse"])
+
+        assert result.exit_code == 0
+        assert "Collapsed" in result.output
+        mock.expand_collapse_element.assert_called_once_with(
+            hwnd=0,
+            automation_id=None,
+            role=None,
+            name=None,
+            expand=False,
+        )
+
+    def test_expand_json(self):
+        """Expand with JSON output."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["--json", "set", "e5", "--expand"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["status"] == "ok"
+        assert data["action"] == "expand"
+        assert data["pattern"] == "ExpandCollapsePattern"
+
+    def test_collapse_json(self):
+        """Collapse with JSON output."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "set", "e5", "--collapse",
+            ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["action"] == "collapse"
+
+    def test_expand_failure(self):
+        """Expand failure shows error."""
+        mock = _make_mock_backend(expand_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, ["set", "e5", "--expand"])
+
+        assert result.exit_code != 0
+
+    def test_expand_failure_json(self):
+        """Expand failure in JSON mode returns error format."""
+        mock = _make_mock_backend(expand_result=False)
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "--json", "set", "e5", "--expand",
+            ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "EXPAND_FAILED"
+
+
+# ── Input Validation Tests ──────────────────────────────────────────────────
+
+
+class TestSetValidation:
+    """Tests for input validation in the ``set`` command."""
+
+    def test_no_target_error(self):
+        """No target shows usage error."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["set"])
+        assert result.exit_code != 0
+
+    def test_no_value_or_action_error(self):
+        """Target without value or action flag shows error."""
+        runner = CliRunner()
+        with _apply_patches(_make_mock_backend()):
+            result = runner.invoke(main, ["set", "--aid", "txtField"])
+        assert result.exit_code != 0
+
+    def test_no_value_or_action_json_error(self):
+        """Target without value or action in JSON mode returns error."""
+        runner = CliRunner()
+        with _apply_patches(_make_mock_backend()):
+            result = runner.invoke(main, [
+                "--json", "set", "--aid", "txtField",
+            ])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_multiple_action_flags_error(self):
+        """Multiple action flags (--toggle + --select) shows error."""
+        runner = CliRunner()
+        with _apply_patches(_make_mock_backend()):
+            result = runner.invoke(main, [
+                "set", "e5", "--toggle", "--select",
+            ])
+        assert result.exit_code != 0
+
+    def test_toggle_ignores_value_arg(self):
+        """--toggle works even if a value argument is provided."""
+        mock = _make_mock_backend(toggle_result="On")
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(main, [
+                "set", "e12", "ignored", "--toggle",
+            ])
+
+        # The value "ignored" is technically the VALUE argument but
+        # --toggle takes precedence
+        assert result.exit_code == 0
+        mock.toggle_element.assert_called_once()
+
+    def test_help_output(self):
+        """--help shows usage info."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["set", "--help"])
+        assert result.exit_code == 0
+        assert "Set element value/state" in result.output
+        assert "--toggle" in result.output
+        assert "--select" in result.output
+        assert "--expand" in result.output
+        assert "--collapse" in result.output
