@@ -56,18 +56,23 @@ def _run_naturo(*args: str, timeout: int = 15) -> Dict[str, Any]:
 
 
 class TestDetectionChainNotepad:
-    """Test detection chain against Notepad (Win32 native)."""
+    """Test detection chain against Notepad (Win32 native / UWP on Win11)."""
 
     def test_detect_notepad_framework(self, notepad_app, detect_chain):
         """Notepad should be detected as a Win32 native application."""
-        result = detect_chain(pid=notepad_app, app_name="Notepad")
+        # (#520) Pass exe= so _find_window_by_process_name can resolve the
+        # window for UWP Notepad where the launcher PID differs from the
+        # window-owning process.
+        result = detect_chain(pid=notepad_app, exe="notepad.exe",
+                              app_name="Notepad")
 
         assert result.pid == notepad_app
         assert len(result.methods) > 0, "Should detect at least one interaction method"
 
     def test_detect_notepad_has_uia(self, notepad_app, detect_chain):
         """Notepad should support UIA interaction method."""
-        result = detect_chain(pid=notepad_app, app_name="Notepad")
+        result = detect_chain(pid=notepad_app, exe="notepad.exe",
+                              app_name="Notepad")
 
         method_names = [m.method.value for m in result.methods]
         assert "uia" in method_names, (
@@ -76,7 +81,8 @@ class TestDetectionChainNotepad:
 
     def test_detect_notepad_best_method(self, notepad_app, detect_chain):
         """Notepad's best method should be UIA (native Win32 app)."""
-        result = detect_chain(pid=notepad_app, app_name="Notepad")
+        result = detect_chain(pid=notepad_app, exe="notepad.exe",
+                              app_name="Notepad")
 
         best = result.best_method()
         assert best is not None, "Should have a best method"
@@ -87,14 +93,17 @@ class TestDetectionChainNotepad:
 
     def test_detect_notepad_quick_mode(self, notepad_app, detect_chain):
         """Quick mode should return faster with fewer probes."""
-        result = detect_chain(pid=notepad_app, app_name="Notepad", quick=True)
+        result = detect_chain(pid=notepad_app, exe="notepad.exe",
+                              app_name="Notepad", quick=True)
 
         assert result.best_method() is not None, "Quick mode should still find a method"
 
     def test_detect_notepad_cache(self, notepad_app, detect_chain):
         """Second detection should use cache (same result, faster)."""
-        result1 = detect_chain(pid=notepad_app, app_name="Notepad")
-        result2 = detect_chain(pid=notepad_app, app_name="Notepad")
+        result1 = detect_chain(pid=notepad_app, exe="notepad.exe",
+                               app_name="Notepad")
+        result2 = detect_chain(pid=notepad_app, exe="notepad.exe",
+                               app_name="Notepad")
 
         # Same PID, same methods — cache should give identical result
         assert result1.pid == result2.pid
@@ -102,7 +111,8 @@ class TestDetectionChainNotepad:
 
     def test_detect_notepad_no_cache(self, notepad_app, detect_chain):
         """Detection without cache should still work."""
-        result = detect_chain(pid=notepad_app, app_name="Notepad", use_cache=False)
+        result = detect_chain(pid=notepad_app, exe="notepad.exe",
+                              app_name="Notepad", use_cache=False)
         assert result.pid == notepad_app
         assert len(result.methods) > 0
 
