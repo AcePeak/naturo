@@ -791,6 +791,18 @@ def _auto_route(
             from naturo.routing import resolve_method
 
             result = resolve_method(app=app, pid=pid, explicit_method=method)
+
+            # (#565) When --app is explicitly provided but the app was not
+            # found (pid=None), fail instead of silently falling back to
+            # vision-based click on desktop coordinates.
+            if app is not None and result.pid is None:
+                _json_err(
+                    f"App '{app}' not found among running processes.",
+                    json_output,
+                    code="APP_NOT_FOUND",
+                )
+                return {}  # unreachable after sys.exit, but keeps type checker happy
+
             route_info = result.to_dict()
             if not json_output:
                 src = f" ({result.framework})" if result.framework != "unknown" else ""
