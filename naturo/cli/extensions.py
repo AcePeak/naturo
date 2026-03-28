@@ -1,29 +1,8 @@
-"""Windows-specific extensions: excel, java, sap."""
-import json as json_module
-import sys
+"""Windows-specific CLI extensions: excel."""
 from typing import Any
 
 import click
 from naturo.cli.fuzzy_group import FuzzyGroup
-
-
-def _not_implemented(name: str, phase: str, json_output: bool) -> None:
-    """Emit a NOT_IMPLEMENTED error with correct exit code.
-
-    Args:
-        name: Command name for the error message.
-        phase: Phase identifier (e.g., '5C.1').
-        json_output: Whether to emit JSON output.
-    """
-    msg = f"{name} is not implemented yet — coming in Phase {phase}"
-    if json_output:
-        click.echo(json_module.dumps({
-            "success": False,
-            "error": {"code": "NOT_IMPLEMENTED", "message": msg},
-        }))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    sys.exit(1)
 
 
 # ── excel ───────────────────────────────────────
@@ -260,92 +239,3 @@ def excel_info(path, sheet, json_output):
         click.echo(f"Sheet: {result['sheet']}")
         click.echo(f"Used range: {result['used_range']}")
         click.echo(f"Rows: {result['rows']}, Columns: {result['columns']}")
-
-
-# ── java ────────────────────────────────────────
-
-
-@click.group(cls=FuzzyGroup)
-def java():
-    """Java application automation via Java Access Bridge (Windows-specific).
-
-    Automate Java Swing/AWT applications using the Java Access Bridge API.
-    """
-    pass
-
-
-@java.command(name="list")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def java_list(json_output):
-    """List Java applications with Access Bridge enabled."""
-    _not_implemented("java list", "5B.3", json_output)
-
-
-@java.command()
-@click.option("--pid", type=int, help="Java process ID")
-@click.option("--title", help="Window title")
-@click.option("--depth", type=int, default=5, help="Tree depth")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tree(pid, title, depth, json_output):
-    """Inspect Java UI element tree."""
-    _not_implemented("java tree", "5B.3", json_output)
-
-
-@java.command(name="click")
-@click.argument("query")
-@click.option("--pid", type=int, help="Java process ID")
-@click.option("--title", help="Window title")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def java_click(query, pid, title, json_output):
-    """Click a Java UI element."""
-    _not_implemented("java click", "5B.3", json_output)
-
-
-# ── sap ─────────────────────────────────────────
-
-
-@click.group(cls=FuzzyGroup)
-def sap():
-    """SAP GUI Scripting automation (Windows-specific).
-
-    Automate SAP GUI for Windows using the SAP Scripting API.
-    """
-    pass
-
-
-@sap.command(name="list")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def sap_list(json_output):
-    """List SAP GUI sessions."""
-    _not_implemented("sap list", "5B.4", json_output)
-
-
-@sap.command()
-@click.argument("transaction")
-@click.option("--session", type=int, default=0, help="Session index")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def run(transaction, session, json_output):
-    """Run a SAP transaction code."""
-    _not_implemented("sap run", "5B.4", json_output)
-
-
-@sap.command(name="get")
-@click.argument("field_id")
-@click.option("--session", type=int, default=0, help="Session index")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def sap_get(field_id, session, json_output):
-    """Get a SAP GUI field value."""
-    _not_implemented("sap get", "5B.4", json_output)
-
-
-@sap.command(name="set")
-@click.argument("field_id")
-@click.argument("value")
-@click.option("--session", type=int, default=0, help="Session index")
-@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def sap_set(field_id, value, session, json_output):
-    """Set a SAP GUI field value."""
-    _not_implemented("sap set", "5B.4", json_output)
-
-
-# ── registry ────────────────────────────────────
