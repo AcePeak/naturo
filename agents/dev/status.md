@@ -1,28 +1,29 @@
 # Dev Status
-Last updated: 2026-03-28T03:20:00Z
-Session: Win32+UIA hybrid enumeration (#312) + PR triage
+Last updated: 2026-03-28T04:15:00Z
+Session: Highlight improvements (#313) + PR monitoring
 
 ## This Session
-- **Issue #312 (v0.3.1, P1):** PR #493 created. Implemented Win32+UIA hybrid enumeration for VB6/ActiveX apps — Win32 HWND tree as base with UIA drill-down for complex controls (VSFlexGrid, SysListView32, SysTreeView32, AfxOleControl42u). Auto mode now uses hybrid instead of pure Win32 for shallow trees. 15 new tests.
-- **PR #492** (selector CLI flag): Windows DLL tests cancelled (timeout ~55min). Updated branch to trigger fresh CI.
-- **PR #489** (Orc-Mycelium CI diagnosis): Same Windows timeout pattern. Updated branch.
-- Tests: 1921 passed, 548 skipped, 0 failed (Ubuntu)
-- PRs: #493 created (CI running), #492 and #489 branches updated
+- **Issue #313 (v0.3.1, P2):** PR #494 created. Replaced 3-flash GDI cycle with simultaneous persistent display. Added depth-based coloring, label collision avoidance, actionable-only default (`--all` flag), `--annotate` PIL mode, `--filter` by role. 19 new tests.
+- **PR #492** (selector CLI): Windows DLL test still in_progress (~55 min). 5/6 checks green.
+- **PR #493** (Win32+UIA hybrid): Same — Windows DLL test still running. 5/6 checks green.
+- **PR #489** (Orc-Mycelium): Same pattern.
+- Tests: 30 passed, 1 skipped, 0 failed (local Ubuntu — annotate + highlight + CLI consistency)
+- PRs: #494 created (CI running), #492/#493 still awaiting Windows DLL test
 
 ## Open PRs
-- #493 — feat: Win32+UIA hybrid enumeration (fixes #312) — CI running
-- #492 — feat: add --selector flag to click/type/press (fixes #103) — CI re-running after branch update
-- #489 — (Orc-Mycelium) dev-prompt CI diagnosis protocol — CI re-running after branch update
+- #494 — feat: highlight simultaneous display, label avoidance, annotate mode (fixes #313) — CI running
+- #493 — feat: Win32+UIA hybrid enumeration (fixes #312) — Windows DLL test in_progress
+- #492 — feat: add --selector flag to click/type/press (fixes #103) — Windows DLL test in_progress
+- #489 — (Orc-Mycelium) dev-prompt CI diagnosis protocol — Windows DLL test in_progress
 
 ## Current State
-- Earliest open milestone: v0.3.1 (#312 — PR created, pending merge)
-- Next milestone: v0.3.2 (#361, #102)
-- CI: GREEN on main; Windows DLL tests flaky on PR branches (timeout/cancel)
-- Known CI issue: Windows DLL test job hangs at ~55 min, gets cancelled. Affects all PRs.
+- Earliest open milestone: v0.3.1 (#312 PR #493 pending, #313 PR #494 pending)
+- Next milestone: v0.3.2 (#361, #103 PR #492 pending)
+- CI: GREEN on main; Windows DLL test job runs very long on PR branches
+- Auto-merge: could not enable yet (checks still in_progress)
 
 ## Next Session Should
-1. **Check CI on PR #493** — merge if green, fix if red. Enable auto-merge.
-2. **Check CI on PR #492** — merge if green after branch update
-3. **Investigate Windows DLL test timeout** — all 3 open PRs have the same cancellation pattern. May need a CI timeout fix or test isolation.
-4. **Issue #361 (v0.3.2, P1)** — Stable app/window ID system for scripting
-5. **Issue #102 (v0.3.2)** — Wire SelectorBuilder into `see` command output
+1. **Check CI on all PRs** — enable auto-merge on any that passed. Fix if red.
+2. **Investigate Windows DLL test duration** — all 4 open PRs have the same slow pattern. May need test timeout or isolation fix.
+3. **Issue #361 (v0.3.2, P1)** — Stable app/window ID system for scripting (next after v0.3.1 clears)
+4. **Issue #102 (v0.3.2)** — Wire SelectorBuilder into `see` command output

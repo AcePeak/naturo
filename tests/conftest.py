@@ -1,9 +1,47 @@
 from __future__ import annotations
 
+import os
 import platform
 from typing import Optional
+from unittest.mock import MagicMock
 
 import pytest
+
+
+# ── CI Windows guard ─────────────────────────────
+# GitHub Actions windows-latest has NO desktop session.
+# Any test that instantiates WindowsBackend() or NaturoCore() will hang
+# because UIA/COM initialization blocks without a desktop.
+# Instead of relying on individual test authors to add @pytest.mark.desktop,
+# we monkeypatch the constructors to auto-skip on CI Windows.
+
+_ON_CI = os.environ.get("CI") == "true"
+_IS_WINDOWS = platform.system() == "Windows"
+_CI_WINDOWS = _ON_CI and _IS_WINDOWS
+
+if _CI_WINDOWS:
+    import naturo.backends.windows as _win_mod
+    import naturo.bridge as _bridge_mod
+
+    _OrigWindowsBackend = _win_mod.WindowsBackend
+    _OrigNaturoCore = _bridge_mod.NaturoCore
+
+    class _SkippingWindowsBackend(_OrigWindowsBackend):
+        def __init__(self, *args, **kwargs):
+            pytest.skip(
+                "WindowsBackend() skipped on CI Windows (no desktop session). "
+                "Add @pytest.mark.desktop if this test requires a real desktop."
+            )
+
+    class _SkippingNaturoCore:
+        def __init__(self, *args, **kwargs):
+            pytest.skip(
+                "NaturoCore() skipped on CI Windows (no desktop session). "
+                "Add @pytest.mark.desktop if this test requires a real desktop."
+            )
+
+    _win_mod.WindowsBackend = _SkippingWindowsBackend  # type: ignore[misc]
+    _bridge_mod.NaturoCore = _SkippingNaturoCore  # type: ignore[misc]
 
 
 def pytest_configure(config):

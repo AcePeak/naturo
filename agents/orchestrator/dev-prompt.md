@@ -273,3 +273,19 @@ git push origin main
 - **Self-review before PR.** Read your own diff. Would you approve this PR from someone else?
 - **Create issues for problems you find** but can't fix this session. You have no cross-session memory.
 - **If your previous PR was rejected or has comments, handle that FIRST.** Don't abandon your own work.
+
+## CI Architecture (MUST understand — do NOT change without Ace's permission)
+The project has TWO test environments:
+
+1. **GitHub Actions Windows runner** (`windows-latest`): NO desktop session. Cannot run UIA/DLL tests that touch the screen. The `build-python` job has `continue-on-error: true` — its failures do NOT block merges. This is intentional, not a bug.
+
+2. **Self-hosted desktop runner** (`windows-desktop`): HAS a real desktop. Runs `@pytest.mark.desktop` and integration tests. This is where real UI testing happens.
+
+**Rules for writing tests:**
+- Any test that calls `NaturoCore()`, `WindowsBackend()`, `get_element_tree()`, `list_windows()`, `capture_screen()`, or invokes CLI commands (`see`, `click`, `type`, `press`, `capture`, `app list`, etc.) without full mock coverage MUST have `@pytest.mark.desktop`
+- Any test that calls `ctypes.windll` functions MUST have `@pytest.mark.desktop`
+- `--help` tests are safe (they don't load the DLL)
+- Tests with `unittest.mock.patch` wrapping ALL backend calls are safe
+- When in doubt, add `@pytest.mark.desktop` — it's better to skip a test on CI than to hang the entire pipeline for 45 minutes
+
+**NEVER remove `continue-on-error: true` from the `build-python` job.** This is a deliberate architectural decision.
