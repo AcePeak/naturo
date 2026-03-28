@@ -99,7 +99,8 @@ jobs:
     name: Python Tests with DLL (Windows)
     runs-on: windows-latest
     needs: build-dll
-    timeout-minutes: 45
+    timeout-minutes: 15
+    continue-on-error: true  # Do not block PRs — desktop tests run on self-hosted runner
     steps:
       - uses: actions/checkout@v4
 
