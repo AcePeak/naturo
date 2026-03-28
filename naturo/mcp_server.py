@@ -654,6 +654,228 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             },
         }
 
+    @server.tool()
+    @_safe_tool
+    def set_element_value(
+        value: str,
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Set the value/text of a UI element via UIA ValuePattern.
+
+        Directly writes to the element's value through accessibility
+        interfaces, bypassing SendInput. Works in schtasks / remote
+        session contexts.
+
+        Args:
+            value: Text value to set on the element.
+            ref: Element ref from snapshot (e.g. ``"e47"``).
+            automation_id: UIA AutomationId string.
+            role: Element role filter (e.g. ``"Edit"``).
+            name: Element name filter.
+            window_title: Target window title (partial match).
+            hwnd: Target window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+
+        # Resolve ref to identifiers
+        resolved_aid = automation_id
+        resolved_role = role
+        resolved_name = name
+        target_hwnd = hwnd or 0
+
+        if ref and not resolved_aid:
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
+            result = mgr.resolve_ref_element(ref)
+            if result:
+                elem, _snap_id = result
+                if elem.identifier:
+                    resolved_aid = elem.identifier
+                elif elem.role and (elem.title or elem.label):
+                    resolved_role = resolved_role or elem.role
+                    resolved_name = resolved_name or elem.title or elem.label
+
+        # Resolve window title to HWND
+        if window_title and not target_hwnd:
+            try:
+                target_hwnd = backend._resolve_hwnd(window_title=window_title)
+            except Exception:
+                pass
+
+        success = backend.set_element_value(
+            text=value,
+            hwnd=target_hwnd,
+            name=resolved_name,
+            automation_id=resolved_aid,
+            role=resolved_role,
+        )
+        if not success:
+            return {
+                "success": False,
+                "error": {
+                    "code": "SET_VALUE_FAILED",
+                    "message": "Failed to set element value. The element may "
+                    "not support ValuePattern or may be read-only.",
+                },
+            }
+        return {"success": True, "action": "set_value", "value": value}
+
+    @server.tool()
+    @_safe_tool
+    def toggle_element(
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Toggle a checkbox or toggle button via UIA TogglePattern.
+
+        Args:
+            ref: Element ref from snapshot (e.g. ``"e12"``).
+            automation_id: UIA AutomationId string.
+            role: Element role (e.g. ``"CheckBox"``).
+            name: Element name.
+            window_title: Target window title (partial match).
+            hwnd: Target window handle.
+
+        Returns:
+            Dict with success flag and new toggle state.
+        """
+        backend = _get_backend()
+        target_hwnd = hwnd or 0
+        if window_title and not target_hwnd:
+            try:
+                target_hwnd = backend._resolve_hwnd(window_title=window_title)
+            except Exception:
+                pass
+
+        new_state = backend.toggle_element(
+            hwnd=target_hwnd,
+            automation_id=automation_id,
+            role=role,
+            name=name,
+        )
+        if new_state is None:
+            return {
+                "success": False,
+                "error": {
+                    "code": "TOGGLE_FAILED",
+                    "message": "Failed to toggle element. It may not support "
+                    "TogglePattern.",
+                },
+            }
+        return {"success": True, "action": "toggle", "new_state": new_state}
+
+    @server.tool()
+    @_safe_tool
+    def select_element(
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Select a list item, radio button, or tab via SelectionItemPattern.
+
+        Args:
+            ref: Element ref from snapshot (e.g. ``"e8"``).
+            automation_id: UIA AutomationId string.
+            role: Element role (e.g. ``"ListItem"``, ``"RadioButton"``).
+            name: Element name.
+            window_title: Target window title (partial match).
+            hwnd: Target window handle.
+
+        Returns:
+            Dict with success flag.
+        """
+        backend = _get_backend()
+        target_hwnd = hwnd or 0
+        if window_title and not target_hwnd:
+            try:
+                target_hwnd = backend._resolve_hwnd(window_title=window_title)
+            except Exception:
+                pass
+
+        success = backend.select_element(
+            hwnd=target_hwnd,
+            automation_id=automation_id,
+            role=role,
+            name=name,
+        )
+        if not success:
+            return {
+                "success": False,
+                "error": {
+                    "code": "SELECT_FAILED",
+                    "message": "Failed to select element. It may not support "
+                    "SelectionItemPattern.",
+                },
+            }
+        return {"success": True, "action": "select"}
+
+    @server.tool()
+    @_safe_tool
+    def expand_collapse_element(
+        expand: bool = True,
+        ref: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        name: Optional[str] = None,
+        window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
+    ) -> dict:
+        """Expand or collapse a combo box or tree item via ExpandCollapsePattern.
+
+        Args:
+            expand: True to expand, False to collapse.
+            ref: Element ref from snapshot (e.g. ``"e5"``).
+            automation_id: UIA AutomationId string.
+            role: Element role (e.g. ``"ComboBox"``, ``"TreeItem"``).
+            name: Element name.
+            window_title: Target window title (partial match).
+            hwnd: Target window handle.
+
+        Returns:
+            Dict with success flag and action performed.
+        """
+        backend = _get_backend()
+        target_hwnd = hwnd or 0
+        if window_title and not target_hwnd:
+            try:
+                target_hwnd = backend._resolve_hwnd(window_title=window_title)
+            except Exception:
+                pass
+
+        success = backend.expand_collapse_element(
+            hwnd=target_hwnd,
+            automation_id=automation_id,
+            role=role,
+            name=name,
+            expand=expand,
+        )
+        action = "expand" if expand else "collapse"
+        if not success:
+            return {
+                "success": False,
+                "error": {
+                    "code": f"{action.upper()}_FAILED",
+                    "message": f"Failed to {action} element. It may not "
+                    f"support ExpandCollapsePattern.",
+                },
+            }
+        return {"success": True, "action": action}
+
     # ── Input Actions ───────────────────────────
 
     @server.tool()
