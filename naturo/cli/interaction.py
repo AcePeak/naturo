@@ -352,6 +352,63 @@ def _selector_option(func):
     )(func)
 
 
+def _app_id_option(func):
+    """Shared Click decorator that adds --app-id to action commands.
+
+    Accepts a stable app/window ID (e.g. ``a1``) assigned by ``naturo app list``.
+    When provided, overrides ``--app``, ``--hwnd``, and ``--pid`` with the
+    stored values from the ID map.  Priority: --app-id > --hwnd > --pid > --app.
+    """
+    return click.option(
+        "--app-id",
+        "app_id",
+        default=None,
+        help='Stable app/window ID from "naturo app list" output (e.g. a1)',
+    )(func)
+
+
+def _resolve_app_id(
+    app_id: Optional[str],
+    app: Optional[str],
+    hwnd: Optional[int],
+    pid: Optional[int],
+    json_output: bool,
+) -> tuple:
+    """Resolve --app-id to (app, hwnd, pid) overrides.
+
+    If ``app_id`` is provided, looks up the stored ID map and returns the
+    stored process name and window handle.  Otherwise returns the original
+    values unchanged.
+
+    Args:
+        app_id: The stable ID string (e.g. "a1"), or None.
+        app: Current --app value.
+        hwnd: Current --hwnd value.
+        pid: Current --pid value.
+        json_output: Whether to emit JSON error output.
+
+    Returns:
+        Tuple of (app, hwnd, pid) — possibly overridden from the ID map.
+        Returns (None, None, None) with error emitted if ID is invalid.
+    """
+    if app_id is None:
+        return app, hwnd, pid
+
+    from naturo.app_ids import get_app_id_map
+
+    id_map = get_app_id_map()
+    entry = id_map.resolve(app_id)
+    if entry is None:
+        _json_err(
+            f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.',
+            json_output,
+            code="APP_ID_NOT_FOUND",
+        )
+        return None, None, None
+
+    return entry.process_name, entry.handle, entry.pid
+
+
 def _elementinfo_to_dict(el) -> dict:
     """Convert an ElementInfo object to a dict for SelectorResolver.
 
@@ -775,12 +832,13 @@ def _auto_route(
 )
 @_method_option
 @_selector_option
+@_app_id_option
 @_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app, pid,
-              window_title, hwnd, wait_for, input_mode, method, selector,
+              window_title, hwnd, wait_for, input_mode, method, selector, app_id,
               verify, see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
 
@@ -801,6 +859,12 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_text:
         on_text = ref_alias
+
+    # (#361) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
+    if app_id and app is None:
+        return  # Error already emitted by _resolve_app_id
+
     backend = _get_backend(json_output)
 
     button = "right" if right else "left"
@@ -1098,14 +1162,15 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
 )
 @_method_option
 @_selector_option
+@_app_id_option
 @_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
-             window_title, hwnd, input_mode, method, selector, verify, see_after, settle,
-             json_output):
+             window_title, hwnd, input_mode, method, selector, app_id, verify, see_after,
+             settle, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -1129,6 +1194,11 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type "hello" --on e42 --app feishu  # target app + element
       naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """
+    # (#361) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
+    if app_id and app is None:
+        return  # Error already emitted by _resolve_app_id
+
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_element:
         on_element = ref_alias
@@ -1530,10 +1600,11 @@ def _is_combo(key_str: str) -> bool:
 )
 @_method_option
 @_selector_option
+@_app_id_option
 @_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, selector, verify, see_after, settle, json_output):
+def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, selector, app_id, verify, see_after, settle, json_output):
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -1548,6 +1619,11 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
       naturo press alt+f4
       naturo press enter --selector 'app://*/Button[@name="OK"]'
     """
+    # (#361) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
+    if app_id and app is None:
+        return  # Error already emitted by _resolve_app_id
+
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_element:
         on_element = ref_alias

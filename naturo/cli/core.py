@@ -106,8 +106,10 @@ def _platform_error_msg(feature: str) -> str:
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
-            element_ref, region, padding, json_output):
+            element_ref, region, padding, json_output, app_id):
     """Capture a live screenshot, optionally cropped to an element or region.
 
     Captures the screen or a specific window and saves to a file.
@@ -126,8 +128,24 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         naturo capture --ref e5 --padding 20            # with 20px padding
         naturo capture --region 100,50,400,300          # crop to region
         naturo capture --app feishu --element e12       # element in specific app
+        naturo capture --app-id a1 --element e12        # element by app ID
         naturo capture -o output.png                    # save to output.png
     """
+    # (#361) Resolve --app-id to app/hwnd before any other logic
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+            if json_output:
+                click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        app = entry.process_name
+        hwnd = entry.handle
+
     if not _platform_supports_gui():
         msg = _platform_error_msg("Screen capture")
         if json_output:
@@ -576,8 +594,11 @@ def permissions(json_output):
     default="auto",
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
-        cascade, fill_gaps, show_stats, coverage_target, visible_only, json_output, backend):
+        cascade, fill_gaps, show_stats, coverage_target, visible_only, json_output, backend,
+        app_id):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -606,6 +627,22 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         naturo see --app feishu --backend auto         # Try all A11y backends
         naturo see --app feishu --backend hybrid       # Per-node backend selection
     """
+    # (#361) Resolve --app-id to app/hwnd/pid before any other logic
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+            if json_output:
+                click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        app = entry.process_name
+        hwnd = entry.handle
+        pid = entry.pid
+
     # BUG-028: Validate --depth range (before platform check — input validation first)
     if depth < 1 or depth > 50:
         msg = f"--depth must be between 1 and 50, got {depth}"

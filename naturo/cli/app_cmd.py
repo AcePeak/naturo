@@ -281,7 +281,12 @@ def app_list(ctx, show_all, json_output):
             filtered_windows.append(w)
         
         windows = filtered_windows
-        
+
+        # Assign stable session-scoped IDs (a1, a2, ...) for --id targeting (#361)
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        id_map.assign_ids(windows)
+
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("BACKEND_ERROR", str(exc)))
@@ -303,6 +308,7 @@ def app_list(ctx, show_all, json_output):
             "success": True,
             "windows": [
                 {
+                    "id": f"a{i}",
                     "handle": w.handle,
                     "pid": w.pid,
                     "process_name": w.process_name,
@@ -312,7 +318,7 @@ def app_list(ctx, show_all, json_output):
                     "is_visible": w.is_visible,
                     "is_minimized": w.is_minimized,
                 }
-                for w in windows
+                for i, w in enumerate(windows, start=1)
             ],
             "count": len(windows),
         }
@@ -329,15 +335,15 @@ def app_list(ctx, show_all, json_output):
         if not windows and not background_apps:
             click.echo("No running applications with visible windows found")
         else:
-            headers = ["PID", "HWND", "Process", "Title"]
+            headers = ["ID", "PID", "HWND", "Process", "Title"]
             rows = []
-            for w in windows:
+            for i, w in enumerate(windows, start=1):
                 title = w.title[:40] if len(w.title) > 40 else w.title
-                rows.append([str(w.pid), str(w.handle), w.process_name, title])
+                rows.append([f"a{i}", str(w.pid), str(w.handle), w.process_name, title])
 
             if background_apps:
                 for a in background_apps:
-                    rows.append([str(a.pid), "", a.name, "(background)"])
+                    rows.append(["", str(a.pid), "", a.name, "(background)"])
 
             count_label = (
                 f"{len(windows)} applications, {len(background_apps)} background processes"
