@@ -4,11 +4,11 @@ import pytest
 from unittest.mock import patch, MagicMock
 from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
-    relaunch_app, list_apps, _list_processes,
+    relaunch_app, list_apps, _list_processes, _verify_quit,
     _get_console_session_id, _get_process_session_id,
     _resolve_launch_name, _LAUNCH_ALIASES,
 )
-from naturo.errors import AppNotFoundError, TimeoutError
+from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
 
 
 class TestProcessInfo:
@@ -507,9 +507,67 @@ class TestQuitApp:
     @patch("naturo.process._force_kill")
     @patch("naturo.process.find_process")
     def test_quit_force(self, mock_find, mock_kill):
-        mock_find.return_value = ProcessInfo(pid=123, name="app")
+        # First call finds the process; subsequent calls return None (killed)
+        mock_find.side_effect = [ProcessInfo(pid=123, name="app"), None, None]
         quit_app(name="app", force=True)
         mock_kill.assert_called_once()
+
+
+    @patch("naturo.process._verify_quit")
+    @patch("naturo.process._force_kill")
+    @patch("naturo.process.is_running")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.platform")
+    def test_quit_graceful_respawn_detected(
+        self, mock_platform, mock_find, mock_is_running, mock_kill, mock_verify,
+    ):
+        """#496: app quit must detect when app respawns after graceful close.
+
+        Simulates Windows 11 Notepad which briefly disappears from the process
+        list after WM_CLOSE but immediately respawns with a new PID.
+        """
+        mock_platform.system.return_value = "Windows"
+        mock_find.return_value = ProcessInfo(pid=100, name="notepad.exe")
+        # is_running returns False momentarily (process respawning),
+        # but _verify_quit should catch the respawn
+        mock_is_running.return_value = False
+        mock_verify.side_effect = InteractionFailedError(
+            message="Failed to quit 'notepad': app is still running under a different PID"
+        )
+        with pytest.raises(InteractionFailedError):
+            quit_app(name="notepad", timeout=0.1)
+
+    @patch("naturo.process.find_process")
+    def test_verify_quit_app_still_running_by_name(self, mock_find):
+        """#496: _verify_quit must check by name, not just PID.
+
+        After force-killing PID 100, if 'notepad' is still running under
+        PID 200 (respawned), verification must fail.
+        """
+        # First call: PID lookup returns None (target PID is dead)
+        # Second call: name lookup returns a new process (respawned)
+        def find_side_effect(name=None, pid=None, **kwargs):
+            if pid == 100:
+                return None  # Target PID is dead
+            if name == "notepad":
+                return ProcessInfo(pid=200, name="notepad.exe")
+            return None
+        mock_find.side_effect = find_side_effect
+        with pytest.raises(InteractionFailedError, match="still running"):
+            _verify_quit("notepad", None, target_pid=100, timeout=0.5)
+
+    @patch("naturo.process.find_process")
+    def test_verify_quit_clean_exit(self, mock_find):
+        """_verify_quit succeeds when both PID is dead and app is gone."""
+        mock_find.return_value = None  # Nothing found
+        # Should not raise
+        _verify_quit("notepad", None, target_pid=100, timeout=0.5)
+
+    @patch("naturo.process.find_process")
+    def test_verify_quit_pid_only_no_name(self, mock_find):
+        """When quit was by PID only (no name), verify by PID only."""
+        mock_find.return_value = None
+        _verify_quit(None, 100, target_pid=100, timeout=0.5)
 
 
 class TestRelaunchApp:

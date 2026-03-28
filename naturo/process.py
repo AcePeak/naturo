@@ -487,33 +487,31 @@ def quit_app(
 
     if force:
         _force_kill(target_pid, system)
-        return
+    else:
+        # Graceful shutdown
+        try:
+            if system == "Windows":
+                subprocess.run(
+                    ["taskkill", "/PID", str(target_pid)],
+                    capture_output=True, timeout=timeout,
+                )
+            else:
+                os.kill(target_pid, signal.SIGTERM)
+        except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
+            pass
 
-    # Graceful shutdown
-    try:
-        if system == "Windows":
-            subprocess.run(
-                ["taskkill", "/PID", str(target_pid)],
-                capture_output=True, timeout=timeout,
-            )
+        # Wait for exit
+        start = time.monotonic()
+        while time.monotonic() - start < timeout:
+            if find_process(pid=target_pid) is None:
+                break
+            time.sleep(0.3)
         else:
-            os.kill(target_pid, signal.SIGTERM)
-    except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-        pass
+            # Still alive after timeout — force kill as fallback
+            _force_kill(target_pid, system)
 
-    # Wait for exit
-    start = time.monotonic()
-    while time.monotonic() - start < timeout:
-        if not is_running(name or "") and (name is not None):
-            return
-        if pid is not None and find_process(pid=pid) is None:
-            return
-        time.sleep(0.3)
-
-    # Force kill as fallback
-    _force_kill(target_pid, system)
-
-    # Verify the process is actually dead (#484)
+    # Always verify the process is actually dead (#496, #484).
+    # Check both the target PID and the app name to catch respawns.
     _verify_quit(name, pid, target_pid, timeout=3.0)
 
 
@@ -524,6 +522,9 @@ def _verify_quit(
     timeout: float = 3.0,
 ) -> None:
     """Verify a process has actually exited after a kill attempt.
+
+    Checks both the specific PID and the app name to catch processes that
+    respawn under a new PID (e.g. Windows 11 Notepad, UWP apps).
 
     Args:
         name: Application name used for the quit request.
@@ -536,23 +537,39 @@ def _verify_quit(
     """
     from naturo.errors import InteractionFailedError
 
+    identifier = name or str(pid or target_pid)
+
+    # Step 1: Wait for the target PID to die
     start = time.monotonic()
     while time.monotonic() - start < timeout:
-        # Check if the specific PID we targeted is gone
         if find_process(pid=target_pid) is None:
-            return
+            break
         time.sleep(0.3)
+    else:
+        # Target PID survived the kill
+        raise InteractionFailedError(
+            message=(
+                f"Failed to quit '{identifier}' (PID {target_pid}): "
+                f"process is still running after force kill. "
+                f"Try: naturo app quit {identifier} --force, or "
+                f"naturo app quit --pid {target_pid} --force"
+            ),
+        )
 
-    # Process survived the kill — report failure honestly
-    identifier = name or str(pid or target_pid)
-    raise InteractionFailedError(
-        message=(
-            f"Failed to quit '{identifier}' (PID {target_pid}): "
-            f"process is still running after force kill. "
-            f"Try: naturo app quit {identifier} --force, or "
-            f"naturo app quit --pid {target_pid} --force"
-        ),
-    )
+    # Step 2: If we have a name, verify the app hasn't respawned (#496).
+    # Brief settle time — respawns happen within a few hundred ms.
+    if name is not None:
+        time.sleep(0.5)
+        surviving = find_process(name=name)
+        if surviving is not None:
+            raise InteractionFailedError(
+                message=(
+                    f"Failed to quit '{name}': target process "
+                    f"(PID {target_pid}) was killed but the application "
+                    f"is still running under PID {surviving.pid}. "
+                    f"Try: naturo app quit --pid {surviving.pid} --force"
+                ),
+            )
 
 
 def _force_kill(pid: int, system: str) -> None:
