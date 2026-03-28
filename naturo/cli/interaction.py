@@ -943,6 +943,20 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 )
                 return
 
+    # (#533) Validate --app filter even when eN ref resolved from cache.
+    # Without this check, `click --app doesnotexist e1` silently clicks
+    # the cached element from a previous snapshot — potentially in the
+    # wrong application.
+    if _ref_resolved and app and hasattr(backend, "_resolve_hwnds"):
+        hwnds = backend._resolve_hwnds(app=app)
+        if not hwnds:
+            _json_err(
+                f"No windows found for app '{app}'.",
+                json_output,
+                code="WINDOW_NOT_FOUND",
+            )
+            return
+
     # (#448) Skip auto-routing when eN ref already resolved to cached
     # coordinates — the framework detection chain is unnecessary since
     # we'll use coordinate-based SendInput.
