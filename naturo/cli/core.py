@@ -587,6 +587,8 @@ def permissions(json_output):
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
               help="Coverage target (0.0–1.0) before trying next provider (default: 0 = UIA only)")
 @click.option("--visible-only", is_flag=True, help="Hide offscreen/zero-bounds elements")
+@click.option("--selectors", "show_selectors", is_flag=True,
+              help="Show unified selectors alongside eN refs (always included in JSON mode)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -597,8 +599,8 @@ def permissions(json_output):
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
-        cascade, fill_gaps, show_stats, coverage_target, visible_only, json_output, backend,
-        app_id):
+        cascade, fill_gaps, show_stats, coverage_target, visible_only, show_selectors,
+        json_output, backend, app_id):
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -825,6 +827,28 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         # resolve the refs shown in ``see`` output.
         _display_ref_map: dict[str, str] = {}
 
+        # (#102) Selector builder for generating unified selectors alongside
+        # eN refs.  Always active in JSON mode; opt-in via --selectors in text.
+        from naturo.selector import SelectorBuilder
+        import re as _re_mod
+        _sel_builder = SelectorBuilder()
+        _selector_app = app or "*"
+
+        def _el_to_selector_dict(el) -> dict[str, str]:
+            """Convert an ElementInfo to a dict suitable for SelectorBuilder."""
+            raw_id = str(el.id) if el.id else ""
+            aid = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+            return {
+                "role": el.role or "*",
+                "name": el.name or "",
+                "automationid": aid,
+            }
+
+        def _build_selector(el, ancestors_dicts: list[dict[str, str]]) -> str:
+            """Build a URI selector for an element given its ancestor dicts."""
+            el_dict = _el_to_selector_dict(el)
+            return _sel_builder.build_uri(el_dict, ancestors_dicts, app=_selector_app)
+
         if json_output:
             # (#237) Use a sequential counter matching _flatten() DFS order
             # to assign unique display IDs.  The previous reverse-map approach
@@ -833,7 +857,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # causing duplicate display IDs in JSON output.
             _json_ref_seq = [0]
 
-            def to_dict(el, parent_ref=None):
+            def to_dict(el, parent_ref=None, ancestors_dicts=None):
                 """Convert ElementInfo tree to a JSON-serializable dict.
 
                 Args:
@@ -841,7 +865,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     parent_ref: The naturo ref (eN) of the parent element,
                         ensuring parent references are always in the same
                         ID space as element refs (#295).
+                    ancestors_dicts: List of ancestor selector dicts (root-first)
+                        for building unified selectors (#102).
                 """
+                if ancestors_dicts is None:
+                    ancestors_dicts = []
+
                 _json_ref_seq[0] += 1
                 display_id = f"e{_json_ref_seq[0]}"
 
@@ -854,9 +883,8 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # (#295) Expose AutomationId separately.  The raw
                 # el.id from the bridge may be an AutomationId or a
                 # tree-assigned "eN" placeholder.  Filter placeholders.
-                import re as _re_local
                 raw_id = str(el.id) if el.id else ""
-                automation_id = raw_id if raw_id and not _re_local.fullmatch(r"e\d+", raw_id) else ""
+                automation_id = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
 
                 # (#365) Zero-bounds elements are offscreen
                 _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
@@ -865,7 +893,14 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 if visible_only and _is_offscreen:
                     return None
 
-                children_raw = [to_dict(c, parent_ref=display_id) for c in el.children]
+                # (#102) Build selector and track ancestors for children
+                el_dict = _el_to_selector_dict(el)
+                selector_uri = _build_selector(el, ancestors_dicts)
+                child_ancestors = ancestors_dicts + [el_dict]
+
+                children_raw = [to_dict(c, parent_ref=display_id,
+                                        ancestors_dicts=child_ancestors)
+                                for c in el.children]
                 children = [c for c in children_raw if c is not None]
 
                 d = {
@@ -874,6 +909,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     "role": el.role,
                     "name": el.name,
                     "value": el.value,
+                    "selector": selector_uri,
                     "x": el.x,
                     "y": el.y,
                     "width": el.width,
@@ -930,8 +966,11 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # passed to ``naturo click e3`` for quick interaction.
             _ref_counter = [0]
 
-            def print_tree(el, indent=0):
+            def print_tree(el, indent=0, ancestors_dicts=None):
                 """Print element tree with short element refs."""
+                if ancestors_dicts is None:
+                    ancestors_dicts = []
+
                 _ref_counter[0] += 1
                 ref = f"e{_ref_counter[0]}"
 
@@ -944,10 +983,14 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 # (#365) Zero-bounds = offscreen
                 _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
 
+                # (#102) Track ancestors for selector building
+                el_dict = _el_to_selector_dict(el)
+                child_ancestors = ancestors_dicts + [el_dict]
+
                 # (#365) --visible-only: skip offscreen elements
                 if visible_only and _is_offscreen:
                     for child in el.children:
-                        print_tree(child, indent)
+                        print_tree(child, indent, child_ancestors)
                     return
 
                 prefix = "  " * indent
@@ -956,7 +999,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 props = getattr(el, "properties", {})
                 source_str = f" [{props['source']}]" if props.get("source") else ""
                 offscreen_str = " [offscreen]" if _is_offscreen else ""
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}")
+                # (#102) Show selector when --selectors is requested
+                selector_str = ""
+                if show_selectors:
+                    selector_uri = _build_selector(el, ancestors_dicts)
+                    selector_str = f"  {selector_uri}"
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{selector_str}")
 
                 # (#372) Show text preview for Document/Edit elements
                 _vp = props.get("value_preview")
@@ -968,12 +1016,15 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     click.echo(f"{prefix}  » {preview}{suffix}")
 
                 for child in el.children:
-                    print_tree(child, indent + 1)
+                    print_tree(child, indent + 1, child_ancestors)
 
             print_tree(tree)
             if snapshot_id:
                 click.echo(f"\nSnapshot: {snapshot_id}")
-                click.echo("Tip: use 'naturo click e<N>' to click an element by its ref.")
+                if show_selectors:
+                    click.echo("Tip: use 'naturo click --selector \"<selector>\"' for stable targeting across sessions.")
+                else:
+                    click.echo("Tip: use 'naturo click e<N>' to click an element by its ref.")
 
             # Print cascade stats when --stats is requested
             if show_stats and cascade_stats:
