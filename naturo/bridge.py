@@ -229,18 +229,26 @@ def _get_role_from_class_name(cls_name: str, is_top_level: bool = False) -> str:
 
 
 def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
-                       refs: Optional[list] = None) -> None:
+                       refs: Optional[list] = None,
+                       show_all: bool = False) -> None:
     """Draw colored borders and labels on Win32 child windows for visual identification.
 
-    Uses Win32 GDI to draw directly on screen. Each element gets a colored
-    rectangle border with its ref (eN) and name/class label.
+    Uses Win32 GDI to draw directly on screen. All matching elements are drawn
+    simultaneously and held for ``duration`` seconds (no flashing).
+
+    Depth-based coloring groups elements at the same tree level by colour.
+    Label collision avoidance shifts labels to avoid overlap.
+
+    By default only highlights interactive control classes (Button, Edit,
+    ComboBox, etc.). Pass ``show_all=True`` to include all elements.
 
     Args:
         hwnd: Parent window handle.
         depth: Max depth for enumeration.
         duration: How long to show highlights (seconds).
         refs: Optional list of specific refs to highlight (e.g. ['e5', 'e10']).
-              If None, highlights all elements.
+              If None, highlights all matching elements.
+        show_all: If False (default), only highlight actionable Win32 classes.
     """
     import ctypes
     from ctypes import wintypes
@@ -253,6 +261,15 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
     user32 = ctypes.windll.user32
     gdi32 = ctypes.windll.gdi32
 
+    # Win32 class names considered actionable (interactive controls)
+    _ACTIONABLE_WIN32_CLASSES = {
+        "button", "edit", "combobox", "listbox", "scrollbar",
+        "syslistview32", "systreeview32", "systabcontrol32",
+        "msctls_trackbar32", "msctls_updown32", "toolbarwindow32",
+        "sysdatetimepick32", "sysmonthcal32", "richedit20w",
+        "richedit50w", "comboboxex32",
+    }
+
     # Collect all child windows with their info
     def _get_direct_children(parent):
         children = []
@@ -262,7 +279,7 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
             child = user32.FindWindowExW(parent, child, None, None)
         return children
 
-    elements = []  # list of (ref, hwnd, title, class_name, rect)
+    elements = []  # list of (ref, hwnd, title, class_name, rect, depth_level)
     counter = [1]
 
     def _collect(h, current_depth):
@@ -293,12 +310,18 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
                 continue
 
             if refs is None or ref in refs:
-                # Build display label
+                # Actionable filter: skip non-interactive classes unless show_all
+                if not show_all and refs is None:
+                    base_cls = cls_name.split(".")[-1].lower() if "." in cls_name else cls_name.lower()
+                    if base_cls not in _ACTIONABLE_WIN32_CLASSES:
+                        _collect(child_hwnd, current_depth + 1)
+                        continue
+
                 short_cls = cls_name.split(".")[-1] if "." in cls_name else cls_name
                 label = title if title else short_cls
                 if len(label) > 20:
                     label = label[:18] + ".."
-                elements.append((ref, child_hwnd, label, cls_name, rect))
+                elements.append((ref, child_hwnd, label, cls_name, rect, current_depth))
 
             _collect(child_hwnd, current_depth + 1)
 
@@ -307,15 +330,55 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
     if not elements:
         return
 
-    # Colors for cycling (RGB)
-    COLORS = [
+    # Depth-based colors (BGR for GDI)
+    DEPTH_COLORS_BGR = [
         0x0000FF,  # Red
-        0x00FF00,  # Green
-        0xFF0000,  # Blue
-        0x00FFFF,  # Yellow
-        0xFF00FF,  # Magenta
-        0xFFFF00,  # Cyan
+        0x00A000,  # Green
+        0xFF5000,  # Blue
+        0x00A0FF,  # Orange
+        0xC800A0,  # Purple
+        0xB4B400,  # Teal
+        0x6400C8,  # Crimson
+        0xFF5050,  # Indigo
     ]
+
+    # Compute label positions to avoid overlap
+    label_rects = []  # list of (left, top, right, bottom) of placed labels
+    label_positions = []  # (lx, ly) per element
+
+    for i, (ref, child_hwnd, label, cls_name, rect, depth_level) in enumerate(elements):
+        label_text = f" {ref}: {label} "
+        # Approximate text width: ~8px per character at 14pt Consolas
+        approx_w = len(label_text) * 8
+        approx_h = 16
+
+        rl, rt, rr, rb = rect.left, rect.top, rect.right, rect.bottom
+        candidates = [
+            (rl, max(0, rt - approx_h)),         # above-left
+            (rr - approx_w, max(0, rt - approx_h)),  # above-right
+            (rl, rb),                              # below-left
+            (rr - approx_w, rb),                   # below-right
+        ]
+
+        best_pos = candidates[0]
+        best_overlap = float("inf")
+
+        for cx, cy in candidates:
+            cx = max(0, cx)
+            cy = max(0, cy)
+            overlap_count = sum(
+                1 for px1, py1, px2, py2 in label_rects
+                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1
+            )
+            if overlap_count < best_overlap:
+                best_overlap = overlap_count
+                best_pos = (cx, cy)
+                if overlap_count == 0:
+                    break
+
+        label_positions.append(best_pos)
+        label_rects.append((best_pos[0], best_pos[1],
+                            best_pos[0] + approx_w, best_pos[1] + approx_h))
 
     # Get screen DC
     hdc = user32.GetDC(None)
@@ -329,45 +392,34 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
     )
 
     try:
-        # Flash 3 times
-        for flash in range(3):
-            # Draw borders and labels
-            for i, (ref, child_hwnd, label, cls_name, rect) in enumerate(elements):
-                color = COLORS[i % len(COLORS)]
-                pen = gdi32.CreatePen(0, 2, color)  # PS_SOLID, width=2
-                old_pen = gdi32.SelectObject(hdc, pen)
-                old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))  # NULL_BRUSH
+        # Draw all borders and labels simultaneously (single pass)
+        for i, (ref, child_hwnd, label, cls_name, rect, depth_level) in enumerate(elements):
+            color = DEPTH_COLORS_BGR[depth_level % len(DEPTH_COLORS_BGR)]
+            pen = gdi32.CreatePen(0, 2, color)  # PS_SOLID, width=2
+            old_pen = gdi32.SelectObject(hdc, pen)
+            old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))  # NULL_BRUSH
 
-                # Draw rectangle
-                gdi32.Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom)
+            # Draw rectangle
+            gdi32.Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom)
 
-                # Draw label background
-                gdi32.SelectObject(hdc, old_brush)
-                label_text = f" {ref}: {label} "
+            # Draw label
+            gdi32.SelectObject(hdc, old_brush)
+            label_text = f" {ref}: {label} "
 
-                # Set text properties
-                gdi32.SetBkColor(hdc, color)
-                gdi32.SetTextColor(hdc, 0xFFFFFF)  # White text
-                old_font = gdi32.SelectObject(hdc, font)
+            gdi32.SetBkColor(hdc, color)
+            gdi32.SetTextColor(hdc, 0xFFFFFF)  # White text
+            old_font = gdi32.SelectObject(hdc, font)
 
-                # Draw label at top-left of element
-                text_buf = ctypes.create_unicode_buffer(label_text)
-                gdi32.TextOutW(hdc, rect.left + 1, rect.top + 1, text_buf, len(label_text))
+            lx, ly = label_positions[i]
+            text_buf = ctypes.create_unicode_buffer(label_text)
+            gdi32.TextOutW(hdc, lx, ly, text_buf, len(label_text))
 
-                gdi32.SelectObject(hdc, old_font)
-                gdi32.SelectObject(hdc, old_pen)
-                gdi32.DeleteObject(pen)
+            gdi32.SelectObject(hdc, old_font)
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
 
-            time.sleep(0.8)
-
-            # Force redraw to clear (invalidate screen regions)
-            for _, child_hwnd, _, _, rect in elements:
-                r = wintypes.RECT(rect.left - 3, rect.top - 3,
-                                  rect.right + 3, rect.bottom + 3)
-                user32.InvalidateRect(None, ctypes.byref(r), True)
-            user32.UpdateWindow(user32.GetDesktopWindow())
-
-            time.sleep(0.4)
+        # Hold the display for the requested duration
+        time.sleep(duration)
 
     finally:
         gdi32.DeleteObject(font)
@@ -680,11 +732,24 @@ def highlight_elements_uia(
     depth: int = 30,
     duration: float = 5.0,
     refs: Optional[list] = None,
-) -> None:
+    show_all: bool = False,
+    annotate_path: Optional[str] = None,
+    role_filter: Optional[str] = None,
+) -> Optional[str]:
     """Highlight UI elements using the UIA element tree from snapshot/see.
 
     Refs match those assigned by ``naturo see`` (sequential DFS e1, e2, ...).
     Falls back to capturing a fresh element tree if no recent snapshot exists.
+
+    All matching elements are drawn simultaneously and held for ``duration``
+    seconds (no flashing). Depth-based coloring and label collision avoidance
+    produce a clean, readable overlay.
+
+    By default only highlights actionable elements. Pass ``show_all=True``
+    to include all visible elements.
+
+    If ``annotate_path`` is set, renders the highlight onto a screenshot image
+    using Pillow instead of GDI drawing, and returns the output path.
 
     Args:
         backend: The platform backend instance.
@@ -693,24 +758,55 @@ def highlight_elements_uia(
         depth: Max depth for element tree.
         duration: How long to show highlights (seconds).
         refs: Optional list of specific refs to highlight (e.g. ['e5', 'e10']).
-              If None, highlights all elements.
+              If None, highlights all matching elements.
+        show_all: If False (default), only highlight actionable elements.
+        annotate_path: If set, save a PIL-annotated screenshot to this path
+            instead of using GDI live overlay. Returns the output path.
+        role_filter: If set, only highlight elements whose role contains this string.
+
+    Returns:
+        The annotated screenshot path if ``annotate_path`` is set, else None.
     """
     import platform
     import time
 
+    from naturo.snapshot import get_snapshot_manager
+    mgr = get_snapshot_manager()
+
+    # ── Annotate mode (PIL, cross-platform) ──────────────────────────────────
+    if annotate_path is not None:
+        snap = None
+        try:
+            snaps = mgr.list_snapshots()
+            if snaps:
+                snap = mgr.get_snapshot(snaps[-1].id)
+        except Exception:
+            pass
+
+        if snap and snap.ui_map and snap.screenshot_path:
+            from naturo.annotate import highlight_annotate
+            return highlight_annotate(
+                screenshot_path=snap.screenshot_path,
+                ui_map=snap.ui_map,
+                output_path=annotate_path,
+                refs=refs,
+                actionable_only=not show_all,
+                role_filter=role_filter,
+            )
+        return None
+
+    # ── GDI live overlay (Windows only) ──────────────────────────────────────
     if platform.system() != "Windows":
-        return
+        return None
 
     import ctypes
     from ctypes import wintypes
 
+    from naturo.annotate import ACTIONABLE_ROLES
+
     # Try to get elements from most recent snapshot first
-    elements = []  # list of (ref, name, role, x, y, w, h)
+    elements = []  # list of (ref, name, role, x, y, w, h, depth_level)
 
-    from naturo.snapshot import get_snapshot_manager
-    mgr = get_snapshot_manager()
-
-    # Check if there's a recent snapshot with elements
     _found_snapshot = False
     try:
         snaps = mgr.list_snapshots()
@@ -725,10 +821,25 @@ def highlight_elements_uia(
                     ex, ey, ew, eh = el.frame
                     if ew <= 0 or eh <= 0:
                         continue
+                    # Actionable filter
+                    if not show_all and refs is None:
+                        if not el.is_actionable and el.role not in ACTIONABLE_ROLES:
+                            continue
+                    # Role filter
+                    if role_filter and role_filter.lower() not in el.role.lower():
+                        continue
                     label = el.title or el.role
                     if len(label) > 20:
                         label = label[:18] + ".."
-                    elements.append((ref_key, label, el.role, ex, ey, ew, eh))
+                    # Compute depth
+                    depth_level = 0
+                    cur = el
+                    seen: set = set()
+                    while cur and cur.parent_id and cur.parent_id not in seen:
+                        seen.add(cur.parent_id)
+                        depth_level += 1
+                        cur = snap.ui_map.get(cur.parent_id)  # type: ignore[assignment]
+                    elements.append((ref_key, label, el.role, ex, ey, ew, eh, depth_level))
     except Exception:
         pass
 
@@ -741,7 +852,7 @@ def highlight_elements_uia(
             if tree:
                 counter = [0]
 
-                def _collect_uia(el):
+                def _collect_uia(el, tree_depth: int = 0) -> None:
                     counter[0] += 1
                     ref = f"e{counter[0]}"
                     if el.width > 0 and el.height > 0:
@@ -749,29 +860,68 @@ def highlight_elements_uia(
                             label = el.name or el.role
                             if len(label) > 20:
                                 label = label[:18] + ".."
-                            elements.append((ref, label, el.role, el.x, el.y, el.width, el.height))
+                            elements.append((ref, label, el.role, el.x, el.y, el.width, el.height, tree_depth))
                     for child in el.children:
-                        _collect_uia(child)
+                        _collect_uia(child, tree_depth + 1)
 
                 _collect_uia(tree)
         except Exception:
             pass
 
     if not elements:
-        return
+        return None
 
-    # Draw highlights using GDI (same rendering as highlight_elements)
+    # Depth-based colors (BGR for GDI)
+    DEPTH_COLORS_BGR = [
+        0x0000FF,  # Red
+        0x00A000,  # Green
+        0xFF5000,  # Blue
+        0x00A0FF,  # Orange
+        0xC800A0,  # Purple
+        0xB4B400,  # Teal
+        0x6400C8,  # Crimson
+        0xFF5050,  # Indigo
+    ]
+
+    # Compute label positions to avoid overlap
+    label_rects: list = []
+    label_positions: list = []
+
+    for i, (ref, label, role, ex, ey, ew, eh, depth_level) in enumerate(elements):
+        label_text = f" {ref}: {label} "
+        approx_w = len(label_text) * 8
+        approx_h = 16
+
+        candidates = [
+            (ex, max(0, ey - approx_h)),
+            (ex + ew - approx_w, max(0, ey - approx_h)),
+            (ex, ey + eh),
+            (ex + ew - approx_w, ey + eh),
+        ]
+
+        best_pos = candidates[0]
+        best_overlap = float("inf")
+
+        for cx, cy in candidates:
+            cx = max(0, cx)
+            cy = max(0, cy)
+            overlap_count = sum(
+                1 for px1, py1, px2, py2 in label_rects
+                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1
+            )
+            if overlap_count < best_overlap:
+                best_overlap = overlap_count
+                best_pos = (cx, cy)
+                if overlap_count == 0:
+                    break
+
+        label_positions.append(best_pos)
+        label_rects.append((best_pos[0], best_pos[1],
+                            best_pos[0] + approx_w, best_pos[1] + approx_h))
+
+    # Draw highlights using GDI
     user32 = ctypes.windll.user32
     gdi32 = ctypes.windll.gdi32
-
-    COLORS = [
-        0x0000FF,  # Red
-        0x00FF00,  # Green
-        0xFF0000,  # Blue
-        0x00FFFF,  # Yellow
-        0xFF00FF,  # Magenta
-        0xFFFF00,  # Cyan
-    ]
 
     hdc = user32.GetDC(None)
     font = gdi32.CreateFontW(
@@ -779,41 +929,39 @@ def highlight_elements_uia(
     )
 
     try:
-        for flash in range(3):
-            for i, (ref, label, role, ex, ey, ew, eh) in enumerate(elements):
-                color = COLORS[i % len(COLORS)]
-                pen = gdi32.CreatePen(0, 2, color)
-                old_pen = gdi32.SelectObject(hdc, pen)
-                old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
+        # Draw all borders and labels simultaneously (single pass)
+        for i, (ref, label, role, ex, ey, ew, eh, depth_level) in enumerate(elements):
+            color = DEPTH_COLORS_BGR[depth_level % len(DEPTH_COLORS_BGR)]
+            pen = gdi32.CreatePen(0, 2, color)
+            old_pen = gdi32.SelectObject(hdc, pen)
+            old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
 
-                gdi32.Rectangle(hdc, ex, ey, ex + ew, ey + eh)
+            gdi32.Rectangle(hdc, ex, ey, ex + ew, ey + eh)
 
-                gdi32.SelectObject(hdc, old_brush)
-                label_text = f" {ref}: {label} "
+            gdi32.SelectObject(hdc, old_brush)
+            label_text = f" {ref}: {label} "
 
-                gdi32.SetBkColor(hdc, color)
-                gdi32.SetTextColor(hdc, 0xFFFFFF)
-                old_font = gdi32.SelectObject(hdc, font)
+            gdi32.SetBkColor(hdc, color)
+            gdi32.SetTextColor(hdc, 0xFFFFFF)
+            old_font = gdi32.SelectObject(hdc, font)
 
-                text_buf = ctypes.create_unicode_buffer(label_text)
-                gdi32.TextOutW(hdc, ex + 1, ey + 1, text_buf, len(label_text))
+            lx, ly = label_positions[i]
+            text_buf = ctypes.create_unicode_buffer(label_text)
+            gdi32.TextOutW(hdc, lx, ly, text_buf, len(label_text))
 
-                gdi32.SelectObject(hdc, old_font)
-                gdi32.SelectObject(hdc, old_pen)
-                gdi32.DeleteObject(pen)
+            gdi32.SelectObject(hdc, old_font)
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
 
-            time.sleep(0.8)
+        # Hold the display for the requested duration
+        time.sleep(duration)
 
-            for _, _, _, ex, ey, ew, eh in elements:
-                r = wintypes.RECT(ex - 3, ey - 3, ex + ew + 3, ey + eh + 3)
-                user32.InvalidateRect(None, ctypes.byref(r), True)
-            user32.UpdateWindow(user32.GetDesktopWindow())
-
-            time.sleep(0.4)
     finally:
         gdi32.DeleteObject(font)
         user32.ReleaseDC(None, hdc)
         user32.InvalidateRect(None, None, True)
+
+    return None
 
 
 class NaturoCoreError(Exception):
