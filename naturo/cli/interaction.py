@@ -1959,11 +1959,13 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@_selector_option
 @_method_option
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
-           smooth, delay, app, window_title, hwnd, method, see_after, settle, json_output):
+           smooth, delay, app, window_title, hwnd, selector, method, see_after, settle,
+           json_output):
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -1974,6 +1976,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
       naturo scroll up --amount 5
       naturo scroll --on e3 down --amount 5
       naturo scroll --coords 500 300 down
+      naturo scroll --selector 'app://*/List[@name="Items"]' down
     """
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_text:
@@ -1988,11 +1991,19 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
-    # Resolve target coordinates from --on, --id, or --coords
+    # Resolve target coordinates: --selector > --coords > --on/--id
     x, y = None, None
     target_label = None
 
-    if coords:
+    if selector:
+        resolved = _resolve_selector_target(
+            selector, backend, app, window_title, hwnd, None, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
+        target_label = selector
+    elif coords:
         x, y = coords
         target_label = f"({x}, {y})"
     elif on_text or element_id:
@@ -2203,22 +2214,35 @@ def drag(from_text, from_coords, to_text, to_coords, duration, steps,
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@_selector_option
 @_method_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def move(to_text, coords, element_id, duration, app, window_title, hwnd,
-         method, json_output):
+         selector, method, json_output):
     """Move the mouse cursor to a target element or coordinates.
 
     \b
     Examples:
       naturo move --coords 500 300
+      naturo move --selector 'app://*/Button[@name="Save"]'
     """
-    if not coords:
-        _json_err("Specify --coords X Y", json_output, code="INVALID_INPUT")
-        return
-
     backend = _get_backend(json_output)
-    x, y = coords
+
+    # Resolve target: --selector > --coords
+    x, y = None, None
+
+    if selector:
+        resolved = _resolve_selector_target(
+            selector, backend, app, window_title, hwnd, None, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
+    elif coords:
+        x, y = coords
+    else:
+        _json_err("Specify --selector, --coords X Y, or --to", json_output, code="INVALID_INPUT")
+        return
 
     try:
         backend.move_mouse(x, y)

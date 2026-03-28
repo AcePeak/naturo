@@ -1,4 +1,4 @@
-"""Tests for --selector flag on interaction commands (click, type, press).
+"""Tests for --selector flag on interaction commands (click, type, press, scroll, move).
 
 The --selector flag resolves unified selectors (URI/XML format) to UI
 elements before performing the action. These tests mock the backend to
@@ -277,3 +277,122 @@ class TestElementInfoToDict:
         assert len(result["children"]) == 1
         assert result["children"][0]["role"] == "Text"
         assert result["children"][0]["name"] == "Label"
+
+
+class TestScrollSelectorFlag:
+    """Tests for 'naturo scroll --selector'."""
+
+    def test_scroll_selector_resolves_to_coords(self, runner):
+        """--selector on scroll should resolve element and scroll at its center."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import scroll
+            result = runner.invoke(scroll, [
+                "down",
+                "--selector", 'app://*/Edit[@automationid="txtContent"]',
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            mock_be.scroll.assert_called_once()
+            call_kwargs = mock_be.scroll.call_args[1]
+            assert call_kwargs["x"] == 210  # 10 + 400//2
+            assert call_kwargs["y"] == 200  # 50 + 300//2
+            assert call_kwargs["direction"] == "down"
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_scroll_selector_not_found(self, runner):
+        """--selector that matches nothing should emit error."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import scroll
+            result = runner.invoke(scroll, [
+                "down",
+                "--selector", 'app://*/CheckBox[@name="Nonexistent"]',
+                "--json",
+            ])
+            assert result.exit_code != 0
+            assert "SELECTOR_NOT_FOUND" in result.output
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_scroll_selector_takes_priority_over_coords(self, runner):
+        """--selector should take priority over --coords."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import scroll
+            result = runner.invoke(scroll, [
+                "down",
+                "--selector", 'app://*/Button[@name="Save"]',
+                "--coords", "999", "999",
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            call_kwargs = mock_be.scroll.call_args[1]
+            assert call_kwargs["x"] == 140  # Save button center, not 999
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_scroll_selector_help(self, runner):
+        """scroll --help should document --selector."""
+        from naturo.cli.interaction import scroll
+        result = runner.invoke(scroll, ["--help"])
+        assert "--selector" in result.output
+
+
+class TestMoveSelectorFlag:
+    """Tests for 'naturo move --selector'."""
+
+    def test_move_selector_resolves_to_coords(self, runner):
+        """--selector on move should resolve element and move to its center."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import move
+            result = runner.invoke(move, [
+                "--selector", 'app://*/Button[@name="Save"]',
+                "--json",
+            ])
+            assert result.exit_code == 0, f"output: {result.output}"
+            mock_be.move_mouse.assert_called_once_with(140, 215)
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_move_selector_not_found(self, runner):
+        """--selector that matches nothing should emit error."""
+        mock_be = _make_mock_backend()
+        patches = _patch_backend(mock_be)
+        for p in patches:
+            p.start()
+        try:
+            from naturo.cli.interaction import move
+            result = runner.invoke(move, [
+                "--selector", 'app://*/CheckBox[@name="Nonexistent"]',
+                "--json",
+            ])
+            assert result.exit_code != 0
+            assert "SELECTOR_NOT_FOUND" in result.output
+        finally:
+            for p in patches:
+                p.stop()
+
+    def test_move_selector_help(self, runner):
+        """move --help should document --selector."""
+        from naturo.cli.interaction import move
+        result = runner.invoke(move, ["--help"])
+        assert "--selector" in result.output
