@@ -737,7 +737,8 @@ class WindowsBackend(Backend):
 
     # === UI Element Inspection (Phase 1) ===
 
-    def find_element(self, selector: str = "", window_title: Optional[str] = None) -> Optional[BaseElementInfo]:
+    def find_element(self, selector: str = "", window_title: Optional[str] = None,
+                     hwnd: Optional[int] = None) -> Optional[BaseElementInfo]:
         """Find a UI element by selector string.
 
         The selector format is "role:name" (e.g., "Button:OK") or just a name.
@@ -745,6 +746,8 @@ class WindowsBackend(Backend):
         Args:
             selector: Element selector in "role:name" or "name" format.
             window_title: Not yet used (reserved for future).
+            hwnd: Target window handle.  When provided, searches within this
+                window instead of the foreground window (#525).
 
         Returns:
             ElementInfo if found, None otherwise.
@@ -761,7 +764,7 @@ class WindowsBackend(Backend):
         else:
             name = selector if selector else None
 
-        result = core.find_element(hwnd=0, role=role, name=name)
+        result = core.find_element(hwnd=hwnd or 0, role=role, name=name)
         if result is None:
             return None
 
@@ -2028,7 +2031,8 @@ class WindowsBackend(Backend):
 
     def click(self, x: Optional[int] = None, y: Optional[int] = None,
               element_id: Optional[str] = None, button: str = "left",
-              double: bool = False, input_mode: str = "normal") -> None:
+              double: bool = False, input_mode: str = "normal",
+              hwnd: Optional[int] = None) -> None:
         """Click at coordinates or on a UI element.
 
         If an element_id is provided, finds the element first and clicks its
@@ -2042,9 +2046,13 @@ class WindowsBackend(Backend):
             button: Mouse button — "left", "right", or "middle".
             double: True for double-click.
             input_mode: Ignored for now (Phase 3 will add hardware/hook modes).
+            hwnd: Target window handle for element search.  When provided,
+                searches within this window instead of the foreground
+                window (#525).
 
         Raises:
             ValueError: If neither coordinates nor element_id is provided.
+            ElementNotFoundError: When element_id is given but not found.
             NaturoCoreError: On system error.
         """
         core = self._ensure_core()
@@ -2054,10 +2062,10 @@ class WindowsBackend(Backend):
 
         if element_id is not None:
             # Find element and click its center
-            el = self.find_element(selector=element_id)
+            el = self.find_element(selector=element_id, hwnd=hwnd)
             if el is None:
-                from naturo.bridge import NaturoCoreError
-                raise NaturoCoreError(-1, f"click: element not found ({element_id!r})")
+                from naturo.errors import ElementNotFoundError
+                raise ElementNotFoundError(element_id)
             cx = el.x + el.width // 2
             cy = el.y + el.height // 2
             core.mouse_move(cx, cy)

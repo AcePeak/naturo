@@ -1020,8 +1020,10 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 return
         elif target_id:
             try:
+                # (#525) Pass resolved hwnd so find_element searches the
+                # correct window, not just the foreground window.
                 backend.click(element_id=target_id, button=button, double=double,
-                              input_mode=input_mode)
+                              input_mode=input_mode, hwnd=hwnd)
             except Exception:
                 # (#442) Fallback: search the app's element tree when C++
                 # exact UIA Name match fails.  Handles localized apps where
