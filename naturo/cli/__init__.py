@@ -74,7 +74,7 @@ def _patch_json_flag(cmd) -> None:
             break
 
 
-def _patch_all_commands(group: click.BaseCommand) -> None:
+def _patch_all_commands(group: click.Command) -> None:
     """Recursively patch all commands under a group for --json propagation."""
     if isinstance(group, click.Group):
         for cmd in group.commands.values():
