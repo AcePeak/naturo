@@ -309,24 +309,6 @@ def test_excel_help(runner):
     assert "run-macro" in result.output
 
 
-@pytest.mark.skip(reason='command hidden — stub not exposed to users')
-def test_java_help(runner):
-    result = runner.invoke(main, ["java", "--help"])
-    assert result.exit_code == 0
-    assert "list" in result.output
-    assert "tree" in result.output
-    assert "click" in result.output
-
-
-@pytest.mark.skip(reason='command hidden — stub not exposed to users')
-def test_sap_help(runner):
-    result = runner.invoke(main, ["sap", "--help"])
-    assert result.exit_code == 0
-    assert "list" in result.output
-    assert "run" in result.output
-    assert "get" in result.output
-    assert "set" in result.output
-
 
 @pytest.mark.skip(reason='command hidden — stub not exposed to users')
 @pytest.mark.skip(reason="registry command removed in v0.2.0")
