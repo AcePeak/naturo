@@ -46,11 +46,42 @@ gh pr list --state open --json number,title,author,mergeable,autoMergeRequest --
 ```
 For any PR where auto-merge is not enabled and CI is green → `gh pr merge <number> --auto --squash`
 
-### 0c. CI health check
+### 0c. CI health check — DEEP DIAGNOSIS
 ```bash
 gh run list --limit 5
 ```
-**If CI is RED → fix it before anything else. Nothing else matters until CI is green.**
+**If CI is RED or CANCELLED → fix it before anything else. Nothing else matters until CI is green.**
+
+#### CI diagnosis protocol (follow ALL steps):
+1. **Identify which job failed**:
+   ```bash
+   gh run view <run-id> --json jobs --jq '.jobs[] | select(.conclusion != "success" and .conclusion != "skipped") | "\(.name): \(.conclusion) (\(.steps | map(select(.conclusion != "success" and .conclusion != "skipped")) | .[0].name // "unknown step"))"'
+   ```
+
+2. **Get the failure logs** (last 50 lines of the failed job):
+   ```bash
+   gh run view <run-id> --log-failed 2>&1 | tail -50
+   ```
+
+3. **Classify the failure**:
+   - **"cancelled" after 20-45 min** → a test is HANGING (DLL/UIA call on headless runner). Find which test by looking at the last PASSED test in the log — the NEXT test is the one that hung. Fix: add `@pytest.mark.desktop` or `@pytest.mark.skipif(_NO_DESKTOP, ...)` to that test.
+   - **"failure" with test name** → a test assertion failed. Read the error, fix the code or the test.
+   - **"failure" with "page fault" or "fatal exception"** → DLL segfault. Usually caused by `--timeout-method=thread` conflicting with ctypes calls, or a test loading DLL without desktop guard.
+   - **"failure" with "Unable to resolve action"** → a GitHub Action version doesn't exist. Downgrade to latest stable (checkout@v4, setup-python@v5).
+   - **"cancelled" immediately** → concurrency group cancelled this run because a newer commit arrived. This is normal, check if the LATEST run passed.
+
+4. **Check if it's a known recurring issue**:
+   - Tests that invoke CLI commands bare without `@pytest.mark.desktop` → they trigger DLL load → hang on CI Windows
+   - Tests that mock wrong function paths → AttributeError on CI but pass locally (import path differs)
+   - Tests with `--timeout-method=thread` → page fault on Windows with ctypes
+
+5. **After fixing**: verify the fix works by checking that the PR's own CI passes. Don't just push and hope — read the CI output of your fix PR.
+
+6. **Open PRs with stale CI**: check all open PRs. If any have cancelled/failed CI from old runs, update their branch:
+   ```bash
+   gh pr list --state open --json number,title --jq '.[] | "#\(.number) \(.title)"'
+   # For each: gh api repos/AcePeak/naturo/pulls/<number>/update-branch -X PUT
+   ```
 
 ### 0d. Determine what to work on
 ```bash

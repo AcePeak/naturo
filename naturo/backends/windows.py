@@ -1614,11 +1614,13 @@ class WindowsBackend(Backend):
             pid: Process ID.  Filters windows to only those owned by this
                 process (#471).
             backend: Accessibility backend — "auto" (default), "uia", "msaa",
-                     "win32", "ia2", or "jab".
-                     "auto" tries UIA first, falls back to MSAA/IA2/JAB/Win32
-                     if UIA returns no meaningful elements.
-                     "win32" uses pure Win32 HWND enumeration (fallback for
-                     VB6/ActiveX apps where UIA/MSAA see opaque Pane containers).
+                     "win32", "win32hybrid", "ia2", or "jab".
+                     "auto" tries UIA first, falls back to hybrid Win32+UIA
+                     if UIA returns shallow trees, then IA2/JAB/MSAA.
+                     "win32" uses pure Win32 HWND enumeration.
+                     "win32hybrid" uses Win32 HWND tree with UIA drill-down
+                     for complex controls like grids, list views, and tree
+                     views (#312).
 
         Returns:
             Root ElementInfo with nested children, or None.
@@ -1700,6 +1702,12 @@ class WindowsBackend(Backend):
             # Pure Win32 HWND enumeration (VB6/ActiveX fallback)
             from naturo.bridge import enumerate_child_windows
             result = enumerate_child_windows(hwnd=handle, depth=depth)
+        elif backend == "win32hybrid":
+            # Win32 HWND tree + UIA drill-down for complex controls (#312)
+            from naturo.bridge import enumerate_hybrid_tree
+            result = enumerate_hybrid_tree(
+                hwnd=handle, depth=depth, core=core,
+            )
         elif backend == "auto":
             result = core.get_element_tree(hwnd=handle, depth=depth)
             # UWP/WinUI fallback: try child windows of AFH
@@ -1708,23 +1716,26 @@ class WindowsBackend(Backend):
                 lambda h, d: core.get_element_tree(hwnd=h, depth=d),
             )
             
-            # Win32 HWND fallback for VB6/ActiveX apps (Issue #308)
-            # When UIA/MSAA return shallow trees (only Pane containers),
-            # fall back to EnumChildWindows
+            # Win32+UIA hybrid fallback for VB6/ActiveX apps (#308, #312)
+            # When UIA returns shallow trees (only Pane containers),
+            # use hybrid enumeration: Win32 HWND tree as base with UIA
+            # drill-down for complex controls (grids, list views, tree views).
             if result is not None and self._is_shallow_tree(result):
                 logger.info(
-                    "UIA/MSAA returned shallow tree (%d children), "
-                    "trying Win32 HWND enumeration fallback (VB6/ActiveX)",
+                    "UIA returned shallow tree (%d children), "
+                    "trying Win32+UIA hybrid enumeration (VB6/ActiveX)",
                     len(result.children)
                 )
-                from naturo.bridge import enumerate_child_windows
-                win32_result = enumerate_child_windows(hwnd=handle, depth=depth)
-                if win32_result is not None and len(win32_result.children) > len(result.children):
+                from naturo.bridge import enumerate_hybrid_tree
+                hybrid_result = enumerate_hybrid_tree(
+                    hwnd=handle, depth=depth, core=core,
+                )
+                if hybrid_result is not None and len(hybrid_result.children) > len(result.children):
                     logger.info(
-                        "Win32 fallback found %d children (vs %d from UIA/MSAA), using it",
-                        len(win32_result.children), len(result.children)
+                        "Hybrid fallback found %d children (vs %d from UIA), using it",
+                        len(hybrid_result.children), len(result.children)
                     )
-                    result = win32_result
+                    result = hybrid_result
             
             if result is None or (not result.children and not result.name):
                 # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
@@ -1741,12 +1752,14 @@ class WindowsBackend(Backend):
                         if msaa_result is not None:
                             result = msaa_result
                         else:
-                            # Final fallback: try Win32 enumeration
-                            from naturo.bridge import enumerate_child_windows
-                            win32_result = enumerate_child_windows(hwnd=handle, depth=depth)
-                            if win32_result is not None:
-                                logger.info("Auto mode: all backends failed, using Win32 fallback")
-                                result = win32_result
+                            # Final fallback: hybrid Win32+UIA enumeration
+                            from naturo.bridge import enumerate_hybrid_tree
+                            hybrid_result = enumerate_hybrid_tree(
+                                hwnd=handle, depth=depth, core=core,
+                            )
+                            if hybrid_result is not None:
+                                logger.info("Auto mode: all backends failed, using Win32+UIA hybrid fallback")
+                                result = hybrid_result
         else:
             result = core.get_element_tree(hwnd=handle, depth=depth)
             # UWP/WinUI fallback for explicit "uia" backend too
