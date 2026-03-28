@@ -304,6 +304,55 @@ class SnapshotManager:
             self._write_json_atomic(ref_path, ref_map)
         logger.debug("Stored ref map for snapshot %s (%d refs)", snapshot_id, len(ref_map))
 
+    def store_display_ref_map(
+        self, snapshot_id: str, display_map: Dict[str, str],
+    ) -> None:
+        """Persist the display ref → stable ref mapping for a snapshot.
+
+        The ``see`` command shows sequential display refs (e1, e2, e3…) but
+        stores hash-based stable refs (e1876, e2473…) in ``refs.json``.
+        This mapping allows ``click eN`` to translate the display ref the
+        user sees into the stable ref used internally (#502).
+
+        Parameters
+        ----------
+        snapshot_id:
+            Target snapshot.
+        display_map:
+            Mapping from display ref (e.g. ``"e1"``) to stable ref
+            (e.g. ``"e1876"``).
+        """
+        snap_dir = self._snap_dir(snapshot_id)
+        with self._lock:
+            path = snap_dir / "display_refs.json"
+            self._write_json_atomic(path, display_map)
+        logger.debug(
+            "Stored display ref map for snapshot %s (%d refs)",
+            snapshot_id, len(display_map),
+        )
+
+    def _translate_display_ref(
+        self, ref: str, snap_dir: Path,
+    ) -> str:
+        """Translate a sequential display ref to its stable hash-based ref.
+
+        The ``see`` command shows sequential refs (e1, e2, e3…) while storing
+        hash-based refs (e1876, e2473…).  If a ``display_refs.json`` mapping
+        exists, this translates the display ref; otherwise returns ``ref``
+        unchanged (#502).
+        """
+        display_path = snap_dir / "display_refs.json"
+        with self._lock:
+            if not display_path.exists():
+                return ref
+            try:
+                display_map = json.loads(
+                    display_path.read_text(encoding="utf-8"),
+                )
+            except (OSError, json.JSONDecodeError):
+                return ref
+        return display_map.get(ref, ref)
+
     def resolve_ref(self, ref: str) -> Optional[tuple]:
         """Resolve a short element ref (e.g. ``e3``) to center coordinates.
 
@@ -337,7 +386,14 @@ class SnapshotManager:
             except (OSError, json.JSONDecodeError):
                 return None
 
-        element_id = ref_map.get(ref)
+        # (#502) Translate sequential display ref (e1, e2…) to stable
+        # hash-based ref (e1876…) if a display_refs.json mapping exists.
+        stable_ref = self._translate_display_ref(ref, snap_dir)
+
+        element_id = ref_map.get(stable_ref)
+        if not element_id:
+            # Fallback: try the original ref in case it's already a stable ref
+            element_id = ref_map.get(ref)
         if not element_id:
             return None
 
@@ -347,8 +403,13 @@ class SnapshotManager:
             return None
 
         # (#237) ui_map may be keyed by ref ("e1") or by backend id,
-        # depending on snapshot version.  Try ref first, then backend id.
-        element = snapshot.ui_map.get(ref) or snapshot.ui_map.get(element_id)
+        # depending on snapshot version.  Try stable ref first, then
+        # backend id, then original ref.
+        element = (
+            snapshot.ui_map.get(stable_ref)
+            or snapshot.ui_map.get(element_id)
+            or snapshot.ui_map.get(ref)
+        )
         if not element:
             return None
 
@@ -401,7 +462,12 @@ class SnapshotManager:
             except (OSError, json.JSONDecodeError):
                 return None
 
-        element_id = ref_map.get(ref)
+        # (#502) Translate sequential display ref to stable hash-based ref.
+        stable_ref = self._translate_display_ref(ref, snap_dir)
+
+        element_id = ref_map.get(stable_ref)
+        if not element_id:
+            element_id = ref_map.get(ref)
         if not element_id:
             return None
 
@@ -410,8 +476,12 @@ class SnapshotManager:
         except Exception:
             return None
 
-        # (#237) ui_map may be keyed by ref ("e1") or by backend id.
-        element = snapshot.ui_map.get(ref) or snapshot.ui_map.get(element_id)
+        # (#237) ui_map may be keyed by ref or by backend id.
+        element = (
+            snapshot.ui_map.get(stable_ref)
+            or snapshot.ui_map.get(element_id)
+            or snapshot.ui_map.get(ref)
+        )
         if not element:
             return None
 

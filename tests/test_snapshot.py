@@ -864,5 +864,117 @@ class TestResolveRefDuplicateBackendIds:
         assert result_b[0].title == "系统"
 
 
+class TestDisplayRefMap:
+    """Tests for display ref → stable ref translation (#502).
+
+    The ``see`` command shows sequential display refs (e1, e2, e3…) but
+    stores hash-based stable refs (e1876, e2473…) in refs.json.  The
+    display_refs.json mapping allows ``click eN`` to resolve the display
+    ref the user sees.
+    """
+
+    def test_resolve_ref_with_display_mapping(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """resolve_ref translates display ref via display_refs.json."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        # Stable refs use hash-based keys (like the real system)
+        el = UIElement(
+            id="e1876", element_id="element_e1876", role="Button",
+            title="OK", label="OK", value=None,
+            frame=(100, 200, 80, 30), is_actionable=True,
+            parent_id=None, children=[],
+        )
+        ui_map = {"e1876": el}
+        ref_map = {"e1876": "backend_id_ok"}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, ref_map)
+
+        # Without display_refs.json, "e1" should NOT resolve
+        assert mgr.resolve_ref("e1") is None
+
+        # Store display ref mapping: e1 (shown to user) → e1876 (stable)
+        mgr.store_display_ref_map(sid, {"e1": "e1876"})
+
+        # Now "e1" should resolve to the element's center
+        result = mgr.resolve_ref("e1")
+        assert result is not None
+        cx, cy, snap_id = result
+        assert snap_id == sid
+        assert cx == 140  # 100 + 80//2
+        assert cy == 215  # 200 + 30//2
+
+    def test_resolve_ref_element_with_display_mapping(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """resolve_ref_element translates display ref via display_refs.json."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        el = UIElement(
+            id="e2473", element_id="element_e2473", role="Edit",
+            title="Search", label="Search", value="hello",
+            frame=(50, 60, 200, 25), is_actionable=True,
+            parent_id=None, children=[],
+        )
+        ui_map = {"e2473": el}
+        ref_map = {"e2473": "backend_search"}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, ref_map)
+        mgr.store_display_ref_map(sid, {"e3": "e2473"})
+
+        result = mgr.resolve_ref_element("e3")
+        assert result is not None
+        element, snap_id = result
+        assert snap_id == sid
+        assert element.role == "Edit"
+        assert element.title == "Search"
+
+    def test_stable_refs_still_work_directly(
+        self, mgr: SnapshotManager, png_file: Path,
+    ) -> None:
+        """Stable refs (e1876) still resolve even when display_refs.json exists."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+
+        el = UIElement(
+            id="e1876", element_id="element_e1876", role="Button",
+            title="Cancel", label="Cancel", value=None,
+            frame=(200, 300, 60, 30), is_actionable=True,
+            parent_id=None, children=[],
+        )
+        ui_map = {"e1876": el}
+        ref_map = {"e1876": "backend_cancel"}
+        mgr.store_detection_result(sid, ui_map)
+        mgr.store_ref_map(sid, ref_map)
+        mgr.store_display_ref_map(sid, {"e1": "e1876"})
+
+        # Direct stable ref should still work
+        result = mgr.resolve_ref("e1876")
+        assert result is not None
+        cx, cy, _ = result
+        assert cx == 230  # 200 + 60//2
+        assert cy == 315  # 300 + 30//2
+
+    def test_display_ref_map_not_required(
+        self, mgr: SnapshotManager, png_file: Path,
+        sample_ui_map: Dict[str, UIElement],
+    ) -> None:
+        """Without display_refs.json, resolve_ref works as before (#237 compat)."""
+        sid = mgr.create_snapshot()
+        mgr.store_screenshot(sid, str(png_file))
+        mgr.store_detection_result(sid, sample_ui_map)
+        mgr.store_ref_map(sid, {"e1": "element_0", "e2": "element_1"})
+
+        # Old-style: ref_map keys match ui_map keys directly
+        result = mgr.resolve_ref("e1")
+        assert result is not None
+        cx, cy, _ = result
+        assert cx == 50   # 10 + 80//2
+        assert cy == 35   # 20 + 30//2
+
+
 # ── need os for backdate test ─────────────────────────────────────────────────
 import os  # noqa: E402  (placed here intentionally to keep test-only import)

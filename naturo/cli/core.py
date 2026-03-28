@@ -749,7 +749,10 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # changes between snapshots (e.g. Calculator display update after Clear).
             from naturo.refs import assign_stable_refs
 
-            ui_map, ref_map = assign_stable_refs(tree, UIElement)
+            _element_obj_to_ref: dict[int, str] = {}
+            ui_map, ref_map = assign_stable_refs(
+                tree, UIElement, element_obj_to_ref=_element_obj_to_ref,
+            )
             mgr.store_detection_result(snapshot_id, ui_map)
             # Persist ref mapping so click/type can resolve e<N> refs
             mgr.store_ref_map(snapshot_id, ref_map)
@@ -780,6 +783,11 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 }
                 mgr.store_screenshot(snapshot_id, result.path, metadata)
 
+        # (#502) Build mapping from sequential display refs (e1, e2, …) to
+        # stable hash-based refs (e1876, e2473, …) so that ``click eN`` can
+        # resolve the refs shown in ``see`` output.
+        _display_ref_map: dict[str, str] = {}
+
         if json_output:
             # (#237) Use a sequential counter matching _flatten() DFS order
             # to assign unique display IDs.  The previous reverse-map approach
@@ -799,6 +807,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 """
                 _json_ref_seq[0] += 1
                 display_id = f"e{_json_ref_seq[0]}"
+
+                # (#502) Map display ref → stable ref for click resolution
+                if store_snapshot:
+                    stable_ref = _element_obj_to_ref.get(id(el))
+                    if stable_ref:
+                        _display_ref_map[display_id] = stable_ref
 
                 # (#295) Expose AutomationId separately.  The raw
                 # el.id from the bridge may be an AutomationId or a
@@ -884,6 +898,12 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 _ref_counter[0] += 1
                 ref = f"e{_ref_counter[0]}"
 
+                # (#502) Map display ref → stable ref for click resolution
+                if store_snapshot:
+                    stable_ref = _element_obj_to_ref.get(id(el))
+                    if stable_ref:
+                        _display_ref_map[ref] = stable_ref
+
                 # (#365) Zero-bounds = offscreen
                 _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
 
@@ -926,6 +946,11 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 click.echo("  Providers:")
                 for p in cascade_stats.providers:
                     click.echo(f"    {p.name:<12} {p.elements:>4} elements  {p.elapsed_ms:>6.0f}ms  [{p.status}]")
+
+        # (#502) Persist display ref → stable ref mapping so that
+        # ``click eN`` can resolve the sequential refs shown in ``see``.
+        if store_snapshot and snapshot_id and _display_ref_map:
+            mgr.store_display_ref_map(snapshot_id, _display_ref_map)
 
         # Generate annotated screenshot
         if annotate and store_snapshot and snapshot_id:
