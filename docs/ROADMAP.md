@@ -138,7 +138,7 @@ See [Unified Selector design doc](design/UNIFIED_SELECTOR.md).
 - [ ] User selector management (`naturo selector save/load/list/export`)
 
 ### Enterprise
-- [ ] Excel COM automation (read/write cells, run macros, create charts)
+- [x] Excel COM automation (read/write cells, run macros) — shipped in v0.1.1
 - [ ] SAP GUI Scripting
 - [ ] MinHook injection (function hooks, intercept/modify Win32 API calls)
 - [ ] Embedded Python 3.12 runtime (~40MB bundled)
