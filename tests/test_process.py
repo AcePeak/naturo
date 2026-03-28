@@ -6,7 +6,7 @@ from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
     relaunch_app, list_apps, _list_processes, _verify_quit,
     _get_console_session_id, _get_process_session_id,
-    _resolve_launch_name, _LAUNCH_ALIASES,
+    _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
 )
 from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
 
@@ -568,6 +568,58 @@ class TestQuitApp:
         """When quit was by PID only (no name), verify by PID only."""
         mock_find.return_value = None
         _verify_quit(None, 100, target_pid=100, timeout=0.5)
+
+
+class TestResolvePidFromBackend:
+    """Tests for UWP-aware PID resolution via backend (#505)."""
+
+    @patch("naturo.backends.base.get_backend")
+    def test_resolves_uwp_pid_from_window_list(self, mock_get_backend):
+        """Backend window list returns the real PID for UWP apps."""
+        mock_window = MagicMock()
+        mock_window.process_name = "C:\\Windows\\Notepad.exe"
+        mock_window.title = "Untitled - Notepad"
+        mock_window.pid = 36328  # Real app PID (not AFH PID 37476)
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [mock_window]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("notepad")
+        assert pid == 36328
+
+    @patch("naturo.backends.base.get_backend")
+    def test_returns_none_when_no_match(self, mock_get_backend):
+        """Returns None when no window matches the app name."""
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = []
+        mock_get_backend.return_value = mock_be
+
+        assert _resolve_pid_from_backend("nonexistent") is None
+
+    @patch("naturo.backends.base.get_backend")
+    def test_falls_back_on_backend_error(self, mock_get_backend):
+        """Returns None gracefully when backend raises."""
+        mock_get_backend.side_effect = Exception("No backend")
+        assert _resolve_pid_from_backend("notepad") is None
+
+    @patch("naturo.process._verify_quit")
+    @patch("naturo.process._force_kill")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process._resolve_pid_from_backend")
+    @patch("naturo.process.platform")
+    def test_quit_app_uses_backend_pid_on_windows(
+        self, mock_platform, mock_resolve, mock_find, mock_kill, mock_verify,
+    ):
+        """quit_app uses backend-resolved PID for name-based quit on Windows (#505)."""
+        mock_platform.system.return_value = "Windows"
+        mock_resolve.return_value = 36328  # UWP-resolved PID
+        mock_find.return_value = ProcessInfo(pid=36328, name="notepad.exe")
+        mock_verify.return_value = None
+
+        quit_app(name="notepad", force=True)
+        mock_resolve.assert_called_once_with("notepad")
+        mock_kill.assert_called_once_with(36328, "Windows")
 
 
 class TestRelaunchApp:

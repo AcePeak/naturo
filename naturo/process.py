@@ -460,6 +460,28 @@ def launch_app(
     return info
 
 
+def _resolve_pid_from_backend(name: str) -> int | None:
+    """Resolve a PID via the window backend for UWP-aware lookup (#505).
+
+    The backend's ``list_windows()`` applies UWP child process resolution
+    (finding the real app PID inside ApplicationFrameHost), which raw
+    ``tasklist`` does not.  This ensures ``app quit notepad`` targets the
+    actual Notepad process, not the stale AFH host PID.
+    """
+    try:
+        from naturo.backends.base import get_backend
+
+        be = get_backend()
+        name_lower = name.lower()
+        for w in be.list_windows():
+            proc_name = os.path.basename(w.process_name).lower()
+            if name_lower in proc_name or name_lower in w.title.lower():
+                return w.pid
+    except Exception:
+        logger.debug("Backend PID resolution failed for %r, falling back", name)
+    return None
+
+
 def quit_app(
     name: str | None = None,
     pid: int | None = None,
@@ -477,6 +499,14 @@ def quit_app(
     Raises:
         AppNotFoundError: If no matching process is found.
     """
+    # (#505) For name-based lookup on Windows, first try the backend's
+    # window list which has UWP child process resolution.  This avoids
+    # targeting the stale ApplicationFrameHost PID.
+    if name and pid is None and platform.system() == "Windows":
+        backend_pid = _resolve_pid_from_backend(name)
+        if backend_pid is not None:
+            pid = backend_pid
+
     proc = find_process(name=name, pid=pid)
     if proc is None:
         identifier = name or str(pid)
