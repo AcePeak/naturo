@@ -1785,15 +1785,14 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration,
 
     \b
     Examples:
-
-        naturo highlight --app notepad                    # Actionable elements only
-        naturo highlight --app notepad --all              # All elements
-        naturo highlight e11 --app notepad                # Highlight specific ref
-        naturo highlight --app notepad --filter Button    # Only buttons
-        naturo highlight --app notepad -A out.png         # Save annotated screenshot
-        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs
-        naturo highlight --app notepad --duration 10      # Show for 10 seconds
-        naturo highlight --app legacy --backend win32     # Win32 HWND fallback
+      naturo highlight --app notepad             # Actionable only
+      naturo highlight --app notepad --all       # All elements
+      naturo highlight e11 --app notepad         # Specific ref
+      naturo highlight --app notepad --filter Button
+      naturo highlight --app notepad -A out.png  # Annotated screenshot
+      naturo highlight --hwnd 10697004 -r e69 -r e77
+      naturo highlight --app notepad --duration 10
+      naturo highlight --app legacy --backend win32
     """
     import json as _json
     be = _get_backend(json_output)

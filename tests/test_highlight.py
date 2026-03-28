@@ -280,3 +280,26 @@ class TestActionableRoles:
 
         for role in ("Window", "Pane", "Group", "Text", "Image", "Document"):
             assert role not in ACTIONABLE_ROLES, f"{role} should NOT be in ACTIONABLE_ROLES"
+
+
+class TestHighlightHelp:
+    """Verify --help output formatting (regression for #543)."""
+
+    def test_help_examples_not_wrapped(self):
+        """Each example should be on its own line, not wrapped together."""
+        from click.testing import CliRunner
+
+        from naturo.cli import main
+
+        result = CliRunner().invoke(main, ["highlight", "--help"])
+        assert result.exit_code == 0
+        # Each example must start on its own line (not wrapped into previous)
+        assert "naturo highlight --app notepad" in result.output
+        # If wrapping occurred, "naturo" would appear mid-line after another command
+        lines = result.output.splitlines()
+        example_lines = [l for l in lines if "naturo highlight" in l]
+        for line in example_lines:
+            # Each line should contain exactly one "naturo highlight" invocation
+            assert line.strip().count("naturo highlight") == 1, (
+                f"Example wrapping detected: {line!r}"
+            )
