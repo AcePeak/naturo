@@ -40,7 +40,7 @@ jobs:
           python-version: "3.12"
 
       - name: Download DLL
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: naturo-core-dll
           path: naturo/bin/
