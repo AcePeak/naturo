@@ -648,17 +648,15 @@ class TestQuitAppVerification:
              patch("naturo.process._force_kill"), \
              patch("naturo.process.is_running", return_value=True), \
              patch("naturo.process.time") as mock_time:
-            # find_process: first call (initial lookup) returns proc,
-            # second call (in _verify_quit) returns None (process died)
-            mock_find.side_effect = [fake_proc, None]
+            # find_process: first call returns proc (initial lookup),
+            # all subsequent calls return None (process died)
+            mock_find.side_effect = lambda **kwargs: fake_proc if mock_find.call_count == 1 else None
             call_count = 0
             base_time = 1000.0
 
             def fake_monotonic():
                 nonlocal call_count
                 call_count += 1
-                # Small increments to let the graceful wait loop expire
-                # but keep _verify_quit within its timeout window
                 return base_time + call_count * 0.5
 
             mock_time.monotonic = fake_monotonic
