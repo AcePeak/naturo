@@ -1,28 +1,29 @@
 # Dev Status
-Last updated: 2026-03-28T02:15:00Z
-Session: Merge stuck PRs + Fix Click deprecation + Implement --selector for action commands
+Last updated: 2026-03-28T04:15:00Z
+Session: Highlight improvements (#313) + PR monitoring
 
 ## This Session
-- **PR #488** (Orc-Mycelium): Merged — skip bare command test on CI Windows
-- **PR #489** (Orc-Mycelium): CI stuck (Windows DLL tests hanging 30+ min). Could not enable auto-merge.
-- **Issue #490 (tech-debt):** Created + fixed in PR #491 (merged). Replaced deprecated `click.BaseCommand` with `click.Command`. Eliminated deprecation warning across 1964 tests.
-- **Issue #103 (v0.3.2, enhancement):** PR #492 created. Added `--selector` flag to `click`, `type`, `press` commands. Wired existing SelectorBuilder/SelectorResolver into CLI. 9 new tests, all passing.
-- Tests: 1973 passed, 489 skipped, 0 failed (Ubuntu)
-- PRs: #491 merged, #492 created (CI running)
+- **Issue #313 (v0.3.1, P2):** PR #494 created. Replaced 3-flash GDI cycle with simultaneous persistent display. Added depth-based coloring, label collision avoidance, actionable-only default (`--all` flag), `--annotate` PIL mode, `--filter` by role. 19 new tests.
+- **PR #492** (selector CLI): Windows DLL test still in_progress (~55 min). 5/6 checks green.
+- **PR #493** (Win32+UIA hybrid): Same — Windows DLL test still running. 5/6 checks green.
+- **PR #489** (Orc-Mycelium): Same pattern.
+- Tests: 30 passed, 1 skipped, 0 failed (local Ubuntu — annotate + highlight + CLI consistency)
+- PRs: #494 created (CI running), #492/#493 still awaiting Windows DLL test
 
-## Open PRs by Me
-- #492 — feat: add --selector flag to click/type/press (fixes #103) — CI running
-- #489 — (Orc-Mycelium) dev-prompt CI diagnosis protocol — Windows DLL tests stuck
+## Open PRs
+- #494 — feat: highlight simultaneous display, label avoidance, annotate mode (fixes #313) — CI running
+- #493 — feat: Win32+UIA hybrid enumeration (fixes #312) — Windows DLL test in_progress
+- #492 — feat: add --selector flag to click/type/press (fixes #103) — Windows DLL test in_progress
+- #489 — (Orc-Mycelium) dev-prompt CI diagnosis protocol — Windows DLL test in_progress
 
 ## Current State
-- Earliest milestoned issues: v0.3.2 (#102, #103), v0.3.3 (#21)
-- CI: GREEN on main
-- All backlog issues (50) have no milestone assigned
-- Code health: clean — no TODOs, no bare excepts, ruff clean, zero deprecation warnings
+- Earliest open milestone: v0.3.1 (#312 PR #493 pending, #313 PR #494 pending)
+- Next milestone: v0.3.2 (#361, #103 PR #492 pending)
+- CI: GREEN on main; Windows DLL test job runs very long on PR branches
+- Auto-merge: could not enable yet (checks still in_progress)
 
 ## Next Session Should
-1. **Check CI on PR #492** — merge if green, fix if red
-2. **PR #489** — if Windows DLL tests still hanging, investigate or cancel the run
-3. **Issue #102 (v0.3.2)** — Wire SelectorBuilder into `see` command to output selectors alongside eN IDs
-4. **Issue #103 follow-up** — Add `--selector` to `find` command, MCP tools, `--timeout` support
-5. **Issue #411 (backlog)** — Split windows.py (3830 lines) into submodules if time permits
+1. **Check CI on all PRs** — enable auto-merge on any that passed. Fix if red.
+2. **Investigate Windows DLL test duration** — all 4 open PRs have the same slow pattern. May need test timeout or isolation fix.
+3. **Issue #361 (v0.3.2, P1)** — Stable app/window ID system for scripting (next after v0.3.1 clears)
+4. **Issue #102 (v0.3.2)** — Wire SelectorBuilder into `see` command output
