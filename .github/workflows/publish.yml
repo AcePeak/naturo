@@ -18,7 +18,7 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Upload DLL
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: naturo-core-dll
           path: build/bin/Release/naturo_core.dll
