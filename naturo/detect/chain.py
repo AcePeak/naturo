@@ -75,6 +75,15 @@ def _run_probe_with_timeout(
 
     def _target() -> None:
         try:
+            # COM must be initialized per-thread on Windows.  Without this,
+            # UIA calls from a daemon thread silently fail because the
+            # thread has no COM apartment (#483).
+            if platform.system() == "Windows":
+                try:
+                    import ctypes
+                    ctypes.windll.ole32.CoInitializeEx(None, 0)
+                except Exception:
+                    pass
             r = probe_fn(pid, exe, hwnd)
             result_holder.append(r)
         except Exception as exc:
@@ -135,6 +144,18 @@ def detect(
             return cached
 
     logger.debug("Running detection chain for PID %d (exe=%s, hwnd=%s)", pid, exe, hwnd)
+
+    # Pre-initialize the native core in the main thread so that DLL loading
+    # and COM initialization do not eat into per-probe timeout budgets.
+    # Without this, the first probe_uia call inside a timeout-wrapped daemon
+    # thread may spend most of its 10 s budget on init rather than UIA
+    # queries, causing false negatives for apps like Win11 Notepad (#483).
+    if platform.system() == "Windows":
+        try:
+            from naturo.detect.probes import _get_native_core
+            _get_native_core()
+        except Exception as exc:
+            logger.debug("Pre-init of native core failed (non-fatal): %s", exc)
 
     # Phase 1: Detect frameworks from DLL signatures
     frameworks = detect_frameworks_from_dlls(pid, exe)
