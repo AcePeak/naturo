@@ -513,13 +513,61 @@ def quit_app(
     # Force kill as fallback
     _force_kill(target_pid, system)
 
+    # Verify the process is actually dead (#484)
+    _verify_quit(name, pid, target_pid, timeout=3.0)
+
+
+def _verify_quit(
+    name: str | None,
+    pid: int | None,
+    target_pid: int,
+    timeout: float = 3.0,
+) -> None:
+    """Verify a process has actually exited after a kill attempt.
+
+    Args:
+        name: Application name used for the quit request.
+        pid: PID used for the quit request (if any).
+        target_pid: The specific PID that was killed.
+        timeout: Seconds to wait for process exit.
+
+    Raises:
+        InteractionFailedError: If the process is still running.
+    """
+    from naturo.errors import InteractionFailedError
+
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        # Check if the specific PID we targeted is gone
+        if find_process(pid=target_pid) is None:
+            return
+        time.sleep(0.3)
+
+    # Process survived the kill — report failure honestly
+    identifier = name or str(pid or target_pid)
+    raise InteractionFailedError(
+        message=(
+            f"Failed to quit '{identifier}' (PID {target_pid}): "
+            f"process is still running after force kill. "
+            f"Try: naturo app quit {identifier} --force, or "
+            f"naturo app quit --pid {target_pid} --force"
+        ),
+    )
+
 
 def _force_kill(pid: int, system: str) -> None:
-    """Force-kill a process by PID."""
+    """Force-kill a process and its children by PID.
+
+    Args:
+        pid: Process ID to kill.
+        system: Platform name (``platform.system()``).
+    """
     try:
         if system == "Windows":
+            # /T kills the entire process tree — needed for UWP apps
+            # and tabbed applications like Windows 11 Notepad (#484)
             subprocess.run(
-                ["taskkill", "/F", "/PID", str(pid)],
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True, timeout=10,
             )
         else:

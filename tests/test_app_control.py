@@ -599,3 +599,96 @@ class TestMatchWindows:
         windows = [_FakeWindow("Feishu", "FEISHU Chat", _safe_pids(1)[0])]
         matched = _match_windows(windows, "feishu")
         assert len(matched) == 1
+
+
+# ── #484: quit_app post-kill verification ────────────────────────────────────
+
+
+class TestQuitAppVerification:
+    """quit_app must verify the process is actually dead (#484)."""
+
+    def test_quit_app_raises_when_process_survives_force_kill(self):
+        """quit_app raises InteractionFailedError when process won't die."""
+        from unittest.mock import patch, MagicMock
+        from naturo.process import quit_app, ProcessInfo
+        from naturo.errors import InteractionFailedError
+
+        fake_proc = ProcessInfo(pid=99999, name="stubborn.exe", is_running=True)
+
+        with patch("naturo.process.find_process") as mock_find, \
+             patch("naturo.process._force_kill"), \
+             patch("naturo.process.is_running", return_value=True), \
+             patch("naturo.process.time") as mock_time:
+            # find_process returns the process every time (it never dies)
+            mock_find.return_value = fake_proc
+            # Speed up the timeout loop
+            call_count = 0
+            base_time = 1000.0
+
+            def fake_monotonic():
+                nonlocal call_count
+                call_count += 1
+                # First few calls for the graceful wait loop, then verification
+                return base_time + call_count * 2.0
+
+            mock_time.monotonic = fake_monotonic
+            mock_time.sleep = MagicMock()
+
+            with pytest.raises(InteractionFailedError, match="still running"):
+                quit_app(name="stubborn", timeout=0.1)
+
+    def test_quit_app_succeeds_when_process_dies(self):
+        """quit_app returns normally when the process exits after kill."""
+        from unittest.mock import patch, MagicMock
+        from naturo.process import quit_app, ProcessInfo
+
+        fake_proc = ProcessInfo(pid=99999, name="good.exe", is_running=True)
+
+        with patch("naturo.process.find_process") as mock_find, \
+             patch("naturo.process._force_kill"), \
+             patch("naturo.process.is_running", return_value=True), \
+             patch("naturo.process.time") as mock_time:
+            # find_process: first call (initial lookup) returns proc,
+            # second call (in _verify_quit) returns None (process died)
+            mock_find.side_effect = [fake_proc, None]
+            call_count = 0
+            base_time = 1000.0
+
+            def fake_monotonic():
+                nonlocal call_count
+                call_count += 1
+                # Small increments to let the graceful wait loop expire
+                # but keep _verify_quit within its timeout window
+                return base_time + call_count * 0.5
+
+            mock_time.monotonic = fake_monotonic
+            mock_time.sleep = MagicMock()
+
+            # Should not raise
+            quit_app(name="good", timeout=0.1)
+
+    def test_quit_app_cli_exits_nonzero_on_failure(self, runner):
+        """CLI 'app quit' returns non-zero when quit_app raises."""
+        from unittest.mock import patch
+        from naturo.errors import InteractionFailedError
+
+        with patch("naturo.process.quit_app") as mock_quit:
+            mock_quit.side_effect = InteractionFailedError(
+                message="Failed to quit 'notepad': process is still running"
+            )
+            result = runner.invoke(main, ["app", "quit", "notepad"])
+            assert result.exit_code != 0
+            assert "still running" in result.output or "Error" in result.output
+
+    def test_force_kill_uses_tree_flag(self):
+        """_force_kill uses /T flag on Windows for process tree kill (#484)."""
+        from unittest.mock import patch, call
+        from naturo.process import _force_kill
+
+        with patch("naturo.process.subprocess.run") as mock_run:
+            _force_kill(12345, "Windows")
+            mock_run.assert_called_once()
+            args = mock_run.call_args[0][0]
+            assert "/T" in args, f"Expected /T in taskkill args: {args}"
+            assert "/F" in args
+            assert "/PID" in args
