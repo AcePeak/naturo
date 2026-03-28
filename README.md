@@ -5,7 +5,9 @@
 [![Build & Test](https://github.com/AcePeak/naturo/actions/workflows/build.yml/badge.svg)](https://github.com/AcePeak/naturo/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/AcePeak/naturo/graph/badge.svg)](https://codecov.io/gh/AcePeak/naturo)
 [![PyPI version](https://img.shields.io/pypi/v/naturo)](https://pypi.org/project/naturo/)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Downloads](https://img.shields.io/pypi/dm/naturo)](https://pypi.org/project/naturo/)
+[![Python 3.9+](https://img.shields.io/pypi/pyversions/naturo)](https://pypi.org/project/naturo/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)](https://github.com/AcePeak/naturo#platform-support)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ## What You Get
@@ -113,6 +115,25 @@ naturo desktop move-window 1 --app "Notepad"  # Move window to desktop 1
 # Paste text via clipboard (fast for large content)
 naturo type "large content" --paste        # Set clipboard → Ctrl+V → restore
 naturo type --paste --file data.txt        # Read file → paste
+
+# Read element values
+naturo get e47                             # Read text/value by element ref
+naturo get --aid txtSearch                 # Read by AutomationId
+naturo get --role Edit --name Search       # Read by role + name
+naturo get --role Button --app notepad --all -j  # All buttons (JSON)
+
+# Write element values
+naturo set e47 "hello world"               # Set text field value
+naturo set --aid txtSearch "query"          # Set by AutomationId
+naturo set e12 --toggle                    # Toggle a checkbox
+naturo set e8 --select                     # Select a list/radio item
+naturo set e5 --expand                     # Expand a combo box
+
+# Highlight UI elements
+naturo highlight --app notepad             # Show actionable elements
+naturo highlight --app notepad --all       # Show all elements
+naturo highlight e11 --app notepad         # Highlight specific ref
+naturo highlight --app notepad -A out.png  # Save annotated screenshot
 ```
 
 ## CLI Commands
@@ -138,6 +159,7 @@ naturo type --paste --file data.txt        # Read file → paste
 |---------|-------------|-------|
 | `click` | Click element/coordinates | 0.1.0 |
 | `type` | Type text (supports `--paste` for clipboard) | 0.1.0 |
+| `set` | Set element value/state (toggle, select, expand) | 0.3.0 |
 | `press` | Press key combination (e.g., `ctrl+s`) | 0.1.0 |
 | `scroll` | Scroll mouse wheel | 0.1.0 |
 | `drag` | Drag from/to coordinates | 0.1.0 |
