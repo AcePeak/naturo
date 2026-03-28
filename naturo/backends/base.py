@@ -21,6 +21,11 @@ class WindowInfo:
     is_visible: bool
     is_minimized: bool
 
+    @property
+    def hwnd(self) -> int:
+        """Alias for ``handle`` for bridge API compatibility (#504)."""
+        return self.handle
+
 
 @dataclass
 class ElementInfo:
