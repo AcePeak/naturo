@@ -152,7 +152,13 @@ You are scheduled to run every hour. The next session starts whether you're done
 1. Create a feature branch: `git checkout -b fix/issue-N-short-desc` (or `feat/` for features)
 2. **Write a failing test first** (TDD). If you can't write a test, think harder about what "fixed" means.
 3. Implement the minimum change to fix the issue
-4. Run tests: `python -m pytest tests/ -x -q --timeout=30`
+4. Run tests AND lint:
+   ```bash
+   python -m pytest tests/ -x -q --timeout=30
+   ruff check naturo/
+   mypy naturo/
+   ```
+   **All three must pass before creating a PR. CI will reject failures.**
 5. **Self-review your diff**: `git diff` — read every line. Ask yourself:
    - Does this change do ONLY what the issue asks? No scope creep?
    - Will this break any other command or feature?

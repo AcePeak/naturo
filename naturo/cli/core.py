@@ -1688,22 +1688,34 @@ def learn(topic):
     default="uia",
     help="Highlight backend: uia (default), win32 (HWND-only), win32hybrid (HWND + UIA drill-down)",
 )
-def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, json_output, backend):
+@click.option("--all", "show_all", is_flag=True, help="Show all elements, not just actionable ones")
+@click.option("--annotate", "-A", "annotate_path", type=click.Path(), default=None,
+              help="Save annotated screenshot to file instead of live overlay (requires Pillow)")
+@click.option("--filter", "role_filter", default=None,
+              help="Filter elements by role (e.g. --filter Button)")
+def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration,
+              json_output, backend, show_all, annotate_path, role_filter):
     """Highlight UI elements on screen with colored borders and labels.
 
-    By default uses the UIA element tree from the most recent snapshot
-    (or captures a fresh one). Refs match those from 'naturo see'.
+    By default highlights only actionable elements (Button, Edit, ComboBox,
+    etc.) using the UIA element tree from the most recent snapshot. Use --all
+    to show every element. Use --filter to show only specific roles.
 
+    Elements at the same tree depth share a color for visual grouping.
+    Labels are positioned to avoid overlapping each other.
+
+    Use --annotate to save an annotated screenshot instead of live overlay.
     Use --backend win32 for VB6/ActiveX apps where UIA fails.
 
     \b
     Examples:
 
-        naturo highlight e11 --app notepad               # Highlight specific ref (positional)
-        naturo highlight --app EnterprisePortal           # Highlight all elements
-        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs (option)
-        naturo highlight e5 e10 --app notepad             # Multiple positional refs
-        naturo highlight --on e5 --app notepad            # Using --on
+        naturo highlight --app notepad                    # Actionable elements only
+        naturo highlight --app notepad --all              # All elements
+        naturo highlight e11 --app notepad                # Highlight specific ref
+        naturo highlight --app notepad --filter Button    # Only buttons
+        naturo highlight --app notepad -A out.png         # Save annotated screenshot
+        naturo highlight --hwnd 10697004 -r e69 -r e77   # Highlight specific refs
         naturo highlight --app notepad --duration 10      # Show for 10 seconds
         naturo highlight --app legacy --backend win32     # Win32 HWND fallback
     """
@@ -1731,18 +1743,49 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, j
                 click.echo(f"Highlighting elements (win32) for {duration}s... (switch to the target window)")
             import time
             time.sleep(1.5)
-            highlight_elements(hwnd=handle, depth=depth, duration=duration, refs=refs_list)
+            highlight_elements(hwnd=handle, depth=depth, duration=duration,
+                               refs=refs_list, show_all=show_all)
         else:
             # UIA mode: use snapshot element tree (#364)
             from naturo.bridge import highlight_elements_uia
-            if not json_output:
-                click.echo(f"Highlighting elements (uia) for {duration}s... (switch to the target window)")
-            import time
-            time.sleep(1.5)
-            highlight_elements_uia(
-                backend=be, app=app, hwnd=handle, depth=depth,
-                duration=duration, refs=refs_list,
-            )
+            if annotate_path:
+                if not json_output:
+                    click.echo("Generating annotated screenshot...")
+                result_path = highlight_elements_uia(
+                    backend=be, app=app, hwnd=handle, depth=depth,
+                    duration=duration, refs=refs_list, show_all=show_all,
+                    annotate_path=annotate_path, role_filter=role_filter,
+                )
+                if result_path:
+                    if json_output:
+                        click.echo(_json.dumps({
+                            "success": True,
+                            "backend": backend,
+                            "annotate_path": result_path,
+                            "refs": refs_list,
+                        }))
+                    else:
+                        click.echo(f"Annotated screenshot saved: {result_path}")
+                    return
+                else:
+                    msg = "No snapshot with screenshot available for --annotate. Run 'naturo see' first."
+                    if json_output:
+                        click.echo(_json_error_str("NO_SNAPSHOT", msg))
+                        raise SystemExit(1)
+                    click.echo(f"Error: {msg}", err=True)
+                    raise SystemExit(1)
+            else:
+                if not json_output:
+                    click.echo(f"Highlighting elements (uia) for {duration}s... (switch to the target window)")
+                import time
+                time.sleep(1.5)
+                highlight_elements_uia(
+                    backend=be, app=app, hwnd=handle, depth=depth,
+                    duration=duration, refs=refs_list, show_all=show_all,
+                    role_filter=role_filter,
+                )
+    except SystemExit:
+        raise
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("HIGHLIGHT_ERROR", str(exc)))
@@ -1756,6 +1799,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, j
             "duration": duration,
             "hwnd": handle,
             "refs": refs_list,
+            "show_all": show_all,
         }
         click.echo(_json.dumps(result))
     else:

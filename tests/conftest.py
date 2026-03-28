@@ -30,14 +30,16 @@ if _CI_WINDOWS:
         def __init__(self, *args, **kwargs):
             pytest.skip(
                 "WindowsBackend() skipped on CI Windows (no desktop session). "
-                "Add @pytest.mark.desktop if this test requires a real desktop."
+                "Add @pytest.mark.desktop if this test requires a real desktop.",
+                allow_module_level=True,
             )
 
     class _SkippingNaturoCore:
         def __init__(self, *args, **kwargs):
             pytest.skip(
                 "NaturoCore() skipped on CI Windows (no desktop session). "
-                "Add @pytest.mark.desktop if this test requires a real desktop."
+                "Add @pytest.mark.desktop if this test requires a real desktop.",
+                allow_module_level=True,
             )
 
     _win_mod.WindowsBackend = _SkippingWindowsBackend  # type: ignore[misc]
