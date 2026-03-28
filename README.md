@@ -26,7 +26,7 @@
 - 📌 **Taskbar & Tray** — List and click taskbar items and system tray icons
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
-- 🍎 **macOS Support** — Peekaboo CLI wrapper (requires [Peekaboo](https://github.com/steipete/Peekaboo) installed)
+- 🍎 **macOS Support** — Coming soon (native implementation in development)
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
 ## Platform Support
@@ -35,7 +35,7 @@
 |----------|--------|-------|
 | **Windows 10/11** | ✅ Full support | Primary platform. All features available. |
 | **Windows 7 SP1+** | ⚠️ Best-effort | Basic features only, no UIAutomation v3. |
-| **macOS 13+** | ⚠️ Partial | Requires [Peekaboo](https://github.com/steipete/Peekaboo) installed. Wraps Peekaboo CLI for capture, click, type, window management. |
+| **macOS 13+** | 🚧 Coming soon | Native support is under active development. |
 | **Linux** | 🚧 Coming soon | Backend is a placeholder. Not usable yet. |
 | **Python** | 3.9+ | Required for all platforms. |
 
@@ -316,16 +316,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ### vs Peekaboo (macOS)
 
-Naturo is the Windows counterpart to [Peekaboo](https://github.com/steipete/Peekaboo) (macOS).
-On macOS, Naturo wraps Peekaboo's CLI so you get one unified API across platforms.
+Naturo aims to provide cross-platform desktop automation. On macOS, native support is coming soon.
 
-| | Peekaboo (macOS) | Naturo (Windows) |
-|--|-----------------|-----------------|
-| UI Framework | Accessibility API | UIA + MSAA + IA2 + JAB |
-| Screen Capture | ScreenCaptureKit | DirectX / GDI |
-| Input | CGEvent | SendInput + Phys32 scan codes |
-| Language | Swift | C++ |
-| Python Bridge | Swift subprocess | ctypes DLL |
+| | Peekaboo (macOS) | Naturo (Windows) | Naturo (macOS - planned) |
+|--|-----------------|-----------------|--------------------------|
+| UI Framework | Accessibility API | UIA + MSAA + IA2 + JAB | Accessibility API |
+| Screen Capture | ScreenCaptureKit | DirectX / GDI | ScreenCaptureKit |
+| Input | CGEvent | SendInput + Phys32 scan codes | CGEvent |
+| Language | Swift | C++ | C++ / Python bridge |
+| Status | Available | Available | Coming soon |
 
 ## Contributing
 
