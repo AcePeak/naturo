@@ -87,6 +87,38 @@ class TestCaptureLiveHelpFlags:
         result = runner.invoke(main, ["capture", "--help"])
         assert "--padding" in result.output
 
+    def test_pid_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["capture", "--help"])
+        assert "--pid" in result.output
+
+
+# ── PID-based capture ────────────────────────────────────────────────────────
+
+
+class TestCapturePid:
+    """capture --pid should resolve window via _resolve_hwnd(pid=...)."""
+
+    def test_capture_pid_calls_resolve_hwnd_with_pid(self, png_1x1):
+        """--pid should be passed to _resolve_hwnd."""
+        runner = CliRunner()
+        mock_result = _mock_capture_result(png_1x1)
+
+        with patch("naturo.cli.core._get_backend") as mock_be, \
+             patch("naturo.cli.core._platform_supports_gui", return_value=True):
+            be = MagicMock()
+            be._resolve_hwnd.return_value = 12345
+            be.capture_window.return_value = mock_result
+            mock_be.return_value = be
+            result = runner.invoke(main, [
+                "capture", "--pid", "9999", "--no-snapshot", "--json",
+            ])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        be._resolve_hwnd.assert_called_once_with(app=None, window_title=None, pid=9999)
+        be.capture_window.assert_called_once()
+
 
 # ── Region validation ─────────────────────────────────────────────────────────
 
