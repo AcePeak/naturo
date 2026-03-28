@@ -46,8 +46,11 @@ _DESKTOP_REQUIRED_COMMANDS = {
 }
 
 _ON_CI = os.environ.get("CI") == "true"
-# On CI, always skip desktop commands — GitHub Actions Windows runners
-# have unreliable desktop sessions even when explorer.exe is running.
+# On CI Windows, skip ALL bare command invocations that might trigger DLL/UIA.
+# GitHub Actions Windows runners have unreliable desktop sessions — any command
+# that touches the DLL can segfault or hang indefinitely.
+# The _DESKTOP_REQUIRED_COMMANDS set is a best-effort allowlist, but new commands
+# get added without updating it. Safer to skip the entire test on CI Windows.
 _NO_DESKTOP = _ON_CI and platform.system() == "Windows"
 
 
@@ -86,20 +89,19 @@ def test_all_visible_commands_respond():
         )
 
 
+@pytest.mark.skipif(
+    _NO_DESKTOP,
+    reason="Bare command invocations can trigger DLL/UIA on Windows CI — segfault/hang risk"
+)
 def test_no_visible_command_prints_not_implemented():
     """Invoking any visible leaf command (with no args) must not print 'Not implemented'."""
     # Long-running server commands that take over stdio — skip bare invocation
     SKIP_BARE_INVOKE = {("mcp", "start")}
-    skipped = []
     for args, cmd in _visible_subcommands(main):
         # Skip groups — they just show help when invoked bare
         if hasattr(cmd, "commands"):
             continue
         if tuple(args) in SKIP_BARE_INVOKE:
-            continue
-        # Skip desktop-dependent commands on headless CI to avoid DLL segfault (#296)
-        if _NO_DESKTOP and tuple(args) in _DESKTOP_REQUIRED_COMMANDS:
-            skipped.append(args)
             continue
         result = runner.invoke(main, args)
         # Some commands legitimately fail due to missing args or Windows-only —
@@ -107,8 +109,6 @@ def test_no_visible_command_prints_not_implemented():
         assert not NOT_IMPLEMENTED_RE.search(result.output), (
             f"naturo {' '.join(args)} returned stub text:\n{result.output}"
         )
-    if skipped:
-        pytest.skip(f"Skipped {len(skipped)} desktop-dependent commands on headless CI")
 
 
 def test_hidden_stubs_return_error_exit_code():

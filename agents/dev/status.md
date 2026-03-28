@@ -1,24 +1,28 @@
 # Dev Status
-Last updated: 2026-03-28T01:30:00Z
-Session: Fix #484 (app quit silent failure) + Fix #483 (UIA detection for Win11 Notepad)
+Last updated: 2026-03-28T02:15:00Z
+Session: Merge stuck PRs + Fix Click deprecation + Implement --selector for action commands
 
 ## This Session
-- **Issue #484 (P1 bug, v0.3.1):** PR #485 created. `quit_app()` now verifies process death after force-kill, raises `InteractionFailedError` on failure. Added `/T` flag for Windows process tree kill. 4 new tests.
-- **Issue #483 (P1 bug, v0.3.1):** PR #486 created. Fixed UIA detection probe: COM per-thread init in daemon threads, pre-init native core before timeout-wrapped probes, added `_find_window_by_process_name` fallback. 2 new tests.
-- Tests: 1960 passed, 489 skipped, 0 failed (Ubuntu)
-- PRs: #485 created (CI 5/6 green), #486 created (CI running)
+- **PR #488** (Orc-Mycelium): Merged — skip bare command test on CI Windows
+- **PR #489** (Orc-Mycelium): CI stuck (Windows DLL tests hanging 30+ min). Could not enable auto-merge.
+- **Issue #490 (tech-debt):** Created + fixed in PR #491 (merged). Replaced deprecated `click.BaseCommand` with `click.Command`. Eliminated deprecation warning across 1964 tests.
+- **Issue #103 (v0.3.2, enhancement):** PR #492 created. Added `--selector` flag to `click`, `type`, `press` commands. Wired existing SelectorBuilder/SelectorResolver into CLI. 9 new tests, all passing.
+- Tests: 1973 passed, 489 skipped, 0 failed (Ubuntu)
+- PRs: #491 merged, #492 created (CI running)
 
 ## Open PRs by Me
-- #485 — fix: app quit verifies process death (fixes #484) — CI 5/6 green, Windows DLL tests running
-- #486 — fix: UIA detection for Win11 Notepad (fixes #483) — CI running
+- #492 — feat: add --selector flag to click/type/press (fixes #103) — CI running
+- #489 — (Orc-Mycelium) dev-prompt CI diagnosis protocol — Windows DLL tests stuck
 
 ## Current State
-- Earliest open milestone: v0.3.1 (1 issue remaining: #411 — refactor windows.py)
+- Earliest milestoned issues: v0.3.2 (#102, #103), v0.3.3 (#21)
 - CI: GREEN on main
-- Both P1 bugs in v0.3.1 have PRs, need CI green + auto-merge
+- All backlog issues (50) have no milestone assigned
+- Code health: clean — no TODOs, no bare excepts, ruff clean, zero deprecation warnings
 
 ## Next Session Should
-1. **Check CI on PRs #485 and #486** — enable auto-merge if green, fix if red
-2. **Tackle #411 (P2, v0.3.1)** — Split windows.py (142KB) into submodules. This is a large task (~40 min).
-3. **After v0.3.1 clear**, move to v0.3.3: #21 (P0, Naturobot engine-level RPA capabilities)
-4. **If blocked on Windows testing**, do code health scan / tech debt audit from Linux
+1. **Check CI on PR #492** — merge if green, fix if red
+2. **PR #489** — if Windows DLL tests still hanging, investigate or cancel the run
+3. **Issue #102 (v0.3.2)** — Wire SelectorBuilder into `see` command to output selectors alongside eN IDs
+4. **Issue #103 follow-up** — Add `--selector` to `find` command, MCP tools, `--timeout` support
+5. **Issue #411 (backlog)** — Split windows.py (3830 lines) into submodules if time permits
