@@ -47,10 +47,49 @@
 pip install naturo
 ```
 
-Or start the MCP server directly:
+## MCP Server Setup
+
+Naturo includes a built-in [MCP](https://modelcontextprotocol.io/) server with 60+ tools for AI agent integration.
+
+### Claude Desktop / Claude Code
+
+Add to your Claude configuration file (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "naturo": {
+      "command": "naturo",
+      "args": ["mcp", "start"]
+    }
+  }
+}
+```
+
+> **Config file location:**
+> - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+> - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+### Other AI Agents (SSE / HTTP)
+
+For agents that connect over HTTP instead of stdio:
 
 ```bash
-naturo mcp start
+# SSE transport (Server-Sent Events)
+naturo mcp start --transport sse --port 3100
+
+# Streamable HTTP transport
+naturo mcp start --transport streamable-http --port 3100
+```
+
+### Verify Setup
+
+```bash
+# List all 60+ MCP tools
+naturo mcp tools
+
+# Install MCP dependencies if needed
+naturo mcp install
 ```
 
 ## Quick Start
