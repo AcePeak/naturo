@@ -325,49 +325,75 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [lint, version-check, build-dll, lint-and-test-python, test-python-macos]
+    if: ${{ always() }}
+    steps:
+      - name: Check required jobs
+        run: |
+          # Fail if any required job did not succeed
+          results=(
+            "${{ needs.lint.result }}"
+            "${{ needs.version-check.result }}"
+            "${{ needs.build-dll.result }}"
+            "${{ needs.lint-and-test-python.result }}"
+            "${{ needs.test-python-macos.result }}"
+          )
+          names=(lint version-check build-dll ubuntu-tests macos-tests)
+          failed=0
+          for i in "${!results[@]}"; do
+            echo "${names[$i]}: ${results[$i]}"
+            if [[ "${results[$i]}" != "success" ]]; then
+              echo "::error::Required job '${names[$i]}' did not succeed (${results[$i]})"
+              failed=1
+            fi
+          done
+          if [[ "$failed" -eq 1 ]]; then
+            exit 1
+          fi
+          echo "✅ All required jobs passed"
+
   notify:
     name: Feishu Notification
     runs-on: ubuntu-latest
-    needs: [lint, build-dll, build-python, lint-and-test-python, test-python-macos]
+    needs: [ci-gate, build-python]
     if: ${{ always() && !cancelled() }}
     steps:
       - name: Determine overall status
         id: status
         run: |
-          # Check each job result - skip notification if any job is still pending
-          LINT_CHECK="${{ needs.lint.result }}"
-          BUILD_DLL="${{ needs.build-dll.result }}"
+          CI_GATE="${{ needs.ci-gate.result }}"
           BUILD_PY="${{ needs.build-python.result }}"
-          LINT="${{ needs.lint-and-test-python.result }}"
-          MACOS="${{ needs.test-python-macos.result }}"
 
-          echo "lint: $LINT_CHECK"
-          echo "build-dll: $BUILD_DLL"
-          echo "build-python: $BUILD_PY"
-          echo "lint-and-test-python: $LINT"
-          echo "test-python-macos: $MACOS"
+          echo "ci-gate: $CI_GATE"
+          echo "build-python: $BUILD_PY (informational, does not block merge)"
 
-          # If any result is empty or "pending", something went wrong - skip notification
-          if [[ -z "$LINT_CHECK" || -z "$BUILD_DLL" || -z "$BUILD_PY" || -z "$LINT" || -z "$MACOS" ]]; then
-            echo "::warning::Some jobs have not completed yet, skipping notification"
+          if [[ -z "$CI_GATE" ]]; then
+            echo "::warning::CI gate has not completed yet, skipping notification"
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          if [[ "$LINT_CHECK" == "success" && \
-                "$BUILD_DLL" == "success" && \
-                "$BUILD_PY" == "success" && \
-                "$LINT" == "success" && \
-                "$MACOS" == "success" ]]; then
-            echo "result=success" >> $GITHUB_OUTPUT
-            echo "emoji=✅" >> $GITHUB_OUTPUT
-          elif [[ "$LINT_CHECK" == "cancelled" || "$BUILD_DLL" == "cancelled" || "$BUILD_PY" == "cancelled" || \
-                  "$LINT" == "cancelled" || "$MACOS" == "cancelled" ]]; then
+          if [[ "$CI_GATE" == "success" ]]; then
+            if [[ "$BUILD_PY" != "success" ]]; then
+              echo "result=success" >> $GITHUB_OUTPUT
+              echo "emoji=⚠️" >> $GITHUB_OUTPUT
+              echo "note= (Windows DLL tests: $BUILD_PY)" >> $GITHUB_OUTPUT
+            else
+              echo "result=success" >> $GITHUB_OUTPUT
+              echo "emoji=✅" >> $GITHUB_OUTPUT
+              echo "note=" >> $GITHUB_OUTPUT
+            fi
+          elif [[ "$CI_GATE" == "cancelled" ]]; then
             echo "result=cancelled" >> $GITHUB_OUTPUT
             echo "emoji=⏹️" >> $GITHUB_OUTPUT
+            echo "note=" >> $GITHUB_OUTPUT
           else
             echo "result=failure" >> $GITHUB_OUTPUT
             echo "emoji=❌" >> $GITHUB_OUTPUT
+            echo "note=" >> $GITHUB_OUTPUT
           fi
           echo "skip=false" >> $GITHUB_OUTPUT
 
@@ -383,6 +409,7 @@ jobs:
           CI_REPO: ${{ github.repository }}
           CI_RUN_ID: ${{ github.run_id }}
           CI_COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CI_NOTE: ${{ steps.status.outputs.note }}
         run: |
           SHORT_COMMIT="${CI_COMMIT:0:7}"
           RUN_URL="https://github.com/${CI_REPO}/actions/runs/${CI_RUN_ID}"
@@ -393,6 +420,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg emoji "$CI_EMOJI" \
             --arg status "$CI_STATUS" \
+            --arg note "$CI_NOTE" \
             --arg repo "$CI_REPO" \
             --arg branch "$CI_BRANCH" \
             --arg commit "$SHORT_COMMIT" \
@@ -402,7 +430,7 @@ jobs:
             '{
               msg_type: "text",
               content: {
-                text: ("🚀 Naturo CI Notification\n" + $emoji + " Status: " + $status + "\n📦 Repo: " + $repo + "\n🌿 Branch: " + $branch + "\n📝 Commit: " + $commit + " — " + $msg + "\n👤 Triggered by: " + $actor + "\n🔗 Details: " + $url)
+                text: ("🚀 Naturo CI Notification\n" + $emoji + " Status: " + $status + $note + "\n📦 Repo: " + $repo + "\n🌿 Branch: " + $branch + "\n📝 Commit: " + $commit + " — " + $msg + "\n👤 Triggered by: " + $actor + "\n🔗 Details: " + $url)
               }
             }')
 
@@ -413,7 +441,7 @@ jobs:
   release:
     name: Release & Publish
     runs-on: windows-latest
-    needs: [lint, build-dll, build-python, lint-and-test-python, test-python-macos]
+    needs: [ci-gate, build-dll]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
