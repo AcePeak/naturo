@@ -233,7 +233,12 @@ class TestCLIIntegration:
     def test_see_notepad(self, notepad_app):
         """'naturo see' should return UI elements from Notepad."""
         try:
-            output = _run_naturo("see", "--pid", str(notepad_app))
+            # (#534) Try --app first (handles UWP PID mismatch), fall back
+            # to --pid for classic Win32 Notepad.
+            try:
+                output = _run_naturo("see", "--app", "notepad")
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                output = _run_naturo("see", "--pid", str(notepad_app))
             assert "elements" in output or "error" not in output
         except (subprocess.TimeoutExpired, json.JSONDecodeError):
             pytest.skip("CLI not available or timed out")
@@ -241,7 +246,10 @@ class TestCLIIntegration:
     def test_find_in_notepad(self, notepad_app):
         """'naturo find' should locate elements in Notepad."""
         try:
-            output = _run_naturo("find", "--pid", str(notepad_app), "--all")
+            try:
+                output = _run_naturo("find", "--app", "notepad", "--all")
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                output = _run_naturo("find", "--pid", str(notepad_app), "--all")
             # Should return some elements or an empty list (not crash)
             assert isinstance(output, (dict, list))
         except (subprocess.TimeoutExpired, json.JSONDecodeError):
@@ -250,7 +258,10 @@ class TestCLIIntegration:
     def test_capture_notepad(self, notepad_app):
         """'naturo capture' should capture Notepad window."""
         try:
-            output = _run_naturo("capture", "--pid", str(notepad_app))
+            try:
+                output = _run_naturo("capture", "--app", "notepad")
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                output = _run_naturo("capture", "--pid", str(notepad_app))
             # Should return path to captured image
             assert "path" in output or "image" in output or "error" not in output
         except (subprocess.TimeoutExpired, json.JSONDecodeError):
