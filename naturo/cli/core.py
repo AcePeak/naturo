@@ -771,7 +771,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
             # Optionally capture screenshot into snapshot
             if path:
-                result = backend.capture_screen(output_path=path)
+                result = be.capture_screen(output_path=path)
                 metadata = {
                     "window_handle": hwnd,
                     "application_name": app,
@@ -949,7 +949,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 
         # Capture screenshot (when not already done above)
         if path and not store_snapshot:
-            result = backend.capture_screen(output_path=path)
+            result = be.capture_screen(output_path=path)
             click.echo(f"\nScreenshot saved: {result.path}")
 
     except WindowNotFoundError as e:
