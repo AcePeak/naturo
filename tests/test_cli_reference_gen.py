@@ -2,8 +2,23 @@
 
 from __future__ import annotations
 
-from scripts.generate_cli_reference import generate_reference, _walk_commands
+import importlib.util
+import sys
+from pathlib import Path
+
+import pytest
+
 from naturo.cli import main
+
+
+# Load the generator module from scripts/ without requiring it to be a package
+_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "generate_cli_reference.py"
+_spec = importlib.util.spec_from_file_location("generate_cli_reference", _SCRIPT)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+generate_reference = _mod.generate_reference
+_walk_commands = _mod._walk_commands
 
 
 class TestGenerateReference:
@@ -59,8 +74,6 @@ class TestGenerateReference:
 
     def test_hidden_commands_excluded_by_default(self):
         result = generate_reference()
-        # window, hotkey, excel, snapshot are hidden
-        assert "naturo window" not in result or "naturo window" in result  # window group
         assert "naturo hotkey" not in result
 
     def test_options_table_format(self):
