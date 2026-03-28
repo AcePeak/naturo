@@ -335,6 +335,166 @@ def _validate_method(method: str, json_output: bool) -> bool:
     """
     return True
 
+
+# ── Selector support (#103) ──────────────────────────────────────────────────
+
+
+def _selector_option(func):
+    """Shared Click decorator that adds --selector to action commands."""
+    return click.option(
+        "--selector",
+        default=None,
+        help=(
+            "Unified selector to locate target element. "
+            'URI format: app://notepad.exe/Button[@name="Save"]. '
+            'XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>.'
+        ),
+    )(func)
+
+
+def _elementinfo_to_dict(el) -> dict:
+    """Convert an ElementInfo object to a dict for SelectorResolver.
+
+    Args:
+        el: ElementInfo object from the backend.
+
+    Returns:
+        Dict with keys expected by SelectorResolver: role, name,
+        automationid, cls, value, x, y, width, height, children.
+    """
+    result = {
+        "role": el.role,
+        "name": el.name or "",
+        "automationid": getattr(el, "id", "") or "",
+        "value": el.value or "",
+        "x": el.x,
+        "y": el.y,
+        "width": el.width,
+        "height": el.height,
+    }
+    # Include className if available in properties
+    props = getattr(el, "properties", {}) or {}
+    cls = props.get("className", "") or props.get("cls", "")
+    if cls:
+        result["cls"] = cls
+    # Recursively convert children
+    children = getattr(el, "children", []) or []
+    result["children"] = [_elementinfo_to_dict(c) for c in children]
+    return result
+
+
+def _resolve_selector_target(
+    selector_str: str,
+    backend,
+    app: Optional[str],
+    window_title: Optional[str],
+    hwnd: Optional[int],
+    pid: Optional[int],
+    json_output: bool,
+) -> Optional[tuple]:
+    """Resolve a unified selector to (x, y) coordinates.
+
+    Parses the selector string, fetches the UI element tree from the
+    backend, and resolves the selector to a target element's center
+    coordinates.
+
+    Args:
+        selector_str: Selector string (URI or XML format).
+        backend: Platform backend instance.
+        app: Application name filter.
+        window_title: Window title filter.
+        hwnd: Window handle.
+        pid: Process ID.
+        json_output: Whether to emit JSON errors.
+
+    Returns:
+        (x, y) center coordinates of the resolved element, or None on failure.
+        On failure, emits an appropriate error message.
+    """
+    from naturo.selector import parse, SelectorParseError, SelectorResolver
+
+    # Parse the selector
+    try:
+        ast = parse(selector_str)
+    except SelectorParseError as exc:
+        _json_err(
+            f"Invalid selector: {exc}",
+            json_output,
+            code="INVALID_SELECTOR",
+        )
+        return None
+
+    # Override app from selector if not specified via CLI
+    if ast.app and ast.app != "*" and not app:
+        app = ast.app
+
+    # Get element tree
+    if not hasattr(backend, "get_element_tree"):
+        _json_err(
+            "Selector resolution requires a backend with UI tree support",
+            json_output,
+            code="BACKEND_ERROR",
+        )
+        return None
+
+    try:
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            depth=20,
+        )
+    except Exception as exc:
+        _json_err(
+            f"Failed to get UI tree for selector resolution: {exc}",
+            json_output,
+            code="TREE_ERROR",
+        )
+        return None
+
+    if tree is None:
+        _json_err(
+            "No window found for selector resolution. "
+            "Check that the target application is running and visible.",
+            json_output,
+            code="WINDOW_NOT_FOUND",
+        )
+        return None
+
+    # Convert ElementInfo tree to dict tree for the resolver
+    tree_dict = [_elementinfo_to_dict(tree)]
+
+    # Resolve
+    resolver = SelectorResolver()
+    result = resolver.resolve(ast, tree_dict)
+
+    if result is None:
+        _json_err(
+            f"Selector matched no elements: {selector_str}",
+            json_output,
+            code="SELECTOR_NOT_FOUND",
+        )
+        return None
+
+    el = result.element
+    x = el.get("x", 0) + el.get("width", 0) // 2
+    y = el.get("y", 0) + el.get("height", 0) // 2
+
+    if el.get("width", 0) == 0 and el.get("height", 0) == 0:
+        _json_err(
+            f"Selector matched element with zero bounds (offscreen/unrendered): "
+            f"{selector_str}",
+            json_output,
+            code="ZERO_BOUNDS",
+        )
+        return None
+
+    logger.info(
+        "Selector resolved: %r → [%s] %r at (%d, %d) (quality: %s)",
+        selector_str, el.get("role", "?"), el.get("name", ""),
+        x, y, result.match_quality,
+    )
+    return (x, y)
+
+
 # ── Shared helper ────────────────────────────────────────────────────────────
 
 
@@ -614,12 +774,13 @@ def _auto_route(
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
+@_selector_option
 @_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app, pid,
-              window_title, hwnd, wait_for, input_mode, method,
+              window_title, hwnd, wait_for, input_mode, method, selector,
               verify, see_after, settle, json_output):
     """Click on a UI element, text, or coordinates.
 
@@ -645,7 +806,16 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     button = "right" if right else "left"
 
     # Resolve target coordinates or element_id
-    if coords:
+    # Priority: --selector (semantic) > --coords > --id > --on/query (#103)
+    if selector:
+        resolved = _resolve_selector_target(
+            selector, backend, app, window_title, hwnd, pid, json_output,
+        )
+        if resolved is None:
+            return  # Error already emitted
+        x, y = resolved
+        target_id = None
+    elif coords:
         x, y = coords
         target_id = None
     elif element_id:
@@ -653,11 +823,11 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         target_id = element_id
     elif on_text or query:
         # Find element by text
-        selector = on_text or query
-        target_id = selector
+        text_query = on_text or query
+        target_id = text_query
         x, y = None, None
     else:
-        _json_err("Specify --coords X Y, --id, or --on TEXT", json_output, code="INVALID_INPUT")
+        _json_err("Specify --selector, --coords X Y, --id, or --on TEXT", json_output, code="INVALID_INPUT")
         return
 
     # (#448) Resolve eN refs BEFORE auto-routing so we can skip the
@@ -927,13 +1097,14 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
 )
 @_method_option
+@_selector_option
 @_verify_options
 @_see_options
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
-             window_title, hwnd, input_mode, method, verify, see_after, settle,
+             window_title, hwnd, input_mode, method, selector, verify, see_after, settle,
              json_output):
     """Type text with configurable speed and profile.
 
@@ -944,6 +1115,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     Use --paste without TEXT to paste current clipboard content.
     Use --file with --paste to read content from a file.
     Use --on to target a specific element (click to focus before typing).
+    Use --selector with a unified selector to target by semantic path.
 
     \b
     Examples:
@@ -955,6 +1127,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type --paste                        # paste current clipboard
       naturo type "hello" --on e42               # click e42 then type
       naturo type "hello" --on e42 --app feishu  # target app + element
+      naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_element:
@@ -1036,6 +1209,21 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     code="WINDOW_FOCUS_ERROR",
                 )
                 return
+
+    # --selector: resolve unified selector and click to focus before typing (#103)
+    if selector and not on_element:
+        resolved = _resolve_selector_target(
+            selector, backend, app, window_title, hwnd, pid, json_output,
+        )
+        if resolved is None:
+            return  # Error already emitted
+        try:
+            backend.click(resolved[0], resolved[1], button="left", input_mode=input_mode)
+            import time
+            time.sleep(0.1)  # Brief pause for focus to settle
+        except Exception as exc:
+            _json_err(f"Failed to click selector target: {exc}", json_output)
+            return
 
     # --on: resolve element ref and click to focus before typing (#165)
     if on_element:
@@ -1341,10 +1529,11 @@ def _is_combo(key_str: str) -> bool:
     help="Input method",
 )
 @_method_option
+@_selector_option
 @_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, verify, see_after, settle, json_output):
+def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, selector, verify, see_after, settle, json_output):
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -1357,6 +1546,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
       naturo press ctrl+c                 # key combination (was: hotkey)
       naturo press ctrl+a ctrl+c          # sequential combos
       naturo press alt+f4
+      naturo press enter --selector 'app://*/Button[@name="OK"]'
     """
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_element:
@@ -1379,6 +1569,20 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
 
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
+
+    # --selector: resolve unified selector and click to focus before pressing (#103)
+    if selector and not on_element:
+        resolved = _resolve_selector_target(
+            selector, backend, app, window_title, hwnd, pid, json_output,
+        )
+        if resolved is None:
+            return  # Error already emitted
+        try:
+            backend.click(resolved[0], resolved[1], button="left", input_mode=input_mode)
+            time.sleep(0.1)  # Brief pause for focus to settle
+        except Exception as exc:
+            _json_err(f"Failed to click selector target: {exc}", json_output)
+            return
 
     # --on: resolve element ref and click to focus before pressing (#375)
     if on_element:

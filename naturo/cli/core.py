@@ -572,7 +572,7 @@ def permissions(json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto", "hybrid"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "win32hybrid", "auto", "hybrid"]),
     default="auto",
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
@@ -986,7 +986,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "auto", "hybrid"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "win32hybrid", "auto", "hybrid"]),
     default="auto",
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
@@ -1647,9 +1647,9 @@ def learn(topic):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "-b",
-    type=click.Choice(["uia", "win32"]),
+    type=click.Choice(["uia", "win32", "win32hybrid"]),
     default="uia",
-    help="Highlight backend: uia (default, uses UIA element tree from snapshot), win32 (Win32 HWND enumeration)",
+    help="Highlight backend: uia (default), win32 (HWND-only), win32hybrid (HWND + UIA drill-down)",
 )
 def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration, json_output, backend):
     """Highlight UI elements on screen with colored borders and labels.
