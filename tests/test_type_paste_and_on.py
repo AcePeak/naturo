@@ -355,3 +355,75 @@ class TestTypeEscapeSequences:
         assert data["success"] is True
         # Clipboard should receive the processed text with real tab
         mock_backend.clipboard_set.assert_called_once_with("A\tB")
+
+
+class TestTypeNewlineBypassesUIA:
+    """When text contains \\n or \\r, type must bypass UIA SetValue (#563).
+
+    UIA ValuePattern.SetValue() silently strips newline/CR characters,
+    causing a silent failure. The type command should detect this and
+    fall through to SendInput which handles them as Enter keypresses.
+    """
+
+    @_win_only
+    def test_newline_text_skips_uia_uses_sendinput(self, runner):
+        """type 'Line1\\nLine2' with UIA route should bypass SetValue."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+        mock_backend.set_element_value.return_value = True  # Would succeed if called
+
+        # Route says UIA is available
+        route_info = {"method": "uia"}
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+            result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        # SetValue should NOT have been called — newlines would be stripped
+        mock_backend.set_element_value.assert_not_called()
+        # SendInput (type_text) should have been used instead
+        mock_backend.type_text.assert_called_once()
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "Line1\nLine2"
+
+    @_win_only
+    def test_cr_text_skips_uia_uses_sendinput(self, runner):
+        """type 'A\\rB' with UIA route should bypass SetValue."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+        mock_backend.set_element_value.return_value = True
+
+        route_info = {"method": "uia"}
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+            result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        mock_backend.set_element_value.assert_not_called()
+        mock_backend.type_text.assert_called_once()
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "A\rB"
+
+    @_win_only
+    def test_tab_text_still_uses_uia(self, runner):
+        """type 'A\\tB' with UIA route should still use SetValue (tabs are safe)."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+        mock_backend.set_element_value.return_value = True
+
+        route_info = {"method": "uia"}
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+            result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        # SetValue SHOULD be called — tabs survive SetValue
+        mock_backend.set_element_value.assert_called_once()
+        # type_text should NOT be called
+        mock_backend.type_text.assert_not_called()
