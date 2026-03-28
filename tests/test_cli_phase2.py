@@ -540,23 +540,27 @@ class TestNotepadAutomation:
 
         proc = subprocess.Popen(["notepad.exe"])
         try:
-            time.sleep(1.5)
-
             # Find Notepad window (UWP/WinUI3 Notepad on Win11 may be
             # hosted by ApplicationFrameHost.exe, so check title too #534)
             def _is_notepad(w):
-                proc = w.process_name.lower()
-                if "notepad" in proc:
+                pname = w.process_name.lower()
+                if "notepad" in pname:
                     return True
-                if proc.startswith("applicationframehost") and "notepad" in w.title.lower():
+                if pname.startswith("applicationframehost") and "notepad" in w.title.lower():
                     return True
                 return False
 
-            windows = core.list_windows()
-            notepad = next(
-                (w for w in windows if _is_notepad(w) and w.is_visible),
-                None
-            )
+            # (#560) Poll for Notepad window — UWP launch is slow
+            deadline = time.monotonic() + 10.0
+            notepad = None
+            while notepad is None and time.monotonic() < deadline:
+                windows = core.list_windows()
+                notepad = next(
+                    (w for w in windows if _is_notepad(w) and w.is_visible),
+                    None
+                )
+                if notepad is None:
+                    time.sleep(0.5)
             assert notepad is not None, "Notepad window not found"
 
             # Click center of window (approximate edit area)

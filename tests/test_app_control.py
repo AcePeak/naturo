@@ -443,6 +443,30 @@ class TestAppLifecycleE2EWindows:
             return True
         return False
 
+    @staticmethod
+    def _poll_for_notepad(backend, is_notepad_fn, timeout=10.0, interval=0.5):
+        """Poll for a visible Notepad window with retry (#560).
+
+        UWP Notepad on Windows 11 launches through a broker process;
+        the actual window may take several seconds to appear.
+
+        Returns:
+            List of matching visible WindowInfo objects.
+        """
+        import time
+        deadline = time.monotonic() + timeout
+        while True:
+            windows = backend.list_windows()
+            notepad_wins = [
+                w for w in windows
+                if is_notepad_fn(w) and w.is_visible
+            ]
+            if notepad_wins:
+                return notepad_wins
+            if time.monotonic() >= deadline:
+                return []
+            time.sleep(interval)
+
     @pytest.mark.xfail(reason="window close/minimize not yet implemented", raises=NotImplementedError)
     def test_notepad_lifecycle(self):
         """T039 – launch notepad, verify in list, close, verify gone."""
@@ -453,13 +477,7 @@ class TestAppLifecycleE2EWindows:
 
         proc = subprocess.Popen(["notepad.exe"])
         try:
-            time.sleep(1.5)
-
-            windows = backend.list_windows()
-            notepad_wins = [
-                w for w in windows
-                if self._is_notepad_window(w) and w.is_visible
-            ]
+            notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
             assert len(notepad_wins) >= 1, "Notepad not found in window list after launch"
 
             handle = notepad_wins[0].handle
@@ -498,13 +516,8 @@ class TestAppLifecycleE2EWindows:
 
         proc = subprocess.Popen(["notepad.exe"])
         try:
-            time.sleep(1.5)
-
-            windows = backend.list_windows()
-            notepad = next(
-                (w for w in windows if self._is_notepad_window(w) and w.is_visible),
-                None
-            )
+            notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
+            notepad = notepad_wins[0] if notepad_wins else None
             assert notepad is not None
 
             # Minimize
