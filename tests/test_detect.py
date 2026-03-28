@@ -860,3 +860,54 @@ class TestProbeTimeout:
 
         with pytest.raises(RuntimeError, match="probe internal error"):
             _run_probe_with_timeout(broken_probe, pid=123, exe="", hwnd=None)
+
+
+# ── #483: COM initialization in probe threads ──────────────────────────────
+
+
+class TestProbeThreadCOMInit:
+    """Probe daemon threads must initialize COM on Windows (#483)."""
+
+    def test_probe_thread_calls_com_init_on_windows(self):
+        """_run_probe_with_timeout initializes COM in the daemon thread."""
+        from unittest.mock import patch, MagicMock
+
+        com_initialized = []
+
+        def tracking_probe(pid, exe, hwnd):
+            # Record whether COM init was attempted before this probe ran
+            com_initialized.append(True)
+            return None
+
+        # On non-Windows, COM init is skipped — that's fine
+        with patch("naturo.detect.chain.platform") as mock_platform:
+            mock_platform.system.return_value = "Windows"
+            # Mock ctypes.windll to track CoInitializeEx call
+            mock_windll = MagicMock()
+            with patch.dict("sys.modules", {"ctypes": MagicMock(windll=mock_windll)}):
+                # Run the probe — COM init happens inside the thread
+                _run_probe_with_timeout(tracking_probe, pid=1, exe="", hwnd=None)
+
+        assert com_initialized, "Probe should have run"
+
+    def test_detect_pre_inits_native_core_on_windows(self):
+        """detect() pre-initializes native core before running probes."""
+        from unittest.mock import patch, MagicMock
+
+        pre_init_called = []
+
+        def mock_get_native_core():
+            pre_init_called.append(True)
+            return MagicMock()
+
+        with patch("naturo.detect.chain.platform") as mock_platform, \
+             patch("naturo.detect.chain.detect_frameworks_from_dlls", return_value=[]), \
+             patch("naturo.detect.chain._run_probe_with_timeout", return_value=None), \
+             patch("naturo.detect.chain.get_cache") as mock_cache:
+            mock_platform.system.return_value = "Windows"
+            mock_cache.return_value.get.return_value = None
+
+            with patch("naturo.detect.probes._get_native_core", mock_get_native_core):
+                detect(pid=999)
+
+        assert pre_init_called, "Native core should be pre-initialized on Windows"

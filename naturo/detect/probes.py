@@ -459,6 +459,11 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
 
     target_hwnd = hwnd or _find_main_window(pid)
     if not target_hwnd:
+        # Fallback: for UWP/WinUI apps (e.g. Win11 Notepad) the window PID
+        # may differ from the process PID.  Try finding a window whose
+        # process name matches the exe basename (#483).
+        target_hwnd = _find_window_by_process_name(pid, exe)
+    if not target_hwnd:
         return None
 
     # Strategy 1: Use the native C++ DLL (same path as 'naturo see').
@@ -784,3 +789,89 @@ def _frame_hosts_pid(user32, frame_hwnd: int, target_pid: int) -> bool:
 
     user32.EnumChildWindows(frame_hwnd, child_callback, 0)
     return found.value
+
+
+def _find_window_by_process_name(pid: int, exe: str) -> Optional[int]:
+    """Fallback window finder: match by process name instead of PID.
+
+    For UWP/WinUI apps like Windows 11 Notepad, the launched process PID
+    may differ from the PID that owns the visible window.  This function
+    resolves the process name from the target PID, then searches for any
+    visible window whose owning process has the same name (#483).
+
+    Args:
+        pid: Process ID (used to look up the process name).
+        exe: Executable path (used as hint if PID lookup fails).
+
+    Returns:
+        Window handle (HWND) or None if not found.
+    """
+    if platform.system() != "Windows":
+        return None
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+        import subprocess
+
+        # Resolve process name from PID
+        proc_name = ""
+        if exe:
+            proc_name = os.path.basename(exe).lower()
+        if not proc_name:
+            try:
+                result = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                    capture_output=True, text=True, encoding="utf-8",
+                    errors="replace", timeout=5,
+                )
+                for line in result.stdout.strip().splitlines():
+                    parts = line.strip('"').split('","')
+                    if len(parts) >= 2:
+                        proc_name = parts[0].lower()
+                        break
+            except Exception:
+                return None
+        if not proc_name:
+            return None
+
+        logger.debug(
+            "Fallback window search by process name '%s' for PID %d",
+            proc_name, pid,
+        )
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        found_hwnd = ctypes.c_void_p(0)
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def enum_callback(hwnd, lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            window_pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+            h_proc = kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, window_pid.value,
+            )
+            if not h_proc:
+                return True
+            try:
+                name_buf = ctypes.create_unicode_buffer(260)
+                if psapi.GetProcessImageFileNameW(h_proc, name_buf, 260):
+                    window_proc_name = os.path.basename(name_buf.value).lower()
+                    if window_proc_name == proc_name:
+                        found_hwnd.value = hwnd
+                        return False  # Found
+            finally:
+                kernel32.CloseHandle(h_proc)
+            return True
+
+        user32.EnumWindows(enum_callback, 0)
+        return found_hwnd.value or None
+
+    except Exception as exc:
+        logger.debug("Fallback window search failed for PID %d: %s", pid, exc)
+        return None
