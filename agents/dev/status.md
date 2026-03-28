@@ -1,31 +1,24 @@
 # Dev Status
-Last updated: 2026-03-27T23:35:00Z
-Session: Fix CI timeout (merged), rebase all PRs, #413 comparison table, #422 .work cleanup
+Last updated: 2026-03-28T01:30:00Z
+Session: Fix #484 (app quit silent failure) + Fix #483 (UIA detection for Win11 Notepad)
 
 ## This Session
-- **CI timeout fix (critical):** PR #477 merged (d456189). Increased Windows timeout 20→45min + added pip caching. First run passed in ~2.5min with warm cache.
-- **Rebased all 6 blocked PRs** (#466, #473, #475, #476, #479, #480) onto new main. Windows CI running (cold cache, ~25min expected for first run).
-- **Issue #413 (P1 docs):** PR #481 created. Added comparison table (naturo vs PyAutoGUI/pywinauto/AutoIt/WinAppDriver) to README.
-- **Issue #422 (P2 chore):** PR #482 created. Removed 42 stale files from .work/, added .gitignore patterns.
-- Tests: 1836 passed, 363 skipped, 0 failed
+- **Issue #484 (P1 bug, v0.3.1):** PR #485 created. `quit_app()` now verifies process death after force-kill, raises `InteractionFailedError` on failure. Added `/T` flag for Windows process tree kill. 4 new tests.
+- **Issue #483 (P1 bug, v0.3.1):** PR #486 created. Fixed UIA detection probe: COM per-thread init in daemon threads, pre-init native core before timeout-wrapped probes, added `_find_window_by_process_name` fallback. 2 new tests.
+- Tests: 1960 passed, 489 skipped, 0 failed (Ubuntu)
+- PRs: #485 created (CI 5/6 green), #486 created (CI running)
 
 ## Open PRs by Me
-- #466 — fix: stable hash-based element refs (fixes #456) — Windows CI running
-- #473 — fix: localized --app alias cleanup (fixes #469) — Windows CI running
-- #475 — fix: --pid flag passthrough (fixes #471) — Windows CI running
-- #476 — fix: flaky test_window_lifecycle (fixes #472) — Windows CI running
-- #479 — fix: find_process alias resolution (fixes #474) — Windows CI running
-- #480 — fix: error message format (fixes #478) — Windows CI running
-- #481 — docs: comparison table (fixes #413) — Windows CI running
-- #482 — chore: clean .work/ (fixes #422) — Windows CI running
+- #485 — fix: app quit verifies process death (fixes #484) — CI 5/6 green, Windows DLL tests running
+- #486 — fix: UIA detection for Win11 Notepad (fixes #483) — CI running
 
 ## Current State
-- Earliest open milestone: v0.3.4
-- CI: GREEN on main. All PR Windows tests running with cold pip cache (~25min first run).
-- All 6 bug issues + 2 new issues have PRs awaiting CI completion.
+- Earliest open milestone: v0.3.1 (1 issue remaining: #411 — refactor windows.py)
+- CI: GREEN on main
+- Both P1 bugs in v0.3.1 have PRs, need CI green + auto-merge
 
 ## Next Session Should
-1. **Check all 8 PRs CI status** — merge any that passed (squash), enable auto-merge on others
-2. **If merge conflicts** from sequential merges — rebase each PR onto updated main
-3. **After PRs clear**, pick next P1 issues: #361 (stable app/window ID), #312 (Win32+UIA hybrid)
-4. **If CI still failing** — investigate Windows test hanging (check CI logs for which step is slow)
+1. **Check CI on PRs #485 and #486** — enable auto-merge if green, fix if red
+2. **Tackle #411 (P2, v0.3.1)** — Split windows.py (142KB) into submodules. This is a large task (~40 min).
+3. **After v0.3.1 clear**, move to v0.3.3: #21 (P0, Naturobot engine-level RPA capabilities)
+4. **If blocked on Windows testing**, do code health scan / tech debt audit from Linux
