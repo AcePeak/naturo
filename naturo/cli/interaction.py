@@ -1424,10 +1424,14 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             else:
                 # No text: paste current clipboard content directly (#165)
                 backend.hotkey("ctrl", "v")
-        elif _uia_method and text and hasattr(backend, "set_element_value"):
+        elif _uia_method and text and "\n" not in text and "\r" not in text and hasattr(backend, "set_element_value"):
             # UIA ValuePattern path (#226): bypasses SendInput entirely.
             # Resolves target HWND from --app and sets text directly on the
             # focused or first editable element in the window.
+            #
+            # Skip when text contains newline/CR (#563): UIA SetValue()
+            # silently strips these characters, causing a silent failure.
+            # SendInput handles them correctly as Enter keypresses.
             _target_hwnd = 0
             _target_name = None
             _target_aid = None
