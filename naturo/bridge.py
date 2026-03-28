@@ -343,8 +343,8 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
     ]
 
     # Compute label positions to avoid overlap
-    label_rects = []  # list of (left, top, right, bottom) of placed labels
-    label_positions = []  # (lx, ly) per element
+    label_rects: list[tuple[int, int, int, int]] = []  # placed label bounds
+    label_positions: list[tuple[int, int]] = []  # (lx, ly) per element
 
     for i, (ref, child_hwnd, label, cls_name, rect, depth_level) in enumerate(elements):
         label_text = f" {ref}: {label} "
@@ -361,15 +361,15 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
         ]
 
         best_pos = candidates[0]
-        best_overlap = float("inf")
+        best_overlap = len(label_rects) + 1  # guaranteed > any real count
 
         for cx, cy in candidates:
             cx = max(0, cx)
             cy = max(0, cy)
-            overlap_count = sum(
-                1 for px1, py1, px2, py2 in label_rects
-                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1
-            )
+            overlap_count = 0
+            for px1, py1, px2, py2 in label_rects:
+                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1:
+                    overlap_count += 1
             if overlap_count < best_overlap:
                 best_overlap = overlap_count
                 best_pos = (cx, cy)
@@ -899,15 +899,15 @@ def highlight_elements_uia(
         ]
 
         best_pos = candidates[0]
-        best_overlap = float("inf")
+        best_overlap = len(label_rects) + 1  # guaranteed > any real count
 
         for cx, cy in candidates:
             cx = max(0, cx)
             cy = max(0, cy)
-            overlap_count = sum(
-                1 for px1, py1, px2, py2 in label_rects
-                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1
-            )
+            overlap_count = 0
+            for px1, py1, px2, py2 in label_rects:
+                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1:
+                    overlap_count += 1
             if overlap_count < best_overlap:
                 best_overlap = overlap_count
                 best_pos = (cx, cy)
