@@ -69,6 +69,8 @@ def _collect_matching_elements(tree, role=None, name=None):
 @click.option("--property", "-p", "prop", default=None,
               help="Return only a specific property (value, name, role, pattern)")
 @click.option("--app", default=None, help="Target application (name or partial match)")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--window", "window_title", default=None,
               help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
@@ -79,7 +81,7 @@ def _collect_matching_elements(tree, role=None, name=None):
               help="JSON output")
 @click.pass_context
 def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
-            window_title, hwnd, json_output):
+            app_id, window_title, hwnd, json_output):
     """Read element text/value.
 
     Read the current value of a UI element. Accepts an element ref (e47),
@@ -101,6 +103,23 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
     # Inherit --json from parent group if not set explicitly
     if json_output is None:
         json_output = ctx.obj.get("json", False) if ctx.obj else False
+
+    # (#522) Resolve --app-id to app/hwnd overrides (consistent with
+    # see/click/capture/type which all accept --app-id).
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            emit_error(
+                "APP_ID_NOT_FOUND",
+                f'App ID "{app_id}" not found or expired. '
+                f'Run "naturo app list" to refresh.',
+                json_output,
+            )
+        app = entry.process_name
+        hwnd = entry.handle
 
     # Parse target argument: could be a ref (e47) or an automation ID
     if target:
