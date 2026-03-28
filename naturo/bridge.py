@@ -800,7 +800,6 @@ def highlight_elements_uia(
         return None
 
     import ctypes
-    from ctypes import wintypes
 
     from naturo.annotate import ACTIONABLE_ROLES
 

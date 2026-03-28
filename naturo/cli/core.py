@@ -1713,7 +1713,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration,
             from naturo.bridge import highlight_elements_uia
             if annotate_path:
                 if not json_output:
-                    click.echo(f"Generating annotated screenshot...")
+                    click.echo("Generating annotated screenshot...")
                 result_path = highlight_elements_uia(
                     backend=be, app=app, hwnd=handle, depth=depth,
                     duration=duration, refs=refs_list, show_all=show_all,
