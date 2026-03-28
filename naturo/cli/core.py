@@ -90,6 +90,7 @@ def _platform_error_msg(feature: str) -> str:
 
 @click.command("capture")
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -108,7 +109,7 @@ def _platform_error_msg(feature: str) -> str:
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
-def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
+def capture(app, pid, window_title, hwnd, screen, path, fmt, store_snapshot, session,
             element_ref, region, padding, json_output, app_id):
     """Capture a live screenshot, optionally cropped to an element or region.
 
@@ -128,6 +129,7 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         naturo capture --ref e5 --padding 20            # with 20px padding
         naturo capture --region 100,50,400,300          # crop to region
         naturo capture --app feishu --element e12       # element in specific app
+        naturo capture --pid 51764                      # capture by process ID
         naturo capture --app-id a1 --element e12        # element by app ID
         naturo capture -o output.png                    # save to output.png
     """
@@ -163,11 +165,11 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
 
     try:
         backend = _get_backend(json_output)
-        if hwnd or app or window_title:
-            # Resolve app/window_title to hwnd if needed
+        if hwnd or app or window_title or pid:
+            # Resolve app/window_title/pid to hwnd if needed
             target_hwnd = hwnd
             if not target_hwnd and hasattr(backend, '_resolve_hwnd'):
-                target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title)
+                target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
             result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
         else:
             # Validate screen index against available monitors
@@ -195,7 +197,7 @@ def capture(app, window_title, hwnd, screen, path, fmt, store_snapshot, session,
         crop_box = None  # (left, top, right, bottom) in image coordinates
 
         # Track whether the capture is window-relative (for element crop offset)
-        _is_window_capture = bool(hwnd or app or window_title)
+        _is_window_capture = bool(hwnd or app or window_title or pid)
 
         if element_ref:
             # Resolve eN ref → bounds from most recent snapshot
