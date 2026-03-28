@@ -718,7 +718,7 @@ def run_cascade(
             # Resolve app/window_title to hwnd first
             try:
                 resolved_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title, hwnd=hwnd,
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
             except Exception as exc:
                 logger.debug("Hybrid: HWND resolution failed: %s", exc)
@@ -753,8 +753,8 @@ def run_cascade(
         t0 = time.monotonic()
         try:
             tree = backend.get_element_tree(
-                app=app, window_title=window_title, hwnd=hwnd, depth=depth,
-                backend=pname,
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=depth, backend=pname,
             )
             elapsed = (time.monotonic() - t0) * 1000
 

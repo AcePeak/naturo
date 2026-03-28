@@ -259,3 +259,127 @@ class TestResolveHwndForegroundPreference:
         result = backend._resolve_hwnd(app="notepad")
         # Neither is foreground, so larger area (2002) wins
         assert result == 2002
+
+
+class TestResolveHwndPid:
+    """Verify _resolve_hwnd correctly handles --pid targeting (#471)."""
+
+    def _make_multi_app_windows(self):
+        """Three apps: Notepad (PID 100), Calculator (PID 200), Paint (PID 300)."""
+        return [
+            WindowInfo(
+                handle=1001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=2002, title="Calculator",
+                process_name="CalculatorApp.exe", pid=200,
+                x=100, y=100, width=400, height=500,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=3003, title="Untitled - Paint",
+                process_name="mspaint.exe", pid=300,
+                x=200, y=200, width=1200, height=800,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+
+    def _setup_backend(self, windows, fg_hwnd=0):
+        """Create a mock backend with the given windows."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+        backend.list_windows = MagicMock(return_value=windows)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+        backend._get_console_session_id = MagicMock(return_value=1)
+        backend._get_process_session_id = MagicMock(return_value=1)
+        backend._get_foreground_hwnd = MagicMock(return_value=fg_hwnd)
+        backend._APP_ALIASES = BackendClass._APP_ALIASES
+        return backend
+
+    def test_pid_alone_targets_correct_window(self):
+        """--pid alone should target the specified process, not foreground."""
+        backend = self._setup_backend(
+            self._make_multi_app_windows(), fg_hwnd=3003,
+        )
+        # Paint (3003) is foreground, but --pid 200 should target Calculator
+        result = backend._resolve_hwnd(pid=200)
+        assert result == 2002
+
+    def test_pid_alone_targets_notepad_not_foreground(self):
+        """--pid for Notepad should work even when Paint is foreground."""
+        backend = self._setup_backend(
+            self._make_multi_app_windows(), fg_hwnd=3003,
+        )
+        result = backend._resolve_hwnd(pid=100)
+        assert result == 1001
+
+    def test_pid_with_app_filters_both(self):
+        """--pid combined with --app should filter by both."""
+        backend = self._setup_backend(self._make_multi_app_windows())
+        # PID 200 is Calculator, --app calculator should also match
+        result = backend._resolve_hwnd(app="calculator", pid=200)
+        assert result == 2002
+
+    def test_pid_selects_largest_window_among_process(self):
+        """When a PID has multiple windows, prefer the largest."""
+        windows = [
+            WindowInfo(
+                handle=1001, title="Untitled - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=1002, title="Find and Replace",
+                process_name="Notepad.exe", pid=100,
+                x=200, y=200, width=300, height=200,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        backend = self._setup_backend(windows)
+        result = backend._resolve_hwnd(pid=100)
+        # Main window (1001) is larger → should be selected
+        assert result == 1001
+
+    def test_pid_not_found_raises_error(self):
+        """--pid with no matching windows should raise WindowNotFoundError."""
+        backend = self._setup_backend(self._make_multi_app_windows())
+        from naturo.errors import WindowNotFoundError
+        with pytest.raises(WindowNotFoundError, match="PID 999"):
+            backend._resolve_hwnd(pid=999)
+
+    def test_pid_none_without_search_returns_foreground(self):
+        """When pid=None and no search term, return 0 (foreground)."""
+        backend = self._setup_backend(self._make_multi_app_windows())
+        result = backend._resolve_hwnd()
+        assert result == 0
+
+    def test_pid_with_hwnd_prefers_hwnd(self):
+        """Direct hwnd takes priority over pid."""
+        backend = self._setup_backend(self._make_multi_app_windows())
+        result = backend._resolve_hwnd(hwnd=9999, pid=200)
+        assert result == 9999
+
+    def test_pid_prefers_foreground_among_same_process(self):
+        """Among multiple windows of same PID, prefer the foreground one."""
+        windows = [
+            WindowInfo(
+                handle=1001, title="Document1 - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=0, y=0, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=1002, title="Document2 - Notepad",
+                process_name="Notepad.exe", pid=100,
+                x=100, y=100, width=800, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+        ]
+        # Window 1002 is foreground
+        backend = self._setup_backend(windows, fg_hwnd=1002)
+        result = backend._resolve_hwnd(pid=100)
+        assert result == 1002

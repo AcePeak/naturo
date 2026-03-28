@@ -882,8 +882,9 @@ class WindowsBackend(Backend):
 
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
-                      hwnd: Optional[int] = None) -> int:
-        """Resolve a window handle from app name, window title, or direct hwnd.
+                      hwnd: Optional[int] = None,
+                      pid: Optional[int] = None) -> int:
+        """Resolve a window handle from app name, window title, pid, or direct hwnd.
 
         Matching strategy (BUG-069/BUG-070):
 
@@ -891,6 +892,11 @@ class WindowsBackend(Backend):
         only** (``.exe`` suffix stripped).  Title matching is not used for
         ``--app`` to prevent cross-process contamination (#465).  When
         ``window_title`` is provided, matches against window title only.
+
+        When ``pid`` is provided (alone or combined with app/window_title),
+        only windows belonging to that process are considered (#471).  Among
+        matching PID windows, the largest-area window in the interactive
+        session is preferred.
 
         Scoring for ``--app`` (higher = better match):
           4 — exact process-name match  (e.g. ``explorer`` == ``explorer.exe``)
@@ -919,6 +925,9 @@ class WindowsBackend(Backend):
             window_title: Window title pattern (case-insensitive, partial
                 match).  Compared against window title only.
             hwnd: Direct window handle (takes priority).
+            pid: Process ID.  When provided, only windows owned by this
+                process are considered.  Can be combined with app/window_title
+                for additional filtering, or used alone (#471).
 
         Returns:
             Window handle (HWND), or 0 for the foreground window.
@@ -931,11 +940,28 @@ class WindowsBackend(Backend):
             return hwnd
 
         search = app or window_title
-        if not search:
+        if not search and not pid:
             return 0  # foreground window
 
-        search_lower = search.lower()
+        search_lower = search.lower() if search else ""
         windows = self.list_windows()
+
+        # (#471) Filter by PID when provided — only consider windows owned
+        # by the specified process.  This is applied before scoring so that
+        # PID-based targeting is never overridden by a higher-scoring window
+        # from a different process.
+        if pid is not None:
+            windows = [w for w in windows if w.pid == pid]
+            if not windows:
+                from naturo.errors import WindowNotFoundError
+                raise WindowNotFoundError(
+                    f"PID {pid}",
+                    suggested_action=(
+                        f"No visible window found for PID {pid}. "
+                        "The process may have exited or has no visible windows.\n"
+                        "Tip: use 'naturo list windows' to see all windows."
+                    ),
+                )
 
         # Get console session for session-aware ranking (#230)
         console_session = self._get_console_session_id()
@@ -945,6 +971,12 @@ class WindowsBackend(Backend):
 
         # --app → match process name first; --window-title → match title only
         match_process = app is not None
+
+        # (#471) When only --pid is given (no app/window_title), all windows
+        # belonging to the PID are valid candidates — assign a base score of 1
+        # so that the best-window selection logic (session, foreground, area)
+        # picks the most appropriate one.
+        pid_only = pid is not None and not search
 
         best_score = 0
         best_session_bonus = False  # True if best_window is in console session
@@ -959,7 +991,10 @@ class WindowsBackend(Backend):
                 proc_stem = proc_stem[:-4]
             title_lower = w.title.lower()
 
-            if match_process:
+            if pid_only:
+                # All PID-filtered windows are valid candidates
+                score = 1
+            elif match_process:
                 # Process-name matching (priority)
                 if search_lower == proc_stem:
                     score = 4  # exact process name
@@ -1104,12 +1139,13 @@ class WindowsBackend(Backend):
             if len(candidates) >= 5:
                 break
 
-        hint = f"No window matching '{search}'."
+        search_label = search or f"PID {pid}"
+        hint = f"No window matching '{search_label}'."
         if candidates:
             hint += " Did you mean:\n" + "\n".join(f"  • {c}" for c in candidates)
         hint += "\nTip: use 'naturo list windows' to see all windows."
 
-        raise WindowNotFoundError(search, suggested_action=hint)
+        raise WindowNotFoundError(search_label, suggested_action=hint)
 
     def _resolve_hwnds(self, app: Optional[str] = None,
                        window_title: Optional[str] = None) -> list[int]:
@@ -1555,6 +1591,7 @@ class WindowsBackend(Backend):
                          depth: int = 3,
                          app: Optional[str] = None,
                          hwnd: Optional[int] = None,
+                         pid: Optional[int] = None,
                          backend: str = "uia") -> Optional[BaseElementInfo]:
         """Get the UI element tree for a window.
 
@@ -1574,6 +1611,8 @@ class WindowsBackend(Backend):
             depth: Maximum depth to traverse (1-10).
             app: Application name to search for (partial match, case-insensitive).
             hwnd: Direct window handle. Overrides app/window_title.
+            pid: Process ID.  Filters windows to only those owned by this
+                process (#471).
             backend: Accessibility backend — "auto" (default), "uia", "msaa",
                      "win32", "ia2", or "jab".
                      "auto" tries UIA first, falls back to MSAA/IA2/JAB/Win32
@@ -1585,7 +1624,7 @@ class WindowsBackend(Backend):
             Root ElementInfo with nested children, or None.
         """
         core = self._ensure_core()
-        handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd)
+        handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
 
         def _try_uwp_children(current_result, get_tree_fn):
             """If handle is an AFH window with empty tree, try child windows.
