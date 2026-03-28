@@ -1,23 +1,24 @@
 # Dev Status
-Last updated: 2026-03-28T09:20:00Z
-Session: Self-driven mode — README gaps, test coverage for agent.py
+Last updated: 2026-03-28T10:15:00Z
+Session: CI gate fix + security/infra improvements
 
 ## This Session
-- **PR #513 created**: README missing `set` command in CLI table + Quick Start examples for `get`/`set`/`highlight` (fixes #512)
-- **PR #515 created**: 46 unit tests for `naturo/agent.py` — the only untested module (fixes #514)
-- **Issues created**: #512 (docs gap), #514 (test coverage gap)
-- Tests: 2105 passed, 499 skipped, 0 failures (up from 2059)
-- PRs: #513 (docs), #515 (tests) — CI green on all required checks, awaiting merge (auto-merge blocked by #510)
+- **PR #516 created**: CI Gate job to unblock auto-merge (fixes #510, P1)
+- **PR #517 created**: Enable Dependabot for pip + GitHub Actions (fixes #416)
+- **PR #518 created**: README badges — downloads, platform, pyversions (fixes #49)
+- **PR #519 created**: CodeQL security scanning for Python and C++ (fixes #417)
+- Tests: 2001 passed, 373 skipped, 0 failures
+- PRs: 4 created this session, 2 from previous session (#513, #515) still open
 
 ## Current State
-- Earliest open milestone: none (all issues are in backlog)
-- CI: GREEN on main and both open PRs (Windows DLL failure is expected/non-blocking)
-- Open PRs by me: #513 (README update), #515 (agent.py tests)
-- Blocker: #510 — auto-merge blocked by "Python Tests with DLL (Windows)" branch protection. Needs admin to remove from required checks.
+- Earliest open milestone: v0.3.4 (issues #416, #417, #49 now have PRs)
+- CI: GREEN on main (Windows DLL failure is expected/non-blocking)
+- Open PRs: #513 (README docs), #515 (agent tests), #516 (CI gate), #517 (Dependabot), #518 (badges), #519 (CodeQL)
+- Blocker: PR #516 needs manual merge by admin (chicken-and-egg — the CI gate fix itself is blocked by the problem it fixes). After merge, update branch protection to require only "CI Gate".
 
 ## Next Session Should
-1. **Check if PRs #513 and #515 were merged** — if not, try merging manually or address any feedback
-2. **Fix #510**: Remove "Python Tests with DLL (Windows)" from branch protection required checks (needs repo admin)
+1. **Check if PR #516 (CI gate) was merged** — if yes, verify auto-merge works on remaining PRs
+2. **Check remaining PRs** (#513, #515, #517, #518, #519) — merge if CI green, address any review feedback
 3. **Code health**: `backends/windows.py` is 4005 lines (#411) — consider splitting into submodules
-4. **Backlog triage**: Pick highest-impact P1/P2 issues to work on (e.g., #411 refactor, #412 input strategy pattern)
-5. **Self-driven**: test first-user experience end-to-end, find friction points in CLI output and error messages
+4. **Backlog**: Pick highest-impact P2 issues (e.g., #411 refactor, #412 input strategy, #419 release notes automation)
+5. **Self-driven**: test first-user experience, find friction in CLI output and error messages
