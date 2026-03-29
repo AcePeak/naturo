@@ -72,7 +72,7 @@ class TestClickAppForeground:
     """Verify that click --app always activates the target window (#608)."""
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_with_snapshot_hwnd_calls_focus_window(
         self, mock_get_backend, mock_get_mgr
     ):
@@ -93,7 +93,7 @@ class TestClickAppForeground:
         backend.focus_window.assert_called_once_with(hwnd=0xABCDE)
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_without_snapshot_hwnd_resolves_via_app(
         self, mock_get_backend, mock_get_mgr
     ):
@@ -116,8 +116,8 @@ class TestClickAppForeground:
         backend._resolve_hwnd.assert_called_once()
         backend.focus_window.assert_called_once_with(hwnd=0x99999)
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_coords_with_app_calls_focus_window(
         self, mock_get_backend, mock_auto_route
     ):
@@ -139,8 +139,8 @@ class TestClickAppForeground:
         backend._resolve_hwnd.assert_called_once()
         backend.focus_window.assert_called_once_with(hwnd=0x77777)
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_coords_with_hwnd_calls_focus_window(
         self, mock_get_backend, mock_auto_route
     ):
@@ -161,8 +161,8 @@ class TestClickAppForeground:
 
         backend.focus_window.assert_called_once_with(hwnd=349525)
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_coords_with_pid_calls_focus_window(
         self, mock_get_backend, mock_auto_route
     ):
@@ -184,8 +184,8 @@ class TestClickAppForeground:
         backend._resolve_hwnd.assert_called_once()
         backend.focus_window.assert_called_once_with(hwnd=0x33333)
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_no_app_flag_no_focus(self, mock_get_backend, mock_auto_route):
         """Without --app/--hwnd/--pid, focus_window() should NOT be called."""
         from click.testing import CliRunner
@@ -203,7 +203,7 @@ class TestClickAppForeground:
         backend.focus_window.assert_not_called()
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_focus_failure_does_not_block_click(
         self, mock_get_backend, mock_get_mgr
     ):

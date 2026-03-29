@@ -69,9 +69,9 @@ def _get_click_xy(mock_call):
 def _patch_backend(mock_backend):
     """Return patch objects for _get_backend, _check_desktop_session, _auto_route."""
     return [
-        patch("naturo.cli.interaction._get_backend", return_value=mock_backend),
-        patch("naturo.cli.interaction._check_desktop_session"),
-        patch("naturo.cli.interaction._auto_route", return_value={}),
+        patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend),
+        patch("naturo.cli.interaction._common._check_desktop_session"),
+        patch("naturo.cli.interaction._common._auto_route", return_value={}),
     ]
 
 

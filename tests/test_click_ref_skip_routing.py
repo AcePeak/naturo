@@ -80,9 +80,9 @@ def _make_mock_snapshot_manager(snapshot: Snapshot) -> MagicMock:
 class TestClickRefSkipsRouting:
     """Verify that clicking via eN ref skips auto-routing."""
 
-    @patch("naturo.cli.interaction._auto_route")
+    @patch("naturo.cli.interaction._common._auto_route")
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_click_skips_auto_route(
         self, mock_get_backend, mock_get_mgr, mock_auto_route
     ):
@@ -103,8 +103,8 @@ class TestClickRefSkipsRouting:
         # _auto_route should NOT have been called — the ref resolved to coords
         mock_auto_route.assert_not_called()
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_non_ref_click_still_routes(self, mock_get_backend, mock_auto_route):
         """Non-ref clicks (--coords, --id, --on text) should still auto-route."""
         from click.testing import CliRunner
@@ -120,9 +120,9 @@ class TestClickRefSkipsRouting:
         # _auto_route should have been called for coordinate-based clicks
         mock_auto_route.assert_called_once()
 
-    @patch("naturo.cli.interaction._auto_route")
+    @patch("naturo.cli.interaction._common._auto_route")
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_click_with_app_flag_skips_auto_route(
         self, mock_get_backend, mock_get_mgr, mock_auto_route
     ):
@@ -143,7 +143,7 @@ class TestClickRefSkipsRouting:
         mock_auto_route.assert_not_called()
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_retrieves_snapshot_hwnd(self, mock_get_backend, mock_get_mgr):
         """eN ref click should retrieve the snapshot's stored window_handle."""
         from click.testing import CliRunner
@@ -162,9 +162,9 @@ class TestClickRefSkipsRouting:
         # Snapshot should have been loaded to retrieve HWND
         mgr.get_snapshot.assert_called_once_with(snapshot.snapshot_id)
 
-    @patch("naturo.cli.interaction._auto_route")
+    @patch("naturo.cli.interaction._common._auto_route")
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_unresolved_ref_falls_through_to_error(
         self, mock_get_backend, mock_get_mgr, mock_auto_route
     ):
@@ -186,8 +186,8 @@ class TestClickRefSkipsRouting:
         # Should have errored with REF_NOT_FOUND, not called auto_route
         mock_auto_route.assert_not_called()
 
-    @patch("naturo.cli.interaction._auto_route")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._auto_route")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_text_click_still_routes(self, mock_get_backend, mock_auto_route):
         """Click --on with plain text (not eN) should still auto-route."""
         from click.testing import CliRunner
@@ -202,9 +202,9 @@ class TestClickRefSkipsRouting:
 
         mock_auto_route.assert_called_once()
 
-    @patch("naturo.cli.interaction._auto_route")
+    @patch("naturo.cli.interaction._common._auto_route")
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_route_info_is_empty(
         self, mock_get_backend, mock_get_mgr, mock_auto_route
     ):

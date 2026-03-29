@@ -105,7 +105,7 @@ class TestWindowDeprecationWarning:
 class TestHotkeyDeprecationWarning:
     """``naturo hotkey`` should emit deprecation warning."""
 
-    @mock.patch("naturo.cli.interaction._get_backend")
+    @mock.patch("naturo.cli.interaction._common._get_backend")
     def test_hotkey_deprecation(self, mock_backend, runner):
         mock_be = mock.MagicMock()
         mock_be.press_key.return_value = None

@@ -290,9 +290,9 @@ class TestClipboardInfo:
 def _click_patches(mock_backend):
     """Return patch context managers for mocking click command dependencies."""
     return {
-        "backend": patch("naturo.cli.interaction._get_backend", return_value=mock_backend),
-        "desktop": patch("naturo.cli.interaction._check_desktop_session"),
-        "auto_route": patch("naturo.cli.interaction._auto_route", return_value={}),
+        "backend": patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend),
+        "desktop": patch("naturo.cli.interaction._common._check_desktop_session"),
+        "auto_route": patch("naturo.cli.interaction._common._auto_route", return_value={}),
     }
 
 

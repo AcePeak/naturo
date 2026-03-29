@@ -36,7 +36,7 @@ class TestTypePasteWithoutText:
         """type without TEXT and without --paste should give INVALID_INPUT."""
         from naturo.cli.interaction import type_cmd
 
-        with patch("naturo.cli.interaction._get_backend"):
+        with patch("naturo.cli.interaction._common._get_backend"):
             result = runner.invoke(type_cmd, ["--json"])
         data = json.loads(result.output)
         assert data["success"] is False
@@ -49,8 +49,8 @@ class TestTypePasteWithoutText:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, ["--paste", "--json"])
 
         data = json.loads(result.output)
@@ -69,8 +69,8 @@ class TestTypePasteWithoutText:
         mock_backend = MagicMock()
         mock_backend.clipboard_get.return_value = ""
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, ["hello", "--paste", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -98,8 +98,8 @@ class TestTypeOnElement:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.snapshot.SnapshotManager") as MockMgr:
             mock_mgr = MockMgr.return_value
             mock_mgr.resolve_ref.return_value = (100, 200)
@@ -121,8 +121,8 @@ class TestTypeOnElement:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.snapshot.SnapshotManager") as MockMgr:
             mock_mgr = MockMgr.return_value
             mock_mgr.resolve_ref.return_value = None
@@ -140,8 +140,8 @@ class TestTypeOnElement:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.snapshot.SnapshotManager") as MockMgr:
             mock_mgr = MockMgr.return_value
             mock_mgr.resolve_ref.return_value = (100, 200)
@@ -189,8 +189,8 @@ class TestTypePasteFallbackOnIME:
                 return failed_result  # First call: SendInput failed
             return success_result  # Second call: paste succeeded
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", side_effect=mock_verify_type), \
              patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello World", "--json", "--verify"])
@@ -218,8 +218,8 @@ class TestTypePasteFallbackOnIME:
             method="value_compare",
         )
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", return_value=failed_result), \
              patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello", "--paste", "--json", "--verify"])
@@ -241,8 +241,8 @@ class TestTypePasteFallbackOnIME:
             method="value_compare",
         )
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}), \
              patch("naturo.verify.verify_type", return_value=success_result), \
              patch("naturo.verify.capture_before_state", return_value=None):
             result = runner.invoke(type_cmd, ["Hello", "--json", "--verify"])
@@ -265,8 +265,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -282,8 +282,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -298,8 +298,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -314,8 +314,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, ["path\\\\file", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -330,8 +330,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"Col1\tCol2\nRow2", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -347,8 +347,8 @@ class TestTypeEscapeSequences:
         mock_backend = MagicMock()
         mock_backend.clipboard_get.return_value = ""
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"A\tB", "--paste", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -363,8 +363,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [
                 r"C:\Users\test\report.txt", "--raw", "--json", "--no-verify",
             ])
@@ -384,8 +384,8 @@ class TestTypeEscapeSequences:
 
         mock_backend = MagicMock()
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value={}):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
             result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -412,8 +412,8 @@ class TestTypeNewlineBypassesUIA:
 
         # Route says UIA is available
         route_info = {"method": "uia"}
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
             result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -434,8 +434,8 @@ class TestTypeNewlineBypassesUIA:
         mock_backend.set_element_value.return_value = True
 
         route_info = {"method": "uia"}
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
             result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
 
         data = json.loads(result.output)
@@ -454,8 +454,8 @@ class TestTypeNewlineBypassesUIA:
         mock_backend.set_element_value.return_value = True
 
         route_info = {"method": "uia"}
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value=route_info):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
             result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
 
         data = json.loads(result.output)

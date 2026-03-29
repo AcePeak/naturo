@@ -16,7 +16,7 @@ from naturo.routing import RoutingResult
 class TestAutoRouteAppNotFound:
     """_auto_route must error when --app is specified but not found (#565)."""
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_click_nonexistent_app_coords_fails(self, mock_get_backend):
         """click --app doesnotexist --coords 100 100 must exit with code 1."""
         from click.testing import CliRunner
@@ -48,7 +48,7 @@ class TestAutoRouteAppNotFound:
         )
         assert "not found" in result.output.lower() or "not found" in (result.output or "").lower()
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_click_nonexistent_app_coords_json_fails(self, mock_get_backend):
         """click --app doesnotexist --coords 100 100 --json must return error."""
         from click.testing import CliRunner
@@ -78,7 +78,7 @@ class TestAutoRouteAppNotFound:
         assert result.exit_code != 0
         assert "APP_NOT_FOUND" in (result.output or "")
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_click_valid_app_coords_proceeds(self, mock_get_backend):
         """click --app notepad --coords 100 100 must proceed when app exists."""
         from click.testing import CliRunner
@@ -109,7 +109,7 @@ class TestAutoRouteAppNotFound:
         # Should not contain "not found" error
         assert "not found" not in (result.output or "").lower() or result.exit_code == 0
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_click_no_app_flag_no_validation(self, mock_get_backend):
         """click --coords 100 100 (no --app) must proceed without validation."""
         from click.testing import CliRunner
@@ -128,7 +128,7 @@ class TestAutoRouteAppNotFound:
         # Should not fail with app-not-found
         assert "not found" not in (result.output or "").lower()
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_type_nonexistent_app_fails(self, mock_get_backend):
         """type --app doesnotexist must also fail (#565 affects all actions)."""
         from click.testing import CliRunner

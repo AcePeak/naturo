@@ -64,50 +64,50 @@ class TestMethodFlagOnCommands:
 
     def test_click_accepts_method_flag(self, runner, mock_backend):
         """click command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(click_cmd, ["--coords", "100", "200", "--method", "uia", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_click_accepts_method_short_flag(self, runner, mock_backend):
         """click command accepts -m shorthand."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(click_cmd, ["--coords", "100", "200", "-m", "uia", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_click_rejects_invalid_method(self, runner, mock_backend):
         """click command rejects invalid --method values."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(click_cmd, ["--coords", "100", "200", "--method", "invalid"])
             assert result.exit_code != 0
             assert "Invalid value" in result.output or "invalid" in result.output.lower()
 
     def test_type_accepts_method_flag(self, runner, mock_backend):
         """type command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(type_cmd, ["Hello", "--method", "cdp", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_press_accepts_method_flag(self, runner, mock_backend):
         """press command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(press, ["enter", "--method", "msaa", "--no-verify"])
             assert result.exit_code == 0, result.output
 
     def test_hotkey_accepts_method_flag(self, runner, mock_backend):
         """hotkey command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(hotkey, ["ctrl+c", "--method", "ia2"])
             assert result.exit_code == 0, result.output
 
     def test_scroll_accepts_method_flag(self, runner, mock_backend):
         """scroll command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(scroll, ["down", "--method", "jab"])
             assert result.exit_code == 0, result.output
 
     def test_drag_accepts_method_flag(self, runner, mock_backend):
         """drag command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(drag, [
                 "--from-coords", "100", "100",
                 "--to-coords", "200", "200",
@@ -117,7 +117,7 @@ class TestMethodFlagOnCommands:
 
     def test_move_accepts_method_flag(self, runner, mock_backend):
         """move command accepts --method."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(move, ["--coords", "300", "400", "--method", "auto"])
             assert result.exit_code == 0, result.output
 
@@ -145,7 +145,7 @@ class TestMethodFlagDefaultAuto:
             captured_method["value"] = kwargs.get("method", "NOT_SET")
             return original_click(*args, **kwargs)
 
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             with patch.object(click_cmd, "callback", patched_click):
                 result = runner.invoke(click_cmd, ["--coords", "100", "200"])
 
@@ -168,7 +168,7 @@ class TestMethodFlagAllValues:
     @pytest.mark.parametrize("method", VALID_METHODS)
     def test_click_accepts_all_valid_methods(self, runner, mock_backend, method):
         """click command accepts every valid method value."""
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
             result = runner.invoke(click_cmd, ["--coords", "50", "50", "--method", method, "--no-verify"])
             assert result.exit_code == 0, f"Failed for method={method}: {result.output}"
 

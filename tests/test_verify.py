@@ -1130,8 +1130,8 @@ class TestInconclusiveExitCode:
         )
 
         runner = CliRunner()
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value=None), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value=None), \
              patch("naturo.verify.capture_before_state", return_value=None), \
              patch("naturo.verify.verify_click", return_value=unknown):
             result = runner.invoke(click_cmd, ["--coords", "500", "300", "--json"])
@@ -1169,8 +1169,8 @@ class TestInconclusiveExitCode:
         )
 
         runner = CliRunner()
-        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.interaction._auto_route", return_value=None), \
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value=None), \
              patch("naturo.verify.capture_before_state", return_value=None), \
              patch("naturo.verify.verify_press", return_value=unknown):
             result = runner.invoke(press, ["enter", "--json"])
