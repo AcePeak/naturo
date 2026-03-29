@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ctypes
 import logging
+import platform
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -30,16 +32,14 @@ def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
               If None, highlights all matching elements.
         show_all: If False (default), only highlight actionable Win32 classes.
     """
-    import ctypes
     from ctypes import wintypes
-    import platform
     import time
 
     if platform.system() != "Windows":
         return
 
-    user32 = ctypes.windll.user32
-    gdi32 = ctypes.windll.gdi32
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
 
     # Win32 class names considered actionable (interactive controls)
     _ACTIONABLE_WIN32_CLASSES = {
@@ -250,7 +250,6 @@ def highlight_elements_uia(
     Returns:
         The annotated screenshot path if ``annotate_path`` is set, else None.
     """
-    import platform
     import time
 
     from naturo.snapshot import get_snapshot_manager
@@ -281,8 +280,6 @@ def highlight_elements_uia(
     # ── GDI live overlay (Windows only) ──────────────────────────────────────
     if platform.system() != "Windows":
         return None
-
-    import ctypes
 
     from naturo.annotate import ACTIONABLE_ROLES
 
@@ -402,8 +399,8 @@ def highlight_elements_uia(
                             best_pos[0] + approx_w, best_pos[1] + approx_h))
 
     # Draw highlights using GDI
-    user32 = ctypes.windll.user32
-    gdi32 = ctypes.windll.gdi32
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
 
     hdc = user32.GetDC(None)
     font = gdi32.CreateFontW(

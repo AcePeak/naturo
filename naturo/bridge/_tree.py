@@ -6,7 +6,9 @@ that grafts UIA subtrees onto Win32 nodes for complex controls.
 """
 from __future__ import annotations
 
+import ctypes
 import logging
+import platform
 from typing import TYPE_CHECKING, Optional
 
 from naturo.bridge._models import ElementInfo, populate_hierarchy
@@ -102,9 +104,7 @@ def enumerate_child_windows(hwnd: int, depth: int = 10) -> Optional[ElementInfo]
     Returns:
         Root ElementInfo with children, or None if enumeration fails.
     """
-    import ctypes
     from ctypes import wintypes
-    import platform
 
     if platform.system() != "Windows":
         return None
@@ -112,7 +112,7 @@ def enumerate_child_windows(hwnd: int, depth: int = 10) -> Optional[ElementInfo]
     if depth < 1:
         depth = 1
 
-    user32 = ctypes.windll.user32
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
     # Resolve foreground window if hwnd is 0
     if hwnd == 0:
@@ -258,9 +258,7 @@ def enumerate_hybrid_tree(
     Returns:
         Root ElementInfo with merged HWND + UIA children, or None.
     """
-    import ctypes
     from ctypes import wintypes
-    import platform
 
     if platform.system() != "Windows":
         return None
@@ -268,7 +266,7 @@ def enumerate_hybrid_tree(
     if depth < 1:
         depth = 1
 
-    user32 = ctypes.windll.user32
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
     # Resolve foreground window if hwnd is 0
     if hwnd == 0:
