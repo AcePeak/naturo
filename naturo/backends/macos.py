@@ -952,11 +952,13 @@ class MacOSBackend(Backend):
 
     # === Menu ===
 
-    def get_menu_items(self, window_title: Optional[str] = None) -> list:
+    def get_menu_items(self, window_title: Optional[str] = None,
+                       hwnd: Optional[int] = None) -> list:
         """Get menu items from the application menu bar.
 
         Args:
             window_title: Application name to inspect menus for.
+            hwnd: Window handle (ignored on macOS).
 
         Returns:
             List of menu item dicts.
