@@ -95,13 +95,48 @@ def _rect_area(x: int, y: int, w: int, h: int) -> int:
     return max(0, w) * max(0, h)
 
 
-def _covered_area(elements: List[ElementInfo]) -> int:
-    """Approximate covered area by summing non-overlapping bounding boxes.
+# Roles that are structural containers — their bounding boxes span large areas
+# but they don't represent actionable content. Only count them if they are leaf
+# nodes (no children), meaning no deeper inspection found inner elements.
+_CONTAINER_ROLES = frozenset({
+    "pane", "group", "window", "document", "custom", "frame",
+    "scrollbar", "toolbar", "statusbar", "titlebar", "menubar",
+    "contentsview", "browseruserview", "browserview",
+})
 
-    This is an overestimate when elements overlap, but good enough for
-    coverage scoring without numpy dependency.
+
+def _is_actionable_leaf(el: ElementInfo) -> bool:
+    """Return True if the element should count toward coverage.
+
+    An element counts if it is a leaf (no children) or has an actionable role
+    (Button, Edit, Link, etc.). Large container elements with children are
+    excluded because their bounding boxes inflate coverage without indicating
+    that the region has been deeply inspected.
     """
-    return sum(_rect_area(e.x, e.y, e.width, e.height) for e in elements)
+    role_lower = el.role.lower()
+    # Leaf elements always count
+    if not el.children:
+        return True
+    # Container roles with children — skip (children provide the real coverage)
+    if role_lower in _CONTAINER_ROLES:
+        return False
+    # Non-container roles with children still count (e.g. TabItem with subelements)
+    return True
+
+
+def _covered_area(elements: List[ElementInfo]) -> int:
+    """Approximate covered area using only actionable/leaf elements.
+
+    Excludes large container elements (Pane, Group, etc.) that have children,
+    since their bounding boxes inflate coverage without indicating actual
+    content discovery. This prevents false 100% coverage when UIA only finds
+    top-level shells around Electron/CEF content.
+    """
+    return sum(
+        _rect_area(e.x, e.y, e.width, e.height)
+        for e in elements
+        if _is_actionable_leaf(e)
+    )
 
 
 def _window_area(tree: ElementInfo) -> int:
