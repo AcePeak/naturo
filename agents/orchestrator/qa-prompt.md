@@ -168,6 +168,19 @@ Pick 1-2 apps for E2E testing. Rotate across rounds: Notepad → Calculator → 
 - Is JSON output valid? (`naturo see --app X -j | python -m json.tool`)
 - Do error messages make sense when things fail?
 
+### Mandatory Real-World Scenarios (EVERY 3 rounds)
+
+These test cases catch P0 bugs that systematic testing misses. Run them from `agents/qa/testcases/`:
+
+- **TC-0024** — Multi-window click targeting (target behind other windows)
+- **TC-0025** — DPI/coordinate verification (change scaling to 125%/150%/200%, **restore after**)
+- **TC-0026** — AI Vision fill-gaps (verify vision provider returns >0 elements)
+- **TC-0027** — AI Vision coverage (verify coverage calc doesn't falsely report 100%)
+- **TC-0028** — UWP multi-tab quit (Notepad with 2+ tabs and unsaved content)
+- **TC-0029** — Hybrid mode enrichment (compare hybrid vs UIA-only element count)
+
+See the YAML files for exact steps. These are in addition to Phase 5 regression — run them every 3 rounds minimum.
+
 ## Phase 3 — Professional Exploratory Testing
 Systematic edge case exploration — same every round:
 1. **Boundary values**: empty string, 10000-char string, special chars (`<>&"'\`), unicode, emoji
