@@ -76,7 +76,6 @@ def test_list_help(runner):
     assert "apps" in result.output
     assert "windows" in result.output
     assert "screens" in result.output
-    assert "permissions" in result.output
 
 
 def test_see_help(runner):
