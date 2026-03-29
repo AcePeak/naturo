@@ -1,33 +1,28 @@
 # Dev Status
-Last updated: 2026-03-29T01:35:00Z
-Session: Fixed 3 bugs (#573 P1, #571 P2, #570 P2), merged PR #574, created & merged PRs #576/#577
+Last updated: 2026-03-29T02:30:00Z
+Session: Fixed #575 (MCP launch_app missing PID), code health scan, self-driven mode
 
 ## This Session
-- **Merged PR #574** (from previous session): UWP --app matching fix for #569. CI Gate passed, manually merged (auto-merge blocked by expected Windows DLL test failure).
-- **Fixed #573 (P1)**: `click/type/press --app-id` always fails with "No windows found"
-  - Root cause: `_resolve_app_id` returned `entry.process_name` as `app` — when stored name was a full path (e.g. `C:\...\chrome.exe`), downstream fuzzy matching (`_resolve_hwnds`, `_auto_route`) always failed.
-  - Fix: Return `app=None` from `_resolve_app_id` since `hwnd+pid` provide precise targeting. Changed error checks from `app is None` to `hwnd is None`.
-  - PR #576 created → CI Gate passed → merged. 3 new tests.
-- **Fixed #571 (P2)**: `test_notepad_lifecycle` fails on CI
-  - Root cause: `_is_notepad_window` didn't match Chinese locale title (记事本). xfail only caught NotImplementedError, not AssertionError.
-  - Fix: Added Chinese title matching, increased poll timeout 20s→30s, broadened xfail.
-  - PR #577 created → CI Gate passed → merged.
-- **Fixed #570 (P2)**: Notepad UIA detection only finds 'vision'
-  - Root cause: `_find_notepad_window_pid` only matched English "Notepad" in title, missing Chinese "记事本". Wrong PID → detection chain couldn't probe UIA.
-  - Fix: Added Chinese title matching + process-name fallback for any locale.
-  - PR #578 created → CI running (Lint/macOS/C++ passed, waiting on Ubuntu/Windows).
-- Tests: 2215 passed, 0 failed
-- PRs: #574 merged, #576 merged, #577 merged, #578 pending CI
+- **Fixed #575 (P2 bug)**: MCP launch_app returns success but omits PID in response
+  - Root cause: MCP handler used `backend.launch_app()` (returns None) instead of `naturo.process.launch_app()` (returns ProcessInfo with PID). The CLI already used the correct function.
+  - Fix: Switched MCP handler to use `naturo.process.launch_app()`, now returns pid, name, path, is_running, window_count in response.
+  - PR #579 created → CI Gate passed, auto-merge pending remaining checks.
+- **Code health scan**: No TODOs/FIXMEs, no bare excepts. windows.py still 4184 lines (#411 exists).
+- **Test coverage analysis**: Very thorough — 100+ test files. Small gaps in CLI utilities (table.py, options.py, extensions.py) and AI providers (ollama, openai) — not critical.
+- **Documentation check**: README is accurate and up-to-date with current CLI commands.
+- Tests: 46/46 MCP tests passed locally
+- PRs: #579 created (CI passing)
 
 ## Current State
-- Earliest open milestone: v0.3.2 (0 remaining issues — all 4 fixed this session)
+- Earliest open milestone: all milestones clear (v0.1.0-v0.3.0 complete)
+- All 41 open issues are in backlog
 - CI: green on main
-- Open PRs by me: #578 (CI in progress, expected to pass)
-- Open PRs by others: #568 (external, removes accurate macOS info — recommend not merging)
+- Open PRs by me: #579 (CI Gate passed, waiting for auto-merge)
+- Open PRs by others: #568 (external, previously reviewed — recommend not merging)
 
 ## Next Session Should
-1. **Merge PR #578** if CI passed (or fix if failed)
-2. **Backlog triage**: All v0.3.2 issues are done — prioritize backlog P2 items
+1. **Merge PR #579** if not already auto-merged (or enable auto-merge if checks complete)
+2. **Backlog P2 bug triage**: #575 in progress, look for other actionable P2 items
 3. **Top tech debt**: backends/windows.py splitting (#411, 4184 lines) is the biggest target
 4. **v0.4.0 planning**: Unified Selector engine items need milestone assignment
-5. **PR #568 review**: External contributor PR — needs careful review, may need to be closed
+5. **Self-driven mode**: Continue product gap analysis, test untested modules
