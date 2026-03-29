@@ -1017,15 +1017,16 @@ class TestCaptureBeforeStatePressAction:
 class TestCaptureFocusStateNonWindows:
     """Test _capture_focus_state on non-Windows platforms."""
 
-    def test_returns_platform_key_on_linux(self):
-        """On Linux, should return dict with platform key."""
+    def test_returns_platform_key_on_non_windows(self):
+        """On non-Windows (Linux/macOS), should return dict with platform key."""
         from naturo.verify import _capture_focus_state
 
         backend = MagicMock(spec=[])
         state = _capture_focus_state(backend)
 
         assert "platform" in state
-        assert state["platform"] == "Linux"
+        # Linux returns "Linux", macOS returns "Darwin"
+        assert state["platform"] in ("Linux", "Darwin")
 
 
 class TestCaptureUiTextsNonWindows:
