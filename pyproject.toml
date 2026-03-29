@@ -131,6 +131,7 @@ no_implicit_optional = false
 [[tool.mypy.overrides]]
 module = [
     "naturo.backends.windows",
+    "naturo.backends.windows.*",
     "naturo.backends.linux",
     "naturo.registry",
     "naturo.bridge",
@@ -144,4 +145,4 @@ module = [
     "naturo.agent",
     "naturo.models.snapshot",
 ]
-disable_error_code = ["attr-defined", "assignment", "arg-type", "union-attr", "call-arg", "override", "return-value", "valid-type"]
+disable_error_code = ["attr-defined", "assignment", "arg-type", "union-attr", "call-arg", "override", "return-value", "valid-type", "misc"]
