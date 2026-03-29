@@ -1,0 +1,32 @@
+id: TC-0019
+title: "--app explorer matches Program Manager instead of actual Explorer windows"
+status: retired
+category: exploratory
+priority: P1
+source_issue: 524
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: pass
+consecutive_passes: 5
+notes: "2026-03-29 R61: PASS — see --app explorer returns 'Windows (C:) - 文件资源管理器' (File Explorer), not Program Manager. Element tree contains File Explorer navigation items, not desktop."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "File Explorer is open (at least one window)"
+
+steps:
+  - description: "Verify Explorer windows exist"
+    command: "naturo list apps | grep -i explorer"
+    expect: "At least one Explorer window listed with title containing folder name"
+  - description: "Try --app explorer"
+    command: "naturo see --app explorer"
+    expect: "Element tree from File Explorer window (folder contents, navigation bar)"
+  - description: "Try --app 文件资源管理器"
+    command: "naturo see --app 文件资源管理器"
+    expect: "Element tree from File Explorer window"
+  - description: "Verify it's NOT Program Manager"
+    command: "Check element tree does NOT contain 'Program Manager' or '桌面' (desktop)"
+    expect: "Elements from actual Explorer window, not desktop"
+
+pass_criteria: "--app explorer targets File Explorer windows, not Program Manager desktop"
+fail_action: "File P1 issue: --app explorer resolves to Program Manager instead of File Explorer windows"

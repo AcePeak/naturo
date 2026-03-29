@@ -1,0 +1,29 @@
+id: TC-0020
+title: "click --app nonexistent exits 0 and claims success (silent failure)"
+status: active
+category: regression
+priority: P0
+source_issue: 533
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: pass
+consecutive_passes: 4
+notes: "2026-03-29 R65: PASS — click --app doesnotexist123 e1 returns 'Error: No windows found' EXIT:1. Fix holds."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "At least one app is open (any app)"
+
+steps:
+  - description: "Run see on a real app to populate element cache"
+    command: "naturo see --app-id a1 -j"
+    expect: "Returns elements successfully"
+  - description: "Click cached element with nonexistent --app filter"
+    command: "naturo click --app doesnotexist e1"
+    expect: "Should return non-zero exit code and error message about app not found"
+  - description: "Verify exit code"
+    command: "naturo click --app doesnotexist e1; echo EXIT:$?"
+    expect: "EXIT:1 (non-zero), not EXIT:0"
+
+pass_criteria: "click with nonexistent --app returns non-zero exit code and does NOT report 'action: clicked'"
+fail_action: "File P0 bug: click ignores --app filter and operates on cached elements from different app"

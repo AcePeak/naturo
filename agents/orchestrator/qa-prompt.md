@@ -278,6 +278,22 @@ Severity guide:
 - P2: Edge case, format inconsistency, cosmetic issue
 
 ## Phase 8 — Update Status
+Write the SAME summary to TWO locations:
+
+### 1. Shared report in repo (for Dev and other agents)
+Write a Markdown report to `tests/qa-reports/QA-Mariana-<YYYYMMDD>-<HHMM>.md`:
+```bash
+TIMESTAMP=$(date +%Y%m%d-%H%M)
+# Write report to tests/qa-reports/QA-Mariana-${TIMESTAMP}.md
+```
+Then git add, commit, and push it:
+```bash
+git add tests/qa-reports/QA-Mariana-*.md agents/qa/status.md agents/qa/testcases/
+git commit -m "qa: round <N> report [skip ci]"
+git push origin main
+```
+
+### 2. Local status file
 Write a summary to `agents/qa/status.md`:
 ```markdown
 # QA Status

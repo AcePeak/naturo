@@ -7,11 +7,33 @@
 - **blocked** — Depends on unmerged fix, skip until unblocked
 
 ## Regression Tests
-- [TC-0001](regression/type-chinese-ime.yaml) — P0: naturo type wrong text on Chinese IME (#425) — **active**
-- [TC-0002](regression/click-exit-code.yaml) — P1: click/press returns exit code 2 on success (#426) — **active**
+- [TC-0001](regression/type-chinese-ime.yaml) — P0: naturo type wrong text on Chinese IME (#425) — **retired** (5 passes, #425 closed)
+- [TC-0002](regression/click-exit-code.yaml) — P1: click/press returns exit code 2 on success (#426) — **retired** (5 passes, #426 closed)
+- [TC-0003](regression/chinese-app-name-matching.yaml) — P1: --app with Chinese titles inconsistent across commands — **active**
 
 ## E2E Tests
-<!-- New cases will be added here by QA-Mariana -->
+- [TC-0004](e2e/calculator-basic-flow.yaml) — P1: Calculator see→click→verify flow — **active**
+- [TC-0010](e2e/mcp-agent-workflow.yaml) — P1: MCP server E2E: initialize→tools/list→type_text→verify — **active**
+- [TC-0014](e2e/scripted-notepad-workflow.yaml) — P1: Scripted workflow: launch→JSON parse→click→type→verify→close — **active**
+
+- [TC-0007](regression/click-on-short-text.yaml) — P1: click --on fails for short English text ('C', 'CE', 'MC') (#442) — **active**
+
+- [TC-0009](regression/uia-detection-after-hybrid.yaml) — P1: UIA detection missing after hybrid tree merge (#455) — **retired** (5 passes, #455 closed)
+- [TC-0012](regression/pid-targeting-ignored.yaml) — P0: --pid flag ignored, always returns foreground window — **active**
+- [TC-0013](regression/type-app-not-found-silent-failure.yaml) — P1: type --app exits 0 on "App not found", types to wrong window (#474) — **retired** (5 passes, #474 closed)
 
 ## Exploratory Tests
-<!-- New cases will be added here by QA-Mariana -->
+- [TC-0005](exploratory/capture-popup-menu.yaml) — P1: capture --app returns tiny image when popup menu is open — **blocked**
+- [TC-0006](exploratory/press-after-menu-focus.yaml) — P1: press fails silently after menu open/close cycle — **blocked**
+- [TC-0008](exploratory/multi-window-targeting.yaml) — P1: --app targets different windows for type vs capture — **active**
+- [TC-0011](exploratory/app-filter-cross-process.yaml) — P2: --app matches wrong process when app name in other window title — **active**
+
+- [TC-0015](regression/app-quit-silent-failure.yaml) — P1: app quit reports success but fails to close windows with unsaved changes — **active**
+- [TC-0016](regression/uwp-app-name-matching.yaml) — P1: --app flag fails to match UWP apps by common name (#469) — **active**
+- [TC-0017](regression/click-en-ref-not-found.yaml) — P0: click eN ref always fails with 'Element ref not found' even after see — **retired** (5 passes, #502 closed)
+- [TC-0018](exploratory/get-value-unreadable.yaml) — P1: get command returns 'no readable pattern' for Calculator display element — **active**
+- [TC-0019](exploratory/explorer-matches-program-manager.yaml) — P1: --app explorer matches Program Manager instead of File Explorer — **retired** (5 passes, #524 closed)
+- [TC-0020](regression/click-nonexistent-app-silent-success.yaml) — P0: click --app nonexistent exits 0 and claims success (silent failure) — **active**
+- [TC-0021](regression/type-escape-sequences-literal.yaml) — P1: naturo type treats \t and \n as literal text, not escape sequences — **active**
+- [TC-0022](exploratory/capture-missing-pid-flag.yaml) — P2: capture command missing --pid flag (API inconsistency) — **retired** (5 passes, #556 closed)
+- [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **active**

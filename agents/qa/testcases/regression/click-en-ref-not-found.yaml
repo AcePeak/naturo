@@ -1,0 +1,32 @@
+id: TC-0017
+title: "click eN ref always fails with 'Element ref not found' even immediately after see"
+status: retired
+category: regression
+priority: P0
+source_issue: 502
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: pass
+consecutive_passes: 5
+notes: "2026-03-29 R57: PASS — see→click eN workflow working correctly. Retired: #502 closed + 5 consecutive passes."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is running"
+
+steps:
+  - description: "Fresh see to capture snapshot"
+    command: "naturo see --app notepad"
+    expect: "Element tree with e1, e2, e3... and Snapshot ID"
+  - description: "Immediately click e3 (Document element)"
+    command: "naturo click e3 --app notepad"
+    expect: "Click succeeds, editor receives focus"
+  - description: "Try with --on flag"
+    command: "naturo click --on e3 --app notepad"
+    expect: "Click succeeds"
+  - description: "Try with HWND targeting"
+    command: "naturo see --hwnd <HWND> && naturo click e1 --hwnd <HWND>"
+    expect: "Click succeeds using same HWND"
+
+pass_criteria: "click eN finds the element from the most recent see snapshot"
+fail_action: "File P0 issue: core see→click eN workflow is broken"

@@ -1,0 +1,32 @@
+id: TC-0003
+title: "--app flag with Chinese window titles should work consistently across all commands"
+status: active
+category: regression
+priority: P1
+source_issue: null
+created: 2026-03-27
+last_run: 2026-03-29
+last_result: fail
+consecutive_passes: 0
+notes: "2026-03-29 R65: FAIL — see --app 计算器 EXIT:1 'No window found'. UWP Calculator hosted by ApplicationFrameHost.exe not matchable by Chinese title. Same as #569."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is running (Chinese title: 计算器)"
+
+steps:
+  - description: "Verify see finds app by Chinese title"
+    command: "naturo see --app 计算器"
+    expect: "Element tree shows calculator UI elements"
+  - description: "Verify click finds app by Chinese title"
+    command: "naturo click --app 计算器 --coords 500 500; echo EXIT=$?"
+    expect: "Click succeeds, no 'App not found' error, exit code 0"
+  - description: "Verify type finds app by Chinese title (Notepad)"
+    command: "naturo type --app 记事本 'test'; echo EXIT=$?"
+    expect: "Type succeeds, no 'App not found' error"
+  - description: "Screenshot verify"
+    command: "naturo capture --app 计算器 -o /tmp/tc-0003.png"
+    expect: "Screenshot shows calculator with click effect"
+
+pass_criteria: "All commands (see, click, type) consistently find apps by Chinese window title"
+fail_action: "File GitHub issue for inconsistent Chinese app name matching"

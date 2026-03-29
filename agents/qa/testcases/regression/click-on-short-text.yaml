@@ -1,0 +1,32 @@
+id: TC-0007
+title: "click --on fails for short English text like 'C', 'CE', 'MC'"
+status: active
+category: regression
+priority: P1
+source_issue: 442
+created: 2026-03-27
+last_run: 2026-03-29
+last_result: blocked
+consecutive_passes: 0
+notes: "2026-03-29 R65: BLOCKED — Chinese Windows Calculator has Chinese labels, cannot test English short text. Same as R64."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is running"
+
+steps:
+  - description: "Click short English text 'C' (Clear button)"
+    command: "naturo click --app calculator --on 'C'"
+    expect: "Click succeeds, calculator display clears"
+  - description: "Click 'CE' (Clear Entry button)"
+    command: "naturo click --app calculator --on 'CE'"
+    expect: "Click succeeds"
+  - description: "Click single Chinese char for comparison"
+    command: "naturo click --app calculator --on '七'"
+    expect: "Click succeeds (expected to pass, for comparison)"
+  - description: "Screenshot verify"
+    command: "naturo capture --app calculator -o /tmp/tc-0007.png"
+    expect: "Calculator shows expected state"
+
+pass_criteria: "click --on finds elements by short English text labels matching visible button text"
+fail_action: "File GitHub issue for click --on text matching with short strings"

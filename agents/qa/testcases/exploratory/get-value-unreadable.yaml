@@ -1,0 +1,29 @@
+id: TC-0018
+title: "get command returns 'no readable pattern' for Calculator display element"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: pass
+consecutive_passes: 5
+notes: "2026-03-29 R65: PASS — naturo get e15 --app-id a1 returns 'Value: 显示为 10' via NameProperty after 7+3=10 calculation."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is open with a non-zero value displayed"
+
+steps:
+  - description: "See Calculator elements to find display"
+    command: "naturo see --app-id a1"
+    expect: "Element tree shows [Text] '显示为 NNN' with eN ref"
+  - description: "Get value of display element"
+    command: "naturo get e15 --aid a1"
+    expect: "Returns the numeric value from the display (e.g. '579')"
+  - description: "Screenshot verify display shows value"
+    command: "naturo capture --app-id a1 -o /tmp/tc-0018.png"
+    expect: "Screenshot shows calculator with visible number on display"
+
+pass_criteria: "naturo get returns the readable value from Calculator display Text element"
+fail_action: "File P1 issue: get command cannot read Calculator display value"

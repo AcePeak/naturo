@@ -1,0 +1,35 @@
+id: TC-0015
+title: "app quit reports success but fails to close windows with unsaved changes"
+status: active
+category: regression
+priority: P1
+source_issue: null
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: pass
+consecutive_passes: 5
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "No Notepad windows are open"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens successfully"
+  - description: "Type text to create unsaved changes"
+    command: "naturo type 'unsaved test text' --app notepad"
+    expect: "Text appears in Notepad (window title shows * for unsaved)"
+  - description: "Quit Notepad"
+    command: "naturo app quit notepad"
+    expect: "Notepad closes OR exit code non-zero indicating it could not close"
+  - description: "Verify Notepad is actually closed"
+    command: "naturo list apps | grep -i notepad"
+    expect: "No Notepad windows in app list. If Notepad still appears, this is a silent failure."
+  - description: "Cleanup if needed"
+    command: "taskkill //F //IM Notepad.exe 2>/dev/null || true"
+    expect: "Force cleanup"
+
+pass_criteria: "app quit either closes Notepad or returns non-zero exit code"
+fail_action: "File P1 bug: app quit reports success but leaves windows with unsaved changes open"
+notes: "2026-03-29 R65: PASS — app quit notepad returns EXIT:1 with 'target process killed but still running under PID 37476', Notepad gone from app list."

@@ -1,0 +1,39 @@
+id: TC-0016
+title: "--app flag fails to match UWP apps by common name (calculator, settings)"
+status: active
+category: regression
+priority: P1
+source_issue: 469
+created: 2026-03-28
+last_run: 2026-03-29
+last_result: fail
+consecutive_passes: 0
+notes: "2026-03-29 R65: FAIL — see --app calculator EXIT:1, --app 计算器 EXIT:1. Only --pid works. UWP name matching still broken (#569). PR #574 not yet merged."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is open (or launch it)"
+
+steps:
+  - description: "Launch Calculator if not open"
+    command: "naturo app launch calculator || true"
+    expect: "Calculator window is visible"
+  - description: "Try --app calculator"
+    command: "naturo see --app calculator 2>&1; echo EXIT:$?"
+    expect: "Should return Calculator element tree, exit 0"
+  - description: "Try --app calc"
+    command: "naturo see --app calc 2>&1; echo EXIT:$?"
+    expect: "Should match Calculator via partial name"
+  - description: "Try Chinese name"
+    command: "naturo see --app 计算器 2>&1; echo EXIT:$?"
+    expect: "Should match on Chinese Windows"
+  - description: "Workaround: use process name"
+    command: "naturo see --app ApplicationFrameHost 2>&1 | head -5; echo EXIT:$?"
+    expect: "Should return Calculator elements (this is the current workaround)"
+  - description: "Cleanup"
+    command: "naturo app quit calculator || true"
+    expect: "Calculator closes"
+
+pass_criteria: "At least one of 'calculator', 'calc', or '计算器' matches the Calculator UWP app"
+fail_action: "Related to #469. UWP apps hosted by ApplicationFrameHost need special name matching."
+notes: "UWP apps run under ApplicationFrameHost.exe. --app matching by process name won't find 'calculator'. Must match by window title or known aliases."

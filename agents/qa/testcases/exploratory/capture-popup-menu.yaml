@@ -1,0 +1,32 @@
+id: TC-0005
+title: "capture --app captures wrong/tiny image when popup menu is open"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-27
+last_run: 2026-03-27
+last_result: blocked
+consecutive_passes: 0
+notes: "2026-03-27 R5: PR #444 (fix) still unmerged. Cannot retest. #440 still open."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is available"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens successfully"
+  - description: "Open File menu via keyboard"
+    command: "naturo press 'alt+f' --app notepad"
+    expect: "File menu opens"
+  - description: "Capture while menu is open"
+    command: "naturo capture --app notepad -o /tmp/tc-0005.png"
+    expect: "Screenshot shows full Notepad window with File menu visible (not a tiny cropped image)"
+  - description: "Close menu and clean up"
+    command: "naturo press 'escape' --app notepad && naturo app quit notepad"
+    expect: "Menu closes and Notepad exits"
+
+pass_criteria: "capture --app returns full window screenshot even when popup menus are open"
+fail_action: "File GitHub issue for capture window selection bug with popups"
