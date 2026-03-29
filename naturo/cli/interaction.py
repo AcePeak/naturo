@@ -1251,12 +1251,13 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
 @_app_id_option
 @_verify_options
 @_see_options
+@click.option("--raw", is_flag=True, help="Disable escape sequence interpretation (type text literally)")
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
              window_title, hwnd, input_mode, method, selector, app_id, verify, see_after,
-             settle, json_output):
+             settle, raw, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -1314,8 +1315,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # Interpret C-style escape sequences (\t, \n, \r, \\) in text so that
     # shell-provided literal backslash+letter sequences become real whitespace
     # characters.  File-sourced text (--file) already contains real characters,
-    # so skip processing for that path.
-    if text and not file_path:
+    # so skip processing for that path.  --raw disables this entirely (#619).
+    if text and not file_path and not raw:
         text = (
             text.replace("\\\\", "\x00")   # placeholder for literal backslash
             .replace("\\t", "\t")
