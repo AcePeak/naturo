@@ -1,0 +1,31 @@
+id: TC-0024
+title: "click --app hits wrong window when target is behind other windows"
+status: active
+category: exploratory
+priority: P0
+source_issue: 608
+created: 2026-03-29
+last_run: null
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "3+ applications open: Notepad, Calculator, and a browser"
+  - "Target app (Notepad) is BEHIND other windows, not in foreground"
+
+steps:
+  - description: "Open Notepad, Calculator, and Chrome. Put Chrome in front."
+    command: "naturo app launch notepad && naturo app launch calc && naturo app switch chrome"
+    expect: "Chrome is in foreground, Notepad is behind"
+  - description: "Get Notepad element tree"
+    command: "naturo see --app notepad"
+    expect: "Element tree returned with valid eN refs"
+  - description: "Click an element in Notepad while Chrome is in front"
+    command: "naturo click e3 --app notepad"
+    expect: "Notepad is brought to foreground AND the click hits the correct element in Notepad, NOT Chrome"
+  - description: "Verify with screenshot"
+    command: "naturo capture --app notepad -o /tmp/tc-0024-verify.png"
+    expect: "Screenshot shows Notepad is now in foreground with the expected click result"
+
+pass_criteria: "Click targets the correct Notepad element even when Notepad was behind other windows. Notepad must be brought to foreground before clicking."
+fail_action: "File P0 bug — click --app ignores window z-order, hits whatever is on top"

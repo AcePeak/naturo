@@ -1,0 +1,28 @@
+id: TC-0026
+title: "AI Vision fill-gaps returns 0 elements — JSON parsing fails"
+status: active
+category: exploratory
+priority: P0
+source_issue: 611
+created: 2026-03-29
+last_run: null
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "ANTHROPIC_API_KEY environment variable is set"
+  - "An Electron app is open (Feishu, Slack, VS Code, etc.) with UI regions UIA cannot see"
+
+steps:
+  - description: "Run cascade with fill-gaps and stats"
+    command: "naturo see --app feishu --cascade --fill-gaps --stats"
+    expect: "Stats show vision provider returned >0 elements, not 'skipped' or '0 elements'"
+  - description: "Check for [vision] tagged elements in output"
+    command: "naturo see --app feishu --cascade --fill-gaps | findstr vision"
+    expect: "At least some elements tagged with [vision] source, especially in regions UIA cannot reach (e.g., Electron sidebar)"
+  - description: "Direct API test"
+    command: "naturo capture --app feishu -o /tmp/tc-0026.png && python -c \"from naturo.providers.base import get_vision_provider; p = get_vision_provider('auto'); r = p.identify_element('/tmp/tc-0026.png', element_description='List all visible interactive UI elements.'); print(len(r.elements), 'elements')\""
+    expect: "AI provider returns >0 elements. If 0, check if JSON parsing strips markdown code blocks."
+
+pass_criteria: "AI Vision identifies elements in regions UIA missed. Stats show vision provider contributed >0 elements."
+fail_action: "File P0 bug — AI Vision fallback is completely broken, --fill-gaps is useless"

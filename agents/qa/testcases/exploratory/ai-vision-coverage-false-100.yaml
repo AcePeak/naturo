@@ -1,0 +1,27 @@
+id: TC-0027
+title: "AI Vision skipped because coverage falsely reports 100% on Electron apps"
+status: active
+category: exploratory
+priority: P0
+source_issue: 609
+created: 2026-03-29
+last_run: null
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "An Electron app is open with UI regions UIA cannot fully expose (e.g., Feishu sidebar)"
+
+steps:
+  - description: "Run UIA-only see and count elements in sidebar region"
+    command: "naturo see --app feishu -d 5 --visible-only"
+    expect: "Note how many elements are in the left sidebar (x < 300). Compare with what you visually see."
+  - description: "Run cascade with stats to check coverage calculation"
+    command: "naturo see --app feishu --cascade --fill-gaps --stats"
+    expect: "Coverage should NOT be 100% if the left sidebar has visible buttons/icons that UIA didn't find. If coverage says 100% but sidebar elements are missing → false positive."
+  - description: "Compare element count UIA-only vs with fill-gaps"
+    command: "naturo see --app feishu --cascade --fill-gaps -j | python -c \"import json,sys; d=json.load(sys.stdin); print(len(d['data']['elements']), 'total elements')\""
+    expect: "fill-gaps should return MORE elements than UIA-only. If same count → AI Vision didn't contribute."
+
+pass_criteria: "Coverage calculation correctly identifies uncovered regions. AI Vision triggers and adds elements for those regions."
+fail_action: "File P0 bug — coverage estimation counts empty container Panes as 'covered', preventing AI from filling gaps"

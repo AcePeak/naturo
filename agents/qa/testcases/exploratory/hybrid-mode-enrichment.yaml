@@ -1,0 +1,27 @@
+id: TC-0029
+title: "Hybrid mode should discover more elements than UIA-only on Electron apps"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-29
+last_run: null
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "An Electron app is open (Feishu, Slack, VS Code, Discord, etc.)"
+
+steps:
+  - description: "Count elements with UIA-only"
+    command: "naturo see --app feishu -d 5 --visible-only -j | python -c \"import json,sys; d=json.load(sys.stdin); print(len(d['data']['elements']), 'UIA elements')\""
+    expect: "Note the UIA element count"
+  - description: "Count elements with hybrid mode"
+    command: "naturo see --app feishu --backend hybrid -d 5 --visible-only -j | python -c \"import json,sys; d=json.load(sys.stdin); print(len(d['data']['elements']), 'hybrid elements')\""
+    expect: "Hybrid should return MORE elements than UIA-only, with some tagged [cdp] or [jab]"
+  - description: "Check for non-UIA source tags"
+    command: "naturo see --app feishu --backend hybrid -d 5 | findstr /v uia"
+    expect: "At least some elements with [cdp], [jab], [ia2], or [win32] tags"
+
+pass_criteria: "Hybrid mode discovers additional elements from non-UIA backends. Element count > UIA-only count."
+fail_action: "File P1 bug — hybrid enrichment not working, returns same result as UIA-only"

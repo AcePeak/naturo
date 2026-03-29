@@ -1,0 +1,30 @@
+id: TC-0028
+title: "app quit fails to fully close UWP Notepad with multiple tabs"
+status: active
+category: exploratory
+priority: P1
+source_issue: 586
+created: 2026-03-29
+last_run: null
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Windows 11 UWP Notepad (not classic notepad.exe)"
+
+steps:
+  - description: "Open Notepad with multiple tabs"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens. Manually open 2-3 additional tabs and type some text in each."
+  - description: "Attempt to quit Notepad"
+    command: "naturo app quit notepad"
+    expect: "Either: all tabs close cleanly, OR naturo reports an error about unsaved changes"
+  - description: "Verify no orphaned tabs remain"
+    command: "naturo see --app notepad"
+    expect: "Should return 'No window found' — no Notepad windows remain. If Notepad tabs are still open → failure."
+  - description: "Check for session restore respawn"
+    command: "timeout 5 && naturo see --app notepad"
+    expect: "After 5 seconds, Notepad should NOT have respawned via session restore"
+
+pass_criteria: "All Notepad tabs are fully closed. No orphaned tabs. No session restore respawn."
+fail_action: "File P1 bug — app quit cannot reliably close UWP multi-tab Notepad"
