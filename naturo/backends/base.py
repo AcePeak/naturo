@@ -1,10 +1,13 @@
 """Abstract backend interface — all platforms must implement this."""
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 import platform
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -366,8 +369,8 @@ class Backend(ABC):
         text = ""
         try:
             text = self.clipboard_get()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Clipboard status check failed: %s", exc)
         return {
             "format": "text" if text else "empty",
             "size": len(text),

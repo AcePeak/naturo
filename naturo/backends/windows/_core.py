@@ -84,8 +84,8 @@ class CoreMixin:
                 self._dpi_aware = True
             except (OSError, AttributeError):
                 pass
-        except Exception:
-            pass  # Non-Windows or no ctypes — skip silently
+        except Exception as exc:
+            logger.debug("DPI awareness setup skipped: %s", exc)
 
     def get_dpi_scale(self, screen_index: int = 0) -> float:
         """Get the DPI scale factor for a specific monitor.
@@ -101,8 +101,8 @@ class CoreMixin:
             monitors = self.list_monitors()
             if 0 <= screen_index < len(monitors):
                 return monitors[screen_index].scale_factor
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("DPI scale lookup failed for screen %s: %s", screen_index, exc)
         return 1.0
 
     def physical_to_logical(self, x: int, y: int, screen_index: int = 0) -> tuple[int, int]:

@@ -38,8 +38,8 @@ def _detect_installer() -> list[str]:
         installer = (dist.read_text("INSTALLER") or "").strip().lower()
         if installer == "uv":
             return ["uv", "pip", "install"]
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Installer detection failed: %s", exc)
 
     # Default: use the current Python's pip
     return [sys.executable, "-m", "pip", "install"]

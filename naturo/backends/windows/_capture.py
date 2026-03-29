@@ -97,8 +97,8 @@ class CaptureMixin:
                             hMonitor, 0,
                             ctypes.byref(dpi_x), ctypes.byref(dpi_y),
                         )
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("GetDpiForMonitor failed: %s", exc)
 
                 dpi = dpi_x.value
                 scale = round(dpi / 96.0, 2)
@@ -202,8 +202,8 @@ class CaptureMixin:
             if 0 <= screen_index < len(monitors):
                 scale_factor = monitors[screen_index].scale_factor
                 dpi = monitors[screen_index].dpi
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Monitor info lookup failed for screen %s: %s", screen_index, exc)
 
         return CaptureResult(
             path=output_path, width=width, height=height, format=fmt,
@@ -264,8 +264,8 @@ class CaptureMixin:
                 if monitor:
                     scale_factor = monitor.scale_factor
                     dpi = monitor.dpi
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Window monitor info lookup failed: %s", exc)
 
         return CaptureResult(
             path=output_path, width=width, height=height, format=fmt,

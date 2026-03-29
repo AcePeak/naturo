@@ -646,8 +646,8 @@ def _capture_ui_texts(
                 target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, pid=pid,
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("HWND resolution for verification failed: %s", exc)
         if not target_hwnd:
             target_hwnd = user32.GetForegroundWindow()
         if not target_hwnd:
@@ -686,8 +686,8 @@ def _capture_ui_texts(
             try:
                 _uia_texts = _capture_uia_child_names(target_hwnd, max_children)
                 texts.update(_uia_texts)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("UIA child name capture failed: %s", exc)
 
     except Exception as exc:
         logger.debug("UI text capture failed: %s", exc)
@@ -836,8 +836,8 @@ def _capture_focus_state(backend, timeout_s: float = 3.0) -> dict:
                         uia_state["focused_name"] = focused.CurrentName or ""
                         uia_state["focused_role"] = focused.CurrentControlType
                         uia_state["focused_aid"] = focused.CurrentAutomationId or ""
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("UIA focused element capture failed: %s", exc)
                 uia_result["state"] = uia_state
 
             thread = threading.Thread(target=_uia_focus, daemon=True)

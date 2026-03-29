@@ -339,8 +339,8 @@ def list_available_providers() -> list[str]:
             provider = cls()
             if provider.is_available:
                 available.append(pname)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Provider %s availability check failed: %s", pname, exc)
     return available
 
 

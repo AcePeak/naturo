@@ -373,8 +373,8 @@ def _find_cdp_debug_port(pid: int) -> Optional[int]:
             sock.close()
             if result == 0:
                 return port
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("CDP port probe failed for port %s: %s", port, exc)
 
     return None
 

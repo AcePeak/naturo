@@ -399,8 +399,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             try:
                 backend.minimize_window(hwnd=w.handle)
                 count += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to minimize window %s: %s", w.handle, exc)
         return {"success": True, "action": "hide", "app": name, "windows_minimized": count}
 
     @server.tool()
@@ -426,8 +426,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             try:
                 backend.restore_window(hwnd=w.handle)
                 count += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to restore window %s: %s", w.handle, exc)
         return {"success": True, "action": "unhide", "app": name, "windows_restored": count}
 
     @server.tool()
@@ -708,8 +708,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if window_title and not target_hwnd:
             try:
                 target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
 
         success = backend.set_element_value(
             text=value,
@@ -757,8 +757,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if window_title and not target_hwnd:
             try:
                 target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
 
         new_state = backend.toggle_element(
             hwnd=target_hwnd,
@@ -805,8 +805,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if window_title and not target_hwnd:
             try:
                 target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
 
         success = backend.select_element(
             hwnd=target_hwnd,
@@ -855,8 +855,8 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         if window_title and not target_hwnd:
             try:
                 target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
 
         success = backend.expand_collapse_element(
             hwnd=target_hwnd,

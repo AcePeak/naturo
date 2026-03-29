@@ -11,12 +11,12 @@ if sys.platform == "win32" and not os.environ.get("PYTHONUTF8"):
         try:
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
-            pass
+            pass  # Best-effort: logging not yet configured at import time
     if hasattr(sys.stderr, "reconfigure"):
         try:
             sys.stderr.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
-            pass
+            pass  # Best-effort: logging not yet configured at import time
 
 import click
 from naturo.version import __version__

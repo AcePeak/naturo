@@ -815,8 +815,8 @@ class ElementMixin:
         try:
             import psutil  # type: ignore[import-untyped]
             return psutil.Process(pid).exe()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("psutil exe resolution failed for pid %s: %s", pid, exc)
         try:
             import ctypes
             from ctypes import wintypes
@@ -831,8 +831,8 @@ class ElementMixin:
                         return buf.value
                 finally:
                     kernel32.CloseHandle(h)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Win32 exe path resolution failed for pid %s: %s", pid, exc)
         return None
 
     @staticmethod

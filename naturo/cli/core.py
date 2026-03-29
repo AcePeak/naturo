@@ -6,6 +6,7 @@ window listing, UI element tree inspection, and element search.
 from __future__ import annotations
 
 import json as json_module
+import logging
 import platform
 
 import click
@@ -13,6 +14,8 @@ import click
 from naturo.cli.error_helpers import json_error as _json_error_str
 from naturo.errors import WindowNotFoundError
 from naturo.cli.fuzzy_group import FuzzyGroup
+
+logger = logging.getLogger(__name__)
 
 
 def _get_backend(json_output: bool = False):
@@ -253,8 +256,8 @@ def capture(app, pid, window_title, hwnd, screen, path, fmt, store_snapshot, ses
                             ):
                                 win_offset_x = rect.left
                                 win_offset_y = rect.top
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("Window rect lookup failed for hwnd %s: %s", _cap_hwnd, exc)
                     # Try 2: fall back to snapshot window_bounds
                     if win_offset_x == 0 and win_offset_y == 0:
                         try:

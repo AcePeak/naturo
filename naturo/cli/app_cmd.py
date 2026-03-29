@@ -6,11 +6,15 @@ Window operations (focus, close, minimize, maximize, restore, move, resize) are
 also registered here, unifying app + window into a single namespace.
 """
 import json
+import logging
 import os
+import sys
+
+import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
-import sys
-import click
+
+logger = logging.getLogger(__name__)
 
 
 def _match_windows(windows, name_lower):
@@ -387,8 +391,8 @@ def app_hide(ctx, name, app_name, json_output):
             try:
                 backend.minimize_window(hwnd=w.handle)
                 count += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to minimize window %s: %s", w.handle, exc)
         if json_output:
             click.echo(json.dumps({"success": True, "action": "hide", "app": name, "windows_minimized": count}))
         else:
@@ -435,8 +439,8 @@ def app_unhide(ctx, name, app_name, json_output):
             try:
                 backend.restore_window(hwnd=w.handle)
                 count += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to restore window %s: %s", w.handle, exc)
         if json_output:
             click.echo(json.dumps({"success": True, "action": "unhide", "app": name, "windows_restored": count}))
         else:

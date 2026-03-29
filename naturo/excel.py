@@ -14,11 +14,14 @@ Requires:
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
 from typing import Any
 
 from naturo.errors import NaturoError, ErrorCode, ErrorCategory
+
+logger = logging.getLogger(__name__)
 
 
 # ── Error classes ────────────────────────────────────────────────────────────
@@ -185,8 +188,8 @@ def _cell_value_to_python(value: Any) -> Any:
     try:
         if hasattr(value, "isoformat"):
             return value.isoformat()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("isoformat conversion failed for %s: %s", type(value).__name__, exc)
 
     # Tuple of tuples (range) → list of lists
     if isinstance(value, tuple):
@@ -308,7 +311,7 @@ def excel_read(
         try:
             excel.Quit()
         except Exception:
-            pass
+            pass  # Best-effort cleanup: Excel process may already be gone
 
 
 def excel_write(
@@ -391,7 +394,7 @@ def excel_write(
         try:
             excel.Quit()
         except Exception:
-            pass
+            pass  # Best-effort cleanup: Excel process may already be gone
 
 
 def excel_list_sheets(path: str) -> dict[str, Any]:
@@ -433,7 +436,7 @@ def excel_list_sheets(path: str) -> dict[str, Any]:
         try:
             excel.Quit()
         except Exception:
-            pass
+            pass  # Best-effort cleanup: Excel process may already be gone
 
 
 def excel_run_macro(
@@ -490,7 +493,7 @@ def excel_run_macro(
         try:
             excel.Quit()
         except Exception:
-            pass
+            pass  # Best-effort cleanup: Excel process may already be gone
 
 
 def excel_get_range_info(
@@ -543,4 +546,4 @@ def excel_get_range_info(
         try:
             excel.Quit()
         except Exception:
-            pass
+            pass  # Best-effort cleanup: Excel process may already be gone

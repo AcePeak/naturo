@@ -741,8 +741,8 @@ def find_cdp_port(pid: Optional[int] = None) -> Optional[int]:
             with urllib.request.urlopen(req, timeout=1.0) as resp:
                 if resp.status == 200:
                     return port
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("CDP port check failed for port %s: %s", port, exc)
 
     return None
 
@@ -786,8 +786,8 @@ def _run_cdp_only(
             proc = find_process(name=app)
             if proc is not None:
                 resolved_pid = proc.pid
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Process lookup failed for app '%s': %s", app, exc)
 
     # Find CDP port
     debug_port = find_cdp_port(resolved_pid)
@@ -1043,8 +1043,8 @@ def run_cascade(
                     from naturo.electron import get_debug_port as _electron_port
                     if app:
                         debug_port = _electron_port(app)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Electron port detection failed for '%s': %s", app, exc)
 
                 # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
                 if debug_port is None:

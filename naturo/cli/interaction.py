@@ -684,8 +684,8 @@ def _check_desktop_session() -> None:
                 encoding="utf-8", errors="replace",
             )
             explorer_running = "explorer.exe" in result.stdout.lower()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Explorer check failed: %s", exc)
 
         from naturo.errors import NoDesktopSessionError
         if explorer_running:
@@ -948,8 +948,8 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 snapshot = mgr.get_snapshot(_snap_id)
                 if snapshot.window_handle:
                     _snapshot_hwnd = snapshot.window_handle
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Snapshot HWND retrieval failed: %s", exc)
         else:
             # resolve_ref returns None for both "not found" and "zero-bounds".
             # Check resolve_ref_element to distinguish: if the element exists
@@ -1022,8 +1022,8 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         if hasattr(backend, "_is_applicationframehost"):
             try:
                 _is_uwp = backend._is_applicationframehost(_focus_hwnd)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("UWP detection failed (hwnd=%s): %s", _focus_hwnd, exc)
         try:
             backend.focus_window(hwnd=_focus_hwnd)
         except Exception as exc:
@@ -1117,8 +1117,8 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
                 if restore:
                     try:
                         _old_clip = backend.clipboard_get()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("Clipboard backup failed: %s", exc)
                 backend.hotkey("ctrl", "v")
                 _clipboard_action = "paste"
                 # Restore previous clipboard content
@@ -1362,15 +1362,15 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
-                except Exception:
-                    pass  # PID recording is Windows-only, optional
+                except Exception as exc:
+                    logger.debug("PID recording failed (Windows-only): %s", exc)
                 # (#441) Also use UIA SetFocus to restore internal widget
                 # focus (e.g. after menu open/close leaves focus on menu bar)
                 if hasattr(backend, "focus_element_uia"):
                     try:
                         backend.focus_element_uia(hwnd=_target_hwnd)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
                 import time
                 time.sleep(0.15)  # Allow focus to settle
         except Exception as exc:
@@ -1486,8 +1486,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 if restore:
                     try:
                         old_clip = backend.clipboard_get()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("Clipboard backup failed: %s", exc)
                 backend.clipboard_set(text)
                 backend.hotkey("ctrl", "v")
                 if restore and old_clip:
@@ -1626,8 +1626,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             if restore:
                 try:
                     old_clip = backend.clipboard_get()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Clipboard backup failed: %s", exc)
             backend.clipboard_set(text)
             backend.hotkey("ctrl", "v")
             if restore and old_clip:
@@ -1833,14 +1833,14 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
-                except Exception:
-                    pass  # PID recording is Windows-only, optional
+                except Exception as exc:
+                    logger.debug("PID recording failed (Windows-only): %s", exc)
                 # Also try UIA SetFocus for schtasks/remote contexts (#226)
                 if hasattr(backend, "focus_element_uia"):
                     try:
                         backend.focus_element_uia(hwnd=_target_hwnd)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
                 time.sleep(0.15)
         except Exception as exc:
             logger.warning("Failed to focus target window for press: %s", exc)

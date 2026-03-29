@@ -82,8 +82,8 @@ def _run_probe_with_timeout(
                 try:
                     import ctypes
                     ctypes.windll.ole32.CoInitializeEx(None, 0)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("COM initialization failed in probe thread: %s", exc)
             r = probe_fn(pid, exe, hwnd)
             result_holder.append(r)
         except Exception as exc:

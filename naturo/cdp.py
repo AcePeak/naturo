@@ -23,10 +23,13 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import threading
 import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class CDPError(Exception):
@@ -218,8 +221,8 @@ class CDPClient:
         if self._ws is not None:
             try:
                 self._ws.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("WebSocket close failed: %s", exc)
             self._ws = None
 
     # ------------------------------------------------------------------

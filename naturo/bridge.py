@@ -787,8 +787,8 @@ def highlight_elements_uia(
             snaps = mgr.list_snapshots()
             if snaps:
                 snap = mgr.get_snapshot(snaps[-1].id)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Snapshot retrieval for highlight failed: %s", exc)
 
         if snap and snap.ui_map and snap.screenshot_path:
             from naturo.annotate import highlight_annotate
@@ -846,8 +846,8 @@ def highlight_elements_uia(
                         depth_level += 1
                         cur = snap.ui_map.get(cur.parent_id)  # type: ignore[assignment]
                     elements.append((ref_key, label, el.role, ex, ey, ew, eh, depth_level))
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Snapshot element collection failed: %s", exc)
 
     # If no recent snapshot, capture a fresh element tree
     if not _found_snapshot:
@@ -871,8 +871,8 @@ def highlight_elements_uia(
                         _collect_uia(child, tree_depth + 1)
 
                 _collect_uia(tree)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("UIA element tree collection failed: %s", exc)
 
     if not elements:
         return None
