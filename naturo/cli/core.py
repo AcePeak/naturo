@@ -379,7 +379,7 @@ def capture(app, pid, window_title, hwnd, screen, path, fmt, store_snapshot, ses
 
 @click.group("list", cls=FuzzyGroup)
 def list_cmd():
-    """List apps, windows, screens, or permissions."""
+    """List apps, windows, and screens."""
     pass
 
 
