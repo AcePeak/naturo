@@ -183,8 +183,8 @@ class TestFindAIPassesFlags:
         )
 
         runner = CliRunner()
-        with patch("naturo.cli.core._platform_supports_gui", return_value=False), \
-             patch("naturo.cli.core._find_with_ai") as mock_find_ai:
+        with patch("naturo.cli.core._common._platform_supports_gui", return_value=False), \
+             patch("naturo.cli.core._find._find_with_ai") as mock_find_ai:
             runner.invoke(main, [
                 "find", "--ai", "the save button",
                 "--provider", "anthropic",

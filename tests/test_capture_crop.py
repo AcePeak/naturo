@@ -104,8 +104,8 @@ class TestCapturePid:
         runner = CliRunner()
         mock_result = _mock_capture_result(png_1x1)
 
-        with patch("naturo.cli.core._get_backend") as mock_be, \
-             patch("naturo.cli.core._platform_supports_gui", return_value=True):
+        with patch("naturo.cli.core._common._get_backend") as mock_be, \
+             patch("naturo.cli.core._common._platform_supports_gui", return_value=True):
             be = MagicMock()
             be._resolve_hwnd.return_value = 12345
             be.capture_window.return_value = mock_result
@@ -129,8 +129,8 @@ class TestRegionValidation:
         mock_result = _mock_capture_result(capture_path, 200, 100)
 
         runner = CliRunner()
-        with patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-             patch("naturo.cli.core._get_backend") as mock_be:
+        with patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+             patch("naturo.cli.core._common._get_backend") as mock_be:
             be = MagicMock()
             be.capture_screen.return_value = mock_result
             be.capture_window.return_value = mock_result
@@ -194,8 +194,8 @@ class TestElementRefCrop:
         mock_result = _mock_capture_result(capture_path, 200, 100)
 
         runner = CliRunner()
-        with patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-             patch("naturo.cli.core._get_backend") as mock_be, \
+        with patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+             patch("naturo.cli.core._common._get_backend") as mock_be, \
              patch("naturo.snapshot.SnapshotManager.resolve_ref") as mock_resolve, \
              patch("naturo.snapshot.SnapshotManager.resolve_ref_element") as mock_resolve_el:
             be = MagicMock()
@@ -248,8 +248,8 @@ class TestElementRefCrop:
         runner = CliRunner()
         mock_result = _mock_capture_result(png_200x100, 200, 100)
 
-        with patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-             patch("naturo.cli.core._get_backend") as mock_be, \
+        with patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+             patch("naturo.cli.core._common._get_backend") as mock_be, \
              patch("naturo.snapshot.SnapshotManager.resolve_ref",
                    return_value=(30, 20, "snap-001")), \
              patch("naturo.snapshot.SnapshotManager.resolve_ref_element",

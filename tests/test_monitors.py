@@ -102,7 +102,7 @@ def _mock_monitors(count=1, primary_dpi=96, secondary_dpi=96):
 class TestListMonitorsBackend:
     """Test backend.list_monitors() via mock."""
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_single_monitor(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(1)
@@ -117,7 +117,7 @@ class TestListMonitorsBackend:
         assert len(data["monitors"]) == 1
         assert data["monitors"][0]["is_primary"] is True
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_multiple_monitors(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(3)
@@ -139,7 +139,7 @@ class TestListMonitorsBackend:
 class TestListScreensCLI:
     """Test CLI output for `naturo list screens`."""
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_text_output(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(2)
@@ -153,7 +153,7 @@ class TestListScreensCLI:
         assert "2560x1440" in result.output
         assert "2 monitor(s) found" in result.output
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_json_output_has_success(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(1)
@@ -172,7 +172,7 @@ class TestListScreensCLI:
         assert "dpi" in m
         assert "scale_factor" in m
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_json_output_work_area(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(1)
@@ -185,7 +185,7 @@ class TestListScreensCLI:
         wa = data["monitors"][0]["work_area"]
         assert wa["height"] == 1040
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_no_monitors_text(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = []
@@ -197,7 +197,7 @@ class TestListScreensCLI:
         assert result.exit_code == 0
         assert "No monitors detected" in result.output
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_not_implemented_json(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.side_effect = NotImplementedError("Not supported")
@@ -211,7 +211,7 @@ class TestListScreensCLI:
         assert data["success"] is False
         assert data["error"]["code"] == "NOT_IMPLEMENTED"
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_not_implemented_text(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.side_effect = NotImplementedError("Not supported")
@@ -223,7 +223,7 @@ class TestListScreensCLI:
         assert result.exit_code == 1
         assert "not supported" in result.output.lower()
 
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common._get_backend")
     def test_dpi_fields(self, mock_backend):
         backend = MagicMock()
         backend.list_monitors.return_value = _mock_monitors(2, primary_dpi=144, secondary_dpi=192)
@@ -244,8 +244,8 @@ class TestListScreensCLI:
 class TestCaptureScreenValidation:
     """Test --screen index validation in capture live."""
 
-    @patch("naturo.cli.core.platform")
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common.platform")
+    @patch("naturo.cli.core._common._get_backend")
     def test_negative_screen_index_json(self, mock_backend, mock_platform):
         mock_platform.system.return_value = "Windows"
         from naturo.cli.core import capture
@@ -256,8 +256,8 @@ class TestCaptureScreenValidation:
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    @patch("naturo.cli.core.platform")
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common.platform")
+    @patch("naturo.cli.core._common._get_backend")
     def test_negative_screen_index_text(self, mock_backend, mock_platform):
         mock_platform.system.return_value = "Windows"
         from naturo.cli.core import capture
@@ -266,8 +266,8 @@ class TestCaptureScreenValidation:
         assert result.exit_code == 1
         assert "--screen must be >= 0" in result.output
 
-    @patch("naturo.cli.core.platform")
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common.platform")
+    @patch("naturo.cli.core._common._get_backend")
     def test_out_of_range_screen_index_json(self, mock_backend, mock_platform):
         mock_platform.system.return_value = "Windows"
         backend = MagicMock()
@@ -283,8 +283,8 @@ class TestCaptureScreenValidation:
         assert data["error"]["code"] == "INVALID_INPUT"
         assert "out of range" in data["error"]["message"].lower()
 
-    @patch("naturo.cli.core.platform")
-    @patch("naturo.cli.core._get_backend")
+    @patch("naturo.cli.core._common.platform")
+    @patch("naturo.cli.core._common._get_backend")
     def test_out_of_range_screen_index_text(self, mock_backend, mock_platform):
         mock_platform.system.return_value = "Windows"
         backend = MagicMock()

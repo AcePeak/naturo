@@ -119,8 +119,8 @@ class TestBUG026MenuInspectAppNotFound:
 
     def test_menu_inspect_nonexistent_app(self, runner):
         from unittest.mock import patch, MagicMock
-        with patch("naturo.cli.core.platform.system", return_value="Windows"), \
-             patch("naturo.cli.core._get_backend", return_value=MagicMock()), \
+        with patch("naturo.cli.core._common.platform.system", return_value="Windows"), \
+             patch("naturo.cli.core._common._get_backend", return_value=MagicMock()), \
              patch("naturo.process.find_process", return_value=None):
             result = runner.invoke(main, ["menu-inspect", "--app", "nonexistent"])
             assert result.exit_code != 0
@@ -128,8 +128,8 @@ class TestBUG026MenuInspectAppNotFound:
 
     def test_menu_inspect_nonexistent_app_json(self, runner):
         from unittest.mock import patch, MagicMock
-        with patch("naturo.cli.core.platform.system", return_value="Windows"), \
-             patch("naturo.cli.core._get_backend", return_value=MagicMock()), \
+        with patch("naturo.cli.core._common.platform.system", return_value="Windows"), \
+             patch("naturo.cli.core._common._get_backend", return_value=MagicMock()), \
              patch("naturo.process.find_process", return_value=None):
             result = runner.invoke(main, ["menu-inspect", "--app", "nonexistent", "--json"])
             assert result.exit_code != 0
@@ -145,8 +145,8 @@ class TestBUG027MenuInspectExitCode:
         from unittest.mock import patch, MagicMock
         mock_backend = MagicMock()
         mock_backend.get_menu_items.return_value = []
-        with patch("naturo.cli.core.platform.system", return_value="Windows"), \
-             patch("naturo.cli.core._get_backend", return_value=mock_backend), \
+        with patch("naturo.cli.core._common.platform.system", return_value="Windows"), \
+             patch("naturo.cli.core._common._get_backend", return_value=mock_backend), \
              patch("naturo.process.find_process", return_value=MagicMock()):
             result = runner.invoke(main, ["menu-inspect", "--app", "someapp", "--json"])
             assert result.exit_code != 0

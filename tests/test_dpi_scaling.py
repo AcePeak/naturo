@@ -229,8 +229,8 @@ class TestCaptureLiveDPI:
 
     def test_json_includes_dpi_fields(self, runner, mock_backend):
         from naturo.cli.core import capture
-        with patch("naturo.cli.core._get_backend", return_value=mock_backend), \
-             patch("naturo.cli.core.platform") as mock_plat:
+        with patch("naturo.cli.core._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.core._common.platform") as mock_plat:
             mock_plat.system.return_value = "Windows"
             result = runner.invoke(capture, [ "--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
@@ -246,8 +246,8 @@ class TestCaptureLiveDPI:
         )
         backend.list_monitors.return_value = _make_monitors()
         from naturo.cli.core import capture
-        with patch("naturo.cli.core._get_backend", return_value=backend), \
-             patch("naturo.cli.core.platform") as mock_plat:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend), \
+             patch("naturo.cli.core._common.platform") as mock_plat:
             mock_plat.system.return_value = "Windows"
             result = runner.invoke(capture, [ "--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
@@ -283,8 +283,8 @@ class TestSeeDPIContext:
         backend.get_dpi_scale.return_value = 1.5
 
         from naturo.cli.core import see
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
@@ -304,8 +304,8 @@ class TestSeeDPIContext:
         backend.get_dpi_scale.side_effect = Exception("no monitors")
 
         from naturo.cli.core import see
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 

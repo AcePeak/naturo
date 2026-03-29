@@ -25,8 +25,8 @@ def mock_backend():
     mock_be = MagicMock()
     mock_be.find_elements.return_value = []
     mock_be.get_element_tree.return_value = None
-    with patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-         patch("naturo.cli.core._get_backend", return_value=mock_be):
+    with patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+         patch("naturo.cli.core._common._get_backend", return_value=mock_be):
         yield mock_be
 
 

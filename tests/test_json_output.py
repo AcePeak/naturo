@@ -89,8 +89,8 @@ class TestJSONOutputFormat:
 
         from naturo.cli.core import see
 
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
@@ -117,8 +117,8 @@ class TestJSONOutputFormat:
 
         from naturo.cli.core import see
 
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
@@ -140,8 +140,8 @@ class TestJSONOutputFormat:
 
         from naturo.cli.core import see
 
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
@@ -160,8 +160,8 @@ class TestJSONOutputFormat:
 
         from naturo.cli.core import see
 
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
@@ -187,8 +187,8 @@ class TestJSONOutputFormat:
 
         from naturo.cli.core import see
 
-        with patch("naturo.cli.core._get_backend", return_value=backend):
-            with patch("naturo.cli.core.platform") as mock_platform:
+        with patch("naturo.cli.core._common._get_backend", return_value=backend):
+            with patch("naturo.cli.core._common.platform") as mock_platform:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 

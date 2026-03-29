@@ -360,8 +360,8 @@ class TestSeeCascadeCLI:
 
         runner = CliRunner()
         with patch("platform.system", return_value="Windows"), \
-             patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-             patch("naturo.cli.core._get_backend") as mock_be, \
+             patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+             patch("naturo.cli.core._common._get_backend") as mock_be, \
              patch("naturo.cascade.run_cascade", return_value=mock_result) as mock_cascade:
             be = MagicMock()
             mock_be.return_value = be
@@ -388,8 +388,8 @@ class TestSeeCascadeCLI:
 
         runner = CliRunner()
         with patch("platform.system", return_value="Windows"), \
-             patch("naturo.cli.core._platform_supports_gui", return_value=True), \
-             patch("naturo.cli.core._get_backend") as mock_be, \
+             patch("naturo.cli.core._common._platform_supports_gui", return_value=True), \
+             patch("naturo.cli.core._common._get_backend") as mock_be, \
              patch("naturo.cascade.run_cascade", return_value=mock_result):
             be = MagicMock()
             mock_be.return_value = be

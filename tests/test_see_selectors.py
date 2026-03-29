@@ -60,8 +60,8 @@ def mock_backend():
 def _invoke_see(runner, mock_backend, args):
     """Invoke the see command with mocked backend and platform."""
     from naturo.cli.core import see
-    with patch("naturo.cli.core._get_backend", return_value=mock_backend), \
-         patch("naturo.cli.core._platform_supports_gui", return_value=True):
+    with patch("naturo.cli.core._common._get_backend", return_value=mock_backend), \
+         patch("naturo.cli.core._common._platform_supports_gui", return_value=True):
         return runner.invoke(see, args)
 
 
