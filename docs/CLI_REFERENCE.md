@@ -607,6 +607,7 @@ Type text with configurable speed and profile.
 | `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--raw` | boolean | Disable escape sequence interpretation (type text literally) |
 | `--input-mode` | {normal, hardware, hook} | Input method: normal (SendInput), hardware (Phys32), hook (MinHook) (default: `normal`) |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
 | `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
@@ -628,6 +629,7 @@ naturo type --paste                        # paste current clipboard
 naturo type "hello" --on e42               # click e42 then type
 naturo type "hello" --on e42 --app feishu  # target app + element
 naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
+naturo type "C:\Users\test\report.txt" --raw  # literal backslashes (no escape)
 ```
 
 ---
