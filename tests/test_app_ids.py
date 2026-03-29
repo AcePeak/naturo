@@ -188,7 +188,8 @@ class TestResolveAppIdHelper:
         assert hwnd == 123
         assert pid == 456
 
-    def test_resolve_overrides_app_hwnd_pid(self, tmp_storage):
+    def test_resolve_returns_hwnd_pid_without_app(self, tmp_storage):
+        """#573: _resolve_app_id must NOT populate app — only hwnd + pid."""
         from naturo.cli.interaction import _resolve_app_id
 
         # Set up an ID map
@@ -207,8 +208,58 @@ class TestResolveAppIdHelper:
         app_ids_mod.get_app_id_map = _patched
         try:
             app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
-            assert app == "excel.exe"
+            # (#573) app must be None — process_name may be a full path that
+            # breaks fuzzy matching downstream.  hwnd + pid suffice.
+            assert app is None
             assert hwnd == 999
             assert pid == 42
+        finally:
+            app_ids_mod.get_app_id_map = orig_factory
+
+    def test_resolve_full_path_process_name_does_not_leak(self, tmp_storage):
+        """#573: Full path in process_name must not become the app filter."""
+        from naturo.cli.interaction import _resolve_app_id
+
+        id_map = AppIdMap(session="default", storage_root=tmp_storage)
+        id_map.assign_ids([
+            FakeWindow(
+                pid=100,
+                handle=5555,
+                process_name=r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                title="Google Chrome",
+            ),
+        ])
+
+        import naturo.app_ids as app_ids_mod
+        orig_factory = app_ids_mod.get_app_id_map
+
+        def _patched(session=None):
+            return AppIdMap(session=session, storage_root=tmp_storage)
+
+        app_ids_mod.get_app_id_map = _patched
+        try:
+            app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
+            assert app is None, "app must not be set to full process path"
+            assert hwnd == 5555
+            assert pid == 100
+        finally:
+            app_ids_mod.get_app_id_map = orig_factory
+
+    def test_resolve_error_exits(self, tmp_storage):
+        """On invalid app_id, _resolve_app_id exits with error."""
+        from naturo.cli.interaction import _resolve_app_id
+
+        # Empty storage — no IDs
+        import naturo.app_ids as app_ids_mod
+        orig_factory = app_ids_mod.get_app_id_map
+
+        def _patched(session=None):
+            return AppIdMap(session=session, storage_root=tmp_storage)
+
+        app_ids_mod.get_app_id_map = _patched
+        try:
+            import pytest
+            with pytest.raises(SystemExit):
+                _resolve_app_id("a99", None, None, None, False)
         finally:
             app_ids_mod.get_app_id_map = orig_factory

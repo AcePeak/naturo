@@ -145,7 +145,8 @@ def capture(app, pid, window_title, hwnd, screen, path, fmt, store_snapshot, ses
             else:
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
-        app = entry.process_name
+        # (#573) Use hwnd for precise targeting.  Do NOT set app
+        # to process_name — it may be a full path that breaks fuzzy matching.
         hwnd = entry.handle
 
     if not _platform_supports_gui():
@@ -643,7 +644,8 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             else:
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
-        app = entry.process_name
+        # (#573) Use hwnd + pid for precise targeting.  Do NOT set app
+        # to process_name — it may be a full path that breaks fuzzy matching.
         hwnd = entry.handle
         pid = entry.pid
 

@@ -377,8 +377,11 @@ def _resolve_app_id(
     """Resolve --app-id to (app, hwnd, pid) overrides.
 
     If ``app_id`` is provided, looks up the stored ID map and returns the
-    stored process name and window handle.  Otherwise returns the original
-    values unchanged.
+    stored window handle and PID.  The ``app`` value is left as ``None``
+    because the ID map provides precise targeting via hwnd+pid — passing
+    the stored process name as ``app`` would trigger fuzzy name matching
+    downstream (``_resolve_hwnds``, ``_auto_route``) which fails when the
+    stored name is a full path (#573).
 
     Args:
         app_id: The stable ID string (e.g. "a1"), or None.
@@ -406,7 +409,11 @@ def _resolve_app_id(
         )
         return None, None, None
 
-    return entry.process_name, entry.handle, entry.pid
+    # (#573) Return hwnd + pid only.  Do NOT populate app — the stored
+    # process_name may be a full path (e.g. "C:\...\chrome.exe") which
+    # breaks fuzzy matching in _resolve_hwnds and _auto_route.  The hwnd
+    # and pid are sufficient for precise window targeting.
+    return None, entry.handle, entry.pid
 
 
 def _elementinfo_to_dict(el) -> dict:
@@ -874,7 +881,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
 
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
     app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
-    if app_id and app is None:
+    if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
     backend = _get_backend(json_output)
@@ -1224,7 +1231,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     """
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
     app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
-    if app_id and app is None:
+    if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
     # --ref is a hidden deprecated alias for --on (#381)
@@ -1666,7 +1673,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
     """
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
     app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
-    if app_id and app is None:
+    if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
     # --ref is a hidden deprecated alias for --on (#381)
