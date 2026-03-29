@@ -1282,27 +1282,27 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     # Auto-routing: detect best interaction method for target app
     route_info = _auto_route(app, None, method, json_output)
 
-    # (#230) When --app/--hwnd/--window is specified, focus the target window
-    # before typing. SendInput sends keystrokes to the foreground window, so
-    # without focusing first, type silently sends to the wrong window.
-    # Session-aware: _resolve_hwnd now prefers interactive session windows.
+    # (#230/#612) When --app/--hwnd/--window is specified, focus the target
+    # window before typing.  SendInput sends keystrokes to the foreground
+    # window, so without focusing first, type silently sends to the wrong
+    # window.  Uses backend.focus_window() which employs AttachThreadInput
+    # on Windows — raw SetForegroundWindow() fails silently when the caller
+    # isn't the foreground process.
     _focused_hwnd = None
     if (app or window_title or hwnd or pid) and not on_element:
-        import platform as _plat
-        if _plat.system() == "Windows":
-            try:
+        try:
+            _target_hwnd = None
+            if hasattr(backend, "_resolve_hwnd"):
                 _target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
-                if _target_hwnd:
-                    _focused_hwnd = _target_hwnd
+            if _target_hwnd:
+                _focused_hwnd = _target_hwnd
+                backend.focus_window(hwnd=_target_hwnd)
+                # Record the actual PID we focused for accurate routing info
+                try:
                     import ctypes
                     import ctypes.wintypes
-                    SW_RESTORE = 9
-                    if backend._is_iconic(_target_hwnd):
-                        ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
-                    ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
-                    # Record the actual PID we focused for accurate routing info
                     _focused_pid = ctypes.wintypes.DWORD()
                     ctypes.windll.user32.GetWindowThreadProcessId(
                         _target_hwnd, ctypes.byref(_focused_pid)
@@ -1310,23 +1310,25 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
-                    # (#441) Also use UIA SetFocus to restore internal widget
-                    # focus (e.g. after menu open/close leaves focus on menu bar)
-                    if hasattr(backend, "focus_element_uia"):
-                        try:
-                            backend.focus_element_uia(hwnd=_target_hwnd)
-                        except Exception:
-                            pass
-                    import time
-                    time.sleep(0.15)  # Allow focus to settle
-            except Exception as exc:
-                _json_err(
-                    f"Failed to focus target window: {exc}. "
-                    f"Cannot guarantee keystrokes reach '{app or window_title}'.",
-                    json_output,
-                    code="WINDOW_FOCUS_ERROR",
-                )
-                return
+                except Exception:
+                    pass  # PID recording is Windows-only, optional
+                # (#441) Also use UIA SetFocus to restore internal widget
+                # focus (e.g. after menu open/close leaves focus on menu bar)
+                if hasattr(backend, "focus_element_uia"):
+                    try:
+                        backend.focus_element_uia(hwnd=_target_hwnd)
+                    except Exception:
+                        pass
+                import time
+                time.sleep(0.15)  # Allow focus to settle
+        except Exception as exc:
+            _json_err(
+                f"Failed to focus target window: {exc}. "
+                f"Cannot guarantee keystrokes reach '{app or window_title}'.",
+                json_output,
+                code="WINDOW_FOCUS_ERROR",
+            )
+            return
 
     # --selector: resolve unified selector and click to focus before typing (#103)
     if selector and not on_element:
@@ -1753,25 +1755,25 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
             _json_err(f"Failed to click target element: {exc}", json_output)
             return
 
-    # (#230) Focus target window before sending key input.
+    # (#230/#612) Focus target window before sending key input.
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
-    # Session-aware: _resolve_hwnd now prefers interactive session windows.
+    # Uses backend.focus_window() which employs AttachThreadInput on
+    # Windows — raw SetForegroundWindow() fails silently when the caller
+    # isn't the foreground process.
     if (app or window_title or hwnd or pid) and not on_element:
-        import platform as _plat
-        if _plat.system() == "Windows":
-            try:
+        try:
+            _target_hwnd = None
+            if hasattr(backend, "_resolve_hwnd"):
                 _target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
-                if _target_hwnd:
+            if _target_hwnd:
+                backend.focus_window(hwnd=_target_hwnd)
+                # Record actual focused PID for routing accuracy
+                try:
                     import ctypes
                     import ctypes.wintypes
-                    SW_RESTORE = 9
-                    if backend._is_iconic(_target_hwnd):
-                        ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
-                    ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
-                    # Record actual focused PID for routing accuracy
                     _focused_pid = ctypes.wintypes.DWORD()
                     ctypes.windll.user32.GetWindowThreadProcessId(
                         _target_hwnd, ctypes.byref(_focused_pid)
@@ -1779,15 +1781,17 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
                     if route_info and _focused_pid.value:
                         route_info["focused_pid"] = _focused_pid.value
                         route_info["focused_hwnd"] = _target_hwnd
-                    # Also try UIA SetFocus for schtasks/remote contexts (#226)
-                    if hasattr(backend, "focus_element_uia"):
-                        try:
-                            backend.focus_element_uia(hwnd=_target_hwnd)
-                        except Exception:
-                            pass
-                    time.sleep(0.15)
-            except Exception as exc:
-                logger.warning("Failed to focus target window for press: %s", exc)
+                except Exception:
+                    pass  # PID recording is Windows-only, optional
+                # Also try UIA SetFocus for schtasks/remote contexts (#226)
+                if hasattr(backend, "focus_element_uia"):
+                    try:
+                        backend.focus_element_uia(hwnd=_target_hwnd)
+                    except Exception:
+                        pass
+                time.sleep(0.15)
+        except Exception as exc:
+            logger.warning("Failed to focus target window for press: %s", exc)
 
     # (#231) Capture before-state for post-action verification
     _before_state = None
