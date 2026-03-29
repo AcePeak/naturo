@@ -151,6 +151,9 @@ naturo desktop create --name "Work"        # Create named desktop
 naturo desktop close                       # Close current desktop
 naturo desktop move-window 1 --app "Notepad"  # Move window to desktop 1
 
+# Type Windows paths literally (--raw disables escape interpretation)
+naturo type "C:\Users\test\report.txt" --raw --app notepad
+
 # Paste text via clipboard (fast for large content)
 naturo type "large content" --paste        # Set clipboard → Ctrl+V → restore
 naturo type --paste --file data.txt        # Read file → paste
