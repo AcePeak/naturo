@@ -997,36 +997,37 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     else:
         route_info = _auto_route(app, pid, method, json_output)
 
-    # (#226) When UIA routing is active and --app is specified, ensure
-    # the target window has focus via UIA before sending mouse input.
-    # (#448) When eN ref resolved, use the snapshot's stored HWND for
-    # focus instead of re-enumerating processes.
+    # (#608) Always bring the target window to foreground before clicking
+    # when a targeting flag (--app/--hwnd/--pid) is specified or when we
+    # have a cached snapshot HWND.  Previous code only activated the window
+    # under narrow conditions (UIA routing or cached HWND present), causing
+    # clicks to land on the wrong window when the target app was in the
+    # background.
+    #
+    # Uses backend.focus_window() which employs the AttachThreadInput
+    # workaround — raw SetForegroundWindow() fails silently when the
+    # caller isn't the foreground process.
     _uia_method = route_info.get("method") == "uia" if route_info else False
     _is_uwp = False  # Track UWP apps for UIA click fallback (#248)
-    if _ref_resolved and _snapshot_hwnd:
-        # Fast path: use cached HWND from snapshot for window focus
+    _focus_hwnd = _snapshot_hwnd  # Prefer cached HWND from snapshot
+    if not _focus_hwnd and (app or hwnd or pid) and hasattr(backend, "_resolve_hwnd"):
         try:
-            import ctypes
-            SW_RESTORE = 9
-            if hasattr(backend, "_is_iconic") and backend._is_iconic(_snapshot_hwnd):
-                ctypes.windll.user32.ShowWindow(_snapshot_hwnd, SW_RESTORE)
-            ctypes.windll.user32.SetForegroundWindow(_snapshot_hwnd)
+            _focus_hwnd = backend._resolve_hwnd(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            )
         except Exception as exc:
-            logger.debug("Snapshot HWND focus failed (hwnd=%s): %s", _snapshot_hwnd, exc)
-    elif _uia_method and (app or hwnd or pid) and hasattr(backend, "focus_element_uia"):
+            logger.debug("HWND resolution for focus failed: %s", exc)
+    if _focus_hwnd:
+        # Detect UWP apps for UIA click fallback (#248)
+        if hasattr(backend, "_is_applicationframehost"):
+            try:
+                _is_uwp = backend._is_applicationframehost(_focus_hwnd)
+            except Exception:
+                pass
         try:
-            _target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
-            if _target_hwnd:
-                # Detect if target is a UWP app (#248)
-                if hasattr(backend, "_is_applicationframehost"):
-                    _is_uwp = backend._is_applicationframehost(_target_hwnd)
-                import ctypes
-                SW_RESTORE = 9
-                if backend._is_iconic(_target_hwnd):
-                    ctypes.windll.user32.ShowWindow(_target_hwnd, SW_RESTORE)
-                ctypes.windll.user32.SetForegroundWindow(_target_hwnd)
+            backend.focus_window(hwnd=_focus_hwnd)
         except Exception as exc:
-            logger.debug("UIA focus for click failed: %s", exc)
+            logger.debug("Window focus failed (hwnd=%s): %s", _focus_hwnd, exc)
 
     # (#231) Capture before-state for post-action verification
     _before_state = None
