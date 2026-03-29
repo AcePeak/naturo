@@ -350,6 +350,32 @@ class Backend(ABC):
     def clipboard_set(self, text: str) -> None:
         ...
 
+    @abstractmethod
+    def clipboard_clear(self) -> None:
+        """Clear the clipboard contents."""
+        ...
+
+    def clipboard_info(self) -> dict:
+        """Return information about the current clipboard contents.
+
+        Returns:
+            Dictionary with keys: format (str), size (int), has_text (bool),
+            has_image (bool), has_files (bool).
+        """
+        # Default implementation: check text only
+        text = ""
+        try:
+            text = self.clipboard_get()
+        except Exception:
+            pass
+        return {
+            "format": "text" if text else "empty",
+            "size": len(text),
+            "has_text": bool(text),
+            "has_image": False,
+            "has_files": False,
+        }
+
     # === Application Control ===
     @abstractmethod
     def list_apps(self) -> list[dict]:

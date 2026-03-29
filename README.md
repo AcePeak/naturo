@@ -196,7 +196,7 @@ naturo highlight --app notepad -A out.png  # Save annotated screenshot
 
 | Command | Description | Since |
 |---------|-------------|-------|
-| `click` | Click element/coordinates | 0.1.0 |
+| `click` | Click element/coordinates (`--paste`, `--copy`, `--cut` modifiers) | 0.1.0 |
 | `type` | Type text (supports `--paste` for clipboard) | 0.1.0 |
 | `set` | Set element value/state (toggle, select, expand) | 0.3.0 |
 | `press` | Press key combination (e.g., `ctrl+s`) | 0.1.0 |
@@ -227,6 +227,10 @@ naturo highlight --app notepad -A out.png  # Save annotated screenshot
 
 | Command | Description | Since |
 |---------|-------------|-------|
+| `clipboard get` | Read clipboard text content | 0.3.1 |
+| `clipboard set` | Write text to clipboard | 0.3.1 |
+| `clipboard clear` | Clear clipboard contents | 0.3.1 |
+| `clipboard info` | Show clipboard format and size | 0.3.1 |
 | `dialog detect` | Detect active system dialogs | 0.1.0 |
 | `dialog accept` | Accept (OK/Yes) a dialog | 0.1.0 |
 | `dialog dismiss` | Dismiss (Cancel/No) a dialog | 0.1.0 |

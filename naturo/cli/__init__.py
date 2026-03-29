@@ -29,6 +29,7 @@ from naturo.cli.interaction import (
     click_cmd, type_cmd, press, hotkey, scroll, drag, move,
 )
 from naturo.cli.system import app
+from naturo.cli.clipboard_cmd import clipboard
 from naturo.cli.dialog_cmd import dialog
 from naturo.cli.taskbar_cmd import taskbar
 from naturo.cli.tray_cmd import tray
@@ -129,6 +130,7 @@ main.add_command(move)
 
 # ── System ──────────────────────────────────────
 main.add_command(app)
+main.add_command(clipboard)
 main.add_command(dialog)
 main.add_command(taskbar)
 main.add_command(tray)

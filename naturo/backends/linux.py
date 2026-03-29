@@ -106,6 +106,9 @@ class LinuxBackend(Backend):
     def clipboard_set(self, text="") -> None:
         raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
+    def clipboard_clear(self) -> None:
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
+
     def list_apps(self) -> list[dict]:
         raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
