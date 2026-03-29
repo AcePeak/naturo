@@ -72,6 +72,11 @@ naturo [--json] [--verbose] [--log-level LEVEL] COMMAND [ARGS]
 
 ### System
 
+- [`naturo clipboard`](#naturo-clipboard) — Read, write, and manage clipboard contents.
+  - [`naturo clipboard get`](#naturo-clipboard-get) — Read current clipboard content.
+  - [`naturo clipboard set`](#naturo-clipboard-set) — Write text to the clipboard.
+  - [`naturo clipboard clear`](#naturo-clipboard-clear) — Clear the clipboard contents.
+  - [`naturo clipboard info`](#naturo-clipboard-info) — Show information about current clipboard contents.
 - [`naturo desktop`](#naturo-desktop) — Virtual desktop management (Windows 10/11).
   - [`naturo desktop close`](#naturo-desktop-close) — Close a virtual desktop.
   - [`naturo desktop create`](#naturo-desktop-create) — Create a new virtual desktop.
@@ -376,6 +381,10 @@ Click on a UI element, text, or coordinates.
 | `--verify`, `--no-verify` | boolean | Verify action had effect (default: on). Use --no-verify to skip. |
 | `--see` | boolean | Capture and display updated UI tree after action |
 | `--settle` | integer | Wait time in ms before re-snapshot (used with --see) (default: `300`) |
+| `--paste` | boolean | Paste clipboard after click (Ctrl+V) |
+| `--copy` | boolean | Select all + copy after click (Ctrl+A, Ctrl+C) |
+| `--cut` | boolean | Select all + cut after click (Ctrl+A, Ctrl+X) |
+| `--restore`, `--no-restore` | boolean | Restore clipboard after --paste (default: on) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -384,6 +393,8 @@ Click on a UI element, text, or coordinates.
 naturo click --coords 500 300
 naturo click --coords 500 300 --right
 naturo click --id "button_ok"
+naturo click e42 --paste                      # Click then paste
+naturo click e42 --copy                       # Click then select all + copy
 ```
 
 ## `naturo drag`
@@ -1119,6 +1130,66 @@ naturo wait 3                            # Sleep 3 seconds
 ---
 
 ## System
+
+## `naturo clipboard`
+
+Read, write, and manage clipboard contents. Supports text clipboard operations for AI agent data transfer between applications.
+
+**Examples:**
+
+```bash
+naturo clipboard get                    # Read clipboard text
+naturo clipboard set "hello world"      # Write text to clipboard
+naturo clipboard clear                  # Clear clipboard
+naturo clipboard info                   # Show format and size
+```
+
+### `naturo clipboard get`
+
+Read current clipboard content.
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--format` | {text} | Output format (currently only text supported) (default: `text`) |
+| `--json`, `-j` | boolean | JSON output |
+
+### `naturo clipboard set`
+
+Write text to the clipboard.
+
+**Arguments:**
+
+| Name | Type | Required |
+|------|------|----------|
+| `TEXT` | text | yes |
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
+
+### `naturo clipboard clear`
+
+Clear the clipboard contents.
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
+
+### `naturo clipboard info`
+
+Show information about current clipboard contents. Reports data format, size, and available content types (text, image, files).
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
 
 ## `naturo desktop`
 
