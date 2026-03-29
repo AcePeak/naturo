@@ -3084,7 +3084,8 @@ class WindowsBackend(Backend):
         """Click a menu item. Phase 3 feature."""
         raise NotImplementedError("menu_click coming in Phase 3")
 
-    def get_menu_items(self, window_title: Optional[str] = None) -> List[MenuItem]:
+    def get_menu_items(self, window_title: Optional[str] = None,
+                       hwnd: Optional[int] = None) -> List[MenuItem]:
         """Get menu items using Win32 API with UIA fallback.
 
         Strategy:
@@ -3096,11 +3097,13 @@ class WindowsBackend(Backend):
 
         Args:
             window_title: Optional window title or app name filter.
+            hwnd: Optional direct window handle (overrides window_title).
 
         Returns:
             List of top-level MenuItem objects with nested submenus.
         """
-        handle = self._resolve_hwnd(app=window_title, window_title=window_title)
+        handle = self._resolve_hwnd(app=window_title, window_title=window_title,
+                                    hwnd=hwnd)
 
         # Strategy 1: Win32 Menu API (native menus)
         items = self._get_menu_items_win32(handle)

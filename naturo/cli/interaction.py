@@ -1997,10 +1997,11 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_selector_option
 @_method_option
+@_app_id_option
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
-           smooth, delay, app, window_title, hwnd, selector, method, see_after, settle,
+           smooth, delay, app, window_title, hwnd, selector, method, app_id, see_after, settle,
            json_output):
     """Scroll in a direction.
 
@@ -2017,6 +2018,12 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_text:
         on_text = ref_alias
+
+    # (#593) Resolve --app-id to app/hwnd before any other logic
+    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    if app_id and hwnd is None:
+        return  # Error already emitted by _resolve_app_id
+
     direction = direction_arg or direction_option or "down"
     if amount < 1:
         _json_err(f"--amount must be >= 1, got {amount}", json_output, code="INVALID_INPUT")
@@ -2152,10 +2159,11 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_method_option
+@_app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
          duration, steps, modifiers, profile, app, window_title, hwnd, method,
-         json_output):
+         app_id, json_output):
     """Drag from one element/position to another.
 
     \b
@@ -2165,6 +2173,11 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
       naturo drag --from e5 --to-coords 500 300
       naturo drag --from-selector 'app://*/ListItem[@name="File1"]' --to-selector 'app://*/TreeItem[@name="Folder"]'
     """
+    # (#593) Resolve --app-id to app/hwnd before any other logic
+    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    if app_id and hwnd is None:
+        return  # Error already emitted by _resolve_app_id
+
     # Resolve element refs (eN) from snapshot for --from and --to (#154)
     import re as _re
     from naturo.snapshot import get_snapshot_manager
@@ -2293,9 +2306,10 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @_selector_option
 @_method_option
+@_app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def move(to_text, coords, element_id, duration, app, window_title, hwnd,
-         selector, method, json_output):
+         selector, method, app_id, json_output):
     """Move the mouse cursor to a target element or coordinates.
 
     \b
@@ -2303,6 +2317,11 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
       naturo move --coords 500 300
       naturo move --selector 'app://*/Button[@name="Save"]'
     """
+    # (#593) Resolve --app-id to app/hwnd before any other logic
+    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    if app_id and hwnd is None:
+        return  # Error already emitted by _resolve_app_id
+
     backend = _get_backend(json_output)
 
     # Resolve target: --selector > --coords

@@ -177,9 +177,16 @@ def test_list_apps_delegates_to_app_list():
     ["dialog", "type"],
     # desktop commands (#584)
     ["desktop", "move-window"],
+    # interaction + core commands (#593)
+    ["scroll"],
+    ["drag"],
+    ["move"],
+    ["find"],
+    ["highlight"],
+    ["menu-inspect"],
 ])
 def test_app_id_option_in_help(cmd_args):
-    """#584: window/dialog/desktop commands must show --app-id in help."""
+    """#584/#593: commands with --app must also show --app-id in help."""
     result = runner.invoke(main, cmd_args + ["--help"])
     assert result.exit_code == 0, f"naturo {' '.join(cmd_args)} --help failed"
     assert "--app-id" in result.output, (

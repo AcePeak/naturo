@@ -372,8 +372,13 @@ class Backend(ABC):
         """Click a menu item by path. Not all platforms support this."""
         raise NotImplementedError(f"menu_click not supported on {self.platform_name}")
 
-    def get_menu_items(self, window_title: Optional[str] = None) -> list:
+    def get_menu_items(self, window_title: Optional[str] = None,
+                       hwnd: Optional[int] = None) -> list:
         """Get structured menu items from the application menu bar.
+
+        Args:
+            window_title: Optional window title or app name filter.
+            hwnd: Optional direct window handle (overrides window_title).
 
         Returns:
             List of MenuItem objects (from naturo.models.menu).

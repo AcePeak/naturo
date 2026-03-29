@@ -1100,6 +1100,8 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Use existing screenshot (for --ai mode)")
 @click.option("--app", default=None, help="Target app window")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -1115,7 +1117,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--api-key", "ai_api_key", default=None,
               help="AI provider API key (overrides env var)")
 def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
-             ai_provider, ai_model, ai_api_key, screenshot, app, json_output, backend):
+             ai_provider, ai_model, ai_api_key, screenshot, app, app_id, json_output, backend):
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
@@ -1135,6 +1137,21 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
     """
+    # (#593) Resolve --app-id to hwnd before any other logic
+    hwnd = None
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+            if json_output:
+                click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        hwnd = entry.handle
+
     # Resolve query: --all flag → wildcard, --query option → override positional
     if find_all:
         query = "*"
@@ -1183,7 +1200,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
 
     try:
         be = _get_backend(json_output)
-        tree = be.get_element_tree(app=app, depth=depth, backend=backend)
+        tree = be.get_element_tree(app=app, hwnd=hwnd, depth=depth, backend=backend)
         if tree is None:
             msg = "No window found or UI tree is empty."
             if json_output:
@@ -1400,9 +1417,11 @@ def _find_with_ai(
 
 @click.command("menu_cmd")
 @click.option("--app", help="Application name")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--flat", is_flag=True, help="Flatten menu tree into paths")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def menu_inspect(app, flat, json_output):
+def menu_inspect(app, app_id, flat, json_output):
     """List the menu bar structure of the foreground application.
 
     Traverses the application's MenuBar via UIAutomation and displays
@@ -1415,6 +1434,21 @@ def menu_inspect(app, flat, json_output):
       naturo menu-inspect --flat              # Flat path list
       naturo menu-inspect --app notepad --json # JSON output
     """
+    # (#593) Resolve --app-id to hwnd before any other logic
+    hwnd = None
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+            if json_output:
+                click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        hwnd = entry.handle
+
     if not _platform_supports_gui():
         msg = _platform_error_msg("Menu inspection")
         if json_output:
@@ -1445,7 +1479,7 @@ def menu_inspect(app, flat, json_output):
             except Exception:
                 pass  # find_process failed for other reasons, fall through
 
-        items = backend.get_menu_items(window_title=app)
+        items = backend.get_menu_items(window_title=app, hwnd=hwnd)
 
         if not items:
             msg = "No menu items found."
@@ -1766,6 +1800,8 @@ def learn(topic):
 @click.option("--ref", "-r", "ref_option", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--app", "-a", help="Application name (partial match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--depth", "-d", type=int, default=30, help="Tree depth for element discovery")
 @click.option("--duration", type=float, default=5.0, help="Highlight duration in seconds")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -1780,7 +1816,7 @@ def learn(topic):
               help="Save annotated screenshot to file instead of live overlay (requires Pillow)")
 @click.option("--filter", "role_filter", default=None,
               help="Filter elements by role (e.g. --filter Button)")
-def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration,
+def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, duration,
               json_output, backend, show_all, annotate_path, role_filter):
     """Highlight UI elements on screen with colored borders and labels.
 
@@ -1805,6 +1841,20 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, depth, duration,
       naturo highlight --app notepad --duration 10
       naturo highlight --app legacy --backend win32
     """
+    # (#593) Resolve --app-id to hwnd before any other logic
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+            if json_output:
+                click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        hwnd = entry.handle
+
     import json as _json
     be = _get_backend(json_output)
     try:
