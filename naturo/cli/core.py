@@ -1407,6 +1407,13 @@ def menu_inspect(app, flat, json_output):
 
     Traverses the application's MenuBar via UIAutomation and displays
     all menu items with their keyboard shortcuts.
+
+    \b
+    Examples:
+      naturo menu-inspect                     # Foreground app
+      naturo menu-inspect --app notepad       # Specific app
+      naturo menu-inspect --flat              # Flat path list
+      naturo menu-inspect --app notepad --json # JSON output
     """
     if not _platform_supports_gui():
         msg = _platform_error_msg("Menu inspection")
