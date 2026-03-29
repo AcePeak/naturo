@@ -185,6 +185,10 @@ def _find_notepad_window_pid() -> Optional[int]:
         user32 = ctypes.WinDLL("user32", use_last_error=True)
         found_pid = ctypes.c_ulong(0)
 
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
         @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
         def enum_callback(hwnd, lparam):
             if not user32.IsWindowVisible(hwnd):
@@ -192,11 +196,31 @@ def _find_notepad_window_pid() -> Optional[int]:
             buf = ctypes.create_unicode_buffer(256)
             user32.GetWindowTextW(hwnd, buf, 256)
             title = buf.value
-            if "notepad" in title.lower() and title.strip():
+            title_lower = title.lower()
+            # (#570) Match by title: English "Notepad" or Chinese "记事本"
+            if (("notepad" in title_lower or "\u8bb0\u4e8b\u672c" in title_lower)
+                    and title.strip()):
                 window_pid = wintypes.DWORD()
                 user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
                 found_pid.value = window_pid.value
                 return False  # stop
+            # (#570) Fallback: match by process name for any locale
+            window_pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+            h_proc = kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, window_pid.value,
+            )
+            if h_proc:
+                try:
+                    name_buf = ctypes.create_unicode_buffer(260)
+                    if psapi.GetProcessImageFileNameW(h_proc, name_buf, 260):
+                        import os
+                        proc_name = os.path.basename(name_buf.value).lower()
+                        if "notepad" in proc_name:
+                            found_pid.value = window_pid.value
+                            return False
+                finally:
+                    kernel32.CloseHandle(h_proc)
             return True
 
         user32.EnumWindows(enum_callback, 0)
