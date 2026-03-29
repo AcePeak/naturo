@@ -171,9 +171,16 @@ Then run `naturo click eN --app <target>`. The click MUST hit the target app, no
 If the click hits the wrong window → P0 bug.
 
 **Scenario B — DPI/coordinate verification:**
-Run `naturo see --app notepad` and check ALL coordinates are positive and within screen bounds.
-On high-DPI (125%+), coordinates like (-31991, -31888) or (0, 0, 0x0) for visible windows = P0 bug.
-Also run `naturo highlight --app notepad` and visually confirm boxes align with actual elements.
+Change the display scaling before testing — rotate through 100%, 125%, 150%, 200% across rounds.
+To change: Settings → Display → Scale → select percentage → sign out and back in.
+**Always restore the original scaling when done.**
+
+After changing DPI, run:
+- `naturo see --app notepad` — check ALL coordinates are positive and within screen bounds
+- `naturo highlight --app notepad` — visually confirm boxes align with actual elements
+- `naturo list screens -j` — verify scale_factor and resolution match Windows settings
+
+Failure indicators: coordinates like (-31991, -31888) or (0, 0, 0x0) for visible windows = P0 bug.
 
 **Scenario C — AI Vision fallback:**
 Run `naturo see --app <electron-app> --cascade --fill-gaps --stats`.
