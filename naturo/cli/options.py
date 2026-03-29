@@ -87,6 +87,51 @@ def on_option(func):
 
 
 
+def app_id_option(func):
+    """``--app-id`` — stable app/window ID from ``naturo app list``."""
+    return click.option(
+        "--app-id",
+        "app_id",
+        default=None,
+        help='Stable app/window ID from "naturo app list" output (e.g. a1)',
+    )(func)
+
+
+def resolve_app_id_to_hwnd(
+    app_id: str | None,
+    hwnd: int | None,
+    json_output: bool,
+) -> int | None:
+    """Resolve --app-id to a window handle.
+
+    Returns the resolved hwnd (from app_id or passed through), or None
+    with an error already emitted if the ID is invalid.
+
+    Args:
+        app_id: The stable ID string (e.g. "a1"), or None.
+        hwnd: Current --hwnd value (returned as-is when no app_id).
+        json_output: Whether to emit JSON error output.
+
+    Returns:
+        Window handle, or None if resolution failed.
+    """
+    if app_id is None:
+        return hwnd
+
+    from naturo.app_ids import get_app_id_map
+
+    id_map = get_app_id_map()
+    entry = id_map.resolve(app_id)
+    if entry is None:
+        msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
+        if json_output:
+            click.echo(f'{{"error": "APP_ID_NOT_FOUND", "message": "{msg}"}}')
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        return None
+    return entry.handle
+
+
 def json_option(func):
     """``--json / -j`` — JSON output mode."""
     return click.option(

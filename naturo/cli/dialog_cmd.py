@@ -23,6 +23,7 @@ import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 
 
 @click.group(cls=FuzzyGroup)
@@ -48,8 +49,9 @@ def dialog():
 @dialog.command()
 @click.option("--app", help="Filter by owner application name")
 @click.option("--hwnd", type=int, help="Filter by dialog window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def detect(app, hwnd, json_output):
+def detect(app, hwnd, app_id, json_output):
     """Detect active dialog windows.
 
     Scans for system dialogs including message boxes, file pickers,
@@ -62,8 +64,14 @@ def detect(app, hwnd, json_output):
     Examples:
         naturo dialog detect                   # List all dialogs
         naturo dialog detect --app notepad     # Filter by app
+        naturo dialog detect --app-id a1       # Filter by app ID
         naturo dialog detect --json            # JSON output
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 
@@ -107,8 +115,9 @@ def detect(app, hwnd, json_output):
 @dialog.command()
 @click.option("--app", help="Owner application name filter")
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def accept(app, hwnd, json_output):
+def accept(app, hwnd, app_id, json_output):
     """Accept (confirm) the active dialog.
 
     Clicks the first accept-type button found: OK, Yes, Open, Save,
@@ -118,8 +127,14 @@ def accept(app, hwnd, json_output):
     Examples:
         naturo dialog accept                   # Accept first dialog
         naturo dialog accept --app notepad     # Accept notepad's dialog
+        naturo dialog accept --app-id a1       # Accept by app ID
         naturo dialog accept --json            # JSON output
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
     from naturo.dialog import _ACCEPT_BUTTONS
@@ -172,8 +187,9 @@ def accept(app, hwnd, json_output):
 @dialog.command()
 @click.option("--app", help="Owner application name filter")
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def dismiss(app, hwnd, json_output):
+def dismiss(app, hwnd, app_id, json_output):
     """Dismiss (cancel) the active dialog.
 
     Clicks the first dismiss-type button found: Cancel, No, Close,
@@ -183,8 +199,14 @@ def dismiss(app, hwnd, json_output):
     Examples:
         naturo dialog dismiss                  # Dismiss first dialog
         naturo dialog dismiss --app notepad    # Dismiss notepad's dialog
+        naturo dialog dismiss --app-id a1      # Dismiss by app ID
         naturo dialog dismiss --json           # JSON output
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
     from naturo.dialog import _DISMISS_BUTTONS
@@ -238,8 +260,9 @@ def dismiss(app, hwnd, json_output):
 @click.argument("button")
 @click.option("--app", help="Owner application name filter")
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def click_button(button, app, hwnd, json_output):
+def click_button(button, app, hwnd, app_id, json_output):
     """Click a specific button in the active dialog.
 
     Finds a button by name (case-insensitive, supports partial match)
@@ -247,10 +270,15 @@ def click_button(button, app, hwnd, json_output):
 
     \b
     Examples:
-        naturo dialog click-button "Save"         # Click Save
-        naturo dialog click-button "Don't Save"   # Click Don't Save
-        naturo dialog click-button "Retry"         # Click Retry
+        naturo dialog click-button "Save"              # Click Save
+        naturo dialog click-button "Don't Save"        # Click Don't Save
+        naturo dialog click-button "Retry" --app-id a1 # By app ID
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 
@@ -282,8 +310,9 @@ def click_button(button, app, hwnd, json_output):
               help="Click OK/Accept after typing")
 @click.option("--app", help="Owner application name filter")
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def dialog_type(text, do_accept, app, hwnd, json_output):
+def dialog_type(text, do_accept, app, hwnd, app_id, json_output):
     """Type text into a dialog's input field.
 
     Finds the dialog's input/edit control, clears it, and types
@@ -291,10 +320,15 @@ def dialog_type(text, do_accept, app, hwnd, json_output):
 
     \b
     Examples:
-        naturo dialog type "hello.txt"            # Type filename
-        naturo dialog type "hello.txt" --accept   # Type then click OK
-        naturo dialog type "C:\\Users" --app notepad
+        naturo dialog type "hello.txt"                  # Type filename
+        naturo dialog type "hello.txt" --accept         # Type then click OK
+        naturo dialog type "C:\\Users" --app-id a1       # By app ID
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
     from naturo.dialog import _ACCEPT_BUTTONS

@@ -23,6 +23,7 @@ import click as _click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 
 
 def _ensure_pyvda() -> None:
@@ -218,26 +219,33 @@ def desktop_close(index: int | None, json_output: bool) -> None:
 @_click.argument("index", type=int)
 @_click.option("--app", default=None, help="Application name (partial match)")
 @_click.option("--hwnd", type=int, default=None, help="Window handle")
+@app_id_option
 @_click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def desktop_move_window(
     index: int,
     app: str | None,
     hwnd: int | None,
+    app_id: str | None,
     json_output: bool,
 ) -> None:
     """Move a window to a different virtual desktop.
 
     INDEX is the target desktop (zero-based). Identify the window by
-    --app name or --hwnd handle. If neither is given, moves the
+    --app name, --hwnd handle, or --app-id. If none given, moves the
     foreground window.
 
     \b
     Examples:
         naturo desktop move-window 1 --app "Notepad"    # Move Notepad
         naturo desktop move-window 0 --hwnd 12345       # Move by handle
+        naturo desktop move-window 1 --app-id a1        # Move by app ID
         naturo desktop move-window 2                    # Move foreground
-        naturo desktop move-window 1 --app X --json     # JSON output
     """
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        raise SystemExit(1)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 

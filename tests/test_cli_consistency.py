@@ -159,6 +159,34 @@ def test_list_apps_delegates_to_app_list():
         )
 
 
+@pytest.mark.parametrize("cmd_args", [
+    # window commands (#584)
+    ["window", "focus"],
+    ["window", "close"],
+    ["window", "minimize"],
+    ["window", "maximize"],
+    ["window", "restore"],
+    ["window", "move"],
+    ["window", "resize"],
+    ["window", "set-bounds"],
+    # dialog commands (#584)
+    ["dialog", "detect"],
+    ["dialog", "accept"],
+    ["dialog", "dismiss"],
+    ["dialog", "click-button"],
+    ["dialog", "type"],
+    # desktop commands (#584)
+    ["desktop", "move-window"],
+])
+def test_app_id_option_in_help(cmd_args):
+    """#584: window/dialog/desktop commands must show --app-id in help."""
+    result = runner.invoke(main, cmd_args + ["--help"])
+    assert result.exit_code == 0, f"naturo {' '.join(cmd_args)} --help failed"
+    assert "--app-id" in result.output, (
+        f"naturo {' '.join(cmd_args)} --help missing --app-id:\n{result.output}"
+    )
+
+
 def test_hidden_commands_not_in_help():
     """Hidden commands must not appear in any --help output."""
     # Check top level

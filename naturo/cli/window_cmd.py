@@ -14,6 +14,7 @@ import click
 from naturo.backends.base import get_backend as _get_backend_impl
 from naturo.cli.error_helpers import json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 
 
 def _safe_echo(text: str, **kwargs) -> None:
@@ -83,15 +84,21 @@ def window():
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def focus(ctx, name, app, title, hwnd, json_output):
+def focus(ctx, name, app, title, hwnd, app_id, json_output):
     """Focus a window (bring to foreground)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     # Support positional NAME for backward compat: naturo window focus "Notepad"
     if name and not app:
         app = name
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -130,14 +137,20 @@ def focus(ctx, name, app, title, hwnd, json_output):
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--force", is_flag=True, help="Force terminate the process")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def close(ctx, name, app, title, hwnd, force, json_output):
+def close(ctx, name, app, title, hwnd, force, app_id, json_output):
     """Close a window (graceful or forced)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#584) Resolve --app-id to hwnd
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -177,14 +190,19 @@ def close(ctx, name, app, title, hwnd, force, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def minimize(ctx, name, app, title, hwnd, json_output):
+def minimize(ctx, name, app, title, hwnd, app_id, json_output):
     """Minimize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -222,14 +240,19 @@ def minimize(ctx, name, app, title, hwnd, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def maximize(ctx, name, app, title, hwnd, json_output):
+def maximize(ctx, name, app, title, hwnd, app_id, json_output):
     """Maximize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -267,14 +290,19 @@ def maximize(ctx, name, app, title, hwnd, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def restore(ctx, name, app, title, hwnd, json_output):
+def restore(ctx, name, app, title, hwnd, app_id, json_output):
     """Restore a minimized or maximized window to normal state."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if not app and not title and not hwnd:
@@ -311,14 +339,19 @@ def restore(ctx, name, app, title, hwnd, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--x", type=int, default=None, help="Target X position")
 @click.option("--y", type=int, default=None, help="Target Y position")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_move(ctx, app, title, hwnd, x, y, json_output):
+def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if x is None or y is None:
@@ -364,14 +397,19 @@ def window_move(ctx, app, title, hwnd, x, y, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--width", type=int, default=None, help="New width in pixels")
 @click.option("--height", type=int, default=None, help="New height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def resize(ctx, app, title, hwnd, width, height, json_output):
+def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     if width is None or height is None:
@@ -426,16 +464,21 @@ def resize(ctx, app, title, hwnd, width, height, json_output):
 @click.option("--app", help="Application/process name (partial match)")
 @click.option("--title", help="Window title pattern (partial match)")
 @click.option("--hwnd", type=int, help="Window handle")
+@app_id_option
 @click.option("--x", type=int, default=None, help="X position")
 @click.option("--y", type=int, default=None, help="Y position")
 @click.option("--width", type=int, default=None, help="Width in pixels")
 @click.option("--height", type=int, default=None, help="Height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def set_bounds(ctx, app, title, hwnd, x, y, width, height, json_output):
+def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id and hwnd is None:
+        sys.exit(1)
+        return
     from naturo.errors import NaturoError
 
     missing = []
