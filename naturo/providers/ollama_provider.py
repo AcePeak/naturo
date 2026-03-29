@@ -14,6 +14,7 @@ from naturo.errors import AIAnalysisFailedError, AIProviderUnavailableError
 from naturo.providers.base import (
     VisionResult,
     encode_image_base64,
+    parse_ai_elements_json,
     register_provider,
 )
 
@@ -140,19 +141,7 @@ class OllamaVisionProvider:
         result = self._call_ollama(image_path, text_prompt)
 
         # Parse JSON from response
-        try:
-            json_text = result.description.strip()
-            if json_text.startswith("```"):
-                lines = json_text.split("\n")
-                json_text = "\n".join(
-                    line for line in lines
-                    if not line.strip().startswith("```")
-                )
-            parsed = json.loads(json_text)
-            if isinstance(parsed, dict):
-                result.elements = [parsed]
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse Ollama response as JSON: %s", result.description[:200])
+        result.elements = parse_ai_elements_json(result.description)
 
         return result
 

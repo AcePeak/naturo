@@ -5,7 +5,6 @@ Requires OPENAI_API_KEY environment variable.
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any, Optional
@@ -15,6 +14,7 @@ from naturo.providers.base import (
     VisionResult,
     detect_media_type,
     encode_image_base64,
+    parse_ai_elements_json,
     register_provider,
 )
 
@@ -239,20 +239,7 @@ class OpenAIVisionProvider:
         if response.usage:
             tokens_used = (response.usage.prompt_tokens or 0) + (response.usage.completion_tokens or 0)
 
-        elements = []
-        try:
-            json_text = raw_text.strip()
-            if json_text.startswith("```"):
-                lines = json_text.split("\n")
-                json_text = "\n".join(
-                    line for line in lines
-                    if not line.strip().startswith("```")
-                )
-            parsed = json.loads(json_text)
-            if isinstance(parsed, dict):
-                elements.append(parsed)
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse element identification as JSON: %s", raw_text[:200])
+        elements = parse_ai_elements_json(raw_text)
 
         return VisionResult(
             description=raw_text.strip(),

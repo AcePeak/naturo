@@ -6,7 +6,10 @@ plus a factory function to instantiate providers by name.
 from __future__ import annotations
 
 import base64
+import json
+import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
@@ -134,6 +137,118 @@ def detect_media_type(image_path: str) -> str:
         ".webp": "image/webp",
         ".bmp": "image/bmp",
     }.get(ext, "image/png")
+
+
+logger = logging.getLogger(__name__)
+
+# Regex to extract JSON from markdown code fences (```json ... ``` or ``` ... ```)
+_CODE_FENCE_RE = re.compile(r"```(?:json)?\s*\n(.*?)\n\s*```", re.DOTALL)
+
+
+def parse_ai_elements_json(raw_text: str) -> list[dict[str, Any]]:
+    """Parse AI vision response text into a list of element dicts.
+
+    Handles common AI response formats:
+    - A plain JSON array: ``[{"role": "Button", ...}, ...]``
+    - JSON wrapped in markdown code fences: ``\\`\\`\\`json\\n[...]\\n\\`\\`\\```
+    - A wrapper object with an array field: ``{"elements": [...]}``
+    - Prose before/after the JSON block
+
+    Args:
+        raw_text: Raw text response from an AI vision provider.
+
+    Returns:
+        List of element dicts. Empty list if parsing fails entirely.
+    """
+    if not raw_text or not raw_text.strip():
+        return []
+
+    json_text = _extract_json_text(raw_text)
+    if json_text is None:
+        logger.warning(
+            "Failed to parse element identification as JSON: %s",
+            raw_text[:200],
+        )
+        return []
+
+    try:
+        parsed = json.loads(json_text)
+    except json.JSONDecodeError:
+        logger.warning(
+            "Failed to parse element identification as JSON: %s",
+            raw_text[:200],
+        )
+        return []
+
+    return _normalize_parsed(parsed)
+
+
+def _extract_json_text(raw_text: str) -> Optional[str]:
+    """Extract JSON string from raw AI response text.
+
+    Tries in order:
+    1. Content inside markdown code fences
+    2. First JSON array ``[...]`` in the text
+    3. First JSON object ``{...}`` in the text
+    4. The entire stripped text as-is
+
+    Args:
+        raw_text: Raw AI response text.
+
+    Returns:
+        Extracted JSON string, or None if nothing looks like JSON.
+    """
+    text = raw_text.strip()
+
+    # 1. Try markdown code fences
+    match = _CODE_FENCE_RE.search(text)
+    if match:
+        return match.group(1).strip()
+
+    # 2. Try to find a JSON array
+    arr_start = text.find("[")
+    if arr_start != -1:
+        arr_end = text.rfind("]")
+        if arr_end > arr_start:
+            return text[arr_start:arr_end + 1]
+
+    # 3. Try to find a JSON object
+    obj_start = text.find("{")
+    if obj_start != -1:
+        obj_end = text.rfind("}")
+        if obj_end > obj_start:
+            return text[obj_start:obj_end + 1]
+
+    # 4. Try the whole thing
+    return text if text else None
+
+
+def _normalize_parsed(parsed: Any) -> list[dict[str, Any]]:
+    """Normalize parsed JSON into a flat list of element dicts.
+
+    Args:
+        parsed: Parsed JSON value (could be list, dict, or other).
+
+    Returns:
+        Flat list of element dicts.
+    """
+    # Already a list — return dicts only
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+
+    # A wrapper object — look for a known array field
+    if isinstance(parsed, dict):
+        for key in ("elements", "items", "results", "found_elements"):
+            if key in parsed and isinstance(parsed[key], list):
+                return [item for item in parsed[key] if isinstance(item, dict)]
+        # Single element dict with expected keys (role/name/bounds)
+        if any(k in parsed for k in ("role", "name", "bounds", "label")):
+            return [parsed]
+        # Unknown dict structure — return empty
+        logger.debug("AI returned dict without recognized element keys: %s", list(parsed.keys()))
+        return []
+
+    return []
 
 
 # ── Provider Registry ──────────────────────────
