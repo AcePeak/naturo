@@ -36,88 +36,88 @@ class LinuxBackend(Backend):
             return "x11"
         return "headless"
 
-    # All methods raise NotImplementedError — Phase 7 will implement
+    # All methods raise NotImplementedError — Linux support planned for v0.5.0
     def list_monitors(self):
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def capture_screen(self, screen_index=0, output_path="capture.png") -> CaptureResult:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def capture_window(self, window_title=None, hwnd=None, output_path="capture.png") -> CaptureResult:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def list_windows(self) -> list[WindowInfo]:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def focus_window(self, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def close_window(self, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def minimize_window(self, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def maximize_window(self, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def move_window(self, x=0, y=0, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def resize_window(self, width=800, height=600, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def set_bounds(self, x=0, y=0, width=800, height=600, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def restore_window(self, title=None, hwnd=None) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def find_element(self, selector="", window_title=None) -> Optional[ElementInfo]:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def get_element_tree(self, window_title=None, depth=3) -> Optional[ElementInfo]:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def click(self, x=None, y=None, element_id=None, button="left", double=False, input_mode="normal") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def type_text(self, text="", delay_ms=5, profile="human", wpm=120, input_mode="normal") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def press_key(self, key="", input_mode="normal") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def hotkey(self, *keys, hold_duration_ms=50) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def scroll(self, direction="down", amount=3, x=None, y=None, smooth=False) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def drag(self, from_x=0, from_y=0, to_x=0, to_y=0, duration_ms=500, steps=10) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def move_mouse(self, x=0, y=0) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def clipboard_get(self) -> str:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def clipboard_set(self, text="") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def list_apps(self) -> list[dict]:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def launch_app(self, name="") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def quit_app(self, name="", force=False) -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def open_uri(self, uri="") -> None:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def get_element_value(self, ref=None, automation_id=None, role=None,
                           name=None, app=None, window_title=None, hwnd=None) -> Optional[dict]:
-        raise NotImplementedError("Linux backend coming in Phase 7")
+        raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")

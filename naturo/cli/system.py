@@ -22,7 +22,7 @@ def app():
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def launch(name, args, wait, json_output):
     """Launch an application by name or path."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
 
 @app.command(hidden=True)
@@ -32,7 +32,7 @@ def launch(name, args, wait, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def quit(name, pid, force, json_output):
     """Quit an application gracefully (or force kill)."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
 
 @app.command(hidden=True)
@@ -40,14 +40,14 @@ def quit(name, pid, force, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def relaunch(name, json_output):
     """Quit and relaunch an application."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
 
 @app.command(name="list", hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def app_list(json_output):
     """List running applications."""
-    click.echo("Not implemented yet — coming in Phase 2")
+    click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
 
 # ── menu ────────────────────────────────────────
@@ -68,7 +68,7 @@ def menu():
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def menu_click(path, app, window_title, hwnd, json_output):
     """Click a menu item by path (e.g. 'File > Save As')."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 @menu.command(name="list")
@@ -80,7 +80,7 @@ def menu_click(path, app, window_title, hwnd, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def menu_list(app, window_title, hwnd, depth, json_output):
     """List menu items of an application."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 # ── taskbar (Windows-specific, maps to Peekaboo dock) ──
@@ -100,7 +100,7 @@ def taskbar():
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def pin(name, json_output):
     """Pin an application to the taskbar."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 @taskbar.command()
@@ -108,14 +108,14 @@ def pin(name, json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def unpin(name, json_output):
     """Unpin an application from the taskbar."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 @taskbar.command(name="list")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def taskbar_list(json_output):
     """List taskbar pinned items."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 # ── tray (Windows-specific, maps to Peekaboo menubar) ──
@@ -134,7 +134,7 @@ def tray():
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def tray_list(json_output):
     """List system tray icons."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 @tray.command(name="click")
@@ -144,7 +144,7 @@ def tray_list(json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def tray_click(name, double, right, json_output):
     """Click a system tray icon by name."""
-    click.echo("Not implemented yet — coming in Phase 3")
+    click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 # ── desktop — moved to naturo/cli/desktop_cmd.py (Phase 5A.3) ──

@@ -81,7 +81,7 @@ def _platform_error_msg(feature: str) -> str:
             "Install it from https://github.com/AcePeak/peekaboo"
         )
     if system == "Linux":
-        return f"{feature} is not yet supported on Linux (coming in Phase 7)."
+        return f"{feature} is not yet supported on Linux. See https://github.com/AcePeak/naturo#platform-support"
     return f"{feature} is not supported on {system}."
 
 
