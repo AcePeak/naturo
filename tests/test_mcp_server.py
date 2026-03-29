@@ -60,6 +60,7 @@ class TestServerCreation:
             "list_apps", "launch_app", "quit_app",
             "menu_inspect",
             "wait_for_element", "wait_for_window", "wait_until_gone",
+            "clipboard_get", "clipboard_set", "clipboard_clear", "clipboard_info",
         ]
         for name in expected:
             assert name in tools, f"Tool '{name}' not registered"
