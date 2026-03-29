@@ -874,6 +874,219 @@ class TestGetElementValueProbing:
                 backend.get_element_value()
 
 
+class TestVerifyTypeUiTextFallbackError:
+    """Test verify_type when UI text fallback itself raises an exception."""
+
+    def test_unknown_when_ui_text_capture_raises(self):
+        """(#263) _capture_ui_texts raises during fallback → graceful UNKNOWN."""
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": "original"}
+
+        before_ui_texts = {"child:100": "before"}
+
+        with patch(
+            "naturo.verify._capture_ui_texts",
+            side_effect=Exception("COM timeout"),
+        ):
+            result = verify_type(
+                backend,
+                text="Hello",
+                before_value="original",
+                before_ui_texts=before_ui_texts,
+                settle_ms=0,
+            )
+        # Falls through to the UNKNOWN return at end of unchanged-value branch
+        assert result.status == VerifyStatus.UNKNOWN
+        assert result.verified is None
+
+    def test_unknown_when_ui_text_capture_returns_empty(self):
+        """_capture_ui_texts returns empty dict → falls through to UNKNOWN."""
+        backend = MagicMock()
+        backend.get_element_value.return_value = {"value": "original"}
+
+        before_ui_texts = {"child:100": "before"}
+
+        with patch("naturo.verify._capture_ui_texts", return_value={}):
+            result = verify_type(
+                backend,
+                text="Hello",
+                before_value="original",
+                before_ui_texts=before_ui_texts,
+                settle_ms=0,
+            )
+        assert result.status == VerifyStatus.UNKNOWN
+
+
+class TestVerifyPressEdgeCases:
+    """Additional edge case tests for verify_press."""
+
+    def test_unknown_on_capture_error(self):
+        """Focus capture raises → UNKNOWN (mirrors TestVerifyClick equivalent)."""
+        backend = MagicMock(spec=[])
+
+        with patch(
+            "naturo.verify._capture_focus_state",
+            side_effect=Exception("COM error"),
+        ):
+            result = verify_press(
+                backend,
+                keys=("enter",),
+                before_focus={"foreground_hwnd": 100},
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+        assert "focus state" in result.detail.lower()
+
+    def test_multiple_nav_keys_unknown(self):
+        """Multiple keys including nav key, no focus change → UNKNOWN."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+
+        with patch("naturo.verify._capture_focus_state") as mock_capture:
+            mock_capture.return_value = focus.copy()
+            result = verify_press(
+                backend,
+                keys=("alt+f4",),
+                before_focus=focus,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+        assert "alt+f4" in result.detail.lower()
+
+    def test_escape_key_is_nav_key(self):
+        """Escape is treated as a navigation key."""
+        backend = MagicMock(spec=[])
+        focus = {"foreground_hwnd": 100}
+
+        with patch("naturo.verify._capture_focus_state") as mock_capture:
+            mock_capture.return_value = focus.copy()
+            result = verify_press(
+                backend,
+                keys=("escape",),
+                before_focus=focus,
+                settle_ms=0,
+            )
+
+        assert result.status == VerifyStatus.UNKNOWN
+
+
+class TestCaptureBeforeStatePressAction:
+    """Test capture_before_state for press actions (no ui_texts capture)."""
+
+    def test_press_does_not_capture_ui_texts(self):
+        """Press action should NOT capture ui_texts (only click/type do)."""
+        backend = MagicMock(spec=[])
+
+        with patch("naturo.verify._capture_focus_state", return_value={"fg": 1}):
+            state = capture_before_state(backend, action="press")
+
+        assert "ui_texts" not in state
+        assert "focus" in state
+
+    def test_press_does_not_capture_value(self):
+        """Press action should NOT capture element value."""
+        backend = MagicMock(spec=[])
+
+        with patch("naturo.verify._capture_focus_state", return_value={}):
+            state = capture_before_state(backend, action="press")
+
+        assert "value" not in state
+
+    def test_type_captures_none_value_when_no_info(self):
+        """Type action: get_element_value returns None → value=None."""
+        backend = MagicMock()
+        backend.get_element_value.return_value = None
+
+        with patch("naturo.verify._capture_focus_state", return_value={}):
+            state = capture_before_state(backend, action="type")
+
+        assert state["value"] is None
+
+    def test_type_without_get_element_value(self):
+        """Type action on backend without get_element_value → no value key."""
+        backend = MagicMock(spec=[])
+
+        with patch("naturo.verify._capture_focus_state", return_value={}):
+            state = capture_before_state(backend, action="type")
+
+        assert "value" not in state
+
+
+class TestCaptureFocusStateNonWindows:
+    """Test _capture_focus_state on non-Windows platforms."""
+
+    def test_returns_platform_key_on_linux(self):
+        """On Linux, should return dict with platform key."""
+        from naturo.verify import _capture_focus_state
+
+        backend = MagicMock(spec=[])
+        state = _capture_focus_state(backend)
+
+        assert "platform" in state
+        assert state["platform"] == "Linux"
+
+
+class TestCaptureUiTextsNonWindows:
+    """Test _capture_ui_texts on non-Windows platforms."""
+
+    def test_returns_empty_dict_on_linux(self):
+        """On Linux, should return empty dict immediately."""
+        from naturo.verify import _capture_ui_texts
+
+        backend = MagicMock(spec=[])
+        result = _capture_ui_texts(backend, app="test")
+
+        assert result == {}
+
+    def test_returns_empty_dict_without_target(self):
+        """Without app/window_title/hwnd/pid, returns empty dict."""
+        from naturo.verify import _capture_ui_texts
+
+        backend = MagicMock(spec=[])
+        result = _capture_ui_texts(backend)
+
+        assert result == {}
+
+
+class TestToDict:
+    """Test VerificationResult.to_dict edge cases."""
+
+    def test_minimal_verified_no_detail(self):
+        """Verified result with no detail/method → only verified key."""
+        result = VerificationResult(status=VerifyStatus.VERIFIED)
+        d = result.to_dict()
+        assert d == {"verified": True}
+
+    def test_zero_elapsed_omitted(self):
+        """Zero elapsed_ms → verification_ms key omitted."""
+        result = VerificationResult(
+            status=VerifyStatus.VERIFIED,
+            elapsed_ms=0.0,
+        )
+        d = result.to_dict()
+        assert "verification_ms" not in d
+
+    def test_skipped_no_error_key(self):
+        """Skipped result → no verification_error key."""
+        result = VerificationResult(
+            status=VerifyStatus.SKIPPED,
+            detail="not applicable",
+        )
+        d = result.to_dict()
+        assert "verification_error" not in d
+
+    def test_unknown_no_error_key(self):
+        """Unknown result → no verification_error key (only FAILED has it)."""
+        result = VerificationResult(
+            status=VerifyStatus.UNKNOWN,
+            detail="inconclusive",
+        )
+        d = result.to_dict()
+        assert "verification_error" not in d
+
+
 class TestVerificationStatusProperties:
     """Test verification status properties (#242 / #426)."""
 
