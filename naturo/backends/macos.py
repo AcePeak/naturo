@@ -877,6 +877,10 @@ class MacOSBackend(Backend):
         """
         self._run(["clipboard", "-a", "set", "--text", text])
 
+    def clipboard_clear(self) -> None:
+        """Clear the clipboard contents."""
+        self._run(["clipboard", "-a", "clear"])
+
     # === Application Control ===
 
     def list_apps(self) -> list[dict]:

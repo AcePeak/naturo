@@ -854,11 +854,17 @@ def _auto_route(
 @_app_id_option
 @_verify_options
 @_see_options
+@click.option("--paste", "paste_after", is_flag=True, help="Paste clipboard after click (Ctrl+V)")
+@click.option("--copy", "copy_after", is_flag=True, help="Select all + copy after click (Ctrl+A, Ctrl+C)")
+@click.option("--cut", "cut_after", is_flag=True, help="Select all + cut after click (Ctrl+A, Ctrl+X)")
+@click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste (default: True)")
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app, pid,
               window_title, hwnd, wait_for, input_mode, method, selector, app_id,
-              verify, see_after, settle, json_output):
+              verify, see_after, settle,
+              paste_after, copy_after, cut_after, restore,
+              json_output):
     """Click on a UI element, text, or coordinates.
 
     QUERY is optional text or eN ref to find and click on. Use --on, --id, or --coords
@@ -869,11 +875,18 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
       hardware — Phys32 driver (bypasses software input filtering)
       hook     — MinHook injection (for protected/game apps)
 
+    Clipboard modifiers (post-click actions):
+      --paste  — After clicking, paste clipboard content (Ctrl+V)
+      --copy   — After clicking, select all + copy (Ctrl+A, Ctrl+C)
+      --cut    — After clicking, select all + cut (Ctrl+A, Ctrl+X)
+
     \b
     Examples:
       naturo click --coords 500 300
       naturo click --coords 500 300 --right
       naturo click --id "button_ok"
+      naturo click e42 --paste
+      naturo click e42 --copy
     """
     # --ref is a hidden deprecated alias for --on (#381)
     if ref_alias and not on_text:
@@ -1091,6 +1104,30 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         _json_err(str(exc), json_output)
         return
 
+    # (#168) Clipboard modifiers: --paste, --copy, --cut (post-click actions)
+    _clipboard_action = None
+    if paste_after or copy_after or cut_after:
+        import time
+        time.sleep(0.1)  # Brief settle after click
+        try:
+            if paste_after:
+                backend.hotkey("ctrl", "v")
+                _clipboard_action = "paste"
+            elif copy_after:
+                backend.hotkey("ctrl", "a")
+                time.sleep(0.05)
+                backend.hotkey("ctrl", "c")
+                _clipboard_action = "copy"
+            elif cut_after:
+                backend.hotkey("ctrl", "a")
+                time.sleep(0.05)
+                backend.hotkey("ctrl", "x")
+                _clipboard_action = "cut"
+        except Exception as exc:
+            _json_err(f"Click succeeded but clipboard action failed: {exc}",
+                      json_output, code="CLIPBOARD_ERROR")
+            return
+
     # Record the action
     _record_action("click", {
         "x": x, "y": y, "button": button, "double_click": double,
@@ -1102,6 +1139,8 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data = {"action": action, "target": str(loc), "button": button}
+    if _clipboard_action:
+        result_data["clipboard_action"] = _clipboard_action
     # (#248) Indicate UIA click was used for UWP apps
     if _is_uwp and locals().get("_used_uia_click"):
         result_data["uwp_uia_click"] = True

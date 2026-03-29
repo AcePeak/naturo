@@ -1,15 +1,15 @@
-"""Tests for Phase 2 clipboard: get, set, paste.
+"""Tests for clipboard CLI commands and click clipboard modifiers.
 
-Tests are organized by category:
-  - Method signature / API existence (all platforms)
-  - CLI option validation (all platforms)
-  - Windows-only functional tests guarded by @pytest.mark.ui
+Tests the `naturo clipboard` command group (get, set, clear, info)
+and the --paste/--copy/--cut modifiers on the click command.
+Backend calls are mocked since clipboard interaction requires a desktop session.
 """
 
 from __future__ import annotations
 
 import json
 import platform
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 from click.testing import CliRunner
@@ -21,28 +21,49 @@ def runner():
     return CliRunner()
 
 
-# ── T140-T146: Clipboard method signatures ────────────────────────────────────
+@pytest.fixture
+def mock_backend():
+    """Mock backend with clipboard methods."""
+    backend = MagicMock()
+    backend.clipboard_get.return_value = "hello world"
+    backend.clipboard_set.return_value = None
+    backend.clipboard_clear.return_value = None
+    backend.clipboard_info.return_value = {
+        "format": "text",
+        "size": 22,
+        "has_text": True,
+        "has_image": False,
+        "has_files": False,
+    }
+    return backend
+
+
+# ── Backend method signatures (all platforms) ────────────────────────────────
 
 
 class TestClipboardMethodSignatures:
     """Backend clipboard methods exist with correct signatures (all platforms)."""
 
     def test_clipboard_get_method_exists(self):
-        """T140 – clipboard_get method exists on WindowsBackend."""
         from naturo.backends.windows import WindowsBackend
         assert hasattr(WindowsBackend, "clipboard_get")
 
     def test_clipboard_set_method_exists(self):
-        """T142 – clipboard_set method exists on WindowsBackend."""
         from naturo.backends.windows import WindowsBackend
         assert hasattr(WindowsBackend, "clipboard_set")
 
+    def test_clipboard_clear_method_exists(self):
+        from naturo.backends.windows import WindowsBackend
+        assert hasattr(WindowsBackend, "clipboard_clear")
+
+    def test_clipboard_info_method_exists(self):
+        from naturo.backends.windows import WindowsBackend
+        assert hasattr(WindowsBackend, "clipboard_info")
+
     def test_clipboard_get_signature(self):
-        """T140 – clipboard_get takes no required args beyond self."""
         import inspect
         from naturo.backends.windows import WindowsBackend
         sig = inspect.signature(WindowsBackend.clipboard_get)
-        # Only 'self' is required
         required = [
             p for name, p in sig.parameters.items()
             if name != "self" and p.default is inspect.Parameter.empty
@@ -50,150 +71,302 @@ class TestClipboardMethodSignatures:
         assert len(required) == 0
 
     def test_clipboard_set_signature(self):
-        """T142 – clipboard_set accepts a text parameter."""
         import inspect
         from naturo.backends.windows import WindowsBackend
         sig = inspect.signature(WindowsBackend.clipboard_set)
         assert "text" in sig.parameters
 
     def test_clipboard_set_default_text(self):
-        """T142 – clipboard_set text defaults to empty string."""
         import inspect
         from naturo.backends.windows import WindowsBackend
         sig = inspect.signature(WindowsBackend.clipboard_set)
         assert sig.parameters["text"].default == ""
 
+    def test_base_clipboard_clear_is_abstract(self):
+        from naturo.backends.base import Backend
+        assert hasattr(Backend, "clipboard_clear")
 
-# ── CLI option validation (all platforms) ─────────────────────────────────────
+    def test_base_clipboard_info_is_defined(self):
+        from naturo.backends.base import Backend
+        assert hasattr(Backend, "clipboard_info")
+
+    def test_default_clipboard_info_text(self):
+        """Default clipboard_info detects text via clipboard_get."""
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "test"
+        from naturo.backends.base import Backend
+        result = Backend.clipboard_info(backend)
+        assert result["has_text"] is True
+        assert result["format"] == "text"
+        assert result["size"] == 4
+
+    def test_default_clipboard_info_empty(self):
+        """Default clipboard_info handles empty clipboard."""
+        backend = MagicMock()
+        backend.clipboard_get.return_value = ""
+        from naturo.backends.base import Backend
+        result = Backend.clipboard_info(backend)
+        assert result["has_text"] is False
+        assert result["format"] == "empty"
 
 
-@pytest.mark.skip(reason='command hidden — stub not exposed to users')
-class TestClipboardCLIOptions:
-    """clipboard CLI option validation (T140-T146)."""
+# ── CLI help & registration (no backend needed) ─────────────────────────────
 
-    def test_clipboard_group_in_main_help(self, runner):
-        """clipboard group is in main help."""
+
+class TestClipboardHelp:
+    """Test clipboard command registration and help output."""
+
+    def test_clipboard_appears_in_main_help(self, runner):
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
         assert "clipboard" in result.output
 
-    def test_clipboard_get_in_help(self, runner):
-        """T140 – clipboard get subcommand is documented."""
+    def test_clipboard_help(self, runner):
         result = runner.invoke(main, ["clipboard", "--help"])
         assert result.exit_code == 0
         assert "get" in result.output
-
-    def test_clipboard_set_in_help(self, runner):
-        """T142 – clipboard set subcommand is documented."""
-        result = runner.invoke(main, ["clipboard", "--help"])
         assert "set" in result.output
+        assert "clear" in result.output
+        assert "info" in result.output
 
-    def test_clipboard_get_json_option(self, runner):
-        """T297 – clipboard get --json option is documented."""
+    def test_clipboard_get_help(self, runner):
         result = runner.invoke(main, ["clipboard", "get", "--help"])
         assert result.exit_code == 0
         assert "--json" in result.output
 
-    def test_clipboard_set_json_option(self, runner):
-        """T297 – clipboard set --json option is documented."""
+    def test_clipboard_set_help(self, runner):
         result = runner.invoke(main, ["clipboard", "set", "--help"])
         assert result.exit_code == 0
-        assert "--json" in result.output
+        assert "TEXT" in result.output
 
-    def test_clipboard_set_subcommand_runs(self, runner):
-        """T142 – clipboard set subcommand is reachable (may be placeholder)."""
-        # The subcommand should at minimum be accessible (exit 0 for placeholder,
-        # or non-zero if content argument is required).
-        result = runner.invoke(main, ["clipboard", "set", "--help"])
+    def test_click_has_paste_option(self, runner):
+        result = runner.invoke(main, ["click", "--help"])
         assert result.exit_code == 0
+        assert "--paste" in result.output
 
-    def test_paste_group_in_main_help(self, runner):
-        """T144 – paste command is in main help."""
-        result = runner.invoke(main, ["--help"])
-        assert "paste" in result.output
+    def test_click_has_copy_option(self, runner):
+        result = runner.invoke(main, ["click", "--help"])
+        assert result.exit_code == 0
+        assert "--copy" in result.output
 
-    def test_paste_restore_option(self, runner):
-        """T144 – paste --restore is documented."""
-        result = runner.invoke(main, ["paste", "--help"])
+    def test_click_has_cut_option(self, runner):
+        result = runner.invoke(main, ["click", "--help"])
+        assert result.exit_code == 0
+        assert "--cut" in result.output
+
+    def test_click_has_restore_option(self, runner):
+        result = runner.invoke(main, ["click", "--help"])
         assert result.exit_code == 0
         assert "--restore" in result.output
 
-    def test_paste_file_option(self, runner):
-        """T144 – paste --file is documented."""
-        result = runner.invoke(main, ["paste", "--help"])
-        assert "--file" in result.output
 
-    def test_paste_no_content_fails(self, runner):
-        """T144 – paste with no content and no --file should fail."""
-        result = runner.invoke(main, ["paste"])
-        assert result.exit_code != 0
+# ── clipboard get ────────────────────────────────────
 
 
-@pytest.mark.skip(reason="CLI command removed in v0.2.0")
-class TestBUG044JsonOnClickValidation:
-    """BUG-044: Click parameter validation must respect --json mode."""
+class TestClipboardGet:
+    """Tests for 'naturo clipboard get'."""
 
-    @pytest.fixture()
-    def runner(self):
-        return CliRunner()
+    def test_get_text(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "get"])
+        assert result.exit_code == 0
+        assert "hello world" in result.output
+        mock_backend.clipboard_get.assert_called_once()
 
-    def test_clipboard_set_nonexistent_file_json(self, runner):
-        """clipboard set --file nonexistent.txt --json must return valid JSON."""
-        result = runner.invoke(main, ["clipboard", "set", "--file", "nonexistent_xyz.txt", "--json"])
-        assert result.exit_code != 0
-        import json
+    def test_get_empty(self, runner, mock_backend):
+        mock_backend.clipboard_get.return_value = ""
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "get"])
+        assert result.exit_code == 0
+        assert "clipboard is empty" in result.output
+
+    def test_get_json(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "get", "--json"])
+        assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert "error" in data
+        assert data["success"] is True
+        assert data["text"] == "hello world"
+        assert data["length"] == 11
+        assert data["action"] == "clipboard_get"
 
-    def test_paste_nonexistent_file_json(self, runner):
-        """paste --file nonexistent.txt --json must return valid JSON."""
-        result = runner.invoke(main, ["paste", "--file", "nonexistent_xyz.txt", "--json"])
-        assert result.exit_code != 0
-        import json
+    def test_get_error(self, runner, mock_backend):
+        mock_backend.clipboard_get.side_effect = Exception("clipboard locked")
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "get"])
+        # emit_exception_error calls sys.exit(1)
+        assert result.exit_code == 1
+
+
+# ── clipboard set ────────────────────────────────────
+
+
+class TestClipboardSet:
+    """Tests for 'naturo clipboard set'."""
+
+    def test_set_text(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "set", "test data"])
+        assert result.exit_code == 0
+        assert "9 chars" in result.output
+        mock_backend.clipboard_set.assert_called_once_with("test data")
+
+    def test_set_json(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "set", "abc", "--json"])
+        assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert "error" in data
+        assert data["success"] is True
+        assert data["action"] == "clipboard_set"
+        assert data["length"] == 3
 
-    def test_window_move_missing_xy_json(self, runner):
-        """window move --app x --json without --x/--y must return valid JSON."""
-        result = runner.invoke(main, ["window", "move", "--app", "x", "--json"])
+    def test_set_requires_text_argument(self, runner):
+        result = runner.invoke(main, ["clipboard", "set"])
         assert result.exit_code != 0
-        import json
+
+
+# ── clipboard clear ──────────────────────────────────
+
+
+class TestClipboardClear:
+    """Tests for 'naturo clipboard clear'."""
+
+    def test_clear(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "clear"])
+        assert result.exit_code == 0
+        assert "cleared" in result.output.lower()
+        mock_backend.clipboard_clear.assert_called_once()
+
+    def test_clear_json(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "clear", "--json"])
+        assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        assert data["success"] is True
+        assert data["action"] == "clipboard_clear"
 
-    def test_window_resize_missing_dims_json(self, runner):
-        """window resize --app x --json without --width/--height must return valid JSON."""
-        result = runner.invoke(main, ["window", "resize", "--app", "x", "--json"])
-        assert result.exit_code != 0
-        import json
+
+# ── clipboard info ───────────────────────────────────
+
+
+class TestClipboardInfo:
+    """Tests for 'naturo clipboard info'."""
+
+    def test_info_text(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "info"])
+        assert result.exit_code == 0
+        assert "text" in result.output.lower()
+        assert "22 bytes" in result.output
+
+    def test_info_json(self, runner, mock_backend):
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "info", "--json"])
+        assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        assert data["success"] is True
+        assert data["format"] == "text"
+        assert data["has_text"] is True
+        assert data["has_image"] is False
 
-    def test_window_set_bounds_missing_params_json(self, runner):
-        """window set-bounds --app x --x 0 --y 0 --json without --width/--height must return valid JSON."""
-        result = runner.invoke(main, ["window", "set-bounds", "--app", "x", "--x", "0", "--y", "0", "--json"])
-        assert result.exit_code != 0
-        import json
+    def test_info_empty(self, runner, mock_backend):
+        mock_backend.clipboard_info.return_value = {
+            "format": "empty",
+            "size": 0,
+            "has_text": False,
+            "has_image": False,
+            "has_files": False,
+        }
+        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["clipboard", "info"])
+        assert result.exit_code == 0
+        assert "empty" in result.output.lower()
+
+
+# ── click --paste/--copy/--cut modifiers ─────────────
+
+
+def _click_patches(mock_backend):
+    """Return patch context managers for mocking click command dependencies."""
+    return {
+        "backend": patch("naturo.cli.interaction._get_backend", return_value=mock_backend),
+        "desktop": patch("naturo.cli.interaction._check_desktop_session"),
+        "auto_route": patch("naturo.cli.interaction._auto_route", return_value={}),
+    }
+
+
+class TestClickClipboardModifiers:
+    """Tests for click --paste, --copy, --cut modifiers."""
+
+    def test_click_paste_calls_hotkey(self, runner, mock_backend):
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--paste", "--no-verify",
+            ])
+        assert result.exit_code == 0
+        mock_backend.click.assert_called_once()
+        mock_backend.hotkey.assert_called_with("ctrl", "v")
+
+    def test_click_copy_calls_select_all_and_copy(self, runner, mock_backend):
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--copy", "--no-verify",
+            ])
+        assert result.exit_code == 0
+        mock_backend.click.assert_called_once()
+        hotkey_calls = mock_backend.hotkey.call_args_list
+        assert call("ctrl", "a") in hotkey_calls
+        assert call("ctrl", "c") in hotkey_calls
+
+    def test_click_cut_calls_select_all_and_cut(self, runner, mock_backend):
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--cut", "--no-verify",
+            ])
+        assert result.exit_code == 0
+        mock_backend.click.assert_called_once()
+        hotkey_calls = mock_backend.hotkey.call_args_list
+        assert call("ctrl", "a") in hotkey_calls
+        assert call("ctrl", "x") in hotkey_calls
+
+    def test_click_paste_json_includes_clipboard_action(self, runner, mock_backend):
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--paste", "--no-verify", "--json",
+            ])
+        assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        # JSON output may nest data under "data" key
+        inner = data.get("data", data)
+        assert inner.get("clipboard_action") == "paste"
+
+    def test_click_copy_json_includes_clipboard_action(self, runner, mock_backend):
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--copy", "--no-verify", "--json",
+            ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        inner = data.get("data", data)
+        assert inner.get("clipboard_action") == "copy"
 
 
-# ── Windows-only functional tests ─────────────────────────────────────────────
+# ── Windows-only functional tests ────────────────────────────────────────────
 
 
 def _clipboard_accessible():
-    """Check if clipboard is accessible and working (requires interactive desktop on Windows)."""
+    """Check if clipboard is accessible (requires interactive desktop on Windows)."""
     if platform.system() != "Windows":
         return False
     try:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
-        # Try an actual clipboard set/get cycle to verify it works
         test_val = "naturo_clipboard_test_12345"
         backend.clipboard_set(test_val)
         result = backend.clipboard_get()
@@ -203,90 +376,55 @@ def _clipboard_accessible():
 
 
 @pytest.mark.ui
+@pytest.mark.desktop
 @pytest.mark.skipif(
     not _clipboard_accessible(),
     reason="Clipboard functional tests require Windows with interactive desktop session",
 )
-@pytest.mark.skip(reason="CLI command removed in v0.2.0")
 class TestClipboardFunctionalWindows:
-    """T140-T146 – Windows functional clipboard tests."""
+    """Windows functional clipboard tests."""
 
     @pytest.fixture
     def backend(self):
         from naturo.backends.windows import WindowsBackend
         b = WindowsBackend()
-        # Save original clipboard content for restore
         try:
             original = b.clipboard_get()
         except Exception:
             original = ""
         yield b
-        # Restore original clipboard content
         try:
             b.clipboard_set(original)
         except Exception:
             pass
 
-    @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
-    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
     def test_clipboard_set_and_get(self, backend):
-        """T142/T140 – clipboard set then get returns same text."""
         test_text = "naturo clipboard test 12345"
         backend.clipboard_set(test_text)
         result = backend.clipboard_get()
         assert result == test_text
 
-    def test_clipboard_get_returns_string(self, backend):
-        """T140 – clipboard_get returns a string."""
-        backend.clipboard_set("test")
-        result = backend.clipboard_get()
-        assert isinstance(result, str)
-
-    def test_clipboard_set_empty(self, backend):
-        """T141 – clipboard_get after setting empty returns empty string."""
-        backend.clipboard_set("")
+    def test_clipboard_clear(self, backend):
+        backend.clipboard_set("something")
+        backend.clipboard_clear()
         result = backend.clipboard_get()
         assert result == ""
 
-    @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
-    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
-    def test_clipboard_set_overwrites(self, backend):
-        """T143 – clipboard set overwrites previous content."""
-        backend.clipboard_set("first content")
-        backend.clipboard_set("second content")
-        result = backend.clipboard_get()
-        assert result == "second content"
+    def test_clipboard_info_text(self, backend):
+        backend.clipboard_set("hello")
+        info = backend.clipboard_info()
+        assert info["has_text"] is True
+        assert info["format"] == "text"
+        assert info["size"] > 0
 
-    @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
-    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
+    def test_clipboard_info_empty(self, backend):
+        backend.clipboard_clear()
+        info = backend.clipboard_info()
+        assert info["format"] == "empty"
+        assert info["has_text"] is False
+
     def test_clipboard_unicode(self, backend):
-        """T146 – clipboard handles unicode and special characters."""
         test_text = "Hello 你好 こんにちは — ™ © ®"
         backend.clipboard_set(test_text)
         result = backend.clipboard_get()
         assert result == test_text
-
-    @pytest.mark.xfail(reason="clipboard get returns empty - implementation incomplete")
-    @pytest.mark.xfail(reason="clipboard_get returns empty - implementation incomplete")
-    def test_clipboard_special_chars(self, backend):
-        """T146 – clipboard handles special ASCII characters."""
-        test_text = "!@#$%^&*()[]{}|\\\"'<>?/~`"
-        backend.clipboard_set(test_text)
-        result = backend.clipboard_get()
-        assert result == test_text
-
-    # Note: CLI clipboard commands are placeholders ("Not implemented yet").
-    # Backend methods work, but CLI integration is deferred to full Phase 2 implementation.
-    # These tests are commented out until CLI is implemented:
-    #
-    # def test_cli_clipboard_set(self, runner):
-    #     """T142 – naturo clipboard set runs on Windows."""
-    #     result = runner.invoke(main, ["clipboard", "set", "hello naturo"])
-    #     assert result.exit_code == 0
-    #
-    # def test_cli_clipboard_get(self, runner):
-    #     """T140 – naturo clipboard get runs on Windows."""
-    #     runner.invoke(main, ["clipboard", "set", "test value"])
-    #     result = runner.invoke(main, ["clipboard", "get"])
-    #     assert result.exit_code == 0
-    #     assert "test value" in result.output
