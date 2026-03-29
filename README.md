@@ -124,10 +124,10 @@ naturo find "Edit:filename"
 
 # App management
 naturo app launch "notepad"
-naturo app switch "notepad"
+naturo app focus "notepad"
 naturo app quit "chrome" --force
-naturo app hide "notepad"
-naturo app unhide "notepad"
+naturo app minimize "notepad"
+naturo app restore "notepad"
 naturo app inspect "notepad"             # Probe frameworks (UIA, CDP, MSAA...)
 naturo app relaunch "notepad"
 
@@ -209,15 +209,19 @@ naturo highlight --app notepad -A out.png  # Save annotated screenshot
 
 | Command | Description | Since |
 |---------|-------------|-------|
-| `app launch` | Launch application | 0.1.0 |
+| `app launch` | Launch application by name or path | 0.1.0 |
 | `app quit` | Quit application (supports `--force`) | 0.1.0 |
-| `app switch` | Switch to application | 0.1.0 |
-| `app list` | List running applications | 0.1.0 |
-| `app find` | Find application by name | 0.1.0 |
-| `app hide` | Minimize all app windows | 0.1.0 |
-| `app unhide` | Restore all app windows | 0.1.0 |
+| `app focus` | Focus an application window (alias: `app switch`) | 0.1.0 |
+| `app close` | Close an application window (graceful or forced) | 0.1.0 |
+| `app minimize` | Minimize an application window (alias: `app hide`) | 0.1.0 |
+| `app maximize` | Maximize an application window | 0.1.0 |
+| `app restore` | Restore a minimized/maximized window (alias: `app unhide`) | 0.1.0 |
+| `app move` | Move and/or resize an application window | 0.1.0 |
+| `app list` | List running applications with visible windows | 0.1.0 |
+| `app windows` | List open windows (filter by app/PID) | 0.1.0 |
+| `app find` | Find application by name or PID | 0.1.0 |
 | `app inspect` | Probe app frameworks (UIA, CDP, MSAA...) | 0.3.0 |
-| `app relaunch` | Restart an application | 0.3.0 |
+| `app relaunch` | Quit and relaunch an application | 0.3.0 |
 
 ### System
 
@@ -243,6 +247,7 @@ naturo highlight --app notepad -A out.png  # Save annotated screenshot
 | Command | Description | Since |
 |---------|-------------|-------|
 | `snapshot list` | List stored snapshots | 0.1.0 |
+| `snapshot sessions` | List all snapshot sessions | 0.1.0 |
 | `snapshot clean` | Remove old snapshots | 0.1.0 |
 | `mcp start` | Start MCP server | 0.1.0 |
 | `mcp install` | Install MCP server configuration | 0.3.0 |
