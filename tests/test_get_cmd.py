@@ -622,13 +622,13 @@ class TestNamePropertyFallback:
 class TestAppIdOption:
     """Tests for the --app-id option on the get command (#522)."""
 
-    def test_app_id_resolves_to_hwnd(self):
-        """--app-id resolves to process_name and handle via app ID map."""
+    def test_app_id_resolves_to_hwnd_only(self):
+        """--app-id resolves to hwnd only, not process_name (#582)."""
         mock = _make_mock_backend()
         runner = CliRunner()
 
         mock_entry = MagicMock()
-        mock_entry.process_name = "Calculator.exe"
+        mock_entry.process_name = "C:\\Program Files\\Calculator.exe"
         mock_entry.handle = 67890
         mock_entry.pid = 1234
 
@@ -643,12 +643,13 @@ class TestAppIdOption:
                 ])
 
         assert result.exit_code == 0
+        # (#582) process_name must NOT leak as app — it may be a full path
         mock.get_element_value.assert_called_once_with(
             ref="e15",
             automation_id=None,
             role=None,
             name=None,
-            app="Calculator.exe",
+            app=None,
             window_title=None,
             hwnd=67890,
         )

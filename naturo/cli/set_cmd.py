@@ -87,6 +87,8 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
               help="Collapse a combo box or tree item (ExpandCollapsePattern)")
 @click.option("--app", default=None,
               help="Target application (name or partial match)")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--window", "window_title", default=None,
               help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True,
@@ -98,7 +100,8 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
               help="JSON output")
 @click.pass_context
 def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
-            select, expand, collapse, app, window_title, hwnd, json_output):
+            select, expand, collapse, app, app_id, window_title, hwnd,
+            json_output):
     """Set element value/state.
 
     Write a value to a UI element, toggle a checkbox, select a list item,
@@ -117,6 +120,22 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
     """
     if json_output is None:
         json_output = ctx.obj.get("json", False) if ctx.obj else False
+
+    # (#582) Resolve --app-id to hwnd override.
+    # Use hwnd only, not process_name (avoids #576 full-path bug).
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+
+        id_map = get_app_id_map()
+        entry = id_map.resolve(app_id)
+        if entry is None:
+            emit_error(
+                "APP_ID_NOT_FOUND",
+                f'App ID "{app_id}" not found or expired. '
+                f'Run "naturo app list" to refresh.',
+                json_output,
+            )
+        hwnd = entry.handle
 
     # Parse positional arguments.  Click gives us [TARGET] [VALUE] but the
     # user may write any of:

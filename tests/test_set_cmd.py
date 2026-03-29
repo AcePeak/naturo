@@ -548,3 +548,113 @@ class TestSetValidation:
         assert "--select" in result.output
         assert "--expand" in result.output
         assert "--collapse" in result.output
+
+
+# ── App ID Tests (#582) ─────────────────────────────────────────────────────
+
+
+class TestSetAppId:
+    """Tests for the --app-id option on the set command (#582)."""
+
+    def test_app_id_resolves_to_hwnd(self):
+        """--app-id resolves to hwnd for element targeting."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_entry = MagicMock()
+        mock_entry.process_name = "C:\\Program Files\\Calculator.exe"
+        mock_entry.handle = 67890
+        mock_entry.pid = 1234
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = mock_entry
+
+        with _apply_patches(mock, resolve_aid="txtField"):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "set", "e47", "hello", "--app-id", "a1",
+                ])
+
+        assert result.exit_code == 0
+        # hwnd should come from app-id resolution
+        mock.set_element_value.assert_called_once_with(
+            text="hello",
+            hwnd=67890,
+            name=None,
+            automation_id="txtField",
+            role=None,
+        )
+
+    def test_app_id_not_found_error(self):
+        """--app-id with invalid ID shows error."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = None
+
+        with _apply_patches(mock):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "set", "e47", "hello", "--app-id", "a99",
+                ])
+
+        assert result.exit_code != 0
+
+    def test_app_id_not_found_json_error(self):
+        """--app-id with invalid ID in JSON mode shows structured error."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = None
+
+        with _apply_patches(mock):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "--json", "set", "e47", "hello", "--app-id", "a99",
+                ])
+
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "APP_ID_NOT_FOUND" in data["error"]["code"]
+
+    def test_app_id_does_not_leak_process_name(self):
+        """--app-id must not leak process_name as app parameter (#576)."""
+        mock = _make_mock_backend()
+        runner = CliRunner()
+
+        mock_entry = MagicMock()
+        mock_entry.process_name = "C:\\Long\\Path\\app.exe"
+        mock_entry.handle = 11111
+        mock_entry.pid = 2222
+
+        mock_id_map = MagicMock()
+        mock_id_map.resolve.return_value = mock_entry
+
+        with _apply_patches(mock, resolve_aid="txtField"):
+            with patch("naturo.app_ids.get_app_id_map",
+                       return_value=mock_id_map):
+                result = runner.invoke(main, [
+                    "set", "e5", "--toggle", "--app-id", "a3",
+                ])
+
+        assert result.exit_code == 0
+        # toggle_element should get hwnd from app-id, NOT the full path
+        mock.toggle_element.assert_called_once_with(
+            hwnd=11111,
+            automation_id="txtField",
+            role=None,
+            name=None,
+        )
+
+    def test_help_shows_app_id_option(self):
+        """--help includes --app-id option."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["set", "--help"])
+        assert result.exit_code == 0
+        assert "--app-id" in result.output

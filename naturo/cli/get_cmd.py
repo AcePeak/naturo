@@ -104,8 +104,10 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
     if json_output is None:
         json_output = ctx.obj.get("json", False) if ctx.obj else False
 
-    # (#522) Resolve --app-id to app/hwnd overrides (consistent with
+    # (#522) Resolve --app-id to hwnd override (consistent with
     # see/click/capture/type which all accept --app-id).
+    # (#582) Do NOT leak process_name as app — it may be a full path
+    # that breaks fuzzy matching (same bug pattern as #576).
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
 
@@ -118,7 +120,6 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
                 f'Run "naturo app list" to refresh.',
                 json_output,
             )
-        app = entry.process_name
         hwnd = entry.handle
 
     # Parse target argument: could be a ref (e47) or an automation ID
