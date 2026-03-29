@@ -3081,8 +3081,8 @@ class WindowsBackend(Backend):
         return [item.to_dict() for item in items]
 
     def menu_click(self, path: str = "", app: Optional[str] = None) -> None:
-        """Click a menu item. Phase 3 feature."""
-        raise NotImplementedError("menu_click coming in Phase 3")
+        """Click a menu item. Planned for a future release."""
+        raise NotImplementedError("menu_click is not yet implemented")
 
     def get_menu_items(self, window_title: Optional[str] = None,
                        hwnd: Optional[int] = None) -> List[MenuItem]:

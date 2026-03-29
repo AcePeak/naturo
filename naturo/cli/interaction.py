@@ -1989,7 +1989,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Element ID to scroll on")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Coordinates to scroll at")
-@click.option("--smooth", is_flag=True, help="Smooth scrolling (Phase 3)")
+@click.option("--smooth", is_flag=True, help="Smooth scrolling (planned)")
 @click.option("--delay", type=float, help="Delay between scroll steps (ms)")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
