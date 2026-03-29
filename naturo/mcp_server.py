@@ -15,6 +15,7 @@ from mcp.server.fastmcp import FastMCP
 
 from naturo.backends.base import get_backend, Backend
 from naturo.errors import NaturoError
+from naturo.process import launch_app as _launch_app
 
 logger = logging.getLogger(__name__)
 
@@ -1085,11 +1086,17 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             name: Application name or executable path.
 
         Returns:
-            Dict with success flag.
+            Dict with success flag, pid, and process info.
         """
-        backend = _get_backend()
-        backend.launch_app(name=name)
-        return {"success": True}
+        info = _launch_app(name=name)
+        return {
+            "success": True,
+            "pid": info.pid,
+            "name": info.name,
+            "path": info.path,
+            "is_running": info.is_running,
+            "window_count": info.window_count,
+        }
 
     @server.tool()
     @_safe_tool
