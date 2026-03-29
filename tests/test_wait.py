@@ -90,6 +90,33 @@ class TestWaitForElement:
         assert result.found is True
         backend.find_element.assert_called_with("Button:Save", window_title="Notepad")
 
+    def test_with_hwnd(self):
+        """hwnd is passed through to backend.find_element (#595)."""
+        backend = MagicMock()
+        backend.find_element.return_value = _make_element()
+
+        result = wait_for_element(
+            "Button:Save", hwnd=12345, timeout=2.0, backend=backend,
+        )
+        assert result.found is True
+        backend.find_element.assert_called_with(
+            "Button:Save", window_title=None, hwnd=12345,
+        )
+
+    def test_with_hwnd_and_window_title(self):
+        """Both hwnd and window_title can be passed together (#595)."""
+        backend = MagicMock()
+        backend.find_element.return_value = _make_element()
+
+        result = wait_for_element(
+            "Button:Save", window_title="Notepad", hwnd=12345,
+            timeout=2.0, backend=backend,
+        )
+        assert result.found is True
+        backend.find_element.assert_called_with(
+            "Button:Save", window_title="Notepad", hwnd=12345,
+        )
+
     def test_handles_poll_errors(self):
         backend = MagicMock()
         call_count = [0]
@@ -154,6 +181,19 @@ class TestWaitUntilGone:
         )
         assert result.found is True
         assert len(result.warnings) >= 1
+
+    def test_with_hwnd(self):
+        """hwnd is passed through to backend.find_element (#595)."""
+        backend = MagicMock()
+        backend.find_element.return_value = None  # element is gone
+
+        result = wait_until_gone(
+            "Dialog:Loading", hwnd=54321, timeout=2.0, backend=backend,
+        )
+        assert result.found is True
+        backend.find_element.assert_called_with(
+            "Dialog:Loading", window_title=None, hwnd=54321,
+        )
 
 
 class TestWaitForWindow:
@@ -249,3 +289,63 @@ class TestWaitDurationCLI:
         assert result.exit_code != 0
         data = json.loads(result.output)
         assert "error" in data or "code" in data
+
+
+class TestWaitCLIAppId:
+    """Tests for --app, --hwnd, --pid, --app-id options on wait (#595)."""
+
+    def test_app_id_invalid_shows_error(self):
+        """Invalid --app-id emits error and exits."""
+        runner = CliRunner()
+        with patch("naturo.cli.wait_cmd.resolve_app_id_to_hwnd", return_value=None):
+            result = runner.invoke(
+                wait_cmd, ["--element", "Button:Save", "--app-id", "z99"],
+            )
+        assert result.exit_code != 0
+
+    @patch("naturo.cli.wait_cmd.resolve_app_id_to_hwnd")
+    @patch("naturo.wait.get_backend")
+    def test_app_id_resolved_passes_hwnd(self, mock_get_backend, mock_resolve):
+        """Resolved --app-id passes hwnd through to wait_for_element."""
+        mock_resolve.return_value = 12345
+
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = _make_element()
+        mock_get_backend.return_value = mock_backend
+
+        runner = CliRunner()
+        result = runner.invoke(
+            wait_cmd, ["--element", "Button:Save", "--app-id", "a1", "--timeout", "0.3"],
+        )
+        assert result.exit_code == 0
+        assert "Found" in result.output
+        # Verify hwnd was passed to find_element
+        call_kwargs = mock_backend.find_element.call_args
+        assert call_kwargs is not None
+        # hwnd should be in the kwargs (passed via find_kwargs dict)
+        assert 12345 in call_kwargs[1].values() or call_kwargs[1].get("hwnd") == 12345
+
+    def test_app_resolves_to_window_title(self):
+        """--app without --hwnd uses app name as window_title."""
+        runner = CliRunner()
+        with patch("naturo.wait.get_backend") as mock_get_backend:
+            mock_backend = MagicMock()
+            mock_backend.find_element.return_value = _make_element()
+            mock_get_backend.return_value = mock_backend
+
+            result = runner.invoke(
+                wait_cmd, ["--element", "Button:Save", "--app", "notepad", "--timeout", "0.3"],
+            )
+        assert result.exit_code == 0
+        # window_title should be "notepad"
+        call_kwargs = mock_backend.find_element.call_args[1]
+        assert call_kwargs.get("window_title") == "notepad"
+
+    def test_help_shows_app_id_option(self):
+        """--help output includes --app-id."""
+        runner = CliRunner()
+        result = runner.invoke(wait_cmd, ["--help"])
+        assert "--app-id" in result.output
+        assert "--app" in result.output
+        assert "--hwnd" in result.output
+        assert "--pid" in result.output
