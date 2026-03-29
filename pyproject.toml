@@ -131,6 +131,7 @@ no_implicit_optional = false
 [[tool.mypy.overrides]]
 module = [
     "naturo.backends.windows",
+    "naturo.backends.windows.*",
     "naturo.backends.linux",
     "naturo.registry",
     "naturo.bridge",
