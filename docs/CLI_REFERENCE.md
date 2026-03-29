@@ -2,7 +2,7 @@
 
 Complete reference for all `naturo` commands. Auto-generated from Click command definitions.
 
-*Generated: 2026-03-28*
+*Generated: 2026-03-29*
 
 ## Global Options
 
@@ -28,7 +28,7 @@ naturo [--json] [--verbose] [--log-level LEVEL] COMMAND [ARGS]
 - [`naturo find`](#naturo-find) — Search for UI elements matching a query.
 - [`naturo get`](#naturo-get) — Read element text/value.
 - [`naturo highlight`](#naturo-highlight) — Highlight UI elements on screen with colored borders and labels.
-- [`naturo list`](#naturo-list) — List apps, windows, screens, or permissions.
+- [`naturo list`](#naturo-list) — List apps, windows, and screens.
   - [`naturo list apps`](#naturo-list-apps) — List running applications (delegates to 'app list').
   - [`naturo list screens`](#naturo-list-screens) — List connected screens/monitors.
   - [`naturo list windows`](#naturo-list-windows) — List open windows.
@@ -72,11 +72,6 @@ naturo [--json] [--verbose] [--log-level LEVEL] COMMAND [ARGS]
 
 ### System
 
-- [`naturo clipboard`](#naturo-clipboard) — Read, write, and manage clipboard contents.
-  - [`naturo clipboard get`](#naturo-clipboard-get) — Read current clipboard content.
-  - [`naturo clipboard set`](#naturo-clipboard-set) — Write text to the clipboard.
-  - [`naturo clipboard clear`](#naturo-clipboard-clear) — Clear the clipboard contents.
-  - [`naturo clipboard info`](#naturo-clipboard-info) — Show information about current clipboard contents.
 - [`naturo desktop`](#naturo-desktop) — Virtual desktop management (Windows 10/11).
   - [`naturo desktop close`](#naturo-desktop-close) — Close a virtual desktop.
   - [`naturo desktop create`](#naturo-desktop-create) — Create a new virtual desktop.
@@ -92,6 +87,11 @@ naturo [--json] [--verbose] [--log-level LEVEL] COMMAND [ARGS]
 
 ### Tools
 
+- [`naturo clipboard`](#naturo-clipboard) — Read, write, and manage clipboard contents.
+  - [`naturo clipboard clear`](#naturo-clipboard-clear) — Clear the clipboard contents.
+  - [`naturo clipboard get`](#naturo-clipboard-get) — Read current clipboard content.
+  - [`naturo clipboard info`](#naturo-clipboard-info) — Show information about current clipboard contents.
+  - [`naturo clipboard set`](#naturo-clipboard-set) — Write text to the clipboard.
 - [`naturo config`](#naturo-config) — Manage Naturo configuration and provider credentials.
   - [`naturo config clear`](#naturo-config-clear) — Remove stored credentials for a provider (or all providers).
   - [`naturo config setup`](#naturo-config-setup) — Interactive setup for AI provider credentials.
@@ -115,6 +115,7 @@ Capture a live screenshot, optionally cropped to an element or region.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--app` | text | Target application (name or partial match) |
+| `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
 | `--screen`, `-s` | integer | Screen/monitor index (default: `0`) |
@@ -136,6 +137,7 @@ naturo capture --element e5                     # crop to element e5
 naturo capture --ref e5 --padding 20            # with 20px padding
 naturo capture --region 100,50,400,300          # crop to region
 naturo capture --app feishu --element e12       # element in specific app
+naturo capture --pid 51764                      # capture by process ID
 naturo capture --app-id a1 --element e12        # element by app ID
 naturo capture -o output.png                    # save to output.png
 ```
@@ -163,8 +165,9 @@ Search for UI elements matching a query.
 | `--ai` | boolean | Use AI vision to find element by natural language |
 | `--screenshot` | path | Use existing screenshot (for --ai mode) |
 | `--app` | text | Target app window |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
-| `--backend`, `--method`, `-b`, `-m` | {uia, msaa, ia2, jab, win32, win32hybrid, auto, hybrid} | Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection) |
+| `--backend`, `--method`, `-b`, `-m` | {uia, msaa, ia2, jab, cdp, win32, win32hybrid, auto, hybrid} | Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content), win32 (VB6/ActiveX), hybrid (per-node backend selection) |
 | `--provider` | {auto, anthropic, openai, ollama} | AI provider for --ai mode (auto, anthropic, openai, ollama) (default: `auto`) |
 | `--model` | text | AI model name override (e.g. claude-sonnet-4-20250514, gpt-4o) |
 | `--api-key` | text | AI provider API key (overrides env var) |
@@ -239,6 +242,7 @@ Highlight UI elements on screen with colored borders and labels.
 | `--ref`, `-r` | text | Specific refs to highlight (e.g. -r e5 -r e10). Omit for all. |
 | `--app`, `-a` | text | Application name (partial match) |
 | `--hwnd` | integer | Direct window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--depth`, `-d` | integer | Tree depth for element discovery (default: `30`) |
 | `--duration` | float | Highlight duration in seconds (default: `5.0`) |
 | `--json`, `-j` | boolean | JSON output |
@@ -262,7 +266,7 @@ naturo highlight --app legacy --backend win32
 
 ## `naturo list`
 
-List apps, windows, screens, or permissions.
+List apps, windows, and screens.
 
 ### `naturo list apps`
 
@@ -306,8 +310,18 @@ List the menu bar structure of the foreground application.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--app` | text | Application name |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--flat` | boolean | Flatten menu tree into paths |
 | `--json`, `-j` | boolean | JSON output |
+
+**Examples:**
+
+```bash
+naturo menu-inspect                     # Foreground app
+naturo menu-inspect --app notepad       # Specific app
+naturo menu-inspect --flat              # Flat path list
+naturo menu-inspect --app notepad --json # JSON output
+```
 
 ## `naturo see`
 
@@ -334,7 +348,7 @@ Capture screenshot and analyze UI elements.
 | `--visible-only` | boolean | Hide offscreen/zero-bounds elements |
 | `--selectors` | boolean | Show unified selectors alongside eN refs (always included in JSON mode) |
 | `--json`, `-j` | boolean | JSON output |
-| `--backend`, `--method`, `-b`, `-m` | {uia, msaa, ia2, jab, win32, win32hybrid, auto, hybrid} | Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection) |
+| `--backend`, `--method`, `-b`, `-m` | {uia, msaa, ia2, jab, cdp, win32, win32hybrid, auto, hybrid} | Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content via DevTools), win32 (VB6/ActiveX), hybrid (per-node backend selection) |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 
 **Examples:**
@@ -376,7 +390,7 @@ Click on a UI element, text, or coordinates.
 | `--hwnd` | integer | Window handle (HWND) |
 | `--input-mode` | {normal, hardware, hook} | Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection) (default: `normal`) |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
-| `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
+| `--selector` | text | Unified selector to locate target element. URI: app://notepad.exe/Button[@name="Save"]. Short: //Edit[@name="Search"] (any app, descendant search). App names are flexible: chrome, chrome.exe, Chrome all match. |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--verify`, `--no-verify` | boolean | Verify action had effect (default: on). Use --no-verify to skip. |
 | `--see` | boolean | Capture and display updated UI tree after action |
@@ -384,7 +398,7 @@ Click on a UI element, text, or coordinates.
 | `--paste` | boolean | Paste clipboard after click (Ctrl+V) |
 | `--copy` | boolean | Select all + copy after click (Ctrl+A, Ctrl+C) |
 | `--cut` | boolean | Select all + cut after click (Ctrl+A, Ctrl+X) |
-| `--restore`, `--no-restore` | boolean | Restore clipboard after --paste (default: on) |
+| `--restore`, `--no-restore` | boolean | Restore clipboard after --paste (default: True) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -393,8 +407,8 @@ Click on a UI element, text, or coordinates.
 naturo click --coords 500 300
 naturo click --coords 500 300 --right
 naturo click --id "button_ok"
-naturo click e42 --paste                      # Click then paste
-naturo click e42 --copy                       # Click then select all + copy
+naturo click e42 --paste
+naturo click e42 --copy
 ```
 
 ## `naturo drag`
@@ -416,9 +430,11 @@ Drag from one element/position to another.
 | `--modifiers` | text | Modifier keys to hold (ctrl, shift, alt) |
 | `--profile` | {linear, ease-in-out} | Motion profile (default: `linear`) |
 | `--app` | text | Target application (name or partial match) |
+| `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -442,10 +458,12 @@ Move the mouse cursor to a target element or coordinates.
 | `--coords` | integer | Target X Y coordinates |
 | `--id` | text | Target element automation ID |
 | `--app` | text | Target application (name or partial match) |
+| `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
-| `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
+| `--selector` | text | Unified selector to locate target element. URI: app://notepad.exe/Button[@name="Save"]. Short: //Edit[@name="Search"] (any app, descendant search). App names are flexible: chrome, chrome.exe, Chrome all match. |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -477,9 +495,9 @@ Press keys — single keys, combos, or sequential key sequences.
 | `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
-| `--input-mode` | {normal, hardware, hook} | Input method (default: `normal`) |
+| `--input-mode` | {normal, hardware, hook} | Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection) (default: `normal`) |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
-| `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
+| `--selector` | text | Unified selector to locate target element. URI: app://notepad.exe/Button[@name="Save"]. Short: //Edit[@name="Search"] (any app, descendant search). App names are flexible: chrome, chrome.exe, Chrome all match. |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--verify`, `--no-verify` | boolean | Verify action had effect (default: on). Use --no-verify to skip. |
 | `--see` | boolean | Capture and display updated UI tree after action |
@@ -516,13 +534,15 @@ Scroll in a direction.
 | `--on` | text | Element text or eN ref to scroll on |
 | `--id` | text | Element ID to scroll on |
 | `--coords` | integer | Coordinates to scroll at |
-| `--smooth` | boolean | Smooth scrolling (Phase 3) |
+| `--smooth` | boolean | Smooth scrolling (planned) |
 | `--delay` | float | Delay between scroll steps (ms) |
 | `--app` | text | Target application (name or partial match) |
+| `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
-| `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
+| `--selector` | text | Unified selector to locate target element. URI: app://notepad.exe/Button[@name="Save"]. Short: //Edit[@name="Search"] (any app, descendant search). App names are flexible: chrome, chrome.exe, Chrome all match. |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--see` | boolean | Capture and display updated UI tree after action |
 | `--settle` | integer | Wait time in ms before re-snapshot (used with --see) (default: `300`) |
 | `--json`, `-j` | boolean | JSON output |
@@ -561,6 +581,7 @@ Set element value/state.
 | `--expand` | boolean | Expand a combo box or tree item (ExpandCollapsePattern) |
 | `--collapse` | boolean | Collapse a combo box or tree item (ExpandCollapsePattern) |
 | `--app` | text | Target application (name or partial match) |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
 | `--json`, `-j` | boolean | JSON output |
@@ -607,14 +628,14 @@ Type text with configurable speed and profile.
 | `--pid` | integer | Process ID |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
-| `--raw` | boolean | Disable escape sequence interpretation (type text literally) |
-| `--input-mode` | {normal, hardware, hook} | Input method: normal (SendInput), hardware (Phys32), hook (MinHook) (default: `normal`) |
+| `--input-mode` | {normal, hardware, hook} | Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection) (default: `normal`) |
 | `--method`, `-m` | {auto, cdp, uia, msaa, ia2, jab, vision} | Interaction method override: auto (default), cdp, uia, msaa, ia2, jab, vision. Bypasses auto-detection when set explicitly. |
-| `--selector` | text | Unified selector to locate target element. URI format: app://notepad.exe/Button[@name="Save"]. XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>. |
+| `--selector` | text | Unified selector to locate target element. URI: app://notepad.exe/Button[@name="Save"]. Short: //Edit[@name="Search"] (any app, descendant search). App names are flexible: chrome, chrome.exe, Chrome all match. |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--verify`, `--no-verify` | boolean | Verify action had effect (default: on). Use --no-verify to skip. |
 | `--see` | boolean | Capture and display updated UI tree after action |
 | `--settle` | integer | Wait time in ms before re-snapshot (used with --see) (default: `300`) |
+| `--raw` | boolean | Disable escape sequence interpretation (type text literally) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -629,7 +650,6 @@ naturo type --paste                        # paste current clipboard
 naturo type "hello" --on e42               # click e42 then type
 naturo type "hello" --on e42 --app feishu  # target app + element
 naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
-naturo type "C:\Users\test\report.txt" --raw  # literal backslashes (no escape)
 ```
 
 ---
@@ -980,6 +1000,7 @@ Accept (confirm) the active dialog.
 |------|------|-------------|
 | `--app` | text | Owner application name filter |
 | `--hwnd` | integer | Specific dialog window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -987,6 +1008,7 @@ Accept (confirm) the active dialog.
 ```bash
 naturo dialog accept                   # Accept first dialog
 naturo dialog accept --app notepad     # Accept notepad's dialog
+naturo dialog accept --app-id a1       # Accept by app ID
 naturo dialog accept --json            # JSON output
 ```
 
@@ -1006,14 +1028,15 @@ Click a specific button in the active dialog.
 |------|------|-------------|
 | `--app` | text | Owner application name filter |
 | `--hwnd` | integer | Specific dialog window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
-naturo dialog click-button "Save"         # Click Save
-naturo dialog click-button "Don't Save"   # Click Don't Save
-naturo dialog click-button "Retry"         # Click Retry
+naturo dialog click-button "Save"              # Click Save
+naturo dialog click-button "Don't Save"        # Click Don't Save
+naturo dialog click-button "Retry" --app-id a1 # By app ID
 ```
 
 ### `naturo dialog detect`
@@ -1026,6 +1049,7 @@ Detect active dialog windows.
 |------|------|-------------|
 | `--app` | text | Filter by owner application name |
 | `--hwnd` | integer | Filter by dialog window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -1033,6 +1057,7 @@ Detect active dialog windows.
 ```bash
 naturo dialog detect                   # List all dialogs
 naturo dialog detect --app notepad     # Filter by app
+naturo dialog detect --app-id a1       # Filter by app ID
 naturo dialog detect --json            # JSON output
 ```
 
@@ -1046,6 +1071,7 @@ Dismiss (cancel) the active dialog.
 |------|------|-------------|
 | `--app` | text | Owner application name filter |
 | `--hwnd` | integer | Specific dialog window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -1053,6 +1079,7 @@ Dismiss (cancel) the active dialog.
 ```bash
 naturo dialog dismiss                  # Dismiss first dialog
 naturo dialog dismiss --app notepad    # Dismiss notepad's dialog
+naturo dialog dismiss --app-id a1      # Dismiss by app ID
 naturo dialog dismiss --json           # JSON output
 ```
 
@@ -1073,14 +1100,15 @@ Type text into a dialog's input field.
 | `--accept` | boolean | Click OK/Accept after typing |
 | `--app` | text | Owner application name filter |
 | `--hwnd` | integer | Specific dialog window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
-naturo dialog type "hello.txt"            # Type filename
-naturo dialog type "hello.txt" --accept   # Type then click OK
-naturo dialog type "C:\Users" --app notepad
+naturo dialog type "hello.txt"                  # Type filename
+naturo dialog type "hello.txt" --accept         # Type then click OK
+naturo dialog type "C:\Users" --app-id a1       # By app ID
 ```
 
 ## `naturo diff`
@@ -1094,6 +1122,10 @@ Compare two UI element trees to detect changes.
 | `--snapshot` | text | Snapshot ID (specify twice) |
 | `--window` | text | Window to diff (captures before/after) |
 | `--interval` | float | Seconds between captures (with --window) (default: `2.0`) |
+| `--app` | text | Target application (name or partial match) |
+| `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -1121,6 +1153,10 @@ Wait for a duration, or for a UI element/window to appear or disappear.
 | `--gone` | text | Element selector to wait to disappear |
 | `--timeout` | float | Timeout in seconds (default: 10) |
 | `--interval` | float | Poll interval in seconds (default: 0.1) |
+| `--app` | text | Target application (name or partial match) |
+| `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -1132,66 +1168,6 @@ naturo wait 3                            # Sleep 3 seconds
 ---
 
 ## System
-
-## `naturo clipboard`
-
-Read, write, and manage clipboard contents. Supports text clipboard operations for AI agent data transfer between applications.
-
-**Examples:**
-
-```bash
-naturo clipboard get                    # Read clipboard text
-naturo clipboard set "hello world"      # Write text to clipboard
-naturo clipboard clear                  # Clear clipboard
-naturo clipboard info                   # Show format and size
-```
-
-### `naturo clipboard get`
-
-Read current clipboard content.
-
-**Options:**
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--format` | {text} | Output format (currently only text supported) (default: `text`) |
-| `--json`, `-j` | boolean | JSON output |
-
-### `naturo clipboard set`
-
-Write text to the clipboard.
-
-**Arguments:**
-
-| Name | Type | Required |
-|------|------|----------|
-| `TEXT` | text | yes |
-
-**Options:**
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--json`, `-j` | boolean | JSON output |
-
-### `naturo clipboard clear`
-
-Clear the clipboard contents.
-
-**Options:**
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--json`, `-j` | boolean | JSON output |
-
-### `naturo clipboard info`
-
-Show information about current clipboard contents. Reports data format, size, and available content types (text, image, files).
-
-**Options:**
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--json`, `-j` | boolean | JSON output |
 
 ## `naturo desktop`
 
@@ -1283,6 +1259,7 @@ Move a window to a different virtual desktop.
 |------|------|-------------|
 | `--app` | text | Application name (partial match) |
 | `--hwnd` | integer | Window handle |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -1290,8 +1267,8 @@ Move a window to a different virtual desktop.
 ```bash
 naturo desktop move-window 1 --app "Notepad"    # Move Notepad
 naturo desktop move-window 0 --hwnd 12345       # Move by handle
+naturo desktop move-window 1 --app-id a1        # Move by app ID
 naturo desktop move-window 2                    # Move foreground
-naturo desktop move-window 1 --app X --json     # JSON output
 ```
 
 ### `naturo desktop switch`
@@ -1428,6 +1405,93 @@ naturo tray list --json                # JSON output
 ---
 
 ## Tools
+
+## `naturo clipboard`
+
+Read, write, and manage clipboard contents.
+
+**Examples:**
+
+```bash
+naturo clipboard get                    # Read clipboard text
+naturo clipboard set "hello world"      # Write text to clipboard
+naturo clipboard clear                  # Clear clipboard contents
+naturo clipboard info                   # Show format and size
+```
+
+### `naturo clipboard clear`
+
+Clear the clipboard contents.
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
+
+**Examples:**
+
+```bash
+naturo clipboard clear                  # Clear clipboard
+```
+
+### `naturo clipboard get`
+
+Read current clipboard content.
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--format` | {text} | Output format (currently only text supported) (default: `text`) |
+| `--json`, `-j` | boolean | JSON output |
+
+**Examples:**
+
+```bash
+naturo clipboard get                    # Print clipboard text
+naturo clipboard get --json             # JSON output with metadata
+```
+
+### `naturo clipboard info`
+
+Show information about current clipboard contents.
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
+
+**Examples:**
+
+```bash
+naturo clipboard info                   # Show clipboard info
+naturo clipboard info --json            # JSON output
+```
+
+### `naturo clipboard set`
+
+Write text to the clipboard.
+
+**Arguments:**
+
+| Name | Type | Required |
+|------|------|----------|
+| `TEXT` | text | yes |
+
+**Options:**
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--json`, `-j` | boolean | JSON output |
+
+**Examples:**
+
+```bash
+naturo clipboard set "hello world"      # Set clipboard text
+naturo clipboard set "line1\nline2"     # Multi-line text
+```
 
 ## `naturo config`
 
