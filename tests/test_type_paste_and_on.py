@@ -356,6 +356,43 @@ class TestTypeEscapeSequences:
         # Clipboard should receive the processed text with real tab
         mock_backend.clipboard_set.assert_called_once_with("A\tB")
 
+    @_win_only
+    def test_type_raw_disables_escape_interpretation(self, runner):
+        """#619: --raw flag types text literally without escape processing."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [
+                r"C:\Users\test\report.txt", "--raw", "--json", "--no-verify",
+            ])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        # With --raw, backslash sequences should NOT be interpreted
+        assert typed_text == r"C:\Users\test\report.txt"
+        assert "\t" not in typed_text
+        assert "\r" not in typed_text
+
+    @_win_only
+    def test_type_without_raw_still_interprets_escapes(self, runner):
+        """Without --raw, escape sequences are still interpreted as before."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == "A\tB"  # \t still becomes real tab
+
 
 class TestTypeNewlineBypassesUIA:
     """When text contains \\n or \\r, type must bypass UIA SetValue (#563).
