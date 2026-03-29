@@ -362,13 +362,19 @@ class TestToolFunctionsWithMockedBackend:
             assert len(data["apps"]) == 1
 
     def test_launch_app(self, mock_backend):
-        """launch_app calls backend."""
-        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+        """launch_app returns PID and process info (#575)."""
+        from naturo.process import ProcessInfo
+
+        mock_info = ProcessInfo(pid=12345, name="notepad", path="C:\\Windows\\notepad.exe", is_running=True, window_count=1)
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend), \
+             patch("naturo.mcp_server._launch_app", return_value=mock_info) as mock_launch:
             srv = create_server()
             result = self._call_tool(srv, "launch_app", {"name": "notepad"})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.launch_app.assert_called_once_with(name="notepad")
+            assert data["pid"] == 12345
+            assert data["name"] == "notepad"
+            mock_launch.assert_called_once_with(name="notepad")
 
     def test_quit_app(self, mock_backend):
         """quit_app calls backend."""
