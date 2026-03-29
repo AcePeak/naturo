@@ -253,18 +253,19 @@ def _fetch_cdp_elements(
 
     try:
         client = CDPClient(port=debug_port)
-        # Fetch interactive elements using DOM.querySelectorAll
-        # This is a best-effort list of common interactive selectors
-        SELECTOR = (
-            "button, input, textarea, select, a[href], "
-            "[role='button'], [role='checkbox'], [role='combobox'], "
-            "[role='menuitem'], [role='option'], [role='tab'], "
-            "[role='textbox'], [role='link'], [onclick], "
-            "[tabindex]:not([tabindex='-1'])"
-        )
-        dom_elements = client.query_selector_all(SELECTOR)
+        client.connect()
+        try:
+            dom_elements = client.get_interactive_elements()
+        finally:
+            client.close()
+
         elements: List[ElementInfo] = []
         px, py = parent_bounds[0], parent_bounds[1]
+
+        _ROLE_MAP = {
+            "button": "Button", "input": "Edit", "a": "Link",
+            "textarea": "Edit", "select": "ComboBox",
+        }
 
         for dom_el in dom_elements:
             bounds = dom_el.get("bounds", {})
@@ -273,24 +274,29 @@ def _fetch_cdp_elements(
             ew = int(bounds.get("width", 0))
             eh = int(bounds.get("height", 0))
 
-            if ew == 0 or eh == 0:
-                continue  # Invisible element
+            if ew <= 0 or eh <= 0:
+                continue
 
-            tag = dom_el.get("tagName", "").lower()
-            role_map = {"button": "Button", "input": "Edit", "a": "Link",
-                        "textarea": "Edit", "select": "ComboBox"}
-            aria_role = dom_el.get("ariaRole", "")
-            role = aria_role.capitalize() or role_map.get(tag, "Text")
+            tag = dom_el.get("tagName", "")
+            raw_role = dom_el.get("role", "")
+            role = raw_role.capitalize() if raw_role else _ROLE_MAP.get(tag, "Text")
+            name = dom_el.get("name", "")
+            css_selector = dom_el.get("selector", "")
 
-            el_id = f"cdp_{dom_el.get('nodeId', id(dom_el))}"
+            el_id = f"cdp_{dom_el.get('nodeIndex', id(dom_el))}"
             elements.append(ElementInfo(
                 id=el_id,
                 role=role,
-                name=dom_el.get("ariaLabel") or dom_el.get("textContent", "")[:80],
+                name=name,
                 value=dom_el.get("value"),
                 x=ex, y=ey, width=ew, height=eh,
                 children=[],
-                properties={"source": "cdp", "tag": tag, "parent_id": None},
+                properties={
+                    "source": "cdp",
+                    "tag": tag,
+                    "css_selector": css_selector,
+                    "parent_id": None,
+                },
             ))
 
         return elements
@@ -639,19 +645,11 @@ def _try_cdp_for_hwnd(
     Returns:
         List of tagged CDP elements, or empty list.
     """
-    if pid is None:
-        return []
-
-    try:
-        from naturo.electron import get_debug_port
-        debug_port = get_debug_port(pid)
-    except Exception:
-        return []
-
+    debug_port = find_cdp_port(pid)
     if not debug_port:
         return []
 
-    elements = _fetch_cdp_elements(pid, debug_port, bounds)
+    elements = _fetch_cdp_elements(pid or 0, debug_port, bounds)
     return [_tag_source(el, "cdp") for el in elements]
 
 
@@ -695,6 +693,184 @@ def _try_backend_for_hwnd(
     return tagged.children
 
 
+# ── CDP port discovery ───────────────────────────────────────────────────────
+
+
+def find_cdp_port(pid: Optional[int] = None) -> Optional[int]:
+    """Find an active CDP debug port for a process or on common ports.
+
+    Checks the process command line for ``--remote-debugging-port=<N>``,
+    then falls back to probing common ports (9222, 9229, 9333).
+
+    Args:
+        pid: Process ID to check.  When ``None``, only probes common ports.
+
+    Returns:
+        Port number if a CDP endpoint responds, ``None`` otherwise.
+    """
+    import platform
+
+    # Phase 1: check process command line (Windows only)
+    if pid is not None and platform.system() == "Windows":
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["wmic", "process", "where", f"ProcessId={pid}",
+                 "get", "CommandLine", "/format:list"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    if "--remote-debugging-port=" in line:
+                        for part in line.split():
+                            if part.startswith("--remote-debugging-port="):
+                                port_str = part.split("=", 1)[1]
+                                return int(port_str)
+        except Exception as exc:
+            logger.debug("Failed to get command line for PID %d: %s", pid, exc)
+
+    # Phase 2: probe common debug ports via HTTP
+    for port in [9222, 9229, 9333]:
+        try:
+            import urllib.request
+            import urllib.error
+
+            url = f"http://127.0.0.1:{port}/json/version"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                if resp.status == 200:
+                    return port
+        except Exception:
+            pass
+
+    return None
+
+
+# ── CDP-only mode ────────────────────────────────────────────────────────────
+
+
+def _run_cdp_only(
+    backend,
+    *,
+    app: Optional[str] = None,
+    window_title: Optional[str] = None,
+    hwnd: Optional[int] = None,
+    pid: Optional[int] = None,
+    depth: int = 3,
+) -> CascadeResult:
+    """Run CDP as the primary provider, with UIA for window chrome.
+
+    Used when ``--backend cdp`` is specified explicitly.  Fetches web
+    content via CDP and optionally enriches with UIA for non-web UI
+    (address bar, tabs, toolbars).
+
+    Args:
+        backend: Platform backend instance.
+        app: Target application name.
+        window_title: Window title filter.
+        hwnd: Window handle.
+        pid: Process ID.
+        depth: Max tree depth for UIA fallback.
+
+    Returns:
+        CascadeResult with CDP elements (and optional UIA chrome).
+    """
+    stats = CascadeStats()
+
+    # Resolve PID if only app name given
+    resolved_pid = pid
+    if resolved_pid is None and app is not None:
+        try:
+            from naturo.process import find_process
+            proc = find_process(name=app)
+            if proc is not None:
+                resolved_pid = proc.pid
+        except Exception:
+            pass
+
+    # Find CDP port
+    debug_port = find_cdp_port(resolved_pid)
+
+    if debug_port is None:
+        logger.warning(
+            "CDP: No debug port found. Start Chrome/Electron with "
+            "--remote-debugging-port=9222 to enable CDP."
+        )
+        stats.providers.append(ProviderStat(
+            name="cdp", status="error",
+        ))
+        return CascadeResult(tree=None, stats=stats, primary_provider="cdp")
+
+    # Get UIA tree first for window structure (address bar, tabs, etc.)
+    t0 = time.monotonic()
+    root_tree: Optional[ElementInfo] = None
+    try:
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            depth=depth, backend="uia",
+        )
+        if tree is not None:
+            root_tree = _tag_source(tree, "uia")
+    except Exception as exc:
+        logger.debug("CDP mode: UIA tree failed (non-fatal): %s", exc)
+    uia_elapsed = (time.monotonic() - t0) * 1000
+
+    if root_tree is not None:
+        uia_flat = _flatten(root_tree)
+        stats.providers.append(ProviderStat(
+            name="uia", elements=len(uia_flat),
+            elapsed_ms=uia_elapsed, status="ok",
+        ))
+
+    # Fetch CDP elements
+    t0 = time.monotonic()
+    bounds = (
+        (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+        if root_tree is not None
+        else (0, 0, 1920, 1080)
+    )
+    cdp_elements = _fetch_cdp_elements(resolved_pid or 0, debug_port, bounds)
+    cdp_elapsed = (time.monotonic() - t0) * 1000
+
+    if cdp_elements:
+        stats.providers.append(ProviderStat(
+            name="cdp", elements=len(cdp_elements),
+            elapsed_ms=cdp_elapsed, status="ok",
+        ))
+        # Merge CDP elements into root tree (or create a synthetic root)
+        if root_tree is not None:
+            for el in cdp_elements:
+                root_tree.children.append(_tag_source(el, "cdp"))
+        else:
+            root_tree = ElementInfo(
+                id="root",
+                role="Window",
+                name=app or window_title or "Browser",
+                value=None,
+                x=bounds[0], y=bounds[1],
+                width=bounds[2], height=bounds[3],
+                children=[_tag_source(el, "cdp") for el in cdp_elements],
+                properties={"source": "cdp"},
+            )
+    else:
+        stats.providers.append(ProviderStat(
+            name="cdp", elapsed_ms=cdp_elapsed, status="no_elements",
+        ))
+
+    # Final stats
+    if root_tree is not None:
+        all_flat = _flatten(root_tree)
+        stats.total_elements = len(all_flat)
+        window_area = _window_area(root_tree)
+        if window_area > 0:
+            stats.coverage_estimate = _estimate_coverage(all_flat[1:], window_area)
+
+    return CascadeResult(
+        tree=root_tree, stats=stats, primary_provider="cdp",
+    )
+
+
 # ── Main cascade entry point ──────────────────────────────────────────────────
 
 
@@ -729,8 +905,11 @@ def run_cascade(
     depth:
         Maximum tree depth for UIA/MSAA probes.
     backend_name:
-        Base accessibility backend: ``"uia"`` | ``"msaa"`` | ``"ia2"`` | ``"jab"`` | ``"auto"``.
+        Base accessibility backend: ``"uia"`` | ``"msaa"`` | ``"ia2"`` | ``"jab"`` |
+        ``"cdp"`` | ``"auto"`` | ``"hybrid"``.
         When ``"auto"``, each provider is tried in cascade order.
+        When ``"cdp"``, uses Chrome DevTools Protocol directly (browser must
+        have ``--remote-debugging-port`` enabled).
     coverage_target:
         When >0, also run CDP if UIA coverage < this threshold (0.0–1.0).
         Ignored when ``backend_name`` is ``"auto"`` (always cascades).
@@ -772,6 +951,13 @@ def run_cascade(
             tree=tree,
             stats=stats,
             primary_provider="hybrid",
+        )
+
+    # ── CDP-only mode: explicit --backend cdp ────────────────────────────
+    if backend_name == "cdp":
+        return _run_cdp_only(
+            backend, app=app, window_title=window_title,
+            hwnd=hwnd, pid=pid, depth=depth,
         )
 
     stats = CascadeStats()
@@ -852,16 +1038,17 @@ def run_cascade(
             debug_port: Optional[int] = None
 
             try:
-                # Try to detect CDP debug port for this app
-                from naturo.electron import get_debug_port
-                if pid:
-                    debug_port = get_debug_port(pid)
-                elif app:
-                    # Resolve app to PID
-                    from naturo.process import find_processes
-                    procs = find_processes(app)
-                    if procs:
-                        debug_port = get_debug_port(procs[0].pid)
+                # Try Electron-specific detection first, then generic CDP
+                try:
+                    from naturo.electron import get_debug_port as _electron_port
+                    if app:
+                        debug_port = _electron_port(app)
+                except Exception:
+                    pass
+
+                # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
+                if debug_port is None:
+                    debug_port = find_cdp_port(pid)
             except Exception as exc:
                 logger.debug("CDP port detection failed: %s", exc)
 

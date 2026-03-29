@@ -595,9 +595,9 @@ def permissions(json_output):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "win32hybrid", "auto", "hybrid"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
     default="auto",
-    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
+    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content via DevTools), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
@@ -615,6 +615,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
     don't expose UIAutomation elements. Use --backend ia2 for IA2-enabled
     applications (Firefox, Thunderbird, LibreOffice). Use --backend auto to
     try UIA first, then IA2, then MSAA automatically.
+
+    Use --backend cdp for Chrome/Electron apps with DevTools Protocol enabled.
+    The browser must be started with --remote-debugging-port=9222.
 
     Use --backend hybrid for per-node backend selection — each node in the
     tree picks the optimal backend based on its Win32 class (Electron→CDP,
@@ -1105,9 +1108,9 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
-    type=click.Choice(["uia", "msaa", "ia2", "jab", "win32", "win32hybrid", "auto", "hybrid"]),
+    type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
     default="auto",
-    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
+    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
 @click.option("--provider", "ai_provider",
               type=click.Choice(["auto", "anthropic", "openai", "ollama"]),

@@ -563,6 +563,89 @@ class CDPClient:
         """
         return self.evaluate("window.location.href") or ""
 
+    def get_interactive_elements(
+        self,
+        selector: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Get interactive DOM elements with bounding boxes and metadata.
+
+        Evaluates JavaScript in the page to collect all interactive elements
+        (buttons, inputs, links, etc.) along with their bounding rectangles,
+        ARIA roles, labels, and tag names.
+
+        Args:
+            selector: Optional CSS selector override.  When ``None``, uses a
+                built-in selector that captures common interactive elements.
+
+        Returns:
+            List of dicts, each with keys:
+                - ``tagName`` (str): Lowercase HTML tag.
+                - ``role`` (str): ARIA role or inferred role.
+                - ``name`` (str): Accessible name (aria-label, title, text).
+                - ``value`` (str | None): Form element value.
+                - ``bounds`` (dict): ``{x, y, width, height}`` in viewport px.
+                - ``selector`` (str): CSS selector for re-targeting.
+                - ``nodeIndex`` (int): Ordinal index in the result set.
+
+        Raises:
+            CDPError: If not connected or evaluation fails.
+        """
+        if selector is None:
+            selector = (
+                "button, input, textarea, select, a[href], "
+                "[role='button'], [role='checkbox'], [role='combobox'], "
+                "[role='menuitem'], [role='option'], [role='tab'], "
+                "[role='textbox'], [role='link'], [onclick], "
+                "[tabindex]:not([tabindex='-1'])"
+            )
+
+        js = f"""
+        (() => {{
+            const sel = {json.dumps(selector)};
+            const els = Array.from(document.querySelectorAll(sel));
+            const seen = new Set();
+            const results = [];
+            for (let i = 0; i < els.length; i++) {{
+                const el = els[i];
+                if (seen.has(el)) continue;
+                seen.add(el);
+                const rect = el.getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) continue;
+                const tag = el.tagName.toLowerCase();
+                const ariaRole = el.getAttribute('role') || '';
+                const ariaLabel = el.getAttribute('aria-label') || '';
+                const title = el.getAttribute('title') || '';
+                const text = (el.innerText || '').trim().substring(0, 80);
+                const name = ariaLabel || title || el.getAttribute('alt') || text;
+                const value = ('value' in el) ? (el.value || null) : null;
+                results.push({{
+                    tagName: tag,
+                    role: ariaRole || tag,
+                    name: name,
+                    value: value,
+                    bounds: {{
+                        x: Math.round(rect.x),
+                        y: Math.round(rect.y),
+                        width: Math.round(rect.width),
+                        height: Math.round(rect.height),
+                    }},
+                    selector: tag + (el.id ? '#' + el.id : '') +
+                              (el.className && typeof el.className === 'string'
+                               ? '.' + el.className.trim().split(/\\s+/).join('.')
+                               : ''),
+                    nodeIndex: i,
+                }});
+            }}
+            return results;
+        }})()
+        """
+        result = self.evaluate(js)
+        if result is None:
+            return []
+        if not isinstance(result, list):
+            return []
+        return result
+
     def wait_for_selector(
         self,
         selector: str,
