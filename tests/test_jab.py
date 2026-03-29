@@ -159,8 +159,8 @@ class TestJABMCP:
         """MCP server source code accepts 'jab' as valid accessibility_backend."""
         import os
 
-        mcp_path = os.path.join(os.path.dirname(__file__), "..", "naturo", "mcp_server.py")
-        with open(mcp_path, "r", encoding="utf-8") as f:
+        inspect_path = os.path.join(os.path.dirname(__file__), "..", "naturo", "mcp", "_inspect.py")
+        with open(inspect_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # The validation line should include 'jab'

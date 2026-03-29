@@ -327,11 +327,11 @@ class TestMCPIA2Support:
 
     def test_mcp_server_allows_ia2_backend(self):
         """MCP see_ui_tree validates ia2 as valid accessibility_backend."""
-        mcp_path = os.path.join(
+        inspect_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "naturo", "mcp_server.py"
+            "naturo", "mcp", "_inspect.py"
         )
-        with open(mcp_path, encoding="utf-8") as f:
+        with open(inspect_path, encoding="utf-8") as f:
             content = f.read()
         assert '"ia2"' in content
         assert "ia2" in content

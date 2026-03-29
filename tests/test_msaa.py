@@ -272,10 +272,10 @@ class TestMCPSeeUITreeMSAA:
         from naturo.mcp_server import create_server
         import inspect
 
-        # Check the function in the module
+        # Check the function in the inspect module
         with open(
             os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                         "naturo", "mcp_server.py"),
+                         "naturo", "mcp", "_inspect.py"),
             encoding="utf-8",
         ) as f:
             content = f.read()
