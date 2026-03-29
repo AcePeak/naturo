@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
     relaunch_app, list_apps, _list_processes, _verify_quit,
+    _close_all_windows_for_app,
     _get_console_session_id, _get_process_session_id,
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
 )
@@ -620,6 +621,170 @@ class TestResolvePidFromBackend:
         quit_app(name="notepad", force=True)
         mock_resolve.assert_called_once_with("notepad")
         mock_kill.assert_called_once_with(36328, "Windows")
+
+
+class TestCloseAllWindowsForApp:
+    """Tests for WM_CLOSE-based window close (#586)."""
+
+    @patch("naturo.backends.base.get_backend")
+    def test_closes_all_matching_windows(self, mock_get_backend):
+        """All windows matching the app name get WM_CLOSE."""
+        w1 = MagicMock(process_name="C:\\Windows\\Notepad.exe",
+                        title="Tab 1 - Notepad", pid=100, handle=0x1001)
+        w2 = MagicMock(process_name="C:\\Windows\\Notepad.exe",
+                        title="Tab 2 - Notepad", pid=100, handle=0x1002)
+        w3 = MagicMock(process_name="C:\\Windows\\explorer.exe",
+                        title="File Explorer", pid=200, handle=0x2001)
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [w1, w2, w3]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        assert mock_be.close_window.call_count == 2
+        mock_be.close_window.assert_any_call(hwnd=0x1001)
+        mock_be.close_window.assert_any_call(hwnd=0x1002)
+        assert pids == [100]
+
+    @patch("naturo.backends.base.get_backend")
+    def test_returns_multiple_pids_for_multi_process_app(self, mock_get_backend):
+        """UWP apps may have windows under different PIDs."""
+        w1 = MagicMock(process_name="Notepad.exe",
+                        title="Tab 1", pid=100, handle=0x1001)
+        w2 = MagicMock(process_name="Notepad.exe",
+                        title="Tab 2", pid=101, handle=0x1002)
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [w1, w2]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        assert set(pids) == {100, 101}
+        assert mock_be.close_window.call_count == 2
+
+    @patch("naturo.backends.base.get_backend")
+    def test_no_match_returns_empty(self, mock_get_backend):
+        """Returns empty list when no windows match."""
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = []
+        mock_get_backend.return_value = mock_be
+
+        assert _close_all_windows_for_app("notepad") == []
+
+    @patch("naturo.backends.base.get_backend")
+    def test_backend_failure_returns_empty(self, mock_get_backend):
+        """Gracefully returns empty on backend error."""
+        mock_get_backend.side_effect = Exception("No backend")
+        assert _close_all_windows_for_app("notepad") == []
+
+    @patch("naturo.backends.base.get_backend")
+    def test_matches_by_title(self, mock_get_backend):
+        """Matches windows by title when process name doesn't match."""
+        w1 = MagicMock(process_name="ApplicationFrameHost.exe",
+                        title="Untitled - Notepad", pid=100, handle=0x1001)
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [w1]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        assert pids == [100]
+        mock_be.close_window.assert_called_once_with(hwnd=0x1001)
+
+    @patch("naturo.backends.base.get_backend")
+    def test_individual_close_failure_continues(self, mock_get_backend):
+        """If one window fails to close, others still get closed."""
+        w1 = MagicMock(process_name="Notepad.exe",
+                        title="Tab 1", pid=100, handle=0x1001)
+        w2 = MagicMock(process_name="Notepad.exe",
+                        title="Tab 2", pid=100, handle=0x1002)
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [w1, w2]
+        mock_be.close_window.side_effect = [Exception("Failed"), None]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        assert mock_be.close_window.call_count == 2
+        # Second call succeeded, so PID should still be in the list
+        assert 100 in pids
+
+
+class TestQuitAppWindowClose:
+    """Tests for quit_app using WM_CLOSE instead of taskkill (#586)."""
+
+    @patch("naturo.process._verify_quit")
+    @patch("naturo.process._close_all_windows_for_app")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process._resolve_pid_from_backend")
+    @patch("naturo.process.platform")
+    def test_graceful_quit_uses_wm_close_on_windows(
+        self, mock_platform, mock_resolve, mock_find, mock_close_all, mock_verify,
+    ):
+        """Graceful quit on Windows sends WM_CLOSE to all windows (#586)."""
+        mock_platform.system.return_value = "Windows"
+        mock_resolve.return_value = 100
+        mock_find.side_effect = [
+            ProcessInfo(pid=100, name="notepad.exe"),  # initial find
+            None,  # all PIDs dead check
+        ]
+        mock_close_all.return_value = [100]
+        mock_verify.return_value = None
+
+        quit_app(name="notepad", timeout=0.1)
+
+        mock_close_all.assert_called_once_with("notepad")
+
+    @patch("naturo.process._verify_quit")
+    @patch("naturo.process._close_all_windows_for_app")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process._resolve_pid_from_backend")
+    @patch("naturo.process.platform")
+    @patch("naturo.process.subprocess")
+    def test_falls_back_to_taskkill_when_no_windows(
+        self, mock_subprocess, mock_platform, mock_resolve, mock_find,
+        mock_close_all, mock_verify,
+    ):
+        """Falls back to taskkill when backend finds no windows."""
+        mock_platform.system.return_value = "Windows"
+        mock_resolve.return_value = 100
+        mock_find.side_effect = [
+            ProcessInfo(pid=100, name="notepad.exe"),  # initial find
+            None,  # PID dead check
+        ]
+        mock_close_all.return_value = []  # No windows found
+        mock_verify.return_value = None
+
+        quit_app(name="notepad", timeout=0.1)
+
+        mock_close_all.assert_called_once()
+        mock_subprocess.run.assert_called_once()
+
+    @patch("naturo.process._verify_quit")
+    @patch("naturo.process._force_kill")
+    @patch("naturo.process._close_all_windows_for_app")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process._resolve_pid_from_backend")
+    @patch("naturo.process.platform")
+    def test_force_kills_surviving_pids_after_timeout(
+        self, mock_platform, mock_resolve, mock_find, mock_close_all,
+        mock_kill, mock_verify,
+    ):
+        """PIDs surviving after WM_CLOSE timeout get force-killed."""
+        mock_platform.system.return_value = "Windows"
+        mock_resolve.return_value = 100
+        # find_process: initial find returns proc, then always returns proc (still alive)
+        mock_find.return_value = ProcessInfo(pid=100, name="notepad.exe")
+        mock_close_all.return_value = [100]
+        mock_verify.return_value = None
+
+        quit_app(name="notepad", timeout=0.1)
+
+        mock_kill.assert_called_once_with(100, "Windows")
 
 
 class TestRelaunchApp:

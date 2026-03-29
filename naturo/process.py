@@ -482,6 +482,44 @@ def _resolve_pid_from_backend(name: str) -> int | None:
     return None
 
 
+def _close_all_windows_for_app(name: str) -> list[int]:
+    """Close all windows belonging to an app by sending WM_CLOSE (#586).
+
+    Uses the backend to enumerate windows and send WM_CLOSE to each one
+    matching the app name.  WM_CLOSE triggers a proper graceful close that
+    does not activate Windows session restore (unlike ``taskkill /F``).
+
+    Args:
+        name: Application name (fuzzy-matched against process names and titles).
+
+    Returns:
+        List of PIDs that had windows closed.
+    """
+    try:
+        from naturo.backends.base import get_backend
+
+        be = get_backend()
+        windows = be.list_windows()
+    except Exception:
+        logger.debug("Backend unavailable for window-based close of %r", name)
+        return []
+
+    name_lower = name.lower()
+    closed_pids: list[int] = []
+
+    for w in windows:
+        proc_name = os.path.basename(w.process_name).lower()
+        if name_lower in proc_name or name_lower in w.title.lower():
+            try:
+                be.close_window(hwnd=w.handle)
+                if w.pid not in closed_pids:
+                    closed_pids.append(w.pid)
+            except Exception:
+                logger.debug("Failed to close window hwnd=%s for %r", w.handle, name)
+
+    return closed_pids
+
+
 def quit_app(
     name: str | None = None,
     pid: int | None = None,
@@ -518,27 +556,38 @@ def quit_app(
     if force:
         _force_kill(target_pid, system)
     else:
-        # Graceful shutdown
-        try:
-            if system == "Windows":
-                subprocess.run(
-                    ["taskkill", "/PID", str(target_pid)],
-                    capture_output=True, timeout=timeout,
-                )
-            else:
-                os.kill(target_pid, signal.SIGTERM)
-        except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-            pass
+        # Graceful shutdown: send WM_CLOSE to all matching windows (#586).
+        # This avoids taskkill /F which triggers Windows session restore
+        # for UWP apps like Notepad, causing closed tabs to respawn.
+        closed_pids: list[int] = []
+        if system == "Windows" and name:
+            closed_pids = _close_all_windows_for_app(name)
 
-        # Wait for exit
+        if not closed_pids:
+            # Fallback: no windows found via backend, use taskkill
+            try:
+                if system == "Windows":
+                    subprocess.run(
+                        ["taskkill", "/PID", str(target_pid)],
+                        capture_output=True, timeout=timeout,
+                    )
+                else:
+                    os.kill(target_pid, signal.SIGTERM)
+            except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
+                pass
+
+        # Wait for exit — check all PIDs that had windows closed
+        pids_to_check = set(closed_pids) | {target_pid}
         start = time.monotonic()
         while time.monotonic() - start < timeout:
-            if find_process(pid=target_pid) is None:
+            if all(find_process(pid=p) is None for p in pids_to_check):
                 break
             time.sleep(0.3)
         else:
             # Still alive after timeout — force kill as fallback
-            _force_kill(target_pid, system)
+            for p in pids_to_check:
+                if find_process(pid=p) is not None:
+                    _force_kill(p, system)
 
     # Always verify the process is actually dead (#496, #484).
     # Check both the target PID and the app name to catch respawns.
