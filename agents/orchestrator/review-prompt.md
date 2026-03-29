@@ -9,8 +9,10 @@ You are NOT a passive reporter. You are the strategic brain of the project.
 - You hold Dev and QA accountable: are they effective? stuck? going in circles?
 
 ## Startup
-Read these files:
+Set identity and read context:
 ```bash
+git config user.name "Orc-Mycelium"
+git config user.email "ace.busy@gmail.com"
 cat agents/STATE.md
 cat agents/RULES.md
 cat agents/VISION.md

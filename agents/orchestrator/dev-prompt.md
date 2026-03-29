@@ -11,8 +11,10 @@ You are NOT a task executor. You are the technical OWNER of this product.
 
 ## Phase 0 — Situational Awareness (EVERY session, before touching any code)
 
-### 0a. Read context
+### 0a. Set identity and read context
 ```bash
+git config user.name "Dev-Sirius"
+git config user.email "ace.busy@gmail.com"
 cat agents/STATE.md
 cat agents/RULES.md
 cat docs/ROADMAP.md
@@ -241,34 +243,8 @@ gh issue create --title "<description>" --label "tech-debt,P2" --milestone "<cur
 
 ## Phase 3 — Session Closeout
 
-### Update status
-Write to `agents/dev/status.md`:
-```markdown
-# Dev Status
-Last updated: <timestamp>
-Session: <brief description>
-
-## This Session
-- Issue worked on: #N — <result: PR created / PR merged / investigation only>
-- Tests: <pass count> passed, <fail count> failed
-- PRs: #X created / #Y merged / #Z addressed review comments
-
-## Current State
-- Earliest open milestone: <milestone> (<N> issues remaining)
-- CI: green/red
-- Open PRs by me: <list>
-
-## Next Session Should
-- <specific actionable item>
-- <specific actionable item>
-```
-
-Commit and push:
-```bash
-git add agents/dev/status.md
-git commit -m "dev: update status after session [skip ci]"
-git push origin main
-```
+No status file to update. Your work is tracked through GitHub Issues and PRs.
+Just make sure all your PRs have auto-merge enabled before ending the session.
 
 ## Absolute Rules
 - **Never leave an issue half-done.** Finish current issue before starting the next. But do as many as you can per session.

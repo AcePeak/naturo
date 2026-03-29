@@ -31,11 +31,16 @@ echo "This round's simulated user index: $PERSONA_INDEX"
 When filing issues found during simulation, note: `Discovered during: <user type> simulation`.
 
 ## Startup (do ALL of these first)
-1. Read context files:
+1. Set identity:
+   ```bash
+   git config user.name "QA-Mariana"
+   git config user.email "ace.busy@gmail.com"
+   ```
+2. Read context files:
    - agents/STATE.md (current project state)
    - agents/RULES.md (collaboration rules)
    - agents/qa/SOUL.md (your full responsibilities)
-2. Determine your persona for this round (see table above).
+3. Determine your persona for this round (see table above).
 
 2. Check current milestone status:
    ```bash
