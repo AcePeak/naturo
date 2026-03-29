@@ -142,6 +142,7 @@ module = [
     "naturo.verify",
     "naturo.process",
     "naturo.mcp_server",
+    "naturo.mcp.*",
     "naturo.agent",
     "naturo.models.snapshot",
 ]
