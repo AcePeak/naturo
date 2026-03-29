@@ -70,7 +70,7 @@ class TestClickAppValidation:
     """Verify --app is validated even when eN ref resolves from cache (#533)."""
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_nonexistent_app_with_en_ref_errors(
         self, mock_get_backend, mock_get_mgr
     ):
@@ -95,7 +95,7 @@ class TestClickAppValidation:
         assert "No windows found" in (result.output or "")
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_nonexistent_app_with_en_ref_json_errors(
         self, mock_get_backend, mock_get_mgr
     ):
@@ -120,7 +120,7 @@ class TestClickAppValidation:
         assert "WINDOW_NOT_FOUND" in (result.output or "")
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_valid_app_with_en_ref_succeeds(
         self, mock_get_backend, mock_get_mgr
     ):
@@ -145,7 +145,7 @@ class TestClickAppValidation:
         assert "No windows found" not in (result.output or "")
 
     @patch("naturo.snapshot.get_snapshot_manager")
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_en_ref_without_app_flag_still_works(
         self, mock_get_backend, mock_get_mgr
     ):

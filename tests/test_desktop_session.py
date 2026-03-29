@@ -21,7 +21,7 @@ from naturo.cli.interaction import (
 from naturo.errors import NoDesktopSessionError
 
 # Shorthand for patching the WTS interactive check used when SESSIONNAME is empty.
-_PATCH_WTS = "naturo.cli.interaction._is_current_session_interactive"
+_PATCH_WTS = "naturo.cli.interaction._common._is_current_session_interactive"
 
 
 class TestCheckDesktopSession:

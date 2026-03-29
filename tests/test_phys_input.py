@@ -233,7 +233,7 @@ class TestCLIInputMode:
         from click.testing import CliRunner
         self.runner = CliRunner()
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_type_hardware_mode(self, mock_get_backend):
         """naturo type --input-mode hardware should call type_text with hardware."""
         mock_backend = MagicMock()
@@ -247,7 +247,7 @@ class TestCLIInputMode:
         assert call_kwargs[1].get("input_mode") == "hardware" or \
                (len(call_kwargs[0]) > 0 and "hardware" in str(call_kwargs))
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_press_hardware_mode(self, mock_get_backend):
         """naturo press --input-mode hardware should call press_key with hardware."""
         mock_backend = MagicMock()
@@ -260,7 +260,7 @@ class TestCLIInputMode:
             "enter", input_mode="hardware"
         )
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_hotkey_hardware_mode(self, mock_get_backend):
         """naturo hotkey --input-mode hardware should call hotkey with hardware."""
         mock_backend = MagicMock()
@@ -273,7 +273,7 @@ class TestCLIInputMode:
         call_kwargs = mock_backend.hotkey.call_args
         assert call_kwargs[1].get("input_mode") == "hardware"
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_type_normal_mode_default(self, mock_get_backend):
         """naturo type without --input-mode should default to normal."""
         mock_backend = MagicMock()
@@ -286,7 +286,7 @@ class TestCLIInputMode:
         call_kwargs = mock_backend.type_text.call_args
         assert call_kwargs[1].get("input_mode") == "normal"
 
-    @patch("naturo.cli.interaction._get_backend")
+    @patch("naturo.cli.interaction._common._get_backend")
     def test_click_hardware_mode(self, mock_get_backend):
         """naturo click --input-mode hardware should pass to backend."""
         mock_backend = MagicMock()
