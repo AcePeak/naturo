@@ -1111,8 +1111,19 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         time.sleep(0.1)  # Brief settle after click
         try:
             if paste_after:
+                # Save clipboard for restore if --restore is on
+                _old_clip = ""
+                if restore:
+                    try:
+                        _old_clip = backend.clipboard_get()
+                    except Exception:
+                        pass
                 backend.hotkey("ctrl", "v")
                 _clipboard_action = "paste"
+                # Restore previous clipboard content
+                if restore and _old_clip:
+                    time.sleep(0.1)
+                    backend.clipboard_set(_old_clip)
             elif copy_after:
                 backend.hotkey("ctrl", "a")
                 time.sleep(0.05)

@@ -356,6 +356,30 @@ class TestClickClipboardModifiers:
         inner = data.get("data", data)
         assert inner.get("clipboard_action") == "copy"
 
+    def test_click_paste_restore_saves_and_restores_clipboard(self, runner, mock_backend):
+        """click --paste --restore saves and restores clipboard content."""
+        mock_backend.clipboard_get.return_value = "original content"
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--paste", "--restore", "--no-verify",
+            ])
+        assert result.exit_code == 0
+        # Should have called clipboard_get to save, then clipboard_set to restore
+        mock_backend.clipboard_get.assert_called_once()
+        mock_backend.clipboard_set.assert_called_once_with("original content")
+
+    def test_click_paste_no_restore_skips_save(self, runner, mock_backend):
+        """click --paste --no-restore does not save/restore clipboard."""
+        patches = _click_patches(mock_backend)
+        with patches["backend"], patches["desktop"], patches["auto_route"]:
+            result = runner.invoke(main, [
+                "click", "--coords", "100", "200", "--paste", "--no-restore", "--no-verify",
+            ])
+        assert result.exit_code == 0
+        mock_backend.clipboard_get.assert_not_called()
+        mock_backend.clipboard_set.assert_not_called()
+
 
 # ── Windows-only functional tests ────────────────────────────────────────────
 
