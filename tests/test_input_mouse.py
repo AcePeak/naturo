@@ -213,6 +213,11 @@ class TestScrollCLIValidation:
         result = runner.invoke(main, ["scroll", "--help"])
         assert "--amount" in result.output
 
+    def test_scroll_pid_option(self, runner):
+        """--pid option is documented in scroll help (#604)."""
+        result = runner.invoke(main, ["scroll", "--help"])
+        assert "--pid" in result.output
+
     def test_scroll_invalid_direction_fails(self, runner):
         """scroll with invalid direction should fail."""
         result = runner.invoke(main, ["scroll", "--direction", "diagonal"])
@@ -252,6 +257,11 @@ class TestDragCLIValidation:
         result = runner.invoke(main, ["drag", "--from-coords", "100", "100"])
         assert result.exit_code != 0
 
+    def test_drag_pid_option(self, runner):
+        """--pid option is documented in drag help (#604)."""
+        result = runner.invoke(main, ["drag", "--help"])
+        assert "--pid" in result.output
+
     def test_drag_no_args_fails(self, runner):
         """T103 – drag with no args should fail."""
         result = runner.invoke(main, ["drag"])
@@ -270,6 +280,11 @@ class TestMoveCLIValidation:
         """T107 – --to is documented."""
         result = runner.invoke(main, ["move", "--help"])
         assert "--to" in result.output
+
+    def test_move_pid_option(self, runner):
+        """--pid option is documented in move help (#604)."""
+        result = runner.invoke(main, ["move", "--help"])
+        assert "--pid" in result.output
 
     def test_move_no_args_fails(self, runner):
         """T106 – move with no args should fail."""

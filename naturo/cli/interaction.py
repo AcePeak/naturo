@@ -2000,6 +2000,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @click.option("--smooth", is_flag=True, help="Smooth scrolling (planned)")
 @click.option("--delay", type=float, help="Delay between scroll steps (ms)")
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -2009,7 +2010,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
-           smooth, delay, app, window_title, hwnd, selector, method, app_id, see_after, settle,
+           smooth, delay, app, pid, window_title, hwnd, selector, method, app_id, see_after, settle,
            json_output):
     """Scroll in a direction.
 
@@ -2027,8 +2028,8 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
     if ref_alias and not on_text:
         on_text = ref_alias
 
-    # (#593) Resolve --app-id to app/hwnd before any other logic
-    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    # (#593) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
     if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
@@ -2048,7 +2049,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 
     if selector:
         resolved = _resolve_selector_target(
-            selector, backend, app, window_title, hwnd, None, json_output,
+            selector, backend, app, window_title, hwnd, pid, json_output,
         )
         if resolved is None:
             return
@@ -2163,6 +2164,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
     help="Motion profile",
 )
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -2170,7 +2172,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @_app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
-         duration, steps, modifiers, profile, app, window_title, hwnd, method,
+         duration, steps, modifiers, profile, app, pid, window_title, hwnd, method,
          app_id, json_output):
     """Drag from one element/position to another.
 
@@ -2181,8 +2183,8 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
       naturo drag --from e5 --to-coords 500 300
       naturo drag --from-selector 'app://*/ListItem[@name="File1"]' --to-selector 'app://*/TreeItem[@name="Folder"]'
     """
-    # (#593) Resolve --app-id to app/hwnd before any other logic
-    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    # (#593) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
     if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
@@ -2200,7 +2202,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
     # Resolve source: --from-selector > --from-coords > --from (eN ref)
     if from_selector:
         resolved = _resolve_selector_target(
-            from_selector, backend, app, window_title, hwnd, None, json_output,
+            from_selector, backend, app, window_title, hwnd, pid, json_output,
         )
         if resolved is None:
             return
@@ -2234,7 +2236,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
     # Resolve destination: --to-selector > --to-coords > --to (eN ref)
     if to_selector:
         resolved = _resolve_selector_target(
-            to_selector, backend, app, window_title, hwnd, None, json_output,
+            to_selector, backend, app, window_title, hwnd, pid, json_output,
         )
         if resolved is None:
             return
@@ -2309,6 +2311,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @click.option("--id", "element_id", help="Target element automation ID")
 @click.option("--duration", type=float, default=0.0, help="Move duration (seconds)", hidden=True)
 @click.option("--app", help="Target application (name or partial match)")
+@click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
@@ -2316,7 +2319,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @_method_option
 @_app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def move(to_text, coords, element_id, duration, app, window_title, hwnd,
+def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
          selector, method, app_id, json_output):
     """Move the mouse cursor to a target element or coordinates.
 
@@ -2325,8 +2328,8 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
       naturo move --coords 500 300
       naturo move --selector 'app://*/Button[@name="Save"]'
     """
-    # (#593) Resolve --app-id to app/hwnd before any other logic
-    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    # (#593) Resolve --app-id to app/hwnd/pid before any other logic
+    app, hwnd, pid = _resolve_app_id(app_id, app, hwnd, pid, json_output)
     if app_id and hwnd is None:
         return  # Error already emitted by _resolve_app_id
 
@@ -2337,7 +2340,7 @@ def move(to_text, coords, element_id, duration, app, window_title, hwnd,
 
     if selector:
         resolved = _resolve_selector_target(
-            selector, backend, app, window_title, hwnd, None, json_output,
+            selector, backend, app, window_title, hwnd, pid, json_output,
         )
         if resolved is None:
             return
