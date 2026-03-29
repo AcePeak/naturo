@@ -1,0 +1,32 @@
+id: TC-0030
+title: "naturo type has no way to produce literal backslash before r/n/t — breaks Windows file paths"
+status: active
+category: regression
+priority: P1
+source_issue: 619
+created: 2026-03-29
+last_run: 2026-03-29
+last_result: fail
+consecutive_passes: 0
+notes: "2026-03-29 R66: FAIL — type 'C:\\Users\\test\\report.txt' produces 'C:\\Users<TAB>est<CR>eport.txt'. No \\\\ escape support. Discovered during: Enterprise RPA Dev simulation."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is available"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens"
+  - description: "Type a Windows file path containing \\r and \\t"
+    command: "naturo type 'C:\\Users\\test\\report.txt' --app notepad"
+    expect: "Literal text 'C:\\Users\\test\\report.txt' appears in editor"
+  - description: "Screenshot verify"
+    command: "naturo capture --app notepad -o /tmp/tc-0030.png"
+    expect: "Screenshot shows the exact path with backslashes, no tab or carriage return interpretation"
+  - description: "Cleanup"
+    command: "naturo app quit notepad"
+    expect: "Notepad closes"
+
+pass_criteria: "naturo type supports \\\\ to produce literal backslash, so Windows paths can be typed correctly"
+fail_action: "File P1 issue: type command needs \\\\ escape for literal backslash to support Windows file paths"

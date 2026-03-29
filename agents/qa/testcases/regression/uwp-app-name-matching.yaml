@@ -6,9 +6,9 @@ priority: P1
 source_issue: 469
 created: 2026-03-28
 last_run: 2026-03-29
-last_result: fail
-consecutive_passes: 0
-notes: "2026-03-29 R65: FAIL — see --app calculator EXIT:1, --app 计算器 EXIT:1. Only --pid works. UWP name matching still broken (#569). PR #574 not yet merged."
+last_result: pass
+consecutive_passes: 1
+notes: "2026-03-29 R66: PASS — see --app calculator EXIT:0, --app calc EXIT:0, --app 计算器 EXIT:0. All three name variants match UWP Calculator. Fix landed."
 
 preconditions:
   - "naturo is installed and in PATH"
