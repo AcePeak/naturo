@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 from naturo.process import (
     ProcessInfo, find_process, is_running, launch_app, quit_app,
     relaunch_app, list_apps, _list_processes, _verify_quit,
-    _close_all_windows_for_app,
+    _close_all_windows_for_app, _app_has_visible_windows,
     _get_console_session_id, _get_process_session_id,
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
 )
@@ -569,6 +569,40 @@ class TestQuitApp:
         """When quit was by PID only (no name), verify by PID only."""
         mock_find.return_value = None
         _verify_quit(None, 100, target_pid=100, timeout=0.5)
+
+    @patch("naturo.process._app_has_visible_windows", return_value=False)
+    @patch("naturo.process.find_process")
+    def test_verify_quit_ghost_process_no_windows(self, mock_find, mock_has_windows):
+        """#620: surviving process with no visible windows is not a failure.
+
+        After killing PID 100, find_process finds PID 200 by name, but the
+        surviving process has no visible windows (e.g. lingering AFH host).
+        Quit should succeed because no windows means the app is effectively closed.
+        """
+        def find_side_effect(name=None, pid=None, **kwargs):
+            if pid == 100:
+                return None  # Target PID is dead
+            if name == "notepad":
+                return ProcessInfo(pid=200, name="notepad.exe")
+            return None
+        mock_find.side_effect = find_side_effect
+        # Should NOT raise — surviving process has no windows
+        _verify_quit("notepad", None, target_pid=100, timeout=0.5)
+        mock_has_windows.assert_called_once_with("notepad", exclude_pid=100)
+
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
+    @patch("naturo.process.find_process")
+    def test_verify_quit_respawned_with_windows_still_fails(self, mock_find, mock_has_windows):
+        """#620: surviving process WITH visible windows is a real respawn — still fail."""
+        def find_side_effect(name=None, pid=None, **kwargs):
+            if pid == 100:
+                return None
+            if name == "notepad":
+                return ProcessInfo(pid=200, name="notepad.exe")
+            return None
+        mock_find.side_effect = find_side_effect
+        with pytest.raises(InteractionFailedError, match="still running"):
+            _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
 
 class TestResolvePidFromBackend:

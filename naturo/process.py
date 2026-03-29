@@ -641,14 +641,49 @@ def _verify_quit(
         time.sleep(0.5)
         surviving = find_process(name=name)
         if surviving is not None:
-            raise InteractionFailedError(
-                message=(
-                    f"Failed to quit '{name}': target process "
-                    f"(PID {target_pid}) was killed but the application "
-                    f"is still running under PID {surviving.pid}. "
-                    f"Try: naturo app quit --pid {surviving.pid} --force"
-                ),
-            )
+            # #620: A surviving process with no visible windows is a ghost
+            # (e.g. lingering ApplicationFrameHost).  The app is effectively
+            # closed if no windows remain — only fail if windows exist.
+            if _app_has_visible_windows(name, exclude_pid=target_pid):
+                raise InteractionFailedError(
+                    message=(
+                        f"Failed to quit '{name}': target process "
+                        f"(PID {target_pid}) was killed but the application "
+                        f"is still running under PID {surviving.pid}. "
+                        f"Try: naturo app quit --pid {surviving.pid} --force"
+                    ),
+                )
+
+
+def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
+    """Check if an app has any visible windows via the backend.
+
+    Used by ``_verify_quit`` to distinguish a true respawn (windows visible)
+    from a ghost host process with no windows (#620).
+
+    Args:
+        name: Application name (fuzzy-matched against process names/titles).
+        exclude_pid: PID to ignore (the already-killed target).
+
+    Returns:
+        True if the app has at least one visible window.
+    """
+    try:
+        from naturo.backends.base import get_backend
+
+        be = get_backend()
+        name_lower = name.lower()
+        for w in be.list_windows():
+            if exclude_pid is not None and w.pid == exclude_pid:
+                continue
+            proc_name = os.path.basename(w.process_name).lower()
+            if name_lower in proc_name or name_lower in w.title.lower():
+                return True
+    except Exception:
+        logger.debug("Backend unavailable for window check of %r", name)
+        # If we can't check windows, assume the worst (still running)
+        return True
+    return False
 
 
 def _force_kill(pid: int, system: str) -> None:
