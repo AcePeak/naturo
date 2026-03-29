@@ -1193,7 +1193,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
     default="normal",
-    help="Input method: normal (SendInput), hardware (Phys32), hook (MinHook)",
+    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
 @_selector_option
@@ -1648,7 +1648,7 @@ def _is_combo(key_str: str) -> bool:
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
     default="normal",
-    help="Input method",
+    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
 @_selector_option
@@ -1922,7 +1922,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
     "--input-mode",
     type=click.Choice(["normal", "hardware", "hook"]),
     default="normal",
-    help="Input method",
+    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
 @_verify_options
