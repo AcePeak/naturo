@@ -670,3 +670,220 @@ class TestRoundTrip:
         result = resolver.resolve(ast, sample_tree)
         assert result is not None
         assert result.element["name"] == "File"
+
+
+# ── Descendant shorthand (// prefix) ────────────────────────────────────────
+
+
+class TestDescendantShorthand:
+    """Tests for the // prefix descendant search shorthand."""
+
+    def test_double_slash_parses_as_wildcard_app(self):
+        """//Edit[@name='foo'] parses to app=* with one Edit node."""
+        ast = parse('//Edit[@name="foo"]')
+        assert ast.app == "*"
+        assert len(ast.nodes) == 1
+        assert ast.nodes[0].role == "Edit"
+        assert ast.nodes[0].name == "foo"
+
+    def test_double_slash_bare_role(self):
+        """//Button parses to app=* with one Button node."""
+        ast = parse("//Button")
+        assert ast.app == "*"
+        assert len(ast.nodes) == 1
+        assert ast.nodes[0].role == "Button"
+
+    def test_double_slash_multi_node(self):
+        """//Window/Edit parses to two nodes under wildcard app."""
+        ast = parse('//Window[@name="Untitled"]/Edit')
+        assert ast.app == "*"
+        assert len(ast.nodes) == 2
+        assert ast.nodes[0].role == "Window"
+        assert ast.nodes[1].role == "Edit"
+
+    def test_double_slash_resolves_in_tree(self, sample_tree):
+        """//MenuItem[@name='File'] finds the File menu item anywhere."""
+        ast = parse('//MenuItem[@name="File"]')
+        resolver = SelectorResolver()
+        result = resolver.resolve(ast, sample_tree)
+        assert result is not None
+        assert result.element["name"] == "File"
+
+    def test_double_slash_finds_deep_element(self, sample_tree):
+        """//Text finds the deeply nested status bar text."""
+        ast = parse("//Text")
+        resolver = SelectorResolver()
+        result = resolver.resolve(ast, sample_tree)
+        assert result is not None
+        assert result.element["name"] == "Ln 1, Col 1"
+
+    @pytest.fixture
+    def sample_tree(self):
+        """Reuse sample tree from module fixture."""
+        return [
+            {
+                "role": "Window",
+                "name": "Untitled - Notepad",
+                "automationid": "",
+                "cls": "Notepad",
+                "children": [
+                    {
+                        "role": "MenuBar",
+                        "name": "Application",
+                        "automationid": "MenuBar",
+                        "cls": "",
+                        "children": [
+                            {
+                                "role": "MenuItem",
+                                "name": "File",
+                                "automationid": "File",
+                                "cls": "",
+                                "children": [],
+                            },
+                        ],
+                    },
+                    {
+                        "role": "StatusBar",
+                        "name": "Status Bar",
+                        "automationid": "",
+                        "cls": "",
+                        "children": [
+                            {
+                                "role": "Text",
+                                "name": "Ln 1, Col 1",
+                                "automationid": "",
+                                "cls": "",
+                                "children": [],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ]
+
+
+# ── App name normalization ───────────────────────────────────────────────────
+
+
+class TestAppNameNormalization:
+    """Tests for normalize_app_name and app_names_match."""
+
+    def test_normalize_strips_exe(self):
+        from naturo.selector import normalize_app_name
+        assert normalize_app_name("chrome.exe") == "chrome"
+
+    def test_normalize_lowercases(self):
+        from naturo.selector import normalize_app_name
+        assert normalize_app_name("Chrome") == "chrome"
+
+    def test_normalize_combined(self):
+        from naturo.selector import normalize_app_name
+        assert normalize_app_name("Chrome.EXE") == "chrome"
+
+    def test_normalize_no_exe(self):
+        from naturo.selector import normalize_app_name
+        assert normalize_app_name("notepad") == "notepad"
+
+    def test_match_same(self):
+        from naturo.selector import app_names_match
+        assert app_names_match("chrome", "chrome") is True
+
+    def test_match_exe_vs_no_exe(self):
+        from naturo.selector import app_names_match
+        assert app_names_match("chrome.exe", "chrome") is True
+
+    def test_match_case_insensitive(self):
+        from naturo.selector import app_names_match
+        assert app_names_match("Chrome.exe", "chrome") is True
+
+    def test_match_wildcard(self):
+        from naturo.selector import app_names_match
+        assert app_names_match("*", "chrome") is True
+        assert app_names_match("chrome", "*") is True
+
+    def test_no_match_different_apps(self):
+        from naturo.selector import app_names_match
+        assert app_names_match("chrome", "firefox") is False
+
+
+# ── Unicode / Chinese text in selectors ──────────────────────────────────────
+
+
+class TestUnicodeSelectors:
+    """Tests for Unicode (Chinese, etc.) text in selector attributes."""
+
+    def test_parse_chinese_name_attribute(self):
+        """Chinese characters in @name parse correctly."""
+        ast = parse('app://chrome/Edit[@name="地址和搜索栏"]')
+        assert ast.nodes[0].name == "地址和搜索栏"
+
+    def test_parse_chinese_in_double_slash(self):
+        """Chinese characters work with // shorthand."""
+        ast = parse('//Edit[@name="地址和搜索栏"]')
+        assert ast.app == "*"
+        assert ast.nodes[0].name == "地址和搜索栏"
+
+    def test_resolve_chinese_name(self):
+        """Resolver matches Chinese @name values."""
+        tree = [
+            {
+                "role": "Window",
+                "name": "新标签页 - Google Chrome",
+                "automationid": "",
+                "cls": "",
+                "children": [
+                    {
+                        "role": "Edit",
+                        "name": "地址和搜索栏",
+                        "automationid": "",
+                        "cls": "",
+                        "children": [],
+                        "x": 100,
+                        "y": 50,
+                        "width": 400,
+                        "height": 30,
+                    },
+                ],
+            },
+        ]
+        ast = parse('//Edit[@name="地址和搜索栏"]')
+        resolver = SelectorResolver()
+        result = resolver.resolve(ast, tree)
+        assert result is not None
+        assert result.element["name"] == "地址和搜索栏"
+
+    def test_resolve_chinese_window_name(self):
+        """Chinese window name in multi-node selector resolves."""
+        tree = [
+            {
+                "role": "Window",
+                "name": "无标题 - 记事本",
+                "automationid": "",
+                "cls": "",
+                "children": [
+                    {
+                        "role": "Edit",
+                        "name": "",
+                        "automationid": "15",
+                        "cls": "",
+                        "children": [],
+                    },
+                ],
+            },
+        ]
+        ast = parse('app://notepad/Window[@name="无标题 - 记事本"]/Edit[@automationid="15"]')
+        resolver = SelectorResolver()
+        result = resolver.resolve(ast, tree)
+        assert result is not None
+        assert result.element["automationid"] == "15"
+
+    def test_wildcard_match_chinese(self):
+        """Wildcard matching works with Chinese characters."""
+        assert _wildcard_match("地址*", "地址和搜索栏") is True
+        assert _wildcard_match("*搜索*", "地址和搜索栏") is True
+
+    def test_fuzzy_match_chinese(self):
+        """Fuzzy matching works with Chinese characters."""
+        assert _fuzzy_match("地址和搜索栏", "地址和搜索栏") is True
+        # Slight difference should still match with low threshold
+        assert _fuzzy_match("地址和搜索", "地址和搜索栏", threshold=0.6) is True

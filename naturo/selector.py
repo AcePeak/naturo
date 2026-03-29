@@ -136,8 +136,14 @@ class SelectorParseError(Exception):
 def parse(selector: str) -> SelectorAST:
     """Parse a selector string (auto-detecting URI vs XML format).
 
+    Supported formats:
+        - URI:    ``app://notepad.exe/Button[@name="Save"]``
+        - XML:    ``<selector app="notepad.exe"><node role="Button" name="Save"/></selector>``
+        - Short:  ``//Edit[@name="foo"]`` (descendant search, any app)
+        - Legacy: ``Button:Save`` or bare ``Save``
+
     Args:
-        selector: A selector in URI or XML format.
+        selector: A selector in any supported format.
 
     Returns:
         Parsed SelectorAST.
@@ -153,6 +159,9 @@ def parse(selector: str) -> SelectorAST:
         return parse_xml(selector)
     elif selector.startswith("app://"):
         return parse_uri(selector)
+    elif selector.startswith("//"):
+        # Descendant shorthand: //Role[@attr="val"] → app://*/Role[@attr="val"]
+        return parse_uri("app://*" + selector[1:])
     else:
         # Try as a simple "role:name" shorthand (backward compat)
         return _parse_simple(selector)
@@ -819,6 +828,42 @@ def _levenshtein_similarity(s1: str, s2: str) -> float:
 
     distance = prev[len2]
     return 1.0 - (distance / max_len)
+
+
+def normalize_app_name(app: str) -> str:
+    """Normalize an application name for flexible matching.
+
+    Strips ``.exe`` suffix and lowercases so that ``chrome.exe``,
+    ``Chrome``, and ``chrome`` all compare equal.
+
+    Args:
+        app: Application identifier (process name or path).
+
+    Returns:
+        Lowercase name without ``.exe`` suffix.
+    """
+    name = app.lower().strip()
+    if name.endswith(".exe"):
+        name = name[:-4]
+    return name
+
+
+def app_names_match(a: str, b: str) -> bool:
+    """Check whether two app identifiers refer to the same application.
+
+    Handles ``chrome`` vs ``chrome.exe`` and case differences.
+    Wildcards (``*``) match anything.
+
+    Args:
+        a: First app name.
+        b: Second app name.
+
+    Returns:
+        True if both names refer to the same application.
+    """
+    if a == "*" or b == "*":
+        return True
+    return normalize_app_name(a) == normalize_app_name(b)
 
 
 def _xml_escape(text: str) -> str:

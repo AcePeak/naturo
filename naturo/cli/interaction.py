@@ -346,8 +346,9 @@ def _selector_option(func):
         default=None,
         help=(
             "Unified selector to locate target element. "
-            'URI format: app://notepad.exe/Button[@name="Save"]. '
-            'XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>.'
+            'URI: app://notepad.exe/Button[@name="Save"]. '
+            'Short: //Edit[@name="Search"] (any app, descendant search). '
+            "App names are flexible: chrome, chrome.exe, Chrome all match."
         ),
     )(func)
 
@@ -475,7 +476,9 @@ def _resolve_selector_target(
         (x, y) center coordinates of the resolved element, or None on failure.
         On failure, emits an appropriate error message.
     """
-    from naturo.selector import parse, SelectorParseError, SelectorResolver
+    from naturo.selector import (
+        parse, SelectorParseError, SelectorResolver, normalize_app_name,
+    )
 
     # Parse the selector
     try:
@@ -488,9 +491,10 @@ def _resolve_selector_target(
         )
         return None
 
-    # Override app from selector if not specified via CLI
+    # Override app from selector if not specified via CLI.
+    # Normalize the app name so chrome.exe / Chrome / chrome all work.
     if ast.app and ast.app != "*" and not app:
-        app = ast.app
+        app = normalize_app_name(ast.app)
 
     # Get element tree
     if not hasattr(backend, "get_element_tree"):
