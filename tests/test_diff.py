@@ -150,6 +150,33 @@ class TestDiffTrees:
         assert result.added[0].element_name == "Cancel"
 
 
+class TestDiffCLIAppId:
+    """Tests for --app, --hwnd, --pid, --app-id options on diff (#595)."""
+
+    def test_help_shows_app_id_option(self):
+        from click.testing import CliRunner
+        from naturo.cli.diff_cmd import diff as diff_cmd
+
+        runner = CliRunner()
+        result = runner.invoke(diff_cmd, ["--help"])
+        assert "--app-id" in result.output
+        assert "--app" in result.output
+        assert "--hwnd" in result.output
+        assert "--pid" in result.output
+
+    def test_app_id_invalid_shows_error(self):
+        from unittest.mock import patch
+        from click.testing import CliRunner
+        from naturo.cli.diff_cmd import diff as diff_cmd
+
+        runner = CliRunner()
+        with patch("naturo.cli.diff_cmd.resolve_app_id_to_hwnd", return_value=None):
+            result = runner.invoke(
+                diff_cmd, ["--app-id", "z99", "--interval", "0.1"],
+            )
+        assert result.exit_code != 0
+
+
 class TestHelpers:
     def test_element_key_with_role_name(self):
         el = _el("Button", "Save")

@@ -3,6 +3,7 @@ import json
 import time
 
 from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 import sys
 import click
 
@@ -14,9 +15,14 @@ import click
 @click.option("--gone", help="Element selector to wait to disappear")
 @click.option("--timeout", type=float, default=10.0, help="Timeout in seconds (default: 10)")
 @click.option("--interval", type=float, default=0.1, help="Poll interval in seconds (default: 0.1)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def wait(ctx, duration, element, window_title, gone, timeout, interval, json_output):
+def wait(ctx, duration, element, window_title, gone, timeout, interval,
+         app, hwnd, pid, app_id, json_output):
     """Wait for a duration, or for a UI element/window to appear or disappear.
 
     \b
@@ -28,11 +34,27 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval, json_out
 
       naturo wait --element "Button:Save" --timeout 10
 
+      naturo wait --element "Button:Save" --app-id a1 --timeout 10
+
       naturo wait --window "Notepad" --timeout 5
 
       naturo wait --gone "Dialog:Loading" --timeout 30
+
+      naturo wait --gone "Dialog:Loading" --app notepad --timeout 30
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # Resolve --app-id to hwnd (#595)
+    resolved_hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id is not None and resolved_hwnd is None:
+        sys.exit(1)
+        return
+    hwnd = resolved_hwnd
+
+    # If --app is given without --hwnd, resolve app name to window title
+    # so wait_for_element/wait_until_gone can target the correct window.
+    if app and not hwnd and not window_title:
+        window_title = app
 
     has_condition = bool(element or window_title or gone)
 
@@ -101,9 +123,15 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval, json_out
 
     try:
         if element:
-            result = wait_for_element(selector=element, timeout=timeout, poll_interval=interval)
+            result = wait_for_element(
+                selector=element, timeout=timeout, poll_interval=interval,
+                window_title=window_title, hwnd=hwnd,
+            )
         elif gone:
-            result = wait_until_gone(selector=gone, timeout=timeout, poll_interval=interval)
+            result = wait_until_gone(
+                selector=gone, timeout=timeout, poll_interval=interval,
+                window_title=window_title, hwnd=hwnd,
+            )
         elif window_title:
             result = wait_for_window(title=window_title, timeout=timeout, poll_interval=interval)
         else:

@@ -1925,11 +1925,12 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
     help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
 )
 @_method_option
+@_app_id_option
 @_verify_options
 @_see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
-           input_mode, method, verify, see_after, settle, json_output):
+           input_mode, method, app_id, verify, see_after, settle, json_output):
     """Press a hotkey combination (alias for 'press').
 
     \b
@@ -1942,6 +1943,12 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
             "Use 'naturo press' instead.",
             err=True,
         )
+
+    # (#595) Resolve --app-id before delegating to press
+    app, hwnd, _pid = _resolve_app_id(app_id, app, hwnd, None, json_output)
+    if app_id and hwnd is None:
+        return
+
     # Build a single combo string from positional or --keys options
     if keys:
         combo = keys
@@ -1964,6 +1971,7 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
         hwnd=hwnd,
         input_mode=input_mode,
         method=method,
+        app_id=None,  # Already resolved above
         verify=verify,
         see_after=see_after,
         settle=settle,

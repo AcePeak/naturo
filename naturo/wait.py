@@ -35,6 +35,7 @@ def wait_for_element(
     timeout: float = 10.0,
     poll_interval: float = 0.1,
     window_title: str | None = None,
+    hwnd: int | None = None,
     backend: Backend | None = None,
 ) -> WaitResult:
     """Poll for a UI element until found or timeout.
@@ -44,6 +45,7 @@ def wait_for_element(
         timeout: Maximum seconds to wait.
         poll_interval: Seconds between polls (default 100ms like Peekaboo).
         window_title: Optional window to search within.
+        hwnd: Optional window handle for precise targeting (#595).
         backend: Backend instance (auto-detected if None).
 
     Returns:
@@ -62,7 +64,10 @@ def wait_for_element(
             break
 
         try:
-            element = backend.find_element(selector, window_title=window_title)
+            find_kwargs: dict = {"window_title": window_title}
+            if hwnd is not None:
+                find_kwargs["hwnd"] = hwnd
+            element = backend.find_element(selector, **find_kwargs)
             if element is not None:
                 return WaitResult(
                     found=True,
@@ -93,6 +98,7 @@ def wait_until_gone(
     timeout: float = 10.0,
     poll_interval: float = 0.1,
     window_title: str | None = None,
+    hwnd: int | None = None,
     backend: Backend | None = None,
 ) -> WaitResult:
     """Wait until a UI element disappears.
@@ -102,6 +108,7 @@ def wait_until_gone(
         timeout: Maximum seconds to wait.
         poll_interval: Seconds between polls (default 100ms).
         window_title: Optional window to search within.
+        hwnd: Optional window handle for precise targeting (#595).
         backend: Backend instance (auto-detected if None).
 
     Returns:
@@ -119,7 +126,10 @@ def wait_until_gone(
             break
 
         try:
-            element = backend.find_element(selector, window_title=window_title)
+            find_kwargs: dict = {"window_title": window_title}
+            if hwnd is not None:
+                find_kwargs["hwnd"] = hwnd
+            element = backend.find_element(selector, **find_kwargs)
             if element is None:
                 return WaitResult(
                     found=True,

@@ -2,6 +2,7 @@
 import json
 
 from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 from naturo.models.snapshot import SnapshotNotFoundError as _ModelsSnapshotNotFoundError
 import sys
 import time
@@ -12,9 +13,13 @@ import click
 @click.option("--snapshot", "snapshots", multiple=True, help="Snapshot ID (specify twice)")
 @click.option("--window", "window_title", help="Window to diff (captures before/after)")
 @click.option("--interval", type=float, default=2.0, help="Seconds between captures (with --window)")
+@click.option("--app", help="Target application (name or partial match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
+@app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def diff(ctx, snapshots, window_title, interval, json_output):
+def diff(ctx, snapshots, window_title, interval, app, hwnd, pid, app_id, json_output):
     """Compare two UI element trees to detect changes.
 
     Either provide two --snapshot IDs, or use --window to capture before/after
@@ -26,8 +31,21 @@ def diff(ctx, snapshots, window_title, interval, json_output):
       naturo diff --snapshot snap1 --snapshot snap2
 
       naturo diff --window "Notepad" --interval 2
+
+      naturo diff --app-id a1 --interval 2
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # Resolve --app-id to hwnd (#595)
+    resolved_hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
+    if app_id is not None and resolved_hwnd is None:
+        sys.exit(1)
+        return
+    hwnd = resolved_hwnd
+
+    # If --app is given without --hwnd, use app as window title
+    if app and not hwnd and not window_title:
+        window_title = app
 
     if interval is not None and interval <= 0:
         msg = f"--interval must be > 0, got {interval}"
@@ -38,8 +56,8 @@ def diff(ctx, snapshots, window_title, interval, json_output):
         sys.exit(1)
         return
 
-    if not snapshots and not window_title:
-        msg = "Specify two --snapshot IDs or --window"
+    if not snapshots and not window_title and not hwnd:
+        msg = "Specify two --snapshot IDs, --window, --app, --hwnd, or --app-id"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
@@ -61,22 +79,29 @@ def diff(ctx, snapshots, window_title, interval, json_output):
     from naturo.errors import NaturoError, WindowNotFoundError
 
     try:
-        if window_title:
+        if window_title or hwnd:
             backend = get_backend()
+            target_label = window_title or f"hwnd={hwnd}"
             if not json_output:
-                click.echo(f"Capturing UI tree for '{window_title}'...")
+                click.echo(f"Capturing UI tree for '{target_label}'...")
 
-            tree_before = backend.get_element_tree(window_title=window_title)
+            tree_kwargs: dict = {}
+            if window_title:
+                tree_kwargs["window_title"] = window_title
+            if hwnd:
+                tree_kwargs["hwnd"] = hwnd
+
+            tree_before = backend.get_element_tree(**tree_kwargs)
             if tree_before is None:
-                raise WindowNotFoundError(window_title)
+                raise WindowNotFoundError(target_label)
 
             if not json_output:
                 click.echo(f"Waiting {interval}s...")
             time.sleep(interval)
 
-            tree_after = backend.get_element_tree(window_title=window_title)
+            tree_after = backend.get_element_tree(**tree_kwargs)
             if tree_after is None:
-                raise WindowNotFoundError(window_title)
+                raise WindowNotFoundError(target_label)
 
             result = diff_trees(tree_before, tree_after)
         else:
