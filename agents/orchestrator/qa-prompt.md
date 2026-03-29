@@ -163,44 +163,18 @@ Pick 1-2 apps for E2E testing. Rotate across rounds: Notepad → Calculator → 
 - Is JSON output valid? (`naturo see --app X -j | python -m json.tool`)
 - Do error messages make sense when things fail?
 
-### Mandatory Real-World Scenarios (EVERY 3 rounds — these catch P0 bugs that systematic testing misses):
+### Mandatory Real-World Scenarios (EVERY 3 rounds)
 
-**Scenario A — Multi-window click targeting:**
-Open 3+ apps (e.g., Notepad, Calculator, and a browser). Put the TARGET app BEHIND another window.
-Then run `naturo click eN --app <target>`. The click MUST hit the target app, not whatever is in front.
-If the click hits the wrong window → P0 bug.
+These test cases catch P0 bugs that systematic testing misses. Run them from `agents/qa/testcases/`:
 
-**Scenario B — DPI/coordinate verification:**
-Change the display scaling before testing — rotate through 100%, 125%, 150%, 200% across rounds.
-To change: Settings → Display → Scale → select percentage → sign out and back in.
-**Always restore the original scaling when done.**
+- **TC-0024** — Multi-window click targeting (target behind other windows)
+- **TC-0025** — DPI/coordinate verification (change scaling to 125%/150%/200%, **restore after**)
+- **TC-0026** — AI Vision fill-gaps (verify vision provider returns >0 elements)
+- **TC-0027** — AI Vision coverage (verify coverage calc doesn't falsely report 100%)
+- **TC-0028** — UWP multi-tab quit (Notepad with 2+ tabs and unsaved content)
+- **TC-0029** — Hybrid mode enrichment (compare hybrid vs UIA-only element count)
 
-After changing DPI, run:
-- `naturo see --app notepad` — check ALL coordinates are positive and within screen bounds
-- `naturo highlight --app notepad` — visually confirm boxes align with actual elements
-- `naturo list screens -j` — verify scale_factor and resolution match Windows settings
-
-Failure indicators: coordinates like (-31991, -31888) or (0, 0, 0x0) for visible windows = P0 bug.
-
-**Scenario C — AI Vision fallback:**
-Run `naturo see --app <electron-app> --cascade --fill-gaps --stats`.
-Check the stats output. If `vision` shows `0 elements [skipped]` but the UI clearly has elements UIA missed → bug in fill-gaps logic.
-Verify AI actually returns identified elements — not 0.
-
-**Scenario D — Hybrid mode on complex apps:**
-Run `naturo see --app <app> --backend hybrid -d 5 --visible-only`.
-Compare against plain `naturo see --app <app>`. Hybrid should find MORE elements (e.g., Electron app internals).
-If hybrid returns identical results to UIA-only → hybrid enrichment is not working.
-
-**Scenario E — UWP app lifecycle:**
-Open UWP Notepad with 2+ tabs and unsaved content.
-Run `naturo app quit notepad`. It should either close cleanly or report an error about unsaved changes.
-If it reports success but tabs remain open → P0 silent failure.
-
-**Scenario F — Selector usability:**
-Run `naturo see --app notepad --selectors -j`. Pick any element's selector.
-Try `naturo click --selector '<that selector>'`. If it fails → log the issue.
-Also try a short-form like `naturo click --selector 'app://notepad/Edit'` — if this fails with "no match" but a full-path version works → the selector engine lacks descendant search.
+See the YAML files for exact steps. These are in addition to Phase 5 regression — run them every 3 rounds minimum.
 
 ## Phase 3 — Professional Exploratory Testing
 Systematic edge case exploration — same every round:
