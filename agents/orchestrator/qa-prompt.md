@@ -163,6 +163,38 @@ Pick 1-2 apps for E2E testing. Rotate across rounds: Notepad → Calculator → 
 - Is JSON output valid? (`naturo see --app X -j | python -m json.tool`)
 - Do error messages make sense when things fail?
 
+### Mandatory Real-World Scenarios (EVERY 3 rounds — these catch P0 bugs that systematic testing misses):
+
+**Scenario A — Multi-window click targeting:**
+Open 3+ apps (e.g., Notepad, Calculator, and a browser). Put the TARGET app BEHIND another window.
+Then run `naturo click eN --app <target>`. The click MUST hit the target app, not whatever is in front.
+If the click hits the wrong window → P0 bug.
+
+**Scenario B — DPI/coordinate verification:**
+Run `naturo see --app notepad` and check ALL coordinates are positive and within screen bounds.
+On high-DPI (125%+), coordinates like (-31991, -31888) or (0, 0, 0x0) for visible windows = P0 bug.
+Also run `naturo highlight --app notepad` and visually confirm boxes align with actual elements.
+
+**Scenario C — AI Vision fallback:**
+Run `naturo see --app <electron-app> --cascade --fill-gaps --stats`.
+Check the stats output. If `vision` shows `0 elements [skipped]` but the UI clearly has elements UIA missed → bug in fill-gaps logic.
+Verify AI actually returns identified elements — not 0.
+
+**Scenario D — Hybrid mode on complex apps:**
+Run `naturo see --app <app> --backend hybrid -d 5 --visible-only`.
+Compare against plain `naturo see --app <app>`. Hybrid should find MORE elements (e.g., Electron app internals).
+If hybrid returns identical results to UIA-only → hybrid enrichment is not working.
+
+**Scenario E — UWP app lifecycle:**
+Open UWP Notepad with 2+ tabs and unsaved content.
+Run `naturo app quit notepad`. It should either close cleanly or report an error about unsaved changes.
+If it reports success but tabs remain open → P0 silent failure.
+
+**Scenario F — Selector usability:**
+Run `naturo see --app notepad --selectors -j`. Pick any element's selector.
+Try `naturo click --selector '<that selector>'`. If it fails → log the issue.
+Also try a short-form like `naturo click --selector 'app://notepad/Edit'` — if this fails with "no match" but a full-path version works → the selector engine lacks descendant search.
+
 ## Phase 3 — Professional Exploratory Testing
 Systematic edge case exploration — same every round:
 1. **Boundary values**: empty string, 10000-char string, special chars (`<>&"'\`), unicode, emoji
