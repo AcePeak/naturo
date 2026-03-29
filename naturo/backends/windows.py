@@ -1170,6 +1170,18 @@ class WindowsBackend(Backend):
 
             return best_window.handle
 
+        # (#569) UWP fallback: UWP apps (Calculator, Settings, etc.) have
+        # their windows owned by ApplicationFrameHost.exe, not by the
+        # actual app process (e.g. CalculatorApp.exe).  When process-name
+        # matching finds nothing, probe each AFH window's content child
+        # to find the real app process and match against that.
+        if match_process and best_window is None:
+            best_window = self._uwp_afh_fallback(
+                search_lower, windows, console_session,
+            )
+            if best_window is not None:
+                return best_window.handle
+
         # No match — build candidate suggestions (BUG-070)
         from naturo.errors import WindowNotFoundError
 
@@ -1331,6 +1343,16 @@ class WindowsBackend(Backend):
             if h not in seen:
                 seen.add(h)
                 result.append(h)
+
+        # (#569) UWP fallback: when no windows matched by process name,
+        # probe AFH windows' content children for the real app process.
+        if not result and match_process:
+            console_session = self._get_console_session_id()
+            afh_match = self._uwp_afh_fallback(
+                search_lower, windows, console_session,
+            )
+            if afh_match is not None:
+                result.append(afh_match.handle)
 
         return result
 
@@ -1587,6 +1609,89 @@ class WindowsBackend(Backend):
             return found[0]
         except Exception:
             return False
+
+    def _uwp_afh_fallback(
+        self,
+        search_lower: str,
+        windows: list,
+        console_session: int,
+    ) -> Optional["BaseWindowInfo"]:
+        """UWP fallback: find an AFH window whose child process matches (#569).
+
+        UWP apps (Calculator, Settings, etc.) have their top-level windows
+        owned by ApplicationFrameHost.exe.  Normal process-name matching
+        cannot find these because the AFH process name never matches
+        user-facing app names like "calculator".
+
+        This method probes each AFH window's content child (CoreWindow) to
+        discover the real app process (e.g. CalculatorApp.exe), then checks
+        if that process name matches the search term or its aliases.
+
+        Only called when the primary scoring loop found no matches.
+
+        Args:
+            search_lower: Lowercase search term from ``--app``.
+            windows: Full window list from ``list_windows()``.
+            console_session: Console session ID for session-aware ranking.
+
+        Returns:
+            The best matching AFH WindowInfo, or None if no match.
+        """
+        import os as _os
+
+        # Build the set of process stems to match against (search + aliases)
+        target_stems: set[str] = {search_lower}
+        aliases = self._APP_ALIASES.get(search_lower, set())
+        target_stems.update(aliases)
+
+        best_afh = None
+        best_in_console = False
+
+        for w in windows:
+            proc = _os.path.basename(w.process_name).lower()
+            if proc.endswith(".exe"):
+                proc = proc[:-4]
+            if proc != "applicationframehost":
+                continue
+            if not self._afh_has_content_window(w.handle):
+                continue
+
+            # Resolve the real app PID/exe inside this AFH window
+            child_pid, child_exe = self._resolve_uwp_child_pid(w.handle)
+            if child_pid is None or child_exe is None:
+                continue
+
+            child_stem = _os.path.basename(child_exe).lower()
+            if child_stem.endswith(".exe"):
+                child_stem = child_stem[:-4]
+
+            # Check if the child process matches any target stem
+            matched = False
+            for stem in target_stems:
+                if stem == child_stem or stem in child_stem:
+                    matched = True
+                    break
+            if not matched:
+                continue
+
+            # Session-aware ranking: prefer console session
+            in_console = False
+            if console_session >= 0:
+                w_session = self._get_process_session_id(w.pid)
+                in_console = (w_session == console_session)
+
+            if best_afh is None or (in_console and not best_in_console):
+                best_afh = w
+                best_in_console = in_console
+
+        if best_afh is not None:
+            logger.debug(
+                "UWP AFH fallback (#569): matched AFH hwnd=%s for "
+                "search '%s'",
+                best_afh.handle, search_lower,
+            )
+
+        return best_afh
 
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
