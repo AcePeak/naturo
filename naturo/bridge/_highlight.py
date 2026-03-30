@@ -5,207 +5,324 @@ from __future__ import annotations
 import ctypes
 import logging
 import platform
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Depth-based colors (BGR for GDI)
+_DEPTH_COLORS_BGR = [
+    0x0000FF,  # Red
+    0x00A000,  # Green
+    0xFF5000,  # Blue
+    0x00A0FF,  # Orange
+    0xC800A0,  # Purple
+    0xB4B400,  # Teal
+    0x6400C8,  # Crimson
+    0xFF5050,  # Indigo
+]
 
-def highlight_elements(hwnd: int, depth: int = 10, duration: float = 5.0,
-                       refs: Optional[list] = None,
-                       show_all: bool = False) -> None:
-    """Draw colored borders and labels on Win32 child windows for visual identification.
+# Type alias: (ref, label, x, y, w, h, depth_level)
+DrawElement = Tuple[str, str, int, int, int, int, int]
 
-    Uses Win32 GDI to draw directly on screen. All matching elements are drawn
-    simultaneously and held for ``duration`` seconds (no flashing).
 
-    Depth-based coloring groups elements at the same tree level by colour.
-    Label collision avoidance shifts labels to avoid overlap.
+def _set_dpi_awareness() -> Optional[int]:
+    """Set per-monitor DPI awareness on the current thread.
 
-    By default only highlights interactive control classes (Button, Edit,
-    ComboBox, etc.). Pass ``show_all=True`` to include all elements.
+    Returns the previous context handle so it can be restored, or None if
+    the call was unavailable / failed.
+    """
+    if platform.system() != "Windows":
+        return None
+    try:
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        _set_thread = user32.SetThreadDpiAwarenessContext
+        _set_thread.restype = ctypes.c_void_p
+        _set_thread.argtypes = [ctypes.c_void_p]
+        old_ctx = _set_thread(-4)  # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+        return old_ctx if old_ctx else None
+    except (OSError, AttributeError):
+        return None
+
+
+def _restore_dpi_awareness(old_ctx: Optional[int]) -> None:
+    """Restore a previously saved DPI awareness context."""
+    if old_ctx is None:
+        return
+    try:
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        user32.SetThreadDpiAwarenessContext(ctypes.c_void_p(old_ctx))
+    except (OSError, AttributeError):
+        pass
+
+
+def flatten_element_tree(
+    tree,
+    refs: Optional[list] = None,
+    show_all: bool = False,
+    role_filter: Optional[str] = None,
+) -> list[DrawElement]:
+    """Flatten a backend ElementInfo tree into a list suitable for GDI drawing.
+
+    Walks the tree in DFS order (matching ``see`` ref assignment) and returns
+    a flat list of ``(ref, label, x, y, w, h, depth_level)`` tuples.
+
+    Args:
+        tree: Root ElementInfo from ``backend.get_element_tree()``.
+        refs: If set, only include these refs.
+        show_all: If False, only include actionable elements.
+        role_filter: If set, only include elements whose role contains this.
+
+    Returns:
+        List of DrawElement tuples ready for ``_draw_gdi_overlay()``.
+    """
+    from naturo.annotate import ACTIONABLE_ROLES
+
+    elements: list[DrawElement] = []
+    counter = [0]
+
+    def _collect(el, depth_level: int = 0) -> None:
+        counter[0] += 1
+        ref = f"e{counter[0]}"
+        if el.width > 0 and el.height > 0:
+            if refs is None or ref in refs:
+                # Actionable filter
+                role = getattr(el, "role", "")
+                if not show_all and refs is None:
+                    is_actionable = getattr(el, "is_actionable", False)
+                    if not is_actionable and role not in ACTIONABLE_ROLES:
+                        for child in (el.children or []):
+                            _collect(child, depth_level + 1)
+                        return
+                # Role filter
+                if role_filter and role_filter.lower() not in role.lower():
+                    for child in (el.children or []):
+                        _collect(child, depth_level + 1)
+                    return
+                label = getattr(el, "name", "") or role
+                if len(label) > 20:
+                    label = label[:18] + ".."
+                x = getattr(el, "x", 0)
+                y = getattr(el, "y", 0)
+                w = getattr(el, "width", 0)
+                h = getattr(el, "height", 0)
+                elements.append((ref, label, x, y, w, h, depth_level))
+        for child in (el.children or []):
+            _collect(child, depth_level + 1)
+
+    _collect(tree)
+    return elements
+
+
+def _draw_gdi_overlay(
+    elements: Sequence[DrawElement],
+    duration: float = 5.0,
+) -> None:
+    """Draw colored borders and labels on screen using Win32 GDI.
+
+    Sets per-monitor DPI awareness before drawing so that coordinates
+    from ``backend.get_element_tree()`` (which are physical pixels)
+    map correctly to the screen DC.
+
+    Args:
+        elements: Flat list of (ref, label, x, y, w, h, depth_level).
+        duration: How long to hold the overlay (seconds).
+    """
+    import time
+
+    if platform.system() != "Windows" or not elements:
+        return
+
+    old_ctx = _set_dpi_awareness()
+    try:
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
+
+        # ── Compute label positions (collision avoidance) ────────────
+        label_rects: list[tuple[int, int, int, int]] = []
+        label_positions: list[tuple[int, int]] = []
+
+        for ref, label, ex, ey, ew, eh, depth_level in elements:
+            label_text = f" {ref}: {label} "
+            approx_w = len(label_text) * 8
+            approx_h = 16
+
+            candidates = [
+                (ex, max(0, ey - approx_h)),
+                (ex + ew - approx_w, max(0, ey - approx_h)),
+                (ex, ey + eh),
+                (ex + ew - approx_w, ey + eh),
+            ]
+
+            best_pos = candidates[0]
+            best_overlap = len(label_rects) + 1
+
+            for cx, cy in candidates:
+                cx = max(0, cx)
+                cy = max(0, cy)
+                overlap_count = 0
+                for px1, py1, px2, py2 in label_rects:
+                    if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1:
+                        overlap_count += 1
+                if overlap_count < best_overlap:
+                    best_overlap = overlap_count
+                    best_pos = (cx, cy)
+                    if overlap_count == 0:
+                        break
+
+            label_positions.append(best_pos)
+            label_rects.append((best_pos[0], best_pos[1],
+                                best_pos[0] + approx_w, best_pos[1] + approx_h))
+
+        # ── GDI drawing ─────────────────────────────────────────────
+        hdc = user32.GetDC(None)
+        font = gdi32.CreateFontW(
+            14, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 0, 0, "Consolas"
+        )
+
+        try:
+            for i, (ref, label, ex, ey, ew, eh, depth_level) in enumerate(elements):
+                color = _DEPTH_COLORS_BGR[depth_level % len(_DEPTH_COLORS_BGR)]
+                pen = gdi32.CreatePen(0, 2, color)
+                old_pen = gdi32.SelectObject(hdc, pen)
+                old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
+
+                gdi32.Rectangle(hdc, ex, ey, ex + ew, ey + eh)
+
+                gdi32.SelectObject(hdc, old_brush)
+                label_text = f" {ref}: {label} "
+
+                gdi32.SetBkColor(hdc, color)
+                gdi32.SetTextColor(hdc, 0xFFFFFF)
+                old_font = gdi32.SelectObject(hdc, font)
+
+                lx, ly = label_positions[i]
+                text_buf = ctypes.create_unicode_buffer(label_text)
+                gdi32.TextOutW(hdc, lx, ly, text_buf, len(label_text))
+
+                gdi32.SelectObject(hdc, old_font)
+                gdi32.SelectObject(hdc, old_pen)
+                gdi32.DeleteObject(pen)
+
+            time.sleep(duration)
+
+        finally:
+            gdi32.DeleteObject(font)
+            user32.ReleaseDC(None, hdc)
+            user32.InvalidateRect(None, None, True)
+    finally:
+        _restore_dpi_awareness(old_ctx)
+
+
+def highlight_elements(
+    hwnd: int,
+    depth: int = 10,
+    duration: float = 5.0,
+    refs: Optional[list] = None,
+    show_all: bool = False,
+    element_tree=None,
+) -> None:
+    """Draw colored borders and labels on Win32 child windows.
+
+    When ``element_tree`` is provided (from ``backend.get_element_tree()``),
+    uses it directly — coordinates are already DPI-correct.  Otherwise falls
+    back to local Win32 HWND enumeration (legacy path).
 
     Args:
         hwnd: Parent window handle.
         depth: Max depth for enumeration.
         duration: How long to show highlights (seconds).
-        refs: Optional list of specific refs to highlight (e.g. ['e5', 'e10']).
-              If None, highlights all matching elements.
-        show_all: If False (default), only highlight actionable Win32 classes.
+        refs: Optional list of specific refs to highlight.
+        show_all: If False, only highlight actionable elements.
+        element_tree: Pre-fetched element tree from backend. When supplied,
+            the function skips its own enumeration and uses these elements.
     """
-    from ctypes import wintypes
-    import time
-
     if platform.system() != "Windows":
         return
 
-    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
-    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
-
-    # Win32 class names considered actionable (interactive controls)
-    _ACTIONABLE_WIN32_CLASSES = {
-        "button", "edit", "combobox", "listbox", "scrollbar",
-        "syslistview32", "systreeview32", "systabcontrol32",
-        "msctls_trackbar32", "msctls_updown32", "toolbarwindow32",
-        "sysdatetimepick32", "sysmonthcal32", "richedit20w",
-        "richedit50w", "comboboxex32",
-    }
-
-    # Collect all child windows with their info
-    def _get_direct_children(parent):
-        children = []
-        child = user32.FindWindowExW(parent, None, None, None)
-        while child:
-            children.append(child)
-            child = user32.FindWindowExW(parent, child, None, None)
-        return children
-
-    elements = []  # list of (ref, hwnd, title, class_name, rect, depth_level)
-    counter = [1]
-
-    def _collect(h, current_depth):
-        if current_depth > depth:
-            return
-        for child_hwnd in _get_direct_children(h):
-            ref = f"e{counter[0]}"
-            counter[0] += 1
-
-            title_buf = ctypes.create_unicode_buffer(256)
-            user32.GetWindowTextW(child_hwnd, title_buf, 256)
-            title = title_buf.value or ""
-
-            cls_buf = ctypes.create_unicode_buffer(256)
-            user32.GetClassNameW(child_hwnd, cls_buf, 256)
-            cls_name = cls_buf.value or ""
-
-            rect = wintypes.RECT()
-            user32.GetWindowRect(child_hwnd, ctypes.byref(rect))
-
-            # Skip invisible/zero-size windows
-            w = rect.right - rect.left
-            h_size = rect.bottom - rect.top
-            if w <= 0 or h_size <= 0:
-                continue
-            # Skip off-screen windows
-            if rect.left < -10000 or rect.top < -10000:
-                continue
-
-            if refs is None or ref in refs:
-                # Actionable filter: skip non-interactive classes unless show_all
-                if not show_all and refs is None:
-                    base_cls = cls_name.split(".")[-1].lower() if "." in cls_name else cls_name.lower()
-                    if base_cls not in _ACTIONABLE_WIN32_CLASSES:
-                        _collect(child_hwnd, current_depth + 1)
-                        continue
-
-                short_cls = cls_name.split(".")[-1] if "." in cls_name else cls_name
-                label = title if title else short_cls
-                if len(label) > 20:
-                    label = label[:18] + ".."
-                elements.append((ref, child_hwnd, label, cls_name, rect, current_depth))
-
-            _collect(child_hwnd, current_depth + 1)
-
-    _collect(hwnd, 0)
-
-    if not elements:
+    if element_tree is not None:
+        elements = flatten_element_tree(
+            element_tree, refs=refs, show_all=show_all,
+        )
+        _draw_gdi_overlay(elements, duration=duration)
         return
 
-    # Depth-based colors (BGR for GDI)
-    DEPTH_COLORS_BGR = [
-        0x0000FF,  # Red
-        0x00A000,  # Green
-        0xFF5000,  # Blue
-        0x00A0FF,  # Orange
-        0xC800A0,  # Purple
-        0xB4B400,  # Teal
-        0x6400C8,  # Crimson
-        0xFF5050,  # Indigo
-    ]
+    # ── Legacy fallback: self-enumerate via Win32 HWND ──────────────
+    # Kept for backward compatibility when no backend is available.
+    from ctypes import wintypes
+    import time
 
-    # Compute label positions to avoid overlap
-    label_rects: list[tuple[int, int, int, int]] = []  # placed label bounds
-    label_positions: list[tuple[int, int]] = []  # (lx, ly) per element
-
-    for i, (ref, child_hwnd, label, cls_name, rect, depth_level) in enumerate(elements):
-        label_text = f" {ref}: {label} "
-        # Approximate text width: ~8px per character at 14pt Consolas
-        approx_w = len(label_text) * 8
-        approx_h = 16
-
-        rl, rt, rr, rb = rect.left, rect.top, rect.right, rect.bottom
-        candidates = [
-            (rl, max(0, rt - approx_h)),         # above-left
-            (rr - approx_w, max(0, rt - approx_h)),  # above-right
-            (rl, rb),                              # below-left
-            (rr - approx_w, rb),                   # below-right
-        ]
-
-        best_pos = candidates[0]
-        best_overlap = len(label_rects) + 1  # guaranteed > any real count
-
-        for cx, cy in candidates:
-            cx = max(0, cx)
-            cy = max(0, cy)
-            overlap_count = 0
-            for px1, py1, px2, py2 in label_rects:
-                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1:
-                    overlap_count += 1
-            if overlap_count < best_overlap:
-                best_overlap = overlap_count
-                best_pos = (cx, cy)
-                if overlap_count == 0:
-                    break
-
-        label_positions.append(best_pos)
-        label_rects.append((best_pos[0], best_pos[1],
-                            best_pos[0] + approx_w, best_pos[1] + approx_h))
-
-    # Get screen DC
-    hdc = user32.GetDC(None)
-
-    # Create font for labels
-    font = gdi32.CreateFontW(
-        14, 0, 0, 0, 700,  # height, width, escapement, orientation, weight (bold)
-        0, 0, 0,  # italic, underline, strikeout
-        0, 0, 0, 0, 0,  # charset, precision, clip, quality, pitch
-        "Consolas"
-    )
-
+    old_ctx = _set_dpi_awareness()
     try:
-        # Draw all borders and labels simultaneously (single pass)
-        for i, (ref, child_hwnd, label, cls_name, rect, depth_level) in enumerate(elements):
-            color = DEPTH_COLORS_BGR[depth_level % len(DEPTH_COLORS_BGR)]
-            pen = gdi32.CreatePen(0, 2, color)  # PS_SOLID, width=2
-            old_pen = gdi32.SelectObject(hdc, pen)
-            old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))  # NULL_BRUSH
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
 
-            # Draw rectangle
-            gdi32.Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom)
+        _ACTIONABLE_WIN32_CLASSES = {
+            "button", "edit", "combobox", "listbox", "scrollbar",
+            "syslistview32", "systreeview32", "systabcontrol32",
+            "msctls_trackbar32", "msctls_updown32", "toolbarwindow32",
+            "sysdatetimepick32", "sysmonthcal32", "richedit20w",
+            "richedit50w", "comboboxex32",
+        }
 
-            # Draw label
-            gdi32.SelectObject(hdc, old_brush)
-            label_text = f" {ref}: {label} "
+        def _get_direct_children(parent):
+            children = []
+            child = user32.FindWindowExW(parent, None, None, None)
+            while child:
+                children.append(child)
+                child = user32.FindWindowExW(parent, child, None, None)
+            return children
 
-            gdi32.SetBkColor(hdc, color)
-            gdi32.SetTextColor(hdc, 0xFFFFFF)  # White text
-            old_font = gdi32.SelectObject(hdc, font)
+        raw_elements = []  # (ref, label, x, y, w, h, depth_level)
+        counter = [1]
 
-            lx, ly = label_positions[i]
-            text_buf = ctypes.create_unicode_buffer(label_text)
-            gdi32.TextOutW(hdc, lx, ly, text_buf, len(label_text))
+        def _collect(h, current_depth):
+            if current_depth > depth:
+                return
+            for child_hwnd in _get_direct_children(h):
+                ref = f"e{counter[0]}"
+                counter[0] += 1
 
-            gdi32.SelectObject(hdc, old_font)
-            gdi32.SelectObject(hdc, old_pen)
-            gdi32.DeleteObject(pen)
+                title_buf = ctypes.create_unicode_buffer(256)
+                user32.GetWindowTextW(child_hwnd, title_buf, 256)
+                title = title_buf.value or ""
 
-        # Hold the display for the requested duration
-        time.sleep(duration)
+                cls_buf = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(child_hwnd, cls_buf, 256)
+                cls_name = cls_buf.value or ""
 
+                rect = wintypes.RECT()
+                user32.GetWindowRect(child_hwnd, ctypes.byref(rect))
+
+                w = rect.right - rect.left
+                h_size = rect.bottom - rect.top
+                if w <= 0 or h_size <= 0:
+                    continue
+                if rect.left < -10000 or rect.top < -10000:
+                    continue
+
+                if refs is None or ref in refs:
+                    if not show_all and refs is None:
+                        base_cls = cls_name.split(".")[-1].lower() if "." in cls_name else cls_name.lower()
+                        if base_cls not in _ACTIONABLE_WIN32_CLASSES:
+                            _collect(child_hwnd, current_depth + 1)
+                            continue
+
+                    short_cls = cls_name.split(".")[-1] if "." in cls_name else cls_name
+                    label = title if title else short_cls
+                    if len(label) > 20:
+                        label = label[:18] + ".."
+                    raw_elements.append((ref, label, rect.left, rect.top, w, h_size, current_depth))
+
+                _collect(child_hwnd, current_depth + 1)
+
+        _collect(hwnd, 0)
+
+        if not raw_elements:
+            return
+
+        _draw_gdi_overlay(raw_elements, duration=duration)
     finally:
-        gdi32.DeleteObject(font)
-        user32.ReleaseDC(None, hdc)
-        # Final cleanup: redraw everything
-        user32.InvalidateRect(None, None, True)
+        _restore_dpi_awareness(old_ctx)
 
 
 def highlight_elements_uia(
@@ -218,18 +335,13 @@ def highlight_elements_uia(
     show_all: bool = False,
     annotate_path: Optional[str] = None,
     role_filter: Optional[str] = None,
+    element_tree=None,
 ) -> Optional[str]:
-    """Highlight UI elements using the UIA element tree from snapshot/see.
+    """Highlight UI elements using the UIA element tree.
 
-    Refs match those assigned by ``naturo see`` (sequential DFS e1, e2, ...).
-    Falls back to capturing a fresh element tree if no recent snapshot exists.
-
-    All matching elements are drawn simultaneously and held for ``duration``
-    seconds (no flashing). Depth-based coloring and label collision avoidance
-    produce a clean, readable overlay.
-
-    By default only highlights actionable elements. Pass ``show_all=True``
-    to include all visible elements.
+    When ``element_tree`` is provided (from ``backend.get_element_tree()``),
+    uses it directly for GDI overlay — coordinates are already DPI-correct.
+    Otherwise tries the most recent snapshot, then captures a fresh tree.
 
     If ``annotate_path`` is set, renders the highlight onto a screenshot image
     using Pillow instead of GDI drawing, and returns the output path.
@@ -240,22 +352,20 @@ def highlight_elements_uia(
         hwnd: Parent window handle.
         depth: Max depth for element tree.
         duration: How long to show highlights (seconds).
-        refs: Optional list of specific refs to highlight (e.g. ['e5', 'e10']).
-              If None, highlights all matching elements.
-        show_all: If False (default), only highlight actionable elements.
-        annotate_path: If set, save a PIL-annotated screenshot to this path
-            instead of using GDI live overlay. Returns the output path.
-        role_filter: If set, only highlight elements whose role contains this string.
+        refs: Optional list of specific refs to highlight.
+        show_all: If False, only highlight actionable elements.
+        annotate_path: If set, save a PIL-annotated screenshot to this path.
+        role_filter: If set, only highlight elements whose role contains this.
+        element_tree: Pre-fetched element tree from backend. When supplied,
+            skips snapshot lookup / fresh capture for GDI overlay.
 
     Returns:
         The annotated screenshot path if ``annotate_path`` is set, else None.
     """
-    import time
-
     from naturo.snapshot import get_snapshot_manager
     mgr = get_snapshot_manager()
 
-    # ── Annotate mode (PIL, cross-platform) ──────────────────────────────────
+    # ── Annotate mode (PIL, cross-platform) ──────────────────────────
     if annotate_path is not None:
         snap = None
         try:
@@ -277,15 +387,23 @@ def highlight_elements_uia(
             )
         return None
 
-    # ── GDI live overlay (Windows only) ──────────────────────────────────────
+    # ── GDI live overlay (Windows only) ──────────────────────────────
     if platform.system() != "Windows":
         return None
 
-    from naturo.annotate import ACTIONABLE_ROLES
+    # If a pre-fetched element tree is provided, use it directly
+    if element_tree is not None:
+        elements = flatten_element_tree(
+            element_tree, refs=refs, show_all=show_all,
+            role_filter=role_filter,
+        )
+        _draw_gdi_overlay(elements, duration=duration)
+        return None
 
     # Try to get elements from most recent snapshot first
-    elements = []  # list of (ref, name, role, x, y, w, h, depth_level)
+    from naturo.annotate import ACTIONABLE_ROLES
 
+    elements: list[DrawElement] = []
     _found_snapshot = False
     try:
         snaps = mgr.list_snapshots()
@@ -300,17 +418,14 @@ def highlight_elements_uia(
                     ex, ey, ew, eh = el.frame
                     if ew <= 0 or eh <= 0:
                         continue
-                    # Actionable filter
                     if not show_all and refs is None:
                         if not el.is_actionable and el.role not in ACTIONABLE_ROLES:
                             continue
-                    # Role filter
                     if role_filter and role_filter.lower() not in el.role.lower():
                         continue
                     label = el.title or el.role
                     if len(label) > 20:
                         label = label[:18] + ".."
-                    # Compute depth
                     depth_level = 0
                     cur = el
                     seen: set = set()
@@ -318,126 +433,26 @@ def highlight_elements_uia(
                         seen.add(cur.parent_id)
                         depth_level += 1
                         cur = snap.ui_map.get(cur.parent_id)  # type: ignore[assignment]
-                    elements.append((ref_key, label, el.role, ex, ey, ew, eh, depth_level))
+                    elements.append((ref_key, label, ex, ey, ew, eh, depth_level))
     except Exception as exc:
         logger.debug("Snapshot element collection failed: %s", exc)
 
-    # If no recent snapshot, capture a fresh element tree
+    # If no recent snapshot, capture a fresh element tree via backend
     if not _found_snapshot:
         try:
             tree = backend.get_element_tree(
                 app=app, hwnd=hwnd, depth=depth, backend="uia",
             )
             if tree:
-                counter = [0]
-
-                def _collect_uia(el, tree_depth: int = 0) -> None:
-                    counter[0] += 1
-                    ref = f"e{counter[0]}"
-                    if el.width > 0 and el.height > 0:
-                        if refs is None or ref in refs:
-                            label = el.name or el.role
-                            if len(label) > 20:
-                                label = label[:18] + ".."
-                            elements.append((ref, label, el.role, el.x, el.y, el.width, el.height, tree_depth))
-                    for child in el.children:
-                        _collect_uia(child, tree_depth + 1)
-
-                _collect_uia(tree)
+                elements = flatten_element_tree(
+                    tree, refs=refs, show_all=show_all,
+                    role_filter=role_filter,
+                )
         except Exception as exc:
             logger.debug("UIA element tree collection failed: %s", exc)
 
     if not elements:
         return None
 
-    # Depth-based colors (BGR for GDI)
-    DEPTH_COLORS_BGR = [
-        0x0000FF,  # Red
-        0x00A000,  # Green
-        0xFF5000,  # Blue
-        0x00A0FF,  # Orange
-        0xC800A0,  # Purple
-        0xB4B400,  # Teal
-        0x6400C8,  # Crimson
-        0xFF5050,  # Indigo
-    ]
-
-    # Compute label positions to avoid overlap
-    label_rects: list = []
-    label_positions: list = []
-
-    for i, (ref, label, role, ex, ey, ew, eh, depth_level) in enumerate(elements):
-        label_text = f" {ref}: {label} "
-        approx_w = len(label_text) * 8
-        approx_h = 16
-
-        candidates = [
-            (ex, max(0, ey - approx_h)),
-            (ex + ew - approx_w, max(0, ey - approx_h)),
-            (ex, ey + eh),
-            (ex + ew - approx_w, ey + eh),
-        ]
-
-        best_pos = candidates[0]
-        best_overlap = len(label_rects) + 1  # guaranteed > any real count
-
-        for cx, cy in candidates:
-            cx = max(0, cx)
-            cy = max(0, cy)
-            overlap_count = 0
-            for px1, py1, px2, py2 in label_rects:
-                if cx < px2 and cx + approx_w > px1 and cy < py2 and cy + approx_h > py1:
-                    overlap_count += 1
-            if overlap_count < best_overlap:
-                best_overlap = overlap_count
-                best_pos = (cx, cy)
-                if overlap_count == 0:
-                    break
-
-        label_positions.append(best_pos)
-        label_rects.append((best_pos[0], best_pos[1],
-                            best_pos[0] + approx_w, best_pos[1] + approx_h))
-
-    # Draw highlights using GDI
-    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
-    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
-
-    hdc = user32.GetDC(None)
-    font = gdi32.CreateFontW(
-        14, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 0, 0, "Consolas"
-    )
-
-    try:
-        # Draw all borders and labels simultaneously (single pass)
-        for i, (ref, label, role, ex, ey, ew, eh, depth_level) in enumerate(elements):
-            color = DEPTH_COLORS_BGR[depth_level % len(DEPTH_COLORS_BGR)]
-            pen = gdi32.CreatePen(0, 2, color)
-            old_pen = gdi32.SelectObject(hdc, pen)
-            old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
-
-            gdi32.Rectangle(hdc, ex, ey, ex + ew, ey + eh)
-
-            gdi32.SelectObject(hdc, old_brush)
-            label_text = f" {ref}: {label} "
-
-            gdi32.SetBkColor(hdc, color)
-            gdi32.SetTextColor(hdc, 0xFFFFFF)
-            old_font = gdi32.SelectObject(hdc, font)
-
-            lx, ly = label_positions[i]
-            text_buf = ctypes.create_unicode_buffer(label_text)
-            gdi32.TextOutW(hdc, lx, ly, text_buf, len(label_text))
-
-            gdi32.SelectObject(hdc, old_font)
-            gdi32.SelectObject(hdc, old_pen)
-            gdi32.DeleteObject(pen)
-
-        # Hold the display for the requested duration
-        time.sleep(duration)
-
-    finally:
-        gdi32.DeleteObject(font)
-        user32.ReleaseDC(None, hdc)
-        user32.InvalidateRect(None, None, True)
-
+    _draw_gdi_overlay(elements, duration=duration)
     return None
