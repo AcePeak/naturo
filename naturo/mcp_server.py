@@ -85,15 +85,6 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     return server
 
 
-def _iter_elements(el):
-    """Iterate over all elements in a tree."""
-    if el is None:
-        return
-    yield el
-    for c in (el.children or []):
-        yield from _iter_elements(c)
-
-
 def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
     """Run the MCP server with the specified transport."""
     server = create_server(host=host, port=port)
