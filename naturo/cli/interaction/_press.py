@@ -160,7 +160,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     import ctypes
                     import ctypes.wintypes
                     _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(
+                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
                         _target_hwnd, ctypes.byref(_focused_pid)
                     )
                     if route_info and _focused_pid.value:

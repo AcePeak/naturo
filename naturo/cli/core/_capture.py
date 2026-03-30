@@ -168,7 +168,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                             import ctypes
                             import ctypes.wintypes as wt
                             rect = wt.RECT()
-                            if ctypes.windll.user32.GetWindowRect(
+                            if ctypes.windll.user32.GetWindowRect(  # type: ignore[attr-defined]
                                 _cap_hwnd, ctypes.byref(rect)
                             ):
                                 win_offset_x = rect.left
