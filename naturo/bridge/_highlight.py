@@ -249,12 +249,10 @@ def highlight_elements(
     # ── Legacy fallback: self-enumerate via Win32 HWND ──────────────
     # Kept for backward compatibility when no backend is available.
     from ctypes import wintypes
-    import time
 
     old_ctx = _set_dpi_awareness()
     try:
         user32 = ctypes.windll.user32  # type: ignore[attr-defined]
-        gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
 
         _ACTIONABLE_WIN32_CLASSES = {
             "button", "edit", "combobox", "listbox", "scrollbar",
@@ -403,7 +401,7 @@ def highlight_elements_uia(
     # Try to get elements from most recent snapshot first
     from naturo.annotate import ACTIONABLE_ROLES
 
-    elements: list[DrawElement] = []
+    snap_elements: list[DrawElement] = []
     _found_snapshot = False
     try:
         snaps = mgr.list_snapshots()
@@ -433,7 +431,7 @@ def highlight_elements_uia(
                         seen.add(cur.parent_id)
                         depth_level += 1
                         cur = snap.ui_map.get(cur.parent_id)  # type: ignore[assignment]
-                    elements.append((ref_key, label, ex, ey, ew, eh, depth_level))
+                    snap_elements.append((ref_key, label, ex, ey, ew, eh, depth_level))
     except Exception as exc:
         logger.debug("Snapshot element collection failed: %s", exc)
 
@@ -444,15 +442,15 @@ def highlight_elements_uia(
                 app=app, hwnd=hwnd, depth=depth, backend="uia",
             )
             if tree:
-                elements = flatten_element_tree(
+                snap_elements = flatten_element_tree(
                     tree, refs=refs, show_all=show_all,
                     role_filter=role_filter,
                 )
         except Exception as exc:
             logger.debug("UIA element tree collection failed: %s", exc)
 
-    if not elements:
+    if not snap_elements:
         return None
 
-    _draw_gdi_overlay(elements, duration=duration)
+    _draw_gdi_overlay(snap_elements, duration=duration)
     return None
