@@ -1,10 +1,12 @@
 {
   "name": "naturo",
   "version": "0.1.0",
-  "description": "Windows desktop automation engine for AI agents — see, click, type, automate. MCP server included.",
+  "description": "Cross-platform desktop automation engine for AI agents — see, click, type, automate. MCP server included.",
   "keywords": [
     "automation",
     "windows",
+    "linux",
+    "macos",
     "desktop",
     "ui",
     "rpa",
@@ -33,5 +35,8 @@
   ],
   "engines": {
     "node": ">=16"
+  },
+  "scripts": {
+    "test": "node test/README.test.js"
   }
 }
