@@ -1,8 +1,13 @@
-# Naturo — Windows Desktop Automation Engine
+# Naturo — Cross-Platform Desktop Automation Engine
 
 > See, click, type, automate. Built for AI agents.
 
 This is the npm wrapper for [Naturo](https://github.com/AcePeak/naturo). It delegates to the Python CLI.
+
+**Platform Support:**
+- **Windows:** Full support available now
+- **Linux:** Coming soon
+- **macOS:** Coming soon
 
 ## Quick Start
 
