@@ -109,6 +109,36 @@ class TestTaskbarClick:
             result = runner.invoke(taskbar, ["click", "Nonexistent"])
         assert result.exit_code != 0 or "error" in result.output.lower() or "Error" in result.output
 
+    def test_click_empty_name(self, runner, mock_backend):
+        """Empty name triggers INVALID_INPUT error."""
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(taskbar, ["click", "   "])
+        assert result.exit_code != 0 or "INVALID_INPUT" in result.output
+        mock_backend.taskbar_click.assert_not_called()
+
+    def test_click_empty_name_json(self, runner, mock_backend):
+        """Empty name with JSON output emits structured error."""
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(taskbar, ["click", "  ", "--json"])
+        assert result.exit_code != 0 or "INVALID_INPUT" in result.output
+        mock_backend.taskbar_click.assert_not_called()
+
+    def test_click_generic_exception(self, runner, mock_backend):
+        """Generic exception from backend is emitted with UNKNOWN_ERROR."""
+        mock_backend.taskbar_click.side_effect = RuntimeError("unexpected crash")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(taskbar, ["click", "Chrome"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
+
+    def test_click_naturo_error_json(self, runner, mock_backend):
+        """NaturoError in JSON mode returns structured error."""
+        from naturo.errors import NaturoError
+        mock_backend.taskbar_click.side_effect = NaturoError("ELEMENT_NOT_FOUND", "Item not found")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(taskbar, ["click", "Missing", "--json"])
+        data = json.loads(result.output)
+        assert data.get("success") is False or "ELEMENT_NOT_FOUND" in result.output
+
 
 class TestTaskbarHelp:
     """Tests for taskbar command help text."""

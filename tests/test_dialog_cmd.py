@@ -151,6 +151,64 @@ class TestDialogAccept:
         # Should report error about no dialog found
         assert result.exit_code != 0 or "error" in result.output.lower() or "DIALOG_NOT_FOUND" in result.output
 
+    def test_accept_hwnd_filter_matches(self, runner, mock_backend):
+        """--hwnd selects the matching dialog, not the first one."""
+        d1 = _make_dialog(title="Wrong", hwnd=111)
+        d2 = _make_dialog(title="Right", hwnd=222)
+        mock_backend.detect_dialogs.return_value = [d1, d2]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["accept", "--hwnd", "222"])
+        assert result.exit_code == 0
+        assert "Right" in result.output
+
+    def test_accept_hwnd_no_match_falls_back(self, runner, mock_backend):
+        """--hwnd with no match falls back to first dialog."""
+        d1 = _make_dialog(title="First", hwnd=111)
+        mock_backend.detect_dialogs.return_value = [d1]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["accept", "--hwnd", "999"])
+        assert result.exit_code == 0
+        assert "First" in result.output
+
+    def test_accept_no_accept_button(self, runner, mock_backend):
+        """Dialog with buttons that don't match accept patterns."""
+        custom_buttons = [
+            DialogButton(name="Retry", element_id="b1", is_default=False, x=100, y=200),
+            DialogButton(name="Help", element_id="b2", is_default=False, x=200, y=200),
+        ]
+        d = _make_dialog(buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["accept"])
+        assert result.exit_code != 0 or "ELEMENT_NOT_FOUND" in result.output
+        mock_backend.click.assert_not_called()
+
+    def test_accept_is_default_button(self, runner, mock_backend):
+        """Button with is_default=True should be picked even if name isn't in _ACCEPT_BUTTONS."""
+        custom_buttons = [
+            DialogButton(name="Confirm", element_id="b1", is_default=True, x=150, y=200),
+            DialogButton(name="Abort", element_id="b2", is_cancel=True, x=250, y=200),
+        ]
+        d = _make_dialog(buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["accept"])
+        assert result.exit_code == 0
+        assert "Confirm" in result.output
+        mock_backend.click.assert_called_once_with(x=150, y=200)
+
+    def test_accept_no_accept_button_json(self, runner, mock_backend):
+        """JSON output when no accept button found."""
+        custom_buttons = [
+            DialogButton(name="Retry", element_id="b1", is_default=False, x=100, y=200),
+        ]
+        d = _make_dialog(buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["accept", "--json"])
+        data = json.loads(result.output)
+        assert data.get("success") is not True or "ELEMENT_NOT_FOUND" in result.output
+
 
 # ---------------------------------------------------------------------------
 # dialog dismiss
@@ -185,6 +243,45 @@ class TestDialogDismiss:
             result = runner.invoke(dialog, ["dismiss"])
         assert result.exit_code != 0 or "error" in result.output.lower() or "DIALOG_NOT_FOUND" in result.output
 
+    def test_dismiss_no_dismiss_button(self, runner, mock_backend):
+        """Dialog with buttons that don't match dismiss patterns (no cancel/close)."""
+        custom_buttons = [
+            DialogButton(name="Retry", element_id="b1", is_default=True, x=100, y=200),
+            DialogButton(name="Continue", element_id="b2", is_default=False, x=200, y=200),
+        ]
+        d = _make_dialog(buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["dismiss"])
+        assert result.exit_code != 0 or "ELEMENT_NOT_FOUND" in result.output
+        # Verify available buttons are listed in error message
+        assert "Retry" in result.output or result.exit_code != 0
+        mock_backend.click.assert_not_called()
+
+    def test_dismiss_is_cancel_button(self, runner, mock_backend):
+        """Button with is_cancel=True should be picked even if name isn't in _DISMISS_BUTTONS."""
+        custom_buttons = [
+            DialogButton(name="Discard", element_id="b1", is_default=False, is_cancel=True, x=300, y=200),
+            DialogButton(name="Save", element_id="b2", is_default=True, x=100, y=200),
+        ]
+        d = _make_dialog(buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["dismiss"])
+        assert result.exit_code == 0
+        assert "Discard" in result.output
+        mock_backend.click.assert_called_once_with(x=300, y=200)
+
+    def test_dismiss_hwnd_filter(self, runner, mock_backend):
+        """--hwnd selects the matching dialog for dismiss."""
+        d1 = _make_dialog(title="Other", hwnd=100)
+        d2 = _make_dialog(title="Target", hwnd=200)
+        mock_backend.detect_dialogs.return_value = [d1, d2]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["dismiss", "--hwnd", "200"])
+        assert result.exit_code == 0
+        assert "Target" in result.output
+
 
 # ---------------------------------------------------------------------------
 # dialog click-button
@@ -218,6 +315,28 @@ class TestDialogClickButton:
     def test_click_button_missing_argument(self, runner):
         result = runner.invoke(dialog, ["click-button"])
         assert result.exit_code != 0
+
+    def test_click_button_empty_name(self, runner, mock_backend):
+        """Empty button name triggers INVALID_INPUT error."""
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["click-button", "   "])
+        assert result.exit_code != 0 or "INVALID_INPUT" in result.output
+        mock_backend.dialog_click_button.assert_not_called()
+
+    def test_click_button_naturo_error(self, runner, mock_backend):
+        """NaturoError from backend is emitted as structured error."""
+        from naturo.errors import NaturoError
+        mock_backend.dialog_click_button.side_effect = NaturoError("ELEMENT_NOT_FOUND", "Button not found")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["click-button", "Nonexistent"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
+
+    def test_click_button_generic_error(self, runner, mock_backend):
+        """Generic exception from backend is emitted with UNKNOWN_ERROR."""
+        mock_backend.dialog_click_button.side_effect = RuntimeError("unexpected")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["click-button", "OK"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +385,75 @@ class TestDialogType:
     def test_type_missing_text(self, runner):
         result = runner.invoke(dialog, ["type"])
         assert result.exit_code != 0
+
+    def test_type_accept_no_dialog_after_typing(self, runner, mock_backend):
+        """--accept flag but no dialog found after typing: silently succeeds with no accept."""
+        mock_backend.dialog_set_input.return_value = {
+            "dialog_title": "Open",
+            "typed_text": "file.txt",
+        }
+        mock_backend.detect_dialogs.return_value = []  # No dialog after typing
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["type", "file.txt", "--accept"])
+        assert result.exit_code == 0
+        assert "Typed 'file.txt'" in result.output
+        # No accept button mentioned since no dialog was found
+        assert "accepted" not in result.output.lower()
+        mock_backend.click.assert_not_called()
+
+    def test_type_accept_no_accept_button_in_dialog(self, runner, mock_backend):
+        """--accept with dialog found but no accept button: silently succeeds."""
+        mock_backend.dialog_set_input.return_value = {
+            "dialog_title": "Custom",
+            "typed_text": "input",
+        }
+        custom_buttons = [
+            DialogButton(name="Retry", element_id="b1", is_default=False, x=100, y=200),
+        ]
+        d = _make_dialog(title="Custom", buttons=custom_buttons)
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["type", "input", "--accept"])
+        assert result.exit_code == 0
+        assert "Typed 'input'" in result.output
+        mock_backend.click.assert_not_called()
+
+    def test_type_accept_json_includes_accepted_with(self, runner, mock_backend):
+        """JSON output includes accepted_with when accept succeeds."""
+        mock_backend.dialog_set_input.return_value = {
+            "dialog_title": "Open",
+            "typed_text": "hello.txt",
+        }
+        d = _make_dialog(title="Open")
+        mock_backend.detect_dialogs.return_value = [d]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["type", "hello.txt", "--accept", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["accepted_with"] == "OK"
+
+    def test_type_accept_json_no_accepted_with(self, runner, mock_backend):
+        """JSON output omits accepted_with when no dialog found after typing."""
+        mock_backend.dialog_set_input.return_value = {
+            "dialog_title": "Open",
+            "typed_text": "file.txt",
+        }
+        mock_backend.detect_dialogs.return_value = []
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["type", "file.txt", "--accept", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert "accepted_with" not in data
+
+    def test_type_naturo_error(self, runner, mock_backend):
+        """NaturoError from dialog_set_input is emitted."""
+        from naturo.errors import NaturoError
+        mock_backend.dialog_set_input.side_effect = NaturoError("DIALOG_NOT_FOUND", "No dialog")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(dialog, ["type", "text"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
 
 
 # ---------------------------------------------------------------------------

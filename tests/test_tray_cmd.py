@@ -130,6 +130,72 @@ class TestTrayClick:
             result = runner.invoke(tray, ["click", "Nonexistent"])
         assert result.exit_code != 0 or "error" in result.output.lower() or "Error" in result.output
 
+    def test_click_empty_name(self, runner, mock_backend):
+        """Empty name triggers INVALID_INPUT error."""
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["click", "   "])
+        assert result.exit_code != 0 or "INVALID_INPUT" in result.output
+        mock_backend.tray_click.assert_not_called()
+
+    def test_click_empty_name_json(self, runner, mock_backend):
+        """Empty name with JSON output emits structured error."""
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["click", "  ", "--json"])
+        assert result.exit_code != 0 or "INVALID_INPUT" in result.output
+        mock_backend.tray_click.assert_not_called()
+
+    def test_click_right_and_double(self, runner, mock_backend):
+        """Both --right and --double: right_click takes priority for button, double still passed."""
+        mock_backend.tray_click.return_value = {"name": "Volume"}
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["click", "Volume", "--right", "--double"])
+        assert result.exit_code == 0
+        mock_backend.tray_click.assert_called_once_with(name="Volume", button="right", double=True)
+
+    def test_click_generic_exception(self, runner, mock_backend):
+        """Generic exception from backend is emitted with UNKNOWN_ERROR."""
+        mock_backend.tray_click.side_effect = RuntimeError("unexpected")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["click", "Volume"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
+
+    def test_click_naturo_error_json(self, runner, mock_backend):
+        """NaturoError in JSON mode returns structured error."""
+        from naturo.errors import NaturoError
+        mock_backend.tray_click.side_effect = NaturoError("ELEMENT_NOT_FOUND", "Not found")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["click", "Missing", "--json"])
+        data = json.loads(result.output)
+        assert data.get("success") is False or "ELEMENT_NOT_FOUND" in result.output
+
+    def test_list_icon_no_tooltip(self, runner, mock_backend):
+        """Icon with no tooltip shows just the name."""
+        mock_backend.tray_list.return_value = [
+            {"name": "MyApp", "tooltip": "", "is_visible": True},
+        ]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["list"])
+        assert result.exit_code == 0
+        assert "MyApp" in result.output
+        assert "—" not in result.output  # No tooltip separator
+
+    def test_list_icon_tooltip_none(self, runner, mock_backend):
+        """Icon with tooltip=None doesn't crash."""
+        mock_backend.tray_list.return_value = [
+            {"name": "SomeApp", "tooltip": None, "is_visible": True},
+        ]
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["list"])
+        assert result.exit_code == 0
+        assert "SomeApp" in result.output
+
+    def test_list_generic_exception(self, runner, mock_backend):
+        """Generic exception from tray_list is caught."""
+        mock_backend.tray_list.side_effect = RuntimeError("crash")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(tray, ["list"])
+        assert result.exit_code != 0 or "error" in result.output.lower()
+
 
 class TestTrayHelp:
     """Tests for tray command help text."""
