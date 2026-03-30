@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import logging
+from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 
@@ -51,10 +52,10 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         except RuntimeError as e:
             raise NaturoError(str(e))
 
-    def _safe_tool(fn):
+    def _safe_tool(fn: Callable[..., Any]) -> Callable[..., Any]:
         """Decorator: wraps MCP tool handlers with try/except to return structured errors."""
         @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return fn(*args, **kwargs)
             except NaturoError as e:

@@ -43,11 +43,14 @@ logger = logging.getLogger(__name__)
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste (default: True)")
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app, pid,
-              window_title, hwnd, wait_for, input_mode, method, selector, app_id,
-              verify, see_after, settle,
-              paste_after, copy_after, cut_after, restore,
-              json_output):
+def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
+              element_id: str | None, coords: tuple[int, int] | None, double: bool,
+              right: bool, app: str | None, pid: int | None,
+              window_title: str | None, hwnd: int | None, wait_for: float | None,
+              input_mode: str, method: str, selector: str | None, app_id: str | None,
+              verify: bool, see_after: bool, settle: int,
+              paste_after: bool, copy_after: bool, cut_after: bool, restore: bool,
+              json_output: bool) -> None:
     """Click on a UI element, text, or coordinates.
 
     QUERY is optional text or eN ref to find and click on. Use --on, --id, or --coords

@@ -27,8 +27,10 @@ import naturo.cli.core._common as _common
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
-def capture(app, pid, window_title, hwnd, screen, path, fmt, store_snapshot, session,
-            element_ref, region, padding, json_output, app_id):
+def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: int | None,
+            screen: int, path: str | None, fmt: str, store_snapshot: bool, session: str | None,
+            element_ref: str | None, region: str | None, padding: int, json_output: bool,
+            app_id: str | None) -> None:
     """Capture a live screenshot, optionally cropped to an element or region.
 
     Captures the screen or a specific window and saves to a file.

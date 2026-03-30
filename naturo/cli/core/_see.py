@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json as json_module
 import re as _re_mod
+from typing import Any
 
 import click
 
@@ -47,9 +48,11 @@ import naturo.cli.core._common as _common
 )
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
-def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapshot, session,
-        cascade, fill_gaps, show_stats, coverage_target, visible_only, show_selectors,
-        json_output, backend, app_id):
+def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | None,
+        mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
+        session: str | None, cascade: bool, fill_gaps: bool, show_stats: bool,
+        coverage_target: float, visible_only: bool, show_selectors: bool,
+        json_output: bool, backend: str, app_id: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -286,7 +289,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
         _sel_builder = SelectorBuilder()
         _selector_app = app or "*"
 
-        def _el_to_selector_dict(el) -> dict[str, str]:
+        def _el_to_selector_dict(el: Any) -> dict[str, str]:
             """Convert an ElementInfo to a dict suitable for SelectorBuilder."""
             raw_id = str(el.id) if el.id else ""
             aid = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
@@ -296,7 +299,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                 "automationid": aid,
             }
 
-        def _build_selector(el, ancestors_dicts: list[dict[str, str]]) -> str:
+        def _build_selector(el: Any, ancestors_dicts: list[dict[str, str]]) -> str:
             """Build a URI selector for an element given its ancestor dicts."""
             el_dict = _el_to_selector_dict(el)
             return _sel_builder.build_uri(el_dict, ancestors_dicts, app=_selector_app)
@@ -309,7 +312,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             # causing duplicate display IDs in JSON output.
             _json_ref_seq = [0]
 
-            def to_dict(el, parent_ref=None, ancestors_dicts=None):
+            def to_dict(el: Any, parent_ref: str | None = None, ancestors_dicts: list[dict[str, str]] | None = None) -> dict[str, Any] | None:
                 """Convert ElementInfo tree to a JSON-serializable dict.
 
                 Args:
@@ -392,6 +395,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
                     d["source"] = props["source"]
                 return d
             out = to_dict(tree)
+            assert out is not None, "Root element should never be filtered"
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
             if cascade_stats:

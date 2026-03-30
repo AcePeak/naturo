@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json as json_module
+from typing import Any
 
 import click
 
@@ -38,8 +39,11 @@ import naturo.cli.core._common as _common
               help="AI model name override (e.g. claude-sonnet-4-20250514, gpt-4o)")
 @click.option("--api-key", "ai_api_key", default=None,
               help="AI provider API key (overrides env var)")
-def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
-             ai_provider, ai_model, ai_api_key, screenshot, app, app_id, json_output, backend):
+def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str | None,
+             actionable: bool, depth: int, limit: int, ai: bool,
+             ai_provider: str, ai_model: str | None, ai_api_key: str | None,
+             screenshot: str | None, app: str | None, app_id: str | None,
+             json_output: bool, backend: str) -> None:
     """Search for UI elements matching a query.
 
     Supports fuzzy name matching, role filtering, and combined queries.
@@ -135,7 +139,7 @@ def find_cmd(query, query_opt, find_all, role, actionable, depth, limit, ai,
         # Convert backend ElementInfo tree to bridge ElementInfo for search
         from naturo.bridge import ElementInfo as BridgeElementInfo
 
-        def to_bridge(el):
+        def to_bridge(el: Any) -> BridgeElementInfo:
             """Convert backend ElementInfo to bridge ElementInfo."""
             return BridgeElementInfo(
                 id=el.id,

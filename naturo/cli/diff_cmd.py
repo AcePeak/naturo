@@ -1,4 +1,6 @@
 """CLI diff command — compare UI element trees."""
+from __future__ import annotations
+
 import json
 
 from naturo.cli.error_helpers import json_error as _json_error_str
@@ -19,7 +21,7 @@ import click
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def diff(ctx, snapshots, window_title, interval, app, hwnd, pid, app_id, json_output):
+def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | None, interval: float, app: str | None, hwnd: int | None, pid: int | None, app_id: str | None, json_output: bool) -> None:
     """Compare two UI element trees to detect changes.
 
     Either provide two --snapshot IDs, or use --window to capture before/after
