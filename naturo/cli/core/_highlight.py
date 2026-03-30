@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import json as _json
+import logging
 
 import click
 
 import naturo.cli.core._common as _common
+
+logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -85,15 +88,25 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
     refs_list = all_refs if all_refs else None
 
     try:
+        # (#662) Fetch element tree via backend first — same path as `see`,
+        # guaranteeing DPI-correct coordinates for all highlight modes.
+        element_tree = None
+        try:
+            element_tree = be.get_element_tree(
+                hwnd=handle, depth=depth, backend=backend,
+            )
+        except Exception:
+            logger.debug("Pre-fetch element tree failed, highlight will fallback", exc_info=True)
+
         if backend == "win32":
-            # Legacy Win32 HWND enumeration fallback
             from naturo.bridge import highlight_elements
             if not json_output:
                 click.echo(f"Highlighting elements (win32) for {duration}s... (switch to the target window)")
             import time
             time.sleep(1.5)
             highlight_elements(hwnd=handle, depth=depth, duration=duration,
-                               refs=refs_list, show_all=show_all)
+                               refs=refs_list, show_all=show_all,
+                               element_tree=element_tree)
         else:
             # UIA mode: use snapshot element tree (#364)
             from naturo.bridge import highlight_elements_uia
@@ -132,6 +145,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
                     backend=be, app=app, hwnd=handle, depth=depth,
                     duration=duration, refs=refs_list, show_all=show_all,
                     role_filter=role_filter,
+                    element_tree=element_tree,
                 )
     except SystemExit:
         raise

@@ -39,6 +39,7 @@ from naturo.bridge._tree import (  # noqa: F401
 
 # Re-export highlighting
 from naturo.bridge._highlight import (  # noqa: F401
+    flatten_element_tree,
     highlight_elements,
     highlight_elements_uia,
 )

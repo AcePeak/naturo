@@ -263,6 +263,91 @@ class TestHighlightAnnotate:
         assert len(non_grey) > 0, "Expected coloured annotation pixels"
 
 
+# ── flatten_element_tree ─────────────────────────────────────────────────────
+
+
+class TestFlattenElementTree:
+    """Tests for bridge._highlight.flatten_element_tree."""
+
+    @staticmethod
+    def _make_tree():
+        """Build a minimal ElementInfo-like tree for testing."""
+        from types import SimpleNamespace
+        child1 = SimpleNamespace(
+            role="Button", name="OK", x=100, y=200, width=80, height=30,
+            children=[], is_actionable=True,
+        )
+        child2 = SimpleNamespace(
+            role="Pane", name="StatusBar", x=0, y=580, width=800, height=20,
+            children=[], is_actionable=False,
+        )
+        root = SimpleNamespace(
+            role="Window", name="Main", x=0, y=0, width=800, height=600,
+            children=[child1, child2], is_actionable=False,
+        )
+        return root
+
+    def test_show_all_returns_everything(self):
+        from naturo.bridge._highlight import flatten_element_tree
+
+        tree = self._make_tree()
+        result = flatten_element_tree(tree, show_all=True)
+        refs = [r[0] for r in result]
+        assert "e1" in refs  # root Window
+        assert "e2" in refs  # Button
+        assert "e3" in refs  # Pane
+
+    def test_actionable_only_filters_non_actionable(self):
+        from naturo.bridge._highlight import flatten_element_tree
+
+        tree = self._make_tree()
+        result = flatten_element_tree(tree, show_all=False)
+        roles = [r[0] for r in result]
+        # Button is actionable, Window and Pane are not
+        assert "e2" in roles
+        # Window and Pane should be filtered out
+        refs = {r[0] for r in result}
+        assert "e1" not in refs  # Window
+        assert "e3" not in refs  # Pane
+
+    def test_ref_filter(self):
+        from naturo.bridge._highlight import flatten_element_tree
+
+        tree = self._make_tree()
+        result = flatten_element_tree(tree, refs=["e2"], show_all=True)
+        assert len(result) == 1
+        assert result[0][0] == "e2"
+
+    def test_role_filter(self):
+        from naturo.bridge._highlight import flatten_element_tree
+
+        tree = self._make_tree()
+        result = flatten_element_tree(tree, show_all=True, role_filter="Button")
+        assert len(result) == 1
+        assert result[0][0] == "e2"
+
+    def test_coordinates_preserved(self):
+        from naturo.bridge._highlight import flatten_element_tree
+
+        tree = self._make_tree()
+        result = flatten_element_tree(tree, refs=["e2"], show_all=True)
+        ref, label, x, y, w, h, depth = result[0]
+        assert (x, y, w, h) == (100, 200, 80, 30)
+        assert depth == 1  # child of root
+
+    def test_label_truncation(self):
+        from naturo.bridge._highlight import flatten_element_tree
+        from types import SimpleNamespace
+
+        root = SimpleNamespace(
+            role="Button", name="A" * 30, x=0, y=0, width=100, height=50,
+            children=[], is_actionable=True,
+        )
+        result = flatten_element_tree(root, show_all=True)
+        assert len(result) == 1
+        assert len(result[0][1]) == 20  # 18 chars + ".."
+
+
 # ── ACTIONABLE_ROLES set ─────────────────────────────────────────────────────
 
 
