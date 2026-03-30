@@ -1,4 +1,4 @@
-"""Core commands: capture, list, see, find, menu-inspect, highlight, learn, tools.
+"""Core commands: capture, list, see, find, menu-inspect, highlight, tools.
 
 Split into focused submodules for maintainability.  The public API is
 re-exported here so that ``from naturo.cli.core import capture``
@@ -11,7 +11,6 @@ Submodules:
     _see        — see command
     _find       — find command + AI find
     _menu       — menu-inspect command
-    _learn      — learn command
     _highlight  — highlight command
     _tools      — tools command (hidden)
 """
@@ -30,6 +29,5 @@ from naturo.cli.core._list import list_cmd  # noqa: F401
 from naturo.cli.core._see import see  # noqa: F401
 from naturo.cli.core._find import find_cmd, _find_with_ai  # noqa: F401
 from naturo.cli.core._menu import menu_inspect  # noqa: F401
-from naturo.cli.core._learn import learn  # noqa: F401
 from naturo.cli.core._highlight import highlight  # noqa: F401
 from naturo.cli.core._tools import tools  # noqa: F401
