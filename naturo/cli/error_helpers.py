@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 import click
 
@@ -295,7 +295,7 @@ def emit_error(
     suggested_action: Optional[str] = None,
     recoverable: Optional[bool] = None,
     exit_code: int = 1,
-) -> None:
+) -> NoReturn:
     """Emit an error message and exit.
 
     In JSON mode, outputs a structured error with recovery hints.
@@ -324,7 +324,7 @@ def emit_exception_error(
     *,
     fallback_code: str = "UNKNOWN_ERROR",
     exit_code: int = 1,
-) -> None:
+) -> NoReturn:
     """Emit an error from an exception and exit.
 
     If the exception is a NaturoError, uses its full structured data.

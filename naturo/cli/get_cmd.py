@@ -270,7 +270,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
             )
 
         if json_output:
-            output = {
+            element_data = {
                 "ref": ref,
                 "role": result.get("role"),
                 "name": result.get("name"),
@@ -282,7 +282,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
                 "width": result.get("width"),
                 "height": result.get("height"),
             }
-            click.echo(json_module.dumps(output))
+            click.echo(json_module.dumps(element_data))
         elif prop:
             # Return just the requested property
             val = result.get(prop)

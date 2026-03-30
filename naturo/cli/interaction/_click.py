@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import click
 
@@ -332,7 +333,7 @@ def click_cmd(query, on_text, ref_alias, element_id, coords, double, right, app,
         loc = f"{_zero_bounds_element.title or _zero_bounds_element.role} (via UIA Invoke)"
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
-    result_data = {"action": action, "target": str(loc), "button": button}
+    result_data: dict[str, Any] = {"action": action, "target": str(loc), "button": button}
     if _clipboard_action:
         result_data["clipboard_action"] = _clipboard_action
     # (#248) Indicate UIA click was used for UWP apps

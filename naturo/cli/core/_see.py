@@ -227,7 +227,7 @@ def see(app, window_title, hwnd, pid, mode, depth, path, annotate, store_snapsho
             raise SystemExit(1)
 
         snapshot_id = None
-        ref_map = {}  # Maps "eN" → backend element id; built when snapshot is stored
+        ref_map: dict[str, str] = {}  # Maps "eN" → backend element id
         if store_snapshot:
             from naturo.snapshot import get_snapshot_manager
             from naturo.models.snapshot import UIElement
