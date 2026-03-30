@@ -5,8 +5,20 @@ Naturo is tested against real applications on real Windows machines. This docume
 ## Compatibility Matrix
 
 | App | Category | See (UI Tree) | Click | Type | Capture | Full E2E | Last Tested | Version | Notes |
-|-----|----------|:---:|:---:|:---:|:---:|:---:|------------|---------|-------|
-| — | — | — | — | — | — | — | — | — | Tests pending |
+
+| Notepad | Text Editor | ✅ | ✅ | ✅ | ✅ | ✅ | 2026-03 | Windows 11 | Smooth end-to-end workflow including Save As |
+
+| Calculator | Utility | ✅ | ✅ | ⚠️ | ✅ | ✅ | 2026-03 | Windows 11 | Typing limited to button input (no keyboard in some modes) |
+
+| File Explorer | System Tool | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | 2026-03 | Windows 11 | Some rename/navigation inconsistencies |
+
+| Paint | Graphics | ✅ | ✅ | ⚠️ | ✅ | ✅ | 2026-03 | Windows 11 | Text tool works, but formatting limited |
+
+| Excel | Productivity | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | 2026-03 | Microsoft 365 | Complex formulas and large sheets may fail |
+
+| Browser (Edge/Chrome) | Web | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | 2026-03 | Latest | Dynamic elements sometimes not detected |
+
+| Settings | System Tool | ⚠️ | ⚠️ | ❌ | ✅ | ❌ | 2026-03 | Windows 11 | Some panels fail to load or interact |
 
 ### Legend
 - ✅ Fully working
@@ -49,4 +61,4 @@ If you find an app that doesn't work well with naturo, please [open an issue](ht
 
 ---
 
-*This document is auto-updated by QA testing. Last update: —*
+*This document is auto-updated by QA testing. Last update:2026-03
