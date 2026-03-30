@@ -96,7 +96,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
             # Resolve eN ref from most recent `see` snapshot
             from naturo.snapshot import get_snapshot_manager
             mgr = get_snapshot_manager()
-            resolved = mgr.resolve_ref(target_id)
+            resolved = mgr.resolve_ref(target_id, app_name=app)
             if resolved:
                 x, y = resolved[0], resolved[1]
                 target_label = target_id
@@ -243,7 +243,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
         fx, fy = from_coords
     elif from_text and _re.fullmatch(r"e\d+", from_text):
         mgr = get_snapshot_manager()
-        resolved = mgr.resolve_ref(from_text)
+        resolved = mgr.resolve_ref(from_text, app_name=app)
         if resolved:
             fx, fy = resolved[0], resolved[1]
             from_label = from_text
@@ -277,7 +277,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
         tx, ty = to_coords
     elif to_text and _re.fullmatch(r"e\d+", to_text):
         mgr = get_snapshot_manager()
-        resolved = mgr.resolve_ref(to_text)
+        resolved = mgr.resolve_ref(to_text, app_name=app)
         if resolved:
             tx, ty = resolved[0], resolved[1]
             to_label = to_text

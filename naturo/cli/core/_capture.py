@@ -124,7 +124,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             # Resolve eN ref → bounds from most recent snapshot
             from naturo.snapshot import get_snapshot_manager
             _mgr = get_snapshot_manager(session=session)
-            resolved = _mgr.resolve_ref(element_ref)
+            resolved = _mgr.resolve_ref(element_ref, app_name=app)
             if resolved is None:
                 msg = (
                     f"Element ref '{element_ref}' not found in recent snapshots. "
@@ -136,7 +136,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                     click.echo(f"Error: {msg}", err=True)
                 raise SystemExit(1)
             cx, cy, _snap_id = resolved
-            el_result = _mgr.resolve_ref_element(element_ref)
+            el_result = _mgr.resolve_ref_element(element_ref, app_name=app)
             if el_result:
                 element, snap_id = el_result
                 ex, ey, ew, eh = element.frame

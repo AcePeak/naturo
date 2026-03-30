@@ -353,7 +353,7 @@ class SnapshotManager:
                 return ref
         return display_map.get(ref, ref)
 
-    def resolve_ref(self, ref: str) -> Optional[tuple]:
+    def resolve_ref(self, ref: str, app_name: Optional[str] = None) -> Optional[tuple]:
         """Resolve a short element ref (e.g. ``e3``) to center coordinates.
 
         Searches the most recent valid snapshot for the ref, looks up the
@@ -364,6 +364,10 @@ class SnapshotManager:
         ----------
         ref:
             Short ref string (e.g. ``"e3"``).
+        app_name:
+            If provided, only consider snapshots for this application.
+            Prevents cross-app snapshot confusion when multiple apps have
+            recent snapshots (#662).
 
         Returns
         -------
@@ -371,7 +375,9 @@ class SnapshotManager:
             ``(x, y, snapshot_id)`` — center coordinates and the snapshot ID
             used; or ``None`` if no matching ref was found.
         """
-        recent_id = self.get_most_recent_snapshot(require_refs=True)
+        recent_id = self.get_most_recent_snapshot(
+            require_refs=True, app_name=app_name,
+        )
         if not recent_id:
             return None
 
@@ -431,7 +437,7 @@ class SnapshotManager:
         cy = ey + eh // 2
         return (cx, cy, recent_id)
 
-    def resolve_ref_element(self, ref: str) -> Optional[tuple]:
+    def resolve_ref_element(self, ref: str, app_name: Optional[str] = None) -> Optional[tuple]:
         """Resolve a short element ref (e.g. ``e3``) to full element info.
 
         Searches the most recent valid snapshot for the ref and returns
@@ -441,13 +447,17 @@ class SnapshotManager:
         ----------
         ref:
             Short ref string (e.g. ``"e3"``).
+        app_name:
+            If provided, only consider snapshots for this application (#662).
 
         Returns
         -------
         tuple | None
             ``(UIElement, snapshot_id)`` or ``None`` if not found.
         """
-        recent_id = self.get_most_recent_snapshot(require_refs=True)
+        recent_id = self.get_most_recent_snapshot(
+            require_refs=True, app_name=app_name,
+        )
         if not recent_id:
             return None
 

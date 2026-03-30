@@ -238,7 +238,7 @@ class TestPressOnElement:
                 catch_exceptions=False,
             )
             assert result.exit_code == 0
-            mgr.resolve_ref.assert_called_once_with("e5")
+            mgr.resolve_ref.assert_called_once_with("e5", app_name=None)
             # Should click at resolved coords then press key
             backend.click.assert_called_once()
             backend.press_key.assert_called_once()
