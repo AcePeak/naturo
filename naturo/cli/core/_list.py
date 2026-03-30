@@ -50,9 +50,9 @@ def windows(app, pid, json_output):
 
         # Exclude own process and parent (terminal) to avoid matching
         # the terminal running the command (#358)
-        import os as _os
-        _own_pid = _os.getpid()
-        _parent_pid = _os.getppid()
+        import os
+        _own_pid = os.getpid()
+        _parent_pid = os.getppid()
         win_list = [w for w in win_list if w.pid not in (_own_pid, _parent_pid)]
 
         # Apply filters
@@ -66,7 +66,6 @@ def windows(app, pid, json_output):
 
         # Warn if empty result on Windows (may indicate no desktop session)
         if not win_list and platform.system() == "Windows":
-            import os
             session_warning = ""
             session_id = os.environ.get("SESSIONNAME", "")
             if not session_id or session_id.lower() == "services":

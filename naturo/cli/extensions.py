@@ -1,4 +1,6 @@
 """Windows-specific CLI extensions: excel."""
+from __future__ import annotations
+
 from typing import Any
 
 import click
@@ -101,7 +103,7 @@ def read(path, cell, sheet, json_output):
 @click.option("--sheet", help="Sheet name (default: active sheet)")
 @click.option("--create", is_flag=True, help="Create workbook if it doesn't exist")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def write(path, cell, value, sheet, create, json_output):
+def write(path: str, cell: str, value: str, sheet: str | None, create: bool, json_output: bool) -> None:
     """Write a value to a cell in a workbook.
 
     PATH is the workbook file. CELL is the target cell (e.g., A1).

@@ -39,7 +39,11 @@ def _is_combo(key_str: str) -> bool:
 @_common._verify_options
 @_common._see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, window_title, hwnd, input_mode, method, selector, app_id, verify, see_after, settle, json_output):
+def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float | None,
+          on_element: str | None, ref_alias: str | None, app: str | None, pid: int | None,
+          window_title: str | None, hwnd: int | None, input_mode: str, method: str,
+          selector: str | None, app_id: str | None, verify: bool, see_after: bool,
+          settle: int, json_output: bool) -> None:
     """Press keys — single keys, combos, or sequential key sequences.
 
     KEYS can be one or more key specs.  A spec containing ``+`` is treated as
@@ -156,7 +160,7 @@ def press(keys, count, delay, hold_duration, on_element, ref_alias, app, pid, wi
                     import ctypes
                     import ctypes.wintypes
                     _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(
+                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
                         _target_hwnd, ctypes.byref(_focused_pid)
                     )
                     if route_info and _focused_pid.value:
