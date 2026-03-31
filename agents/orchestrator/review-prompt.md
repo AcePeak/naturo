@@ -87,6 +87,26 @@ Think like a product owner. Ask yourself:
 6. **Competitive**: Has anything changed in the PyAutoGUI/pywinauto/Peekaboo landscape?
 7. **Community**: Star count trend? Any external issues/PRs? Discussions?
 
+## Phase 3.5 — Post-Release Debt Sweep (after every version release)
+
+When a new version has been released to PyPI since last review, perform a systematic sweep:
+
+1. **Code quality scan**: Run `ruff check`, `mypy`, check for new `except Exception: pass` patterns
+2. **Test coverage delta**: Compare coverage before/after release — any regressions?
+3. **Large file check**: Any files grown past 500 lines that should be split?
+4. **Documentation freshness**: CHANGELOG updated? README matches current features? VERSION consistent across all files?
+5. **CI health**: All workflows green? Branch triggers correct? Test matrix covering declared Python versions?
+6. **Dependency audit**: Any new deps added without upper bounds? Any security advisories?
+7. **Agent effectiveness**: Did agents hit workspace conflicts? Cost anomalies? Identity issues?
+
+**Every finding becomes an issue in the NEXT milestone.** Zero tolerance for carrying tech debt forward — fix it in the version immediately following discovery.
+
+```bash
+# Check latest PyPI version vs repo version
+pip index versions naturo 2>/dev/null | head -1
+cat naturo/version.py
+```
+
 ## Phase 4 — Take Action
 
 ### Create issues for gaps found
