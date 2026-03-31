@@ -1,20 +1,20 @@
 # QA Status
-Last updated: 2026-04-01 05:02 UTC
+Last updated: 2026-04-01 06:24
 Current round: 75
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 1 failed, 5 passed, 18 skipped (commit 5d8d101); E2E: 2 failed, 8 passed
-- Issues verified: #717, #713, #712, #730 (pass); #714, #702 (deferred, PRs not merged)
-- E2E tests: Notepad (pass), Calculator (pass)
-- Regression: 10/11 passed, 0 retired
+- CI Desktop Tests: 5 passed, 2 failed, 18 skipped (commit c439d87); E2E: 8 passed, 2 failed
+- Issues verified: #743 (pass), #715 (pass), #714 (pass), #729 (partial)
+- E2E tests: Calculator (pass), Notepad (pass)
+- Regression: 8/8 passed, 0 retired
 - New test cases created: none
 - Test cases cleaned up: none
 - New issues created: none
-- Total active test cases: 20
-- Tests run: 11
+- Total active test cases: 21
+- Tests run: 20
 
 ## Top 3 Risks
-1. #743 — `app quit` with Chinese app name targets wrong PID (P1, reproducible every round)
-2. #729 — CI desktop tests fail (Notepad window not found after launch), blocking CI green status
-3. PRs #741 and #742 still open — coverage threshold and AI vision dedup fixes not yet on develop
+1. **CI test flakiness** — zombie UWP Notepad processes cause 2 intermittent test failures (#729)
+2. **AI vision untestable** — no API key on runner, cannot verify cascade dedup (#702)
+3. **Scripter UX** — nested JSON tree output from `see -j` is unintuitive for automation scripts

@@ -8,7 +8,7 @@ created: 2026-03-28
 last_run: 2026-04-01
 last_result: pass
 consecutive_passes: 20
-notes: "2026-04-01 R75: PASS — Full flow: launch→click e3→type 'Hello from QA-Mariana round 75!'→ctrl+a→delete→quit. JSON valid. Screenshot verified."
+notes: "2026-04-01 R75: PASS — Full scripted chain with set -e: launch→see→click e3→type 'Script chain test OK'→verify screenshot→cleanup→quit. All exit 0."
 
 preconditions:
   - "naturo is installed and in PATH"

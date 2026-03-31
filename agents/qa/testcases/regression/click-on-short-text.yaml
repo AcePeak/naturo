@@ -8,7 +8,7 @@ created: 2026-03-27
 last_run: 2026-04-01
 last_result: pass
 consecutive_passes: 4
-notes: "2026-04-01 R75: PASS — click --on '清除' and --on '七' exit 0. 'C'/'CE' fail on Chinese locale (expected, UIA names are Chinese)."
+notes: "2026-04-01 R75: PASS — click --on 'Backspace', '百分比', '清除条目' all exit 0 on Chinese Windows."
 
 preconditions:
   - "naturo is installed and in PATH"
