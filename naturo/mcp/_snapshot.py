@@ -60,23 +60,30 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
-        # Capture UI tree
+        # Capture UI tree and store as flat element map
         tree = backend.get_element_tree(window_title=window_title, depth=depth)
         if tree:
-            def _convert_elements(el, parent_id=None):
-                from naturo.models.snapshot import UIElement
-                elem = UIElement(
+            from naturo.models.snapshot import UIElement
+
+            ui_map: dict[str, UIElement] = {}
+
+            def _collect_elements(el, parent_id=None):
+                child_ids = [c.id for c in (el.children or [])]
+                ui_map[el.id] = UIElement(
+                    id=el.id,
                     element_id=el.id,
                     role=el.role,
-                    name=el.name,
+                    title=el.name,
                     value=el.value or "",
-                    bounds=(el.x, el.y, el.width, el.height),
+                    frame=(el.x, el.y, el.width, el.height),
                     parent_id=parent_id,
-                    children=[_convert_elements(c, el.id) for c in (el.children or [])],
+                    children=child_ids,
                 )
-                return elem
-            root_elem = _convert_elements(tree)
-            manager.store_ui_tree(snapshot_id, root_elem)
+                for c in (el.children or []):
+                    _collect_elements(c, parent_id=el.id)
+
+            _collect_elements(tree)
+            manager.store_detection_result(snapshot_id, ui_map)
 
         # Load the full snapshot
         snapshot = manager.get_snapshot(snapshot_id)
@@ -118,25 +125,24 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
         response = {
             "success": True,
             "snapshot_id": snapshot.snapshot_id,
-            "created_at": snapshot.created_at,
+            "last_update_time": snapshot.last_update_time.isoformat(),
             "screenshot_path": snapshot.screenshot_path,
             "window_title": snapshot.window_title,
             "application_name": snapshot.application_name,
         }
 
-        # Include element tree summary
-        if snapshot.ui_tree:
-            def _serialize(el) -> dict:
-                d = {
-                    "id": el.element_id,
+        # Include element map summary
+        if snapshot.ui_map:
+            response["element_count"] = len(snapshot.ui_map)
+            response["elements"] = [
+                {
+                    "id": el.id,
                     "role": el.role,
-                    "name": el.name,
-                    "bounds": el.bounds,
+                    "title": el.title,
+                    "frame": list(el.frame),
                 }
-                if el.children:
-                    d["children"] = [_serialize(c) for c in el.children]
-                return d
-            response["ui_tree"] = _serialize(snapshot.ui_tree)
+                for el in snapshot.ui_map.values()
+            ]
 
         return response
 
