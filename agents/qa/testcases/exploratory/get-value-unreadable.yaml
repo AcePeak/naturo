@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-03-28
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 11
-notes: "2026-04-01 R73: PASS — get e15 returned '显示为 0' matching Calculator display."
+consecutive_passes: 12
+notes: "2026-04-01 R74: PASS — get e15 returned '显示为 579' matching Calculator display."
 
 preconditions:
   - "naturo is installed and in PATH"
