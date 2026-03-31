@@ -205,10 +205,33 @@ class TestEnglishToChineseProcessBidirectional:
 
 
 class TestNoFalsePositiveFromChineseAlias:
-    """Chinese alias should not cause false matches on unrelated processes."""
+    """Chinese alias should prefer process matches over title matches."""
 
-    def test_chinese_calc_no_match_chrome(self, monkeypatch):
-        """--app 计算器 should NOT match chrome.exe with title containing 计算器."""
+    def test_chinese_calc_prefers_process_over_chrome_title(self, monkeypatch):
+        """--app 计算器 should prefer CalculatorApp.exe over Chrome with '计算器' in title."""
+        backend = _make_backend(monkeypatch, [
+            WindowInfo(
+                handle=9000,
+                title="计算器 - 百度搜索 - Google Chrome",
+                process_name="chrome.exe",
+                pid=900,
+                x=0, y=0, width=1920, height=1080,
+                is_visible=True, is_minimized=False,
+            ),
+            WindowInfo(
+                handle=9001,
+                title="计算器",
+                process_name="CalculatorApp.exe",
+                pid=901,
+                x=0, y=0, width=400, height=600,
+                is_visible=True, is_minimized=False,
+            ),
+        ])
+        result = backend._resolve_hwnd(app="计算器")
+        assert result == 9001, "Process/alias match must beat title fallback"
+
+    def test_chinese_calc_falls_back_to_title(self, monkeypatch):
+        """--app 计算器 falls back to title match when Calculator not running (#671)."""
         backend = _make_backend(monkeypatch, [
             WindowInfo(
                 handle=9000,
@@ -219,8 +242,8 @@ class TestNoFalsePositiveFromChineseAlias:
                 is_visible=True, is_minimized=False,
             ),
         ])
-        with pytest.raises(WindowNotFoundError):
-            backend._resolve_hwnd(app="计算器")
+        result = backend._resolve_hwnd(app="计算器")
+        assert result == 9000, "Title fallback should match when no process matches"
 
 
 class TestAliasMapCompleteness:

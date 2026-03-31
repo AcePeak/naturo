@@ -202,9 +202,12 @@ class ElementMixin:
         Matching strategy (BUG-069/BUG-070):
 
         When ``app`` is provided, matches against **process name and aliases
-        only** (``.exe`` suffix stripped).  Title matching is not used for
-        ``--app`` to prevent cross-process contamination (#465).  When
-        ``window_title`` is provided, matches against window title only.
+        first** (``.exe`` suffix stripped).  If no process name match is
+        found, falls back to **window title matching** (#671).  This allows
+        ``--app claude`` to find a Terminal window titled "claude" while
+        still preventing cross-process contamination when a process name
+        match exists (#465).  When ``window_title`` is provided, matches
+        against window title only.
 
         When ``pid`` is provided (alone or combined with app/window_title),
         only windows belonging to that process are considered (#471).  Among
@@ -462,6 +465,59 @@ class ElementMixin:
             if best_window is not None:
                 return best_window.handle
 
+        # (#671) Window title fallback for --app: when no process name
+        # matched, try matching against window titles.  This allows
+        # `--app claude` to find a Terminal window titled "claude" when
+        # no process named "claude" exists.  Title matches use score 2
+        # (below process name matches at 3-4) so they never override
+        # a valid process name match.  The initial process-name-only
+        # pass above (#465) prevents cross-process contamination when
+        # a process name match exists.
+        if match_process and best_window is None:
+            for w in windows:
+                title_lower = w.title.lower()
+                if not title_lower:
+                    continue
+
+                score = 0
+                if search_lower == title_lower:
+                    score = 4  # exact title match
+                elif search_lower in title_lower:
+                    score = 2  # substring in title
+
+                if score == 0:
+                    continue
+
+                in_console = False
+                if console_session >= 0:
+                    w_session = self._get_process_session_id(w.pid)
+                    in_console = (w_session == console_session)
+
+                is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
+
+                if score > best_score:
+                    best_score = score
+                    best_session_bonus = in_console
+                    best_is_foreground = is_foreground
+                    best_window = w
+                elif score == best_score and best_window is not None:
+                    if in_console and not best_session_bonus:
+                        best_session_bonus = in_console
+                        best_is_foreground = is_foreground
+                        best_window = w
+                    elif in_console == best_session_bonus:
+                        if is_foreground and not best_is_foreground:
+                            best_is_foreground = True
+                            best_window = w
+                        elif is_foreground == best_is_foreground:
+                            w_area = w.width * w.height
+                            best_area = best_window.width * best_window.height
+                            if w_area > best_area:
+                                best_window = w
+
+            if best_window is not None:
+                return best_window.handle
+
         # No match — build candidate suggestions (BUG-070)
         from naturo.errors import WindowNotFoundError
 
@@ -633,6 +689,33 @@ class ElementMixin:
             )
             if afh_match is not None:
                 result.append(afh_match.handle)
+
+        # (#671) Window title fallback for --app: when no process name
+        # matched, try matching against window titles.  This allows
+        # `--app claude` to find a Terminal window titled "claude".
+        if not result and match_process:
+            title_matches = []
+            for w in windows:
+                title_lower = w.title.lower()
+                if not title_lower:
+                    continue
+                score = 0
+                if search_lower == title_lower:
+                    score = 4
+                elif search_lower in title_lower:
+                    score = 2
+                if score > 0:
+                    in_console = False
+                    if console_session >= 0:
+                        w_session = self._get_process_session_id(w.pid)
+                        in_console = (w_session == console_session)
+                    title_matches.append((score, in_console, len(w.title), w))
+
+            if title_matches:
+                title_matches.sort(
+                    key=lambda x: (x[0], x[1], -x[2]), reverse=True,
+                )
+                result = [m[3].handle for m in title_matches]
 
         return result
 
