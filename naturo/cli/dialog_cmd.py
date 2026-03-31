@@ -27,7 +27,7 @@ from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 
 
 @click.group(cls=FuzzyGroup)
-def dialog():
+def dialog() -> None:
     """Detect and interact with system dialogs.
 
     Handles message boxes, file pickers, confirmation prompts, and other
@@ -51,7 +51,7 @@ def dialog():
 @click.option("--hwnd", type=int, help="Filter by dialog window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def detect(app, hwnd, app_id, json_output):
+def detect(app, hwnd, app_id, json_output) -> None:
     """Detect active dialog windows.
 
     Scans for system dialogs including message boxes, file pickers,
@@ -117,7 +117,7 @@ def detect(app, hwnd, app_id, json_output):
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def accept(app, hwnd, app_id, json_output):
+def accept(app, hwnd, app_id, json_output) -> None:
     """Accept (confirm) the active dialog.
 
     Clicks the first accept-type button found: OK, Yes, Open, Save,
@@ -189,7 +189,7 @@ def accept(app, hwnd, app_id, json_output):
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def dismiss(app, hwnd, app_id, json_output):
+def dismiss(app, hwnd, app_id, json_output) -> None:
     """Dismiss (cancel) the active dialog.
 
     Clicks the first dismiss-type button found: Cancel, No, Close,
@@ -262,7 +262,7 @@ def dismiss(app, hwnd, app_id, json_output):
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def click_button(button, app, hwnd, app_id, json_output):
+def click_button(button, app, hwnd, app_id, json_output) -> None:
     """Click a specific button in the active dialog.
 
     Finds a button by name (case-insensitive, supports partial match)
@@ -312,7 +312,7 @@ def click_button(button, app, hwnd, app_id, json_output):
 @click.option("--hwnd", type=int, help="Specific dialog window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def dialog_type(text, do_accept, app, hwnd, app_id, json_output):
+def dialog_type(text, do_accept, app, hwnd, app_id, json_output) -> None:
     """Type text into a dialog's input field.
 
     Finds the dialog's input/edit control, clears it, and types

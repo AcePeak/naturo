@@ -362,7 +362,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
 @_common._see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
-           input_mode, method, app_id, verify, see_after, settle, json_output):
+           input_mode, method, app_id, verify, see_after, settle, json_output) -> None:
     """Press a hotkey combination (alias for 'press').
 
     \b

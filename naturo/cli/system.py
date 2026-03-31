@@ -10,7 +10,7 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 @click.group(cls=FuzzyGroup)
-def app():
+def app() -> None:
     """Manage applications and windows: launch, quit, focus, close, minimize, maximize, restore, move, and more."""
     pass
 
@@ -20,7 +20,7 @@ def app():
 @click.option("--args", multiple=True, help="Launch arguments")
 @click.option("--wait", is_flag=True, help="Wait for app to start")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def launch(name, args, wait, json_output):
+def launch(name, args, wait, json_output) -> None:
     """Launch an application by name or path."""
     click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
@@ -30,7 +30,7 @@ def launch(name, args, wait, json_output):
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--force", is_flag=True, help="Force kill")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def quit(name, pid, force, json_output):
+def quit(name, pid, force, json_output) -> None:
     """Quit an application gracefully (or force kill)."""
     click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
@@ -38,14 +38,14 @@ def quit(name, pid, force, json_output):
 @app.command(hidden=True)
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def relaunch(name, json_output):
+def relaunch(name, json_output) -> None:
     """Quit and relaunch an application."""
     click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
 
 @app.command(name="list", hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def app_list(json_output):
+def app_list(json_output) -> None:
     """List running applications."""
     click.echo("Not implemented yet. See 'naturo app --help' for available commands.")
 
@@ -54,7 +54,7 @@ def app_list(json_output):
 
 
 @click.group(cls=FuzzyGroup)
-def menu():
+def menu() -> None:
     """Interact with application menu bars."""
     pass
 
@@ -66,7 +66,7 @@ def menu():
 @click.option("--window-title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def menu_click(path, app, window_title, hwnd, json_output):
+def menu_click(path, app, window_title, hwnd, json_output) -> None:
     """Click a menu item by path (e.g. 'File > Save As')."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
@@ -78,7 +78,7 @@ def menu_click(path, app, window_title, hwnd, json_output):
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--depth", type=int, default=3, help="Menu tree depth")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def menu_list(app, window_title, hwnd, depth, json_output):
+def menu_list(app, window_title, hwnd, depth, json_output) -> None:
     """List menu items of an application."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
@@ -87,7 +87,7 @@ def menu_list(app, window_title, hwnd, depth, json_output):
 
 
 @click.group(cls=FuzzyGroup)
-def taskbar():
+def taskbar() -> None:
     """Windows taskbar management (pin, unpin, list).
 
     Windows equivalent of Peekaboo's dock commands.
@@ -98,7 +98,7 @@ def taskbar():
 @taskbar.command()
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def pin(name, json_output):
+def pin(name, json_output) -> None:
     """Pin an application to the taskbar."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
@@ -106,14 +106,14 @@ def pin(name, json_output):
 @taskbar.command()
 @click.argument("name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def unpin(name, json_output):
+def unpin(name, json_output) -> None:
     """Unpin an application from the taskbar."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
 
 @taskbar.command(name="list")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def taskbar_list(json_output):
+def taskbar_list(json_output) -> None:
     """List taskbar pinned items."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
@@ -122,7 +122,7 @@ def taskbar_list(json_output):
 
 
 @click.group(cls=FuzzyGroup)
-def tray():
+def tray() -> None:
     """System tray icon interaction.
 
     Windows equivalent of Peekaboo's menubar commands.
@@ -132,7 +132,7 @@ def tray():
 
 @tray.command(name="list")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tray_list(json_output):
+def tray_list(json_output) -> None:
     """List system tray icons."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 
@@ -142,7 +142,7 @@ def tray_list(json_output):
 @click.option("--double", is_flag=True, help="Double-click")
 @click.option("--right", is_flag=True, help="Right-click")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tray_click(name, double, right, json_output):
+def tray_click(name, double, right, json_output) -> None:
     """Click a system tray icon by name."""
     click.echo("Not implemented yet. This feature is planned for a future release.")
 

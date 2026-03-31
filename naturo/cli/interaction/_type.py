@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
              window_title, hwnd, input_mode, method, selector, app_id, verify, see_after,
-             settle, raw, interpret_escapes, json_output):
+             settle, raw, interpret_escapes, json_output) -> None:
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -159,7 +159,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     import ctypes
                     import ctypes.wintypes
                     _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(
+                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
                         _target_hwnd, ctypes.byref(_focused_pid)
                     )
                     if route_info and _focused_pid.value:

@@ -97,7 +97,7 @@ def _patch_all_commands(group: click.Command) -> None:
     help="Log level",
 )
 @click.pass_context
-def main(ctx, json_output, verbose, log_level):
+def main(ctx, json_output, verbose, log_level) -> None:
     """Naturo — Windows desktop automation engine.
 
     See, click, type, automate. Built for AI agents.
@@ -158,7 +158,7 @@ main.add_command(excel)
 # Users naturally try `naturo help` (like git/docker). Redirect to --help.
 @main.command("help", hidden=True)
 @click.pass_context
-def help_cmd(ctx):
+def help_cmd(ctx) -> None:
     """Show help information (alias for --help)."""
     click.echo(ctx.parent.get_help())
 

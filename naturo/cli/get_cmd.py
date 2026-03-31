@@ -40,7 +40,7 @@ def _collect_matching_elements(tree, role=None, name=None):
     """
     matches = []
 
-    def _walk(el, depth=0):
+    def _walk(el, depth=0) -> None:
         role_match = role is None or el.role.lower() == role.lower()
         name_match = name is None or (
             el.name and name.lower() in el.name.lower()
@@ -81,7 +81,7 @@ def _collect_matching_elements(tree, role=None, name=None):
               help="JSON output")
 @click.pass_context
 def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
-            app_id, window_title, hwnd, json_output):
+            app_id, window_title, hwnd, json_output) -> None:
     """Read element text/value.
 
     Read the current value of a UI element. Accepts an element ref (e47),

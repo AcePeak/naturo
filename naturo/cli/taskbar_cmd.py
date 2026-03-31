@@ -22,7 +22,7 @@ from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
 @_click.group()
-def taskbar():
+def taskbar() -> None:
     """Interact with the Windows taskbar.
 
     List running applications and pinned shortcuts on the taskbar,
@@ -39,7 +39,7 @@ def taskbar():
 
 @taskbar.command("list")
 @_click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def taskbar_list(json_output):
+def taskbar_list(json_output) -> None:
     """List items on the taskbar.
 
     Shows running applications and pinned shortcuts visible on the
@@ -81,7 +81,7 @@ def taskbar_list(json_output):
 @taskbar.command("click")
 @_click.argument("name")
 @_click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def taskbar_click(name, json_output):
+def taskbar_click(name, json_output) -> None:
     """Click a taskbar item to activate its window.
 
     Finds a taskbar button matching NAME (case-insensitive, partial match)

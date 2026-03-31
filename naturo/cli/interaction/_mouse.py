@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
            smooth, delay, app, pid, window_title, hwnd, selector, method, app_id, see_after, settle,
-           json_output):
+           json_output) -> None:
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -204,7 +204,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
          duration, steps, modifiers, profile, app, pid, window_title, hwnd, method,
-         app_id, json_output):
+         app_id, json_output) -> None:
     """Drag from one element/position to another.
 
     \b
@@ -351,7 +351,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
-         selector, method, app_id, json_output):
+         selector, method, app_id, json_output) -> None:
     """Move the mouse cursor to a target element or coordinates.
 
     \b

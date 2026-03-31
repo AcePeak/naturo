@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 @click.option("--pid", type=int, default=None, help="Process ID")
 def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, duration,
               json_output, backend, show_all, annotate_path, role_filter,
-              visible_only, cascade, fill_gaps, pid):
+              visible_only, cascade, fill_gaps, pid) -> None:
     """Highlight UI elements on screen with colored borders and labels.
 
     By default highlights only actionable elements (Button, Edit, ComboBox,

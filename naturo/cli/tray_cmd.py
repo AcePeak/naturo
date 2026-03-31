@@ -23,7 +23,7 @@ from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
 @_click.group()
-def tray():
+def tray() -> None:
     """Interact with the system tray (notification area).
 
     List icons in the Windows notification area and click them to
@@ -40,7 +40,7 @@ def tray():
 
 @tray.command("list")
 @_click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tray_list(json_output):
+def tray_list(json_output) -> None:
     """List system tray icons.
 
     Shows icons in the Windows notification area (system tray), including
@@ -84,7 +84,7 @@ def tray_list(json_output):
 @_click.option("--right", "right_click", is_flag=True, help="Right-click (context menu)")
 @_click.option("--double", "double_click", is_flag=True, help="Double-click (open)")
 @_click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tray_click(name, right_click, double_click, json_output):
+def tray_click(name, right_click, double_click, json_output) -> None:
     """Click a system tray icon.
 
     Finds a tray icon matching NAME (case-insensitive, partial match)

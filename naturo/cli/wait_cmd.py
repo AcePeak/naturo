@@ -22,7 +22,7 @@ import click
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def wait(ctx, duration, element, window_title, gone, timeout, interval,
-         app, hwnd, pid, app_id, json_output):
+         app, hwnd, pid, app_id, json_output) -> None:
     """Wait for a duration, or for a UI element/window to appear or disappear.
 
     \b

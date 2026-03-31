@@ -101,7 +101,7 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
 @click.pass_context
 def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
             select, expand, collapse, app, app_id, window_title, hwnd,
-            json_output):
+            json_output) -> None:
     """Set element value/state.
 
     Write a value to a UI element, toggle a checkbox, select a list item,
@@ -262,7 +262,7 @@ def _resolve_hwnd(backend, app, window_title):
 
 
 def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
-                  json_output):
+                  json_output) -> None:
     """Set text value via UIA ValuePattern.
 
     Args:
@@ -309,7 +309,7 @@ def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
         click.echo(f"Set value on {target_str}: {value!r}")
 
 
-def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output):
+def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output) -> None:
     """Toggle element via UIA TogglePattern.
 
     Args:
@@ -353,7 +353,7 @@ def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output):
         click.echo(f"Toggled {target_str} → {result}")
 
 
-def _do_select(backend, hwnd, automation_id, role, name, ref, json_output):
+def _do_select(backend, hwnd, automation_id, role, name, ref, json_output) -> None:
     """Select element via UIA SelectionItemPattern.
 
     Args:
@@ -398,7 +398,7 @@ def _do_select(backend, hwnd, automation_id, role, name, ref, json_output):
 
 
 def _do_expand_collapse(backend, hwnd, automation_id, role, name, ref,
-                        json_output, expanding):
+                        json_output, expanding) -> None:
     """Expand or collapse element via UIA ExpandCollapsePattern.
 
     Args:

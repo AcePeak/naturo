@@ -70,7 +70,7 @@ def _safe_echo(text: str, **kwargs) -> None:
 @click.option("--args", multiple=True, help="Arguments to pass to the application")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, args, json_output):
+def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, args, json_output) -> None:
     """Launch an application by name or path."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -126,7 +126,7 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
 @click.option("--timeout", type=float, default=10.0, help="Graceful shutdown timeout")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output):
+def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output) -> None:
     """Quit an application gracefully (or force kill).
 
     NAME is the application name to quit.
@@ -178,7 +178,7 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
 @click.option("--timeout", type=float, default=30.0, help="Timeout in seconds")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output):
+def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) -> None:
     """Quit and relaunch an application."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -222,7 +222,7 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output):
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_list(ctx, show_all, json_output):
+def app_list(ctx, show_all, json_output) -> None:
     """List running applications with visible windows.
 
     By default, shows user-facing applications with visible windows
@@ -362,7 +362,7 @@ def app_list(ctx, show_all, json_output):
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_hide(ctx, name, app_name, json_output):
+def app_hide(ctx, name, app_name, json_output) -> None:
     """Hide (minimize) all windows of an application. Alias for minimize."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -410,7 +410,7 @@ def app_hide(ctx, name, app_name, json_output):
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_unhide(ctx, name, app_name, json_output):
+def app_unhide(ctx, name, app_name, json_output) -> None:
     """Unhide (restore) all windows of an application. Alias for restore."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -458,7 +458,7 @@ def app_unhide(ctx, name, app_name, json_output):
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_switch(ctx, name, app_name, json_output):
+def app_switch(ctx, name, app_name, json_output) -> None:
     """Switch to (focus) the most recent window of an application. Alias for focus."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -494,7 +494,7 @@ def app_switch(ctx, name, app_name, json_output):
 @click.option("--pid", type=int, help="Search by PID instead of name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_find(ctx, name, pid, json_output):
+def app_find(ctx, name, pid, json_output) -> None:
     """Find a running application by name or PID."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
@@ -548,7 +548,7 @@ def app_find(ctx, name, pid, json_output):
 @click.option("--quick", is_flag=True, help="Fast probe — stop at first available method")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output):
+def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output) -> None:
     """Probe an application and report available interaction methods.
 
     Detects which UI framework the app uses (Electron, WPF, Qt, etc.)
@@ -854,7 +854,7 @@ def _require_target(name, window_title, hwnd, json_output):
     return True
 
 
-def _handle_naturo_error(exc, json_output):
+def _handle_naturo_error(exc, json_output) -> None:
     """Emit a NaturoError and exit."""
     if json_output:
         click.echo(json.dumps(exc.to_json_response()))
@@ -863,7 +863,7 @@ def _handle_naturo_error(exc, json_output):
     sys.exit(1)
 
 
-def _handle_generic_error(exc, json_output):
+def _handle_generic_error(exc, json_output) -> None:
     """Emit a generic exception and exit."""
     if json_output:
         click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
@@ -879,7 +879,7 @@ def _handle_generic_error(exc, json_output):
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_focus(ctx, name, app_name, window_title, hwnd, json_output):
+def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
     """Focus an application window (bring to foreground).
 
     \b
@@ -921,7 +921,7 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output):
 @click.option("--force", is_flag=True, help="Force terminate the process")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_close(ctx, name, app_name, window_title, hwnd, force, json_output):
+def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> None:
     """Close an application window (graceful or forced).
 
     \b
@@ -961,7 +961,7 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output):
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_minimize(ctx, name, window_title, hwnd, json_output):
+def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
     """Minimize an application window.
 
     \b
@@ -995,7 +995,7 @@ def app_minimize(ctx, name, window_title, hwnd, json_output):
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_maximize(ctx, name, window_title, hwnd, json_output):
+def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
     """Maximize an application window.
 
     \b
@@ -1029,7 +1029,7 @@ def app_maximize(ctx, name, window_title, hwnd, json_output):
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_restore(ctx, name, window_title, hwnd, json_output):
+def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
     """Restore a minimized or maximized window to normal state.
 
     \b
@@ -1067,7 +1067,7 @@ def app_restore(ctx, name, window_title, hwnd, json_output):
 @click.option("--height", type=int, default=None, help="New height in pixels (optional)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output):
+def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) -> None:
     """Move and/or resize an application window.
 
     Combines move, resize, and set-bounds into one command.
@@ -1162,7 +1162,7 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output):
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_windows(ctx, name, pid, json_output):
+def app_windows(ctx, name, pid, json_output) -> None:
     """List open windows (optionally filtered by app name or PID).
 
     \b

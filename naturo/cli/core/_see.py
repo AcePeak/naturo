@@ -445,7 +445,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             # passed to ``naturo click e3`` for quick interaction.
             _ref_counter = [0]
 
-            def print_tree(el, indent=0, ancestors_dicts=None):
+            def print_tree(el, indent=0, ancestors_dicts=None) -> None:
                 """Print element tree with short element refs."""
                 if ancestors_dicts is None:
                     ancestors_dicts = []

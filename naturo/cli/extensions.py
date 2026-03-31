@@ -11,7 +11,7 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 @click.group(hidden=True, cls=FuzzyGroup)
-def excel():
+def excel() -> None:
     """Excel COM automation (Windows-specific).
 
     Automate Excel workbooks via COM interface — read/write cells, run macros,
@@ -27,7 +27,7 @@ def excel():
 @click.option("--visible", is_flag=True, help="Show Excel window")
 @click.option("--read-only", is_flag=True, help="Open in read-only mode")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def excel_open_cmd(path, visible, read_only, json_output):
+def excel_open_cmd(path, visible, read_only, json_output) -> None:
     """Open an Excel workbook and show its info.
 
     PATH is the workbook file (.xlsx, .xls, .xlsm).
@@ -62,7 +62,7 @@ def excel_open_cmd(path, visible, read_only, json_output):
 @click.argument("cell")
 @click.option("--sheet", help="Sheet name (default: active sheet)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def read(path, cell, sheet, json_output):
+def read(path, cell, sheet, json_output) -> None:
     """Read a cell or range value from a workbook.
 
     PATH is the workbook file. CELL is a cell reference (A1) or range (A1:C10).
@@ -145,7 +145,7 @@ def write(path: str, cell: str, value: str, sheet: str | None, create: bool, jso
 @excel.command("list-sheets")
 @click.argument("path", type=click.Path())
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def list_sheets(path, json_output):
+def list_sheets(path, json_output) -> None:
     """List all sheets in a workbook.
 
     \b
@@ -179,7 +179,7 @@ def list_sheets(path, json_output):
 @click.argument("macro_name")
 @click.option("--arg", "macro_args", multiple=True, help="Macro argument (repeatable)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def run_macro(path, macro_name, macro_args, json_output):
+def run_macro(path, macro_name, macro_args, json_output) -> None:
     """Run a VBA macro in a workbook.
 
     PATH is the workbook file (.xlsm). MACRO_NAME is the macro to run.
@@ -213,7 +213,7 @@ def run_macro(path, macro_name, macro_args, json_output):
 @click.argument("path", type=click.Path())
 @click.option("--sheet", help="Sheet name (default: active sheet)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def excel_info(path, sheet, json_output):
+def excel_info(path, sheet, json_output) -> None:
     """Get used range info for a worksheet.
 
     Shows the dimensions of the data area in the sheet.

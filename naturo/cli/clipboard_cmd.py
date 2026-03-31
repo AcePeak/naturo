@@ -38,7 +38,7 @@ def _get_backend(json_output: bool = False):
 
 
 @click.group(cls=FuzzyGroup)
-def clipboard():
+def clipboard() -> None:
     """Read, write, and manage clipboard contents.
 
     Data management for the system clipboard. Supports reading and writing
