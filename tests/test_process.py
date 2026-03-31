@@ -8,6 +8,7 @@ from naturo.process import (
     _close_all_windows_for_app, _app_has_visible_windows,
     _get_console_session_id, _get_process_session_id,
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
+    _matches_app_by_process_name,
 )
 from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
 
@@ -605,6 +606,42 @@ class TestQuitApp:
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
 
+class TestMatchesAppByProcessName:
+    """Tests for _matches_app_by_process_name (#743)."""
+
+    def test_direct_name_match(self):
+        """Direct substring match on process name works."""
+        assert _matches_app_by_process_name("notepad.exe", "notepad") is True
+
+    def test_direct_name_no_match(self):
+        """Non-matching name returns False."""
+        assert _matches_app_by_process_name("explorer.exe", "notepad") is False
+
+    def test_chinese_name_via_alias(self):
+        """Chinese app name resolves via _LAUNCH_ALIASES to process name (#743)."""
+        assert _matches_app_by_process_name("notepad.exe", "记事本") is True
+
+    def test_chinese_name_no_match_wrong_process(self):
+        """Chinese name does not match unrelated processes."""
+        assert _matches_app_by_process_name("explorer.exe", "记事本") is False
+
+    def test_chinese_calculator_alias(self):
+        """Chinese calculator name resolves to calc.exe."""
+        assert _matches_app_by_process_name("calc.exe", "计算器") is True
+        assert _matches_app_by_process_name("calculatorapp.exe", "计算器") is True
+
+    def test_title_not_used(self):
+        """Process name matching only — title-like strings in process name don't cause false matches."""
+        # A process named "ApplicationFrameHost.exe" should not match "notepad"
+        # even though a window of that process might have "Notepad" in its title
+        assert _matches_app_by_process_name("applicationframehost.exe", "notepad") is False
+        assert _matches_app_by_process_name("applicationframehost.exe", "记事本") is False
+
+    def test_case_insensitive_alias(self):
+        """Alias matching is case-insensitive."""
+        assert _matches_app_by_process_name("Notepad.exe".lower(), "Notepad".lower()) is True
+
+
 class TestResolvePidFromBackend:
     """Tests for UWP-aware PID resolution via backend (#505)."""
 
@@ -622,6 +659,43 @@ class TestResolvePidFromBackend:
 
         pid = _resolve_pid_from_backend("notepad")
         assert pid == 36328
+
+    @patch("naturo.backends.base.get_backend")
+    def test_chinese_name_resolves_via_alias(self, mock_get_backend):
+        """Chinese app name '记事本' resolves to Notepad PID via alias (#743)."""
+        mock_window = MagicMock()
+        mock_window.process_name = "C:\\Windows\\Notepad.exe"
+        mock_window.title = "无标题 - 记事本"
+        mock_window.pid = 89080
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [mock_window]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("记事本")
+        assert pid == 89080
+
+    @patch("naturo.backends.base.get_backend")
+    def test_chinese_name_ignores_title_only_match(self, mock_get_backend):
+        """Chinese name does NOT match by title alone — prevents wrong PID (#743)."""
+        # Simulate a non-Notepad window whose title happens to contain "记事本"
+        wrong_window = MagicMock()
+        wrong_window.process_name = "C:\\Windows\\explorer.exe"
+        wrong_window.title = "记事本快捷方式"
+        wrong_window.pid = 37476  # Wrong PID!
+
+        right_window = MagicMock()
+        right_window.process_name = "C:\\Windows\\Notepad.exe"
+        right_window.title = "无标题 - 记事本"
+        right_window.pid = 89080  # Correct PID
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [wrong_window, right_window]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("记事本")
+        # Should skip explorer.exe (title-only match) and find Notepad.exe (alias match)
+        assert pid == 89080
 
     @patch("naturo.backends.base.get_backend")
     def test_returns_none_when_no_match(self, mock_get_backend):
@@ -714,8 +788,8 @@ class TestCloseAllWindowsForApp:
         assert _close_all_windows_for_app("notepad") == []
 
     @patch("naturo.backends.base.get_backend")
-    def test_matches_by_title(self, mock_get_backend):
-        """Matches windows by title when process name doesn't match."""
+    def test_no_title_only_matching(self, mock_get_backend):
+        """Title-only matching is disabled to prevent cross-process contamination (#743)."""
         w1 = MagicMock(process_name="ApplicationFrameHost.exe",
                         title="Untitled - Notepad", pid=100, handle=0x1001)
 
@@ -725,8 +799,9 @@ class TestCloseAllWindowsForApp:
 
         pids = _close_all_windows_for_app("notepad")
 
-        assert pids == [100]
-        mock_be.close_window.assert_called_once_with(hwnd=0x1001)
+        # Should NOT match: "notepad" is in the title but not in the process name
+        assert pids == []
+        mock_be.close_window.assert_not_called()
 
     @patch("naturo.backends.base.get_backend")
     def test_individual_close_failure_continues(self, mock_get_backend):
