@@ -139,10 +139,19 @@ class OllamaVisionProvider:
             element_description=element_description
         )
         result = self._call_ollama(image_path, text_prompt)
-
-        # Parse JSON from response
         result.elements = parse_ai_elements_json(result.description)
+        return result
 
+    def enumerate_elements(
+        self,
+        image_path: str,
+        prompt: str,
+        *,
+        max_tokens: int = 16384,
+    ) -> VisionResult:
+        """Enumerate all UI elements in a screenshot."""
+        result = self._call_ollama(image_path, prompt)
+        result.elements = parse_ai_elements_json(result.description)
         return result
 
     def _call_ollama(self, image_path: str, prompt: str) -> VisionResult:

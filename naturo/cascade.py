@@ -366,9 +366,9 @@ def _fetch_ai_elements(
                 f"x ranges from 0 to {img_w}, y ranges from 0 to {img_h}."
             )
 
-        result = provider.identify_element(
+        result = provider.enumerate_elements(
             screenshot_path,
-            element_description=(
+            prompt=(
                 "You are a UI element detector. Analyze this screenshot and list EVERY "
                 "individual clickable or interactive element you can see. Be exhaustive.\n\n"
                 "Rules:\n"
@@ -388,7 +388,6 @@ def _fetch_ai_elements(
                 + dim_hint
             ),
             max_tokens=16384,
-            raw_prompt=True,
         )
 
         # (#694) Window offset: AI coords are relative to the screenshot

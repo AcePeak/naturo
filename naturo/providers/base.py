@@ -83,16 +83,13 @@ class VisionProvider(Protocol):
         element_description: str,
         *,
         max_tokens: int = 4096,
-        raw_prompt: bool = False,
     ) -> VisionResult:
         """Find a specific UI element in a screenshot.
 
         Args:
             image_path: Path to screenshot file.
-            element_description: Natural language description (e.g., "the Save button"),
-                or a complete prompt when ``raw_prompt=True``.
+            element_description: Natural language description (e.g., "the Save button").
             max_tokens: Maximum tokens in the response.
-            raw_prompt: When True, use element_description as-is without template wrapping.
 
         Returns:
             VisionResult with element location info.
@@ -100,6 +97,29 @@ class VisionProvider(Protocol):
         Raises:
             AIProviderUnavailableError: Provider not configured.
             AIAnalysisFailedError: Analysis request failed.
+        """
+        ...
+
+    def enumerate_elements(
+        self,
+        image_path: str,
+        prompt: str,
+        *,
+        max_tokens: int = 16384,
+    ) -> VisionResult:
+        """Enumerate all UI elements in a screenshot.
+
+        Unlike ``identify_element`` which wraps the description in a
+        template for single-element lookup, this sends the prompt directly
+        to the AI.  Used by cascade AI vision for full element enumeration.
+
+        Args:
+            image_path: Path to screenshot file.
+            prompt: Complete prompt text (no template wrapping).
+            max_tokens: Maximum tokens in the response.
+
+        Returns:
+            VisionResult with all identified elements.
         """
         ...
 

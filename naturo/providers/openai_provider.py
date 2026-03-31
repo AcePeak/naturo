@@ -171,27 +171,14 @@ class OpenAIVisionProvider:
             raw_response=response,
         )
 
-    def identify_element(
+    def _call_vision(
         self,
         image_path: str,
-        element_description: str,
+        text_prompt: str,
         *,
         max_tokens: int = 4096,
     ) -> VisionResult:
-        """Find a specific UI element in a screenshot.
-
-        Args:
-            image_path: Path to screenshot file.
-            element_description: Natural language description of the element.
-            max_tokens: Maximum tokens in the response.
-
-        Returns:
-            VisionResult with element location info.
-
-        Raises:
-            AIProviderUnavailableError: API key not set or package missing.
-            AIAnalysisFailedError: API request failed.
-        """
+        """Send an image + text prompt to the OpenAI API."""
         if not self.is_available:
             raise AIProviderUnavailableError(
                 provider="openai",
@@ -201,10 +188,6 @@ class OpenAIVisionProvider:
         client = self._get_client()
         image_data = encode_image_base64(image_path)
         media_type = detect_media_type(image_path)
-
-        text_prompt = _DEFAULT_IDENTIFY_PROMPT.format(
-            element_description=element_description
-        )
 
         try:
             response = client.chat.completions.create(
@@ -248,6 +231,29 @@ class OpenAIVisionProvider:
             tokens_used=tokens_used,
             raw_response=response,
         )
+
+    def identify_element(
+        self,
+        image_path: str,
+        element_description: str,
+        *,
+        max_tokens: int = 4096,
+    ) -> VisionResult:
+        """Find a specific UI element in a screenshot."""
+        text_prompt = _DEFAULT_IDENTIFY_PROMPT.format(
+            element_description=element_description
+        )
+        return self._call_vision(image_path, text_prompt, max_tokens=max_tokens)
+
+    def enumerate_elements(
+        self,
+        image_path: str,
+        prompt: str,
+        *,
+        max_tokens: int = 16384,
+    ) -> VisionResult:
+        """Enumerate all UI elements in a screenshot."""
+        return self._call_vision(image_path, prompt, max_tokens=max_tokens)
 
 
 # Register this provider
