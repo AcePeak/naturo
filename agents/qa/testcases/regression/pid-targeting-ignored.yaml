@@ -7,8 +7,8 @@ source_issue: 471
 created: 2026-03-28
 last_run: 2026-03-31
 last_result: pass
-consecutive_passes: 1
-notes: "2026-03-31 R68: PASS — see --pid 82720 correctly returned Calculator tree. capture --pid also showed Calculator screenshot. PID targeting working for CalculatorApp.exe (non-AFH PID)."
+consecutive_passes: 2
+notes: "2026-03-31 R69: PASS — see --pid 68596 (ApplicationFrameHost) correctly returned Calculator tree while Notepad was foreground."
 
 preconditions:
   - "naturo is installed and in PATH"
