@@ -7,7 +7,8 @@ source_issue: 613
 created: 2026-03-29
 last_run: 2026-03-31
 last_result: pass
-consecutive_passes: 1
+consecutive_passes: 3
+notes: "2026-03-31 R70: PASS — 1920x1080 @ 100% DPI, coordinates correct."
 
 preconditions:
   - "naturo is installed and in PATH"

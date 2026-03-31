@@ -8,7 +8,7 @@ created: 2026-03-27
 last_run: 2026-03-31
 last_result: blocked
 consecutive_passes: 0
-notes: "2026-03-29 R65: BLOCKED — Chinese Windows Calculator has Chinese labels, cannot test English short text. Same as R64."
+notes: "2026-03-31 R70: BLOCKED — Chinese Windows Calculator has Chinese labels, cannot test English short text."
 
 preconditions:
   - "naturo is installed and in PATH"

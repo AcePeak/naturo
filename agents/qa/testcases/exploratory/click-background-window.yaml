@@ -7,8 +7,8 @@ source_issue: 608
 created: 2026-03-29
 last_run: 2026-03-31
 last_result: pass
-consecutive_passes: 2
-notes: "2026-03-31 R69: PASS — Click e3 in Notepad while Explorer was in foreground. Notepad received click correctly. Screenshot verified."
+consecutive_passes: 3
+notes: "2026-03-31 R70: PASS — Click e3 in Notepad while Chrome foreground. Screenshot confirms Notepad came to front with text."
 
 preconditions:
   - "naturo is installed and in PATH"

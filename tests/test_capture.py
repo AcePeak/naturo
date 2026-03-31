@@ -294,6 +294,48 @@ def test_capture_to_invalid_path_raises(core):
         core.capture_screen(0, invalid_path)
 
 
+@pytest.mark.desktop
+def test_capture_screen_unicode_path(core):
+    """T020: Capture should work with Chinese/Unicode characters in path (#693)."""
+    unicode_dir = os.path.join(tempfile.gettempdir(), "naturo_测试_中文路径")
+    os.makedirs(unicode_dir, exist_ok=True)
+    unicode_path = os.path.join(unicode_dir, "截图.bmp")
+
+    try:
+        result = core.capture_screen(0, unicode_path)
+        assert result == unicode_path
+        assert os.path.exists(unicode_path)
+        assert os.path.getsize(unicode_path) > 0
+    finally:
+        if os.path.exists(unicode_path):
+            os.unlink(unicode_path)
+        try:
+            os.rmdir(unicode_dir)
+        except OSError:
+            pass
+
+
+@pytest.mark.desktop
+def test_capture_window_unicode_path(core):
+    """T021: Window capture should work with Unicode characters in path (#693)."""
+    unicode_dir = os.path.join(tempfile.gettempdir(), "naturo_测试_中文路径")
+    os.makedirs(unicode_dir, exist_ok=True)
+    unicode_path = os.path.join(unicode_dir, "窗口截图.bmp")
+
+    try:
+        result = core.capture_window(0, unicode_path)
+        assert result == unicode_path
+        assert os.path.exists(unicode_path)
+        assert os.path.getsize(unicode_path) > 0
+    finally:
+        if os.path.exists(unicode_path):
+            os.unlink(unicode_path)
+        try:
+            os.rmdir(unicode_dir)
+        except OSError:
+            pass
+
+
 def test_backend_capture_screen(backend):
     """T019: WindowsBackend.capture_screen should return a CaptureResult."""
     with tempfile.NamedTemporaryFile(suffix=".bmp", delete=False) as f:
