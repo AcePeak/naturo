@@ -5,7 +5,7 @@ on:
     branches: ["*"]
     tags: ["v*"]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -276,15 +276,19 @@ jobs:
           if-no-files-found: warn
 
   lint-and-test-python:
-    name: Python Tests (Ubuntu)
+    name: Python Tests (Ubuntu, ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install package
         run: pip install -e ".[dev]"
@@ -303,15 +307,19 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-python-macos:
-    name: Python Tests (macOS)
+    name: Python Tests (macOS, ${{ matrix.python-version }})
     runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install package
         run: pip install -e ".[dev]"
