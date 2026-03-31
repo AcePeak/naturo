@@ -5,10 +5,10 @@ category: exploratory
 priority: P2
 source_issue: null
 created: 2026-03-31
-last_run: 2026-03-31
+last_run: 2026-04-01
 last_result: fail
 consecutive_passes: 0
-notes: "2026-03-31 R71: FAIL — naturo press 'alt' returns 'Invalid argument'. Blocks keyboard-only menu activation (Alt key to focus menu bar). Discovered during: Accessibility User simulation."
+notes: "2026-04-01 R73: FAIL — naturo press 'alt'/'ctrl'/'shift' all return 'Invalid argument'. Compound modifiers (ctrl+a) work. Issue #704 open."
 
 preconditions:
   - "naturo is installed and in PATH"
