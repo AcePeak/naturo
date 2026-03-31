@@ -13,6 +13,8 @@ from unittest.mock import patch, MagicMock, PropertyMock
 
 from naturo.backends.base import WindowInfo
 
+_SESSION_PATCH_BASE = "naturo.backends.windows._element"
+
 
 def _make_backend():
     """Create a WindowsBackend-like object for testing _resolve_hwnd.
@@ -56,14 +58,13 @@ class TestResolveHwndSessionAwareness:
 
         # Bind the real method to our mock
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(
-            side_effect=lambda pid: 0 if pid == 100 else 1
-        )
         backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id",
+                   side_effect=lambda pid: 0 if pid == 100 else 1):
+            result = backend._resolve_hwnd(app="notepad")
         # Should pick handle 2002 (PID 200, Session 1) not 1001 (PID 100, Session 0)
         assert result == 2002
 
@@ -88,12 +89,12 @@ class TestResolveHwndSessionAwareness:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=-1)
-        backend._get_process_session_id = MagicMock(return_value=-1)
         backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=-1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=-1):
+            result = backend._resolve_hwnd(app="notepad")
         # Both match equally on process name; PID 200 has larger area
         assert result == 2002
 
@@ -118,12 +119,12 @@ class TestResolveHwndSessionAwareness:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(app="notepad")
         # Main window (3001) has much larger area than popup (3002)
         assert result == 3001
 
@@ -148,15 +149,13 @@ class TestResolveHwndSessionAwareness:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        # PID 100 in console, PID 200 in Session 0
-        backend._get_process_session_id = MagicMock(
-            side_effect=lambda pid: 1 if pid == 100 else 0
-        )
         backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id",
+                   side_effect=lambda pid: 1 if pid == 100 else 0):
+            result = backend._resolve_hwnd(app="notepad")
         # PID 200 has exact process name match (score 4),
         # PID 100 only has title substring (score 1).
         # Higher score wins regardless of session.
@@ -187,13 +186,13 @@ class TestResolveHwndForegroundPreference:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         # Window 2002 is the foreground window
         backend._get_foreground_hwnd = MagicMock(return_value=2002)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(app="notepad")
         # Both match on process name (score 4), same session, same area.
         # Foreground window (2002) should win.
         assert result == 2002
@@ -219,13 +218,13 @@ class TestResolveHwndForegroundPreference:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         # Window 1001 is the foreground window (listed second)
         backend._get_foreground_hwnd = MagicMock(return_value=1001)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(app="notepad")
         # Foreground window 1001 should win even though it's listed second
         assert result == 1001
 
@@ -250,13 +249,13 @@ class TestResolveHwndForegroundPreference:
         ]
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         # Foreground is some unrelated window
         backend._get_foreground_hwnd = MagicMock(return_value=9999)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
 
-        result = backend._resolve_hwnd(app="notepad")
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(app="notepad")
         # Neither is foreground, so larger area (2002) wins
         assert result == 2002
 
@@ -293,8 +292,6 @@ class TestResolveHwndPid:
         backend = MagicMock(spec=BackendClass)
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         backend._get_foreground_hwnd = MagicMock(return_value=fg_hwnd)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
         return backend
@@ -304,8 +301,10 @@ class TestResolveHwndPid:
         backend = self._setup_backend(
             self._make_multi_app_windows(), fg_hwnd=3003,
         )
-        # Paint (3003) is foreground, but --pid 200 should target Calculator
-        result = backend._resolve_hwnd(pid=200)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            # Paint (3003) is foreground, but --pid 200 should target Calculator
+            result = backend._resolve_hwnd(pid=200)
         assert result == 2002
 
     def test_pid_alone_targets_notepad_not_foreground(self):
@@ -313,14 +312,18 @@ class TestResolveHwndPid:
         backend = self._setup_backend(
             self._make_multi_app_windows(), fg_hwnd=3003,
         )
-        result = backend._resolve_hwnd(pid=100)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(pid=100)
         assert result == 1001
 
     def test_pid_with_app_filters_both(self):
         """--pid combined with --app should filter by both."""
         backend = self._setup_backend(self._make_multi_app_windows())
-        # PID 200 is Calculator, --app calculator should also match
-        result = backend._resolve_hwnd(app="calculator", pid=200)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            # PID 200 is Calculator, --app calculator should also match
+            result = backend._resolve_hwnd(app="calculator", pid=200)
         assert result == 2002
 
     def test_pid_selects_largest_window_among_process(self):
@@ -340,7 +343,9 @@ class TestResolveHwndPid:
             ),
         ]
         backend = self._setup_backend(windows)
-        result = backend._resolve_hwnd(pid=100)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(pid=100)
         # Main window (1001) is larger → should be selected
         assert result == 1001
 
@@ -348,19 +353,25 @@ class TestResolveHwndPid:
         """--pid with no matching windows should raise WindowNotFoundError."""
         backend = self._setup_backend(self._make_multi_app_windows())
         from naturo.errors import WindowNotFoundError
-        with pytest.raises(WindowNotFoundError, match="PID 999"):
-            backend._resolve_hwnd(pid=999)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            with pytest.raises(WindowNotFoundError, match="PID 999"):
+                backend._resolve_hwnd(pid=999)
 
     def test_pid_none_without_search_returns_foreground(self):
         """When pid=None and no search term, return 0 (foreground)."""
         backend = self._setup_backend(self._make_multi_app_windows())
-        result = backend._resolve_hwnd()
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd()
         assert result == 0
 
     def test_pid_with_hwnd_prefers_hwnd(self):
         """Direct hwnd takes priority over pid."""
         backend = self._setup_backend(self._make_multi_app_windows())
-        result = backend._resolve_hwnd(hwnd=9999, pid=200)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(hwnd=9999, pid=200)
         assert result == 9999
 
     def test_pid_prefers_foreground_among_same_process(self):
@@ -381,5 +392,7 @@ class TestResolveHwndPid:
         ]
         # Window 1002 is foreground
         backend = self._setup_backend(windows, fg_hwnd=1002)
-        result = backend._resolve_hwnd(pid=100)
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            result = backend._resolve_hwnd(pid=100)
         assert result == 1002

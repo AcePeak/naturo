@@ -8,6 +8,7 @@ from typing import ClassVar, Optional
 from naturo.backends.base import (ElementInfo as BaseElementInfo, WindowInfo as BaseWindowInfo)
 from naturo.bridge import populate_hierarchy
 from naturo.errors import NaturoError
+from naturo.process import _get_console_session_id, _get_process_session_id
 
 logger = logging.getLogger(__name__)
 
@@ -103,51 +104,6 @@ class ElementMixin:
         "截图工具": {"snippingtool", "screensketch"},
     }
 
-    @staticmethod
-    def _get_console_session_id() -> int:
-        """Get the active console (interactive desktop) session ID.
-
-        Uses WTSGetActiveConsoleSessionId to determine which Windows session
-        owns the physical console.  Returns -1 if the call fails.
-
-        Returns:
-            Active console session ID, or -1 on failure.
-        """
-        try:
-            import ctypes
-            session_id = ctypes.windll.kernel32.WTSGetActiveConsoleSessionId()
-            # WTSGetActiveConsoleSessionId returns 0xFFFFFFFF on failure
-            if session_id == 0xFFFFFFFF:
-                return -1
-            return session_id
-        except Exception:
-            return -1
-
-    @staticmethod
-    def _get_process_session_id(pid: int) -> int:
-        """Get the Windows session ID for a given process.
-
-        Uses ProcessIdToSessionId to determine which session a process
-        belongs to.  Session 0 is the non-interactive services session;
-        session 1+ are interactive user sessions.
-
-        Args:
-            pid: Process ID.
-
-        Returns:
-            Session ID, or -1 on failure.
-        """
-        try:
-            import ctypes
-            session_id = ctypes.wintypes.DWORD()
-            success = ctypes.windll.kernel32.ProcessIdToSessionId(
-                pid, ctypes.byref(session_id)
-            )
-            if success:
-                return session_id.value
-            return -1
-        except Exception:
-            return -1
 
     @staticmethod
     def _get_foreground_hwnd() -> int:
@@ -280,7 +236,7 @@ class ElementMixin:
                 )
 
         # Get console session for session-aware ranking (#230)
-        console_session = self._get_console_session_id()
+        console_session = _get_console_session_id()
 
         # Get foreground HWND for deterministic tie-breaking (#449)
         fg_hwnd = self._get_foreground_hwnd()
@@ -359,7 +315,7 @@ class ElementMixin:
             # processes that exist in the non-interactive session.
             in_console = False
             if console_session >= 0:
-                w_session = self._get_process_session_id(w.pid)
+                w_session = _get_process_session_id(w.pid)
                 in_console = (w_session == console_session)
 
             # (#449) Check if this window is the foreground window
@@ -490,7 +446,7 @@ class ElementMixin:
 
                 in_console = False
                 if console_session >= 0:
-                    w_session = self._get_process_session_id(w.pid)
+                    w_session = _get_process_session_id(w.pid)
                     in_console = (w_session == console_session)
 
                 is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
@@ -566,7 +522,7 @@ class ElementMixin:
 
         search_lower = search.lower()
         windows = self.list_windows()
-        console_session = self._get_console_session_id()
+        console_session = _get_console_session_id()
         match_process = app is not None
 
         # Collect all matching windows with their scores
@@ -609,7 +565,7 @@ class ElementMixin:
             # Session-aware ranking
             in_console = False
             if console_session >= 0:
-                w_session = self._get_process_session_id(w.pid)
+                w_session = _get_process_session_id(w.pid)
                 in_console = (w_session == console_session)
 
             matches.append((score, in_console, len(w.title), w))
@@ -683,7 +639,7 @@ class ElementMixin:
         # (#569) UWP fallback: when no windows matched by process name,
         # probe AFH windows' content children for the real app process.
         if not result and match_process:
-            console_session = self._get_console_session_id()
+            console_session = _get_console_session_id()
             afh_match = self._uwp_afh_fallback(
                 search_lower, windows, console_session,
             )
@@ -707,7 +663,7 @@ class ElementMixin:
                 if score > 0:
                     in_console = False
                     if console_session >= 0:
-                        w_session = self._get_process_session_id(w.pid)
+                        w_session = _get_process_session_id(w.pid)
                         in_console = (w_session == console_session)
                     title_matches.append((score, in_console, len(w.title), w))
 
@@ -1040,7 +996,7 @@ class ElementMixin:
             # Session-aware ranking: prefer console session
             in_console = False
             if console_session >= 0:
-                w_session = self._get_process_session_id(w.pid)
+                w_session = _get_process_session_id(w.pid)
                 in_console = (w_session == console_session)
 
             if best_afh is None or (in_console and not best_in_console):
