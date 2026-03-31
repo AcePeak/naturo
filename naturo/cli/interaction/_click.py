@@ -119,9 +119,11 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
     _zero_bounds_element = None  # Track element for Invoke fallback (#137)
     _ref_resolved = False  # True when eN ref resolved to coordinates
     _snapshot_hwnd = None  # HWND from snapshot metadata for window focus
+    _ref_element = None  # (#681) Cached element metadata for UIA identity lookup
     if target_id and _re.fullmatch(r"e\d+", target_id):
         from naturo.snapshot import get_snapshot_manager
         mgr = get_snapshot_manager()
+        _original_ref = target_id  # Save before target_id is cleared
         resolved = mgr.resolve_ref(target_id)
         if resolved:
             x, y = resolved[0], resolved[1]
@@ -136,6 +138,16 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                     _snapshot_hwnd = snapshot.window_handle
             except Exception as exc:
                 logger.debug("Snapshot HWND retrieval failed: %s", exc)
+            # (#681) Retrieve element metadata (name, role, AutomationId)
+            # for identity-based UIA lookup — more reliable than
+            # ElementFromPoint for UWP apps where cached coordinates may
+            # resolve to the wrong element.
+            try:
+                el_result = mgr.resolve_ref_element(_original_ref)
+                if el_result is not None:
+                    _ref_element = el_result[0]  # UIElement
+            except Exception as exc:
+                logger.debug("Element metadata retrieval failed: %s", exc)
         else:
             # resolve_ref returns None for both "not found" and "zero-bounds".
             # Check resolve_ref_element to distinguish: if the element exists
@@ -276,14 +288,19 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
             # (#248) UWP apps: SendInput clicks don't reach content inside
             # ApplicationFrameHost.  Try UIA InvokePattern first for
             # coordinate-based clicks on UWP apps.
+            # (#681) Pass element metadata from snapshot for identity-based
+            # lookup — avoids ElementFromPoint returning the wrong element.
             _used_uia_click = False
             if _is_uwp and x is not None and y is not None and button == "left" and not double:
                 if hasattr(backend, "click_element_uia"):
-                    _used_uia_click = backend.click_element_uia(
-                        x=x, y=y, app=app, hwnd=hwnd,
-                    )
+                    _uia_kwargs: dict[str, Any] = {"x": x, "y": y, "app": app, "hwnd": hwnd}
+                    if _ref_element is not None:
+                        _uia_kwargs["element_name"] = _ref_element.title
+                        _uia_kwargs["element_automation_id"] = _ref_element.identifier
+                        _uia_kwargs["element_role"] = _ref_element.role
+                    _used_uia_click = backend.click_element_uia(**_uia_kwargs)
                     if _used_uia_click:
-                        logger.info("UWP click: used UIA InvokePattern at (%d, %d)", x, y)
+                        logger.info("UWP click: used UIA pattern at (%d, %d)", x, y)
             if not _used_uia_click:
                 backend.click(x=x, y=y, button=button, double=double,
                               input_mode=input_mode)
