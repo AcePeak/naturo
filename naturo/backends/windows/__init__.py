@@ -13,6 +13,12 @@ from naturo.backends.windows._core import CoreMixin
 from naturo.backends.windows._element import ElementMixin
 from naturo.backends.windows._input import InputMixin
 from naturo.backends.windows._shell import ShellMixin
+from naturo.backends.windows._strategies import (
+    InputStrategy,
+    Phys32Strategy,
+    SendInputStrategy,
+    get_input_strategy,
+)
 from naturo.backends.windows._window import WindowMixin
 
 # Re-export names that were previously importable from the monolithic module.
@@ -40,4 +46,10 @@ class WindowsBackend(
     """
 
 
-__all__ = ["WindowsBackend"]
+__all__ = [
+    "WindowsBackend",
+    "InputStrategy",
+    "SendInputStrategy",
+    "Phys32Strategy",
+    "get_input_strategy",
+]

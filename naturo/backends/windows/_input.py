@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from naturo.backends.windows._strategies import get_input_strategy
 from naturo.errors import NaturoError
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class InputMixin:
             NaturoCoreError: On system error.
         """
         core = self._ensure_core()
+        strategy = get_input_strategy(core, input_mode)
 
         BUTTON_MAP = {"left": 0, "right": 1, "middle": 2}
         btn = BUTTON_MAP.get(button.lower(), 0)
@@ -54,13 +56,11 @@ class InputMixin:
                 raise ElementNotFoundError(element_id)
             cx = el.x + el.width // 2
             cy = el.y + el.height // 2
-            core.mouse_move(cx, cy)
+            strategy.click(cx, cy, btn, double)
         elif x is not None and y is not None:
-            core.mouse_move(x, y)
+            strategy.click(x, y, btn, double)
         else:
             raise ValueError("click: provide either (x, y) or element_id")
-
-        core.mouse_click(btn, double)
 
     def click_element_uia(
         self,
@@ -673,6 +673,7 @@ class InputMixin:
             NaturoCoreError: On system error.
         """
         core = self._ensure_core()
+        strategy = get_input_strategy(core, input_mode)
 
         actual_delay = delay_ms
         if profile == "human" and wpm > 0:
@@ -680,10 +681,7 @@ class InputMixin:
             ms_per_char = int(60_000 / (wpm * 5))
             actual_delay = max(1, ms_per_char)
 
-        if input_mode == "hardware":
-            core.phys_key_type(text, actual_delay)
-        else:
-            core.key_type(text, actual_delay)
+        strategy.type_text(text, actual_delay)
 
     def press_key(self, key: str = "", input_mode: str = "normal") -> None:
         """Press and release a named key.
@@ -697,10 +695,8 @@ class InputMixin:
             NaturoCoreError: If key name is unrecognized or on system error.
         """
         core = self._ensure_core()
-        if input_mode == "hardware":
-            core.phys_key_press(key)
-        else:
-            core.key_press(key)
+        strategy = get_input_strategy(core, input_mode)
+        strategy.press_key(key)
 
     def hotkey(self, *keys: str, hold_duration_ms: int = 50,
               input_mode: str = "normal") -> None:
@@ -721,10 +717,8 @@ class InputMixin:
             NaturoCoreError: On invalid argument or system error.
         """
         core = self._ensure_core()
-        if input_mode == "hardware":
-            core.phys_key_hotkey(*keys)
-        else:
-            core.key_hotkey(*keys)
+        strategy = get_input_strategy(core, input_mode)
+        strategy.hotkey(*keys)
 
     def scroll(self, direction: str = "down", amount: int = 3,
                x: Optional[int] = None, y: Optional[int] = None,
@@ -742,6 +736,7 @@ class InputMixin:
             NaturoCoreError: On system error.
         """
         core = self._ensure_core()
+        strategy = get_input_strategy(core)
 
         if x is not None and y is not None:
             core.mouse_move(x, y)
@@ -752,7 +747,7 @@ class InputMixin:
         sign = 1 if direction in ("up", "right") else -1
         delta = sign * amount * WHEEL_DELTA
 
-        core.mouse_scroll(delta, horizontal)
+        strategy.scroll(delta, horizontal)
 
     def drag(self, from_x: int = 0, from_y: int = 0, to_x: int = 0, to_y: int = 0,
              duration_ms: int = 500, steps: int = 10) -> None:
