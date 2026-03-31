@@ -1,0 +1,361 @@
+"""Tests for naturo.mcp._inspect — MCP UI inspection tools.
+
+Tests cover see_ui_tree, find_element, get_element_value, set_element_value,
+toggle_element, select_element, expand_collapse_element with mocked backend.
+All tests run on Linux CI (no Windows dependencies).
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+mcp_available = True
+try:
+    from naturo.mcp_server import create_server
+except ImportError:
+    mcp_available = False
+
+pytestmark = pytest.mark.skipif(not mcp_available, reason="mcp package not installed")
+
+
+def _call_tool(server, tool_name: str, arguments: dict):
+    """Helper to call an MCP tool function by name."""
+    async def _run():
+        return await server.call_tool(tool_name, arguments)
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_run())
+    finally:
+        loop.close()
+
+
+def _make_element(**overrides):
+    """Create a mock element with standard attributes."""
+    el = MagicMock()
+    el.id = overrides.get("id", "btn_ok")
+    el.role = overrides.get("role", "Button")
+    el.name = overrides.get("name", "OK")
+    el.value = overrides.get("value", None)
+    el.x = overrides.get("x", 100)
+    el.y = overrides.get("y", 200)
+    el.width = overrides.get("width", 80)
+    el.height = overrides.get("height", 30)
+    el.properties = overrides.get("properties", {})
+    el.children = overrides.get("children", [])
+    return el
+
+
+@pytest.fixture
+def mock_backend():
+    backend = MagicMock()
+    backend.get_element_tree.return_value = _make_element()
+    backend.find_element.return_value = _make_element()
+    backend.get_element_value.return_value = {
+        "value": "hello",
+        "pattern": "ValuePattern",
+        "role": "Edit",
+        "name": "Input",
+        "automation_id": "txt_input",
+        "x": 10,
+        "y": 20,
+        "width": 200,
+        "height": 25,
+    }
+    backend.set_element_value.return_value = True
+    backend.toggle_element.return_value = "On"
+    backend.select_element.return_value = True
+    backend.expand_collapse_element.return_value = True
+    backend._resolve_hwnd.return_value = 12345
+    return backend
+
+
+@pytest.fixture
+def server(mock_backend):
+    with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+        yield create_server()
+
+
+# ── see_ui_tree ──────────────────────────────────────────────────────
+
+
+class TestSeeUiTree:
+
+    def test_returns_tree_structure(self, server, mock_backend):
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert "tree" in data
+        tree = data["tree"]
+        assert tree["id"] == "btn_ok"
+        assert tree["role"] == "Button"
+        assert tree["name"] == "OK"
+        assert tree["bounds"] == {"x": 100, "y": 200, "width": 80, "height": 30}
+
+    def test_with_window_title(self, server, mock_backend):
+        _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
+        mock_backend.get_element_tree.assert_called_once_with(
+            window_title="Notepad", depth=7, backend="uia",
+        )
+
+    def test_custom_depth_and_backend(self, server, mock_backend):
+        _call_tool(server, "see_ui_tree", {"depth": 3, "accessibility_backend": "msaa"})
+        mock_backend.get_element_tree.assert_called_once_with(
+            window_title=None, depth=3, backend="msaa",
+        )
+
+    def test_depth_below_range_returns_error(self, server):
+        result = _call_tool(server, "see_ui_tree", {"depth": 0})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_depth_above_range_returns_error(self, server):
+        result = _call_tool(server, "see_ui_tree", {"depth": 11})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_invalid_backend_returns_error(self, server):
+        result = _call_tool(server, "see_ui_tree", {"accessibility_backend": "invalid"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_no_window_returns_error(self, server, mock_backend):
+        mock_backend.get_element_tree.return_value = None
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "NO_WINDOW"
+
+    def test_nested_children_serialized(self, server, mock_backend):
+        child = _make_element(id="child1", role="Text", name="Hello", children=[])
+        parent = _make_element(id="root", role="Window", name="Main", children=[child])
+        mock_backend.get_element_tree.return_value = parent
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        tree = data["tree"]
+        assert len(tree["children"]) == 1
+        assert tree["children"][0]["id"] == "child1"
+        assert tree["children"][0]["role"] == "Text"
+
+    def test_valid_backend_values_accepted(self, server, mock_backend):
+        for backend_name in ("uia", "msaa", "ia2", "jab", "auto"):
+            result = _call_tool(server, "see_ui_tree", {"accessibility_backend": backend_name})
+            data = json.loads(result[0].text)
+            assert data["success"] is True
+
+
+# ── find_element ─────────────────────────────────────────────────────
+
+
+class TestFindElement:
+
+    def test_found_element_returned(self, server, mock_backend):
+        result = _call_tool(server, "find_element", {"selector": "Button:OK"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["element"]["role"] == "Button"
+        assert data["element"]["name"] == "OK"
+        mock_backend.find_element.assert_called_once_with(
+            selector="Button:OK", window_title=None,
+        )
+
+    def test_with_window_title(self, server, mock_backend):
+        _call_tool(server, "find_element", {"selector": "Edit:*search*", "window_title": "Firefox"})
+        mock_backend.find_element.assert_called_once_with(
+            selector="Edit:*search*", window_title="Firefox",
+        )
+
+    def test_element_not_found(self, server, mock_backend):
+        mock_backend.find_element.return_value = None
+        result = _call_tool(server, "find_element", {"selector": "Button:Nonexistent"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "ELEMENT_NOT_FOUND"
+        assert "Nonexistent" in data["error"]["message"]
+
+
+# ── get_element_value ────────────────────────────────────────────────
+
+
+class TestGetElementValue:
+
+    def test_returns_value_and_metadata(self, server, mock_backend):
+        result = _call_tool(server, "get_element_value", {"ref": "e47"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["value"] == "hello"
+        assert data["pattern"] == "ValuePattern"
+        assert data["ref"] == "e47"
+        assert data["bounds"]["x"] == 10
+
+    def test_element_not_found(self, server, mock_backend):
+        mock_backend.get_element_value.return_value = None
+        result = _call_tool(server, "get_element_value", {"ref": "e999"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "ELEMENT_NOT_FOUND"
+
+    def test_by_automation_id(self, server, mock_backend):
+        _call_tool(server, "get_element_value", {"automation_id": "txt_input"})
+        mock_backend.get_element_value.assert_called_once_with(
+            ref=None, automation_id="txt_input", role=None,
+            name=None, window_title=None, hwnd=None,
+        )
+
+    def test_by_role_and_name(self, server, mock_backend):
+        _call_tool(server, "get_element_value", {"role": "Edit", "name": "Username"})
+        mock_backend.get_element_value.assert_called_once_with(
+            ref=None, automation_id=None, role="Edit",
+            name="Username", window_title=None, hwnd=None,
+        )
+
+
+# ── set_element_value ────────────────────────────────────────────────
+
+
+class TestSetElementValue:
+
+    def test_success(self, server, mock_backend):
+        result = _call_tool(server, "set_element_value", {
+            "value": "new text", "automation_id": "txt_input",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["action"] == "set_value"
+        assert data["value"] == "new text"
+
+    def test_failure(self, server, mock_backend):
+        mock_backend.set_element_value.return_value = False
+        result = _call_tool(server, "set_element_value", {
+            "value": "x", "automation_id": "txt_readonly",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "SET_VALUE_FAILED"
+
+    def test_with_window_title_resolves_hwnd(self, server, mock_backend):
+        _call_tool(server, "set_element_value", {
+            "value": "test", "window_title": "Notepad",
+        })
+        mock_backend._resolve_hwnd.assert_called_once_with(window_title="Notepad")
+
+    def test_hwnd_resolution_failure_graceful(self, server, mock_backend):
+        mock_backend._resolve_hwnd.side_effect = Exception("window gone")
+        result = _call_tool(server, "set_element_value", {
+            "value": "test", "window_title": "Gone",
+        })
+        data = json.loads(result[0].text)
+        # Should still attempt set_element_value (with hwnd=0)
+        mock_backend.set_element_value.assert_called_once()
+
+    def test_ref_resolves_via_snapshot(self, server, mock_backend):
+        mock_elem = MagicMock()
+        mock_elem.identifier = "resolved_aid"
+        mock_elem.role = "Edit"
+        mock_elem.title = "Name"
+        mock_elem.label = None
+
+        with patch("naturo.snapshot.get_snapshot_manager") as mock_mgr_fn:
+            mock_mgr = MagicMock()
+            mock_mgr.resolve_ref_element.return_value = (mock_elem, "snap1")
+            mock_mgr_fn.return_value = mock_mgr
+
+            _call_tool(server, "set_element_value", {"value": "test", "ref": "e5"})
+            mock_mgr.resolve_ref_element.assert_called_once_with("e5")
+
+
+# ── toggle_element ───────────────────────────────────────────────────
+
+
+class TestToggleElement:
+
+    def test_success_returns_new_state(self, server, mock_backend):
+        result = _call_tool(server, "toggle_element", {"automation_id": "chk_agree"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["action"] == "toggle"
+        assert data["new_state"] == "On"
+
+    def test_failure(self, server, mock_backend):
+        mock_backend.toggle_element.return_value = None
+        result = _call_tool(server, "toggle_element", {"name": "Missing"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "TOGGLE_FAILED"
+
+    def test_with_window_title(self, server, mock_backend):
+        _call_tool(server, "toggle_element", {
+            "automation_id": "chk", "window_title": "Settings",
+        })
+        mock_backend._resolve_hwnd.assert_called_once_with(window_title="Settings")
+
+
+# ── select_element ───────────────────────────────────────────────────
+
+
+class TestSelectElement:
+
+    def test_success(self, server, mock_backend):
+        result = _call_tool(server, "select_element", {"name": "Option A"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["action"] == "select"
+
+    def test_failure(self, server, mock_backend):
+        mock_backend.select_element.return_value = False
+        result = _call_tool(server, "select_element", {"name": "Missing"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "SELECT_FAILED"
+
+
+# ── expand_collapse_element ──────────────────────────────────────────
+
+
+class TestExpandCollapseElement:
+
+    def test_expand_success(self, server, mock_backend):
+        result = _call_tool(server, "expand_collapse_element", {
+            "expand": True, "name": "Dropdown",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["action"] == "expand"
+
+    def test_collapse_success(self, server, mock_backend):
+        result = _call_tool(server, "expand_collapse_element", {
+            "expand": False, "name": "Dropdown",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["action"] == "collapse"
+
+    def test_expand_failure(self, server, mock_backend):
+        mock_backend.expand_collapse_element.return_value = False
+        result = _call_tool(server, "expand_collapse_element", {
+            "expand": True, "name": "Static",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "EXPAND_FAILED"
+
+    def test_collapse_failure(self, server, mock_backend):
+        mock_backend.expand_collapse_element.return_value = False
+        result = _call_tool(server, "expand_collapse_element", {
+            "expand": False, "name": "Static",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "COLLAPSE_FAILED"
+
+    def test_with_window_title(self, server, mock_backend):
+        _call_tool(server, "expand_collapse_element", {
+            "expand": True, "name": "Tree", "window_title": "Explorer",
+        })
+        mock_backend._resolve_hwnd.assert_called_once_with(window_title="Explorer")
