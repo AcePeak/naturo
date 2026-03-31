@@ -122,7 +122,7 @@ class TestCreateSnapshot:
         assert data["success"] is True
         assert data["snapshot_id"] == "snap-002"
         assert data["element_count"] == 2  # root + child
-        mock_manager.store_ui_tree.assert_called_once()
+        mock_manager.store_detection_result.assert_called_once()
 
     def test_no_base64_when_screenshot_missing(self, server, mock_backend):
         mock_manager = MagicMock()
@@ -162,20 +162,20 @@ class TestCreateSnapshot:
 class TestGetSnapshot:
 
     def test_snapshot_found(self, server):
-        mock_ui_tree = MagicMock()
-        mock_ui_tree.element_id = "e1"
-        mock_ui_tree.role = "Window"
-        mock_ui_tree.name = "Main"
-        mock_ui_tree.bounds = (0, 0, 1920, 1080)
-        mock_ui_tree.children = []
+        from naturo.models.snapshot import UIElement
+
+        mock_el = UIElement(
+            id="e1", element_id="e1", role="Window", title="Main",
+            frame=(0, 0, 1920, 1080),
+        )
 
         mock_snapshot = MagicMock()
         mock_snapshot.snapshot_id = "snap-001"
-        mock_snapshot.created_at = "2026-03-31T00:00:00"
+        mock_snapshot.last_update_time.isoformat.return_value = "2026-03-31T00:00:00"
         mock_snapshot.screenshot_path = "/tmp/snap.png"
         mock_snapshot.window_title = "Notepad"
         mock_snapshot.application_name = "notepad.exe"
-        mock_snapshot.ui_tree = mock_ui_tree
+        mock_snapshot.ui_map = {"e1": mock_el}
 
         mock_manager = MagicMock()
         mock_manager.get_snapshot.return_value = mock_snapshot
@@ -186,7 +186,8 @@ class TestGetSnapshot:
         assert data["success"] is True
         assert data["snapshot_id"] == "snap-001"
         assert data["window_title"] == "Notepad"
-        assert "ui_tree" in data
+        assert "elements" in data
+        assert data["element_count"] == 1
 
     def test_snapshot_not_found(self, server):
         from naturo.models.snapshot import SnapshotNotFoundError
@@ -200,14 +201,14 @@ class TestGetSnapshot:
         assert data["success"] is False
         assert data["error"]["code"] == "SNAPSHOT_NOT_FOUND"
 
-    def test_snapshot_without_ui_tree(self, server):
+    def test_snapshot_without_ui_map(self, server):
         mock_snapshot = MagicMock()
         mock_snapshot.snapshot_id = "snap-005"
-        mock_snapshot.created_at = "2026-03-31T00:00:00"
+        mock_snapshot.last_update_time.isoformat.return_value = "2026-03-31T00:00:00"
         mock_snapshot.screenshot_path = "/tmp/snap.png"
         mock_snapshot.window_title = None
         mock_snapshot.application_name = None
-        mock_snapshot.ui_tree = None
+        mock_snapshot.ui_map = {}
 
         mock_manager = MagicMock()
         mock_manager.get_snapshot.return_value = mock_snapshot
@@ -216,7 +217,7 @@ class TestGetSnapshot:
             result = _call_tool(server, "get_snapshot", {"snapshot_id": "snap-005"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        assert "ui_tree" not in data
+        assert "elements" not in data
 
 
 class TestListSnapshots:
