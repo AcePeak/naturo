@@ -15,8 +15,21 @@
 #include <new>
 
 /**
+ * @brief Convert a UTF-8 string to a wide (UTF-16) string.
+ * @param utf8 Null-terminated UTF-8 string.
+ * @param wbuf Output buffer for wide characters.
+ * @param wbuf_len Size of wbuf in wchar_t units.
+ * @return Number of wide characters written (excluding null), or 0 on error.
+ */
+static int utf8_to_wide(const char* utf8, wchar_t* wbuf, int wbuf_len) {
+    if (!utf8 || !wbuf || wbuf_len <= 0) return 0;
+    int result = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wbuf, wbuf_len);
+    return result > 0 ? result - 1 : 0;  // Exclude null terminator from count
+}
+
+/**
  * @brief Write pixel data to a BMP file.
- * @param path Output file path.
+ * @param path Output file path (UTF-8 encoded).
  * @param pixels Pointer to raw pixel data (BGR, bottom-up).
  * @param width Image width in pixels.
  * @param height Image height in pixels.
@@ -40,7 +53,12 @@ static int write_bmp(const char* path, const void* pixels, int width, int height
     info_header.biCompression = BI_RGB;
     info_header.biSizeImage = data_size;
 
-    FILE* f = fopen(path, "wb");
+    // (#693) Use _wfopen with UTF-16 path to support Unicode file paths
+    // (Chinese characters, etc.). The path arrives as UTF-8 from Python.
+    wchar_t wpath[MAX_PATH];
+    if (utf8_to_wide(path, wpath, MAX_PATH) == 0) return -3;
+
+    FILE* f = _wfopen(wpath, L"wb");
     if (!f) return -3;
 
     fwrite(&file_header, sizeof(file_header), 1, f);
