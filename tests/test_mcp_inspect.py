@@ -46,6 +46,7 @@ def _make_element(**overrides):
     el.height = overrides.get("height", 30)
     el.properties = overrides.get("properties", {})
     el.children = overrides.get("children", [])
+    el.is_actionable = overrides.get("is_actionable", False)
     return el
 
 
@@ -74,8 +75,16 @@ def mock_backend():
 
 
 @pytest.fixture
-def server(mock_backend):
-    with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+def snapshot_mgr(tmp_path):
+    """Real SnapshotManager using a temp directory."""
+    from naturo.snapshot import SnapshotManager
+    return SnapshotManager(storage_root=tmp_path, session="test")
+
+
+@pytest.fixture
+def server(mock_backend, snapshot_mgr):
+    with patch("naturo.mcp_server.get_backend", return_value=mock_backend), \
+         patch("naturo.snapshot.get_snapshot_manager", return_value=snapshot_mgr):
         yield create_server()
 
 
@@ -89,8 +98,10 @@ class TestSeeUiTree:
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert "tree" in data
+        assert "snapshot_id" in data
         tree = data["tree"]
-        assert tree["id"] == "btn_ok"
+        # IDs are now stable hash-based refs (e.g. "e1234")
+        assert tree["id"].startswith("e")
         assert tree["role"] == "Button"
         assert tree["name"] == "OK"
         assert tree["bounds"] == {"x": 100, "y": 200, "width": 80, "height": 30}
@@ -140,7 +151,8 @@ class TestSeeUiTree:
         data = json.loads(result[0].text)
         tree = data["tree"]
         assert len(tree["children"]) == 1
-        assert tree["children"][0]["id"] == "child1"
+        # IDs are now stable hash-based refs
+        assert tree["children"][0]["id"].startswith("e")
         assert tree["children"][0]["role"] == "Text"
 
     def test_valid_backend_values_accepted(self, server, mock_backend):
