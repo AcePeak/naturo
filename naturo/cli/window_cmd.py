@@ -74,7 +74,7 @@ def _emit_deprecation(json_output: bool) -> None:
 
 
 @click.group(cls=FuzzyGroup, hidden=True)
-def window():
+def window() -> None:
     """Manage windows (deprecated — use 'naturo app' instead)."""
     pass
 
@@ -87,7 +87,7 @@ def window():
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def focus(ctx, name, app, title, hwnd, app_id, json_output):
+def focus(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Focus a window (bring to foreground)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -140,7 +140,7 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def close(ctx, name, app, title, hwnd, force, app_id, json_output):
+def close(ctx, name, app, title, hwnd, force, app_id, json_output) -> None:
     """Close a window (graceful or forced)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -193,7 +193,7 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def minimize(ctx, name, app, title, hwnd, app_id, json_output):
+def minimize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Minimize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -243,7 +243,7 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def maximize(ctx, name, app, title, hwnd, app_id, json_output):
+def maximize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Maximize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -293,7 +293,7 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def restore(ctx, name, app, title, hwnd, app_id, json_output):
+def restore(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Restore a minimized or maximized window to normal state."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -344,7 +344,7 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output):
 @click.option("--y", type=int, default=None, help="Target Y position")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
+def window_move(ctx, app, title, hwnd, app_id, x, y, json_output) -> None:
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -402,7 +402,7 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
 @click.option("--height", type=int, default=None, help="New height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
+def resize(ctx, app, title, hwnd, app_id, width, height, json_output) -> None:
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -471,7 +471,7 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
 @click.option("--height", type=int, default=None, help="Height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
+def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output) -> None:
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -544,7 +544,7 @@ def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_list(ctx, app, pid, json_output):
+def window_list(ctx, app, pid, json_output) -> None:
     """List open windows."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)

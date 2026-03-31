@@ -14,7 +14,7 @@ import naturo.cli.core._common as _common
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--flat", is_flag=True, help="Flatten menu tree into paths")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def menu_inspect(app, app_id, flat, json_output):
+def menu_inspect(app, app_id, flat, json_output) -> None:
     """List the menu bar structure of the foreground application.
 
     Traverses the application's MenuBar via UIAutomation and displays
@@ -97,7 +97,7 @@ def menu_inspect(app, app_id, flat, json_output):
                         shortcut = f"  [{entry['shortcut']}]" if entry.get("shortcut") else ""
                         click.echo(f"  {entry['path']}{shortcut}")
             else:
-                def print_menu(item, indent=0):
+                def print_menu(item, indent=0) -> None:
                     """Recursively print a menu item and its submenus with indentation."""
                     prefix = "  " * indent
                     shortcut = f" [{item.shortcut}]" if item.shortcut else ""

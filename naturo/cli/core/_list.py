@@ -10,7 +10,7 @@ import naturo.cli.core._common as _common
 
 
 @click.group("list", cls=_common.FuzzyGroup)
-def list_cmd():
+def list_cmd() -> None:
     """List apps, windows, and screens."""
     pass
 
@@ -19,7 +19,7 @@ def list_cmd():
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def apps(ctx, show_all, json_output):
+def apps(ctx, show_all, json_output) -> None:
     """List running applications (delegates to 'app list')."""
     from naturo.cli.app_cmd import app_list
     ctx.invoke(app_list, show_all=show_all, json_output=json_output)
@@ -30,7 +30,7 @@ def apps(ctx, show_all, json_output):
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def windows(app, pid, json_output):
+def windows(app, pid, json_output) -> None:
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
@@ -111,7 +111,7 @@ def windows(app, pid, json_output):
 
 @list_cmd.command()
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def screens(json_output):
+def screens(json_output) -> None:
     """List connected screens/monitors.
 
     Shows monitor index, resolution, position, DPI scale factor, and
@@ -181,7 +181,7 @@ def screens(json_output):
 
 @list_cmd.command(hidden=True)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def permissions(json_output):
+def permissions(json_output) -> None:
     """List automation permissions status (UIAccess, admin, etc.)."""
     msg = "Permission listing is not implemented yet — coming in a future release."
     if json_output:

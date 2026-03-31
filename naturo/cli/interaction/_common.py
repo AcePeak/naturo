@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from typing import Optional
+from typing import Callable, Optional
 
 import click
 
@@ -18,7 +18,7 @@ def _find_element_by_text_fallback(
     hwnd: Optional[int] = None,
     window_title: Optional[str] = None,
     pid: Optional[int] = None,
-):
+) -> tuple[int, int] | None:
     """Fallback element search when C++ exact UIA Name match fails.
 
     Searches the target app's element tree for elements whose name matches
@@ -116,7 +116,7 @@ def _find_element_by_text_fallback(
 # ── --see flag (post-action UI snapshot) ─────────────────────────────────────
 
 
-def _see_options(func):
+def _see_options(func: Callable) -> Callable:
     """Shared Click decorator that adds --see and --settle to action commands.
 
     When ``--see`` is passed, the command re-captures the UI element tree
@@ -139,7 +139,7 @@ def _see_options(func):
     return func
 
 
-def _verify_options(func):
+def _verify_options(func: Callable) -> Callable:
     """Shared Click decorator that adds --verify/--no-verify to action commands.
 
     Post-action verification checks whether the action actually had effect.
@@ -275,7 +275,7 @@ def _post_action_see(
         # Print tree with refs
         _ref_counter = [0]
 
-        def _print_tree(el, indent=0):
+        def _print_tree(el, indent=0) -> None:
             _ref_counter[0] += 1
             ref = f"e{_ref_counter[0]}"
             prefix = "  " * indent
@@ -306,7 +306,7 @@ def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
 VALID_METHODS = ("auto", "cdp", "uia", "msaa", "ia2", "jab", "vision")
 
 
-def _method_option(func):
+def _method_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --method to an action command.
 
     The flag lets users bypass auto-detection and force a specific
@@ -339,7 +339,7 @@ def _validate_method(method: str, json_output: bool) -> bool:
 # ── Selector support (#103) ──────────────────────────────────────────────────
 
 
-def _selector_option(func):
+def _selector_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --selector to action commands."""
     return click.option(
         "--selector",
@@ -353,7 +353,7 @@ def _selector_option(func):
     )(func)
 
 
-def _app_id_option(func):
+def _app_id_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --app-id to action commands.
 
     Accepts a stable app/window ID (e.g. ``a1``) assigned by ``naturo app list``.

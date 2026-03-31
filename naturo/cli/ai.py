@@ -9,7 +9,7 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 @click.group(cls=FuzzyGroup)
-def mcp():
+def mcp() -> None:
     """MCP (Model Context Protocol) server for AI agent integration."""
     pass
 
@@ -20,7 +20,7 @@ def mcp():
 @click.option("--host", default="localhost", help="Bind host (for sse/http)")
 @click.option("--port", type=int, default=3100, help="Bind port (for sse/http)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def start(transport, host, port, json_output):
+def start(transport, host, port, json_output) -> None:
     """Start the MCP server.
 
     Default transport is stdio (for integration with AI agents like Claude, OpenClaw).
@@ -67,7 +67,7 @@ def start(transport, host, port, json_output):
 
 @mcp.command()
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def install(json_output):
+def install(json_output) -> None:
     """Install MCP server dependencies.
 
     Installs the required 'mcp' package for running the MCP server.
@@ -104,7 +104,7 @@ def install(json_output):
 
 @mcp.command()
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def tools(json_output):
+def tools(json_output) -> None:
     """List available MCP tools.
 
     Shows all tools that the MCP server exposes to AI agents.

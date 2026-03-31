@@ -33,7 +33,7 @@ def _ensure_pyvda() -> None:
 
 
 @_click.group(cls=FuzzyGroup)
-def desktop():
+def desktop() -> None:
     """Virtual desktop management (Windows 10/11).
 
     List, switch, create, and close virtual desktops.

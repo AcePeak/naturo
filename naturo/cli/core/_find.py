@@ -239,7 +239,7 @@ def _find_with_ai(
     *,
     model: str | None = None,
     api_key: str | None = None,
-):
+) -> None:
     """AI-powered element finding via naturo find --ai.
 
     Args:
