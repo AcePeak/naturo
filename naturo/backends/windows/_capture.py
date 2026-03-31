@@ -172,16 +172,11 @@ class CaptureMixin:
         import os
         core = self._ensure_core()
 
-        # DLL writes BMP; use a temp file in a safe directory to avoid
-        # encoding issues with Chinese/Unicode paths on Windows
-        output_dir = os.path.dirname(os.path.abspath(output_path)) or "."
-        try:
-            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp", dir=output_dir)
-            os.close(fd)
-        except OSError:
-            # Fallback to system temp dir if output dir fails
-            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
-            os.close(fd)
+        # DLL writes BMP to the system temp dir (always ASCII-safe on
+        # Windows) then Pillow converts to the final output_path which may
+        # contain Chinese/Unicode characters (#693, #728).
+        fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+        os.close(fd)
 
         try:
             core.capture_screen(screen_index, tmp_bmp)
@@ -231,14 +226,10 @@ class CaptureMixin:
         core = self._ensure_core()
         handle = hwnd if hwnd else 0
 
-        # Use a safe temp file to avoid encoding issues with Unicode paths
-        output_dir = os.path.dirname(os.path.abspath(output_path)) or "."
-        try:
-            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp", dir=output_dir)
-            os.close(fd)
-        except OSError:
-            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
-            os.close(fd)
+        # DLL writes BMP to the system temp dir (always ASCII-safe on
+        # Windows) then Pillow converts to the final output_path (#728).
+        fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+        os.close(fd)
 
         try:
             core.capture_window(handle, tmp_bmp)
