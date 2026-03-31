@@ -242,15 +242,17 @@ def notepad_app(has_desktop) -> Generator[int, None, None]:
     if proc is None:
         pytest.skip("Could not launch Notepad")
 
-    # (#534, #697) Find the PID that owns the visible Notepad window.
+    # (#534, #697, #729) Find the PID that owns the visible Notepad window.
     # This handles UWP Notepad where the launcher PID differs from
     # the actual window-owning process.
-    # Wait extra time for UWP Notepad on Win11 — the UIA tree takes
-    # several seconds to initialize after the window appears.
-    time.sleep(2)
-    actual_pid = _find_notepad_window_pid()
+    # Poll instead of fixed sleep — UWP Notepad on Win11 can take 5-10s.
+    actual_pid = None
+    deadline = time.monotonic() + 15.0
+    while actual_pid is None and time.monotonic() < deadline:
+        actual_pid = _find_notepad_window_pid()
+        if actual_pid is None:
+            time.sleep(1.0)
     if actual_pid is None:
-        # Fallback: try tasklist
         actual_pid = _find_process_by_name("Notepad.exe")
     if actual_pid is None:
         actual_pid = proc.pid

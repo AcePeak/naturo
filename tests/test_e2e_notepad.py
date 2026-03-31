@@ -73,6 +73,31 @@ def _kill_process(proc):
             pass
 
 
+def _poll_for_notepad(core, count: int = 1, *, timeout: float = 15.0,
+                      interval: float = 0.5, visible_only: bool = False):
+    """Poll for Notepad windows until *count* are found or *timeout* expires.
+
+    UWP Notepad on Windows 11 launches via ApplicationFrameHost.exe and
+    may take several seconds before the real window appears (#729).
+
+    Returns:
+        List of matching window objects.
+    """
+    deadline = time.monotonic() + timeout
+    matches = []
+    while time.monotonic() < deadline:
+        windows = core.list_windows()
+        matches = [
+            w for w in windows
+            if _is_notepad_window(w)
+            and (not visible_only or (w.is_visible and not w.is_minimized))
+        ]
+        if len(matches) >= count:
+            return matches
+        time.sleep(interval)
+    return matches
+
+
 class TestMultiWindowChaos:
     """R-QA-001 to R-QA-003: Multi-window chaos tests."""
 
@@ -86,18 +111,12 @@ class TestMultiWindowChaos:
         try:
             for _ in range(3):
                 procs.append(_launch_notepad())
-                time.sleep(1.0)  # CI runners can be slow; 0.5s was flaky
+                time.sleep(1.0)
 
-            # Give windows time to fully initialize
-            time.sleep(2.0)
+            # (#729) Poll until all 3 windows appear — UWP Notepad's process
+            # model (ApplicationFrameHost → Notepad) can take 5-10 seconds.
+            notepad_windows = _poll_for_notepad(core, count=3, timeout=20.0)
 
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-            ]
-
-            # Should find at least our 3 notepad windows
             assert len(notepad_windows) >= 3, (
                 f"Expected >=3 Notepad windows, found {len(notepad_windows)}"
             )
@@ -129,16 +148,12 @@ class TestMultiWindowChaos:
         try:
             for _ in range(2):
                 procs.append(_launch_notepad())
-                time.sleep(0.5)
-            time.sleep(1.0)
+                time.sleep(1.0)
 
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-                and w.is_visible
-                and not w.is_minimized
-            ]
+            # (#729) Poll for windows instead of fixed sleep
+            notepad_windows = _poll_for_notepad(
+                core, count=2, timeout=15.0, visible_only=True,
+            )
 
             if len(notepad_windows) < 2:
                 pytest.skip("Could not find 2 visible Notepad windows")
@@ -169,16 +184,12 @@ class TestMultiWindowChaos:
         try:
             for _ in range(2):
                 procs.append(_launch_notepad())
-                time.sleep(0.5)
-            time.sleep(1.0)
+                time.sleep(1.0)
 
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-                and w.is_visible
-                and not w.is_minimized
-            ]
+            # (#729) Poll for windows instead of fixed sleep
+            notepad_windows = _poll_for_notepad(
+                core, count=2, timeout=15.0, visible_only=True,
+            )
 
             if len(notepad_windows) < 2:
                 pytest.skip("Could not find 2 visible Notepad windows")
@@ -203,14 +214,10 @@ class TestNotepadElements:
         """
         proc = _launch_notepad()
         try:
-            time.sleep(1.5)
-
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-                and w.is_visible
-            ]
+            # (#729) Poll for UWP Notepad window
+            notepad_windows = _poll_for_notepad(
+                core, count=1, timeout=15.0, visible_only=True,
+            )
             if not notepad_windows:
                 pytest.skip("Notepad window not found")
 
@@ -243,14 +250,10 @@ class TestNotepadElements:
         """
         proc = _launch_notepad()
         try:
-            time.sleep(1.5)
-
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-                and w.is_visible
-            ]
+            # (#729) Poll for UWP Notepad window
+            notepad_windows = _poll_for_notepad(
+                core, count=1, timeout=15.0, visible_only=True,
+            )
             if not notepad_windows:
                 pytest.skip("Notepad window not found")
 
@@ -290,14 +293,10 @@ class TestAIAgentPerspective:
 
         proc = _launch_notepad()
         try:
-            time.sleep(1.5)
-
-            windows = core.list_windows()
-            notepad_windows = [
-                w for w in windows
-                if _is_notepad_window(w)
-                and w.is_visible
-            ]
+            # (#729) Poll for UWP Notepad window
+            notepad_windows = _poll_for_notepad(
+                core, count=1, timeout=15.0, visible_only=True,
+            )
             if not notepad_windows:
                 pytest.skip("Notepad window not found")
 

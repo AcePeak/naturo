@@ -550,8 +550,8 @@ class TestNotepadAutomation:
                     return True
                 return False
 
-            # (#560) Poll for Notepad window — UWP launch is slow
-            deadline = time.monotonic() + 10.0
+            # (#560, #729) Poll for Notepad window — UWP launch is slow
+            deadline = time.monotonic() + 15.0
             notepad = None
             while notepad is None and time.monotonic() < deadline:
                 windows = core.list_windows()
