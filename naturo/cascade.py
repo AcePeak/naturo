@@ -342,6 +342,9 @@ def _fetch_ai_elements(
         except AIProviderUnavailableError:
             return []
 
+        logger.info("AI vision: calling provider '%s' with screenshot '%s'",
+                    provider_name, screenshot_path)
+
         result = provider.identify_element(
             screenshot_path,
             element_description=(
@@ -365,6 +368,15 @@ def _fetch_ai_elements(
             max_tokens=16384,
         )
 
+        logger.info("AI vision: provider returned %d elements",
+                     len(result.elements))
+        if not result.elements:
+            # Log raw response for debugging parse failures
+            raw = result.raw_response
+            if raw:
+                logger.warning("AI vision: 0 elements parsed from response: %.500s",
+                               str(raw))
+
         # (#694) Window offset: AI coords are relative to the screenshot
         # (which is a window capture). Add window position to get screen coords.
         win_x, win_y = window_bounds[0], window_bounds[1]
@@ -372,6 +384,7 @@ def _fetch_ai_elements(
         elements: List[ElementInfo] = []
         for i, raw in enumerate(result.elements):
             if not isinstance(raw, dict):
+                logger.debug("AI vision: skipping non-dict element at index %d: %r", i, raw)
                 continue
             b = raw.get("bounds", {})
             # Scale AI pixel coords by DPI factor, then offset to screen coords
@@ -392,7 +405,7 @@ def _fetch_ai_elements(
             ))
         return elements
     except Exception as exc:
-        logger.debug("AI vision element fetch failed: %s", exc)
+        logger.warning("AI vision element fetch failed: %s", exc, exc_info=True)
         return []
 
 
