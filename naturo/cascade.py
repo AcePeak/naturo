@@ -345,6 +345,27 @@ def _fetch_ai_elements(
         logger.info("AI vision: calling provider '%s' with screenshot '%s'",
                     provider_name, screenshot_path)
 
+        # (#694) Read actual screenshot dimensions for coordinate scaling.
+        # Claude vision API downscales large images internally; AI returns
+        # coords in that smaller space. We need to scale back up.
+        img_w, img_h = 0, 0
+        try:
+            from PIL import Image as _PILImage
+            with _PILImage.open(screenshot_path) as _img:
+                img_w, img_h = _img.size
+            logger.info("AI vision: screenshot dimensions %dx%d", img_w, img_h)
+        except Exception as exc:
+            logger.debug("AI vision: could not read screenshot dimensions: %s", exc)
+
+        # Include image dimensions in prompt so AI can return accurate coords
+        dim_hint = ""
+        if img_w > 0 and img_h > 0:
+            dim_hint = (
+                f"\n\nIMPORTANT: This image is {img_w}x{img_h} pixels. "
+                f"Return all bounding box coordinates in this {img_w}x{img_h} pixel space. "
+                f"x ranges from 0 to {img_w}, y ranges from 0 to {img_h}."
+            )
+
         result = provider.identify_element(
             screenshot_path,
             element_description=(
@@ -364,6 +385,7 @@ def _fetch_ai_elements(
                 "Return a JSON array where each item has: "
                 "role, name, bounds (x, y, width, height). "
                 "Return ONLY the JSON array, no markdown fences, no explanation."
+                + dim_hint
             ),
             max_tokens=16384,
         )
@@ -371,15 +393,45 @@ def _fetch_ai_elements(
         # (#694) Window offset: AI coords are relative to the screenshot
         # (which is a window capture). Add window position to get screen coords.
         win_x, win_y = window_bounds[0], window_bounds[1]
+        win_w, win_h = window_bounds[2], window_bounds[3]
 
         logger.info("AI vision: provider returned %d elements (window offset: %d,%d)",
                      len(result.elements), win_x, win_y)
         if not result.elements:
-            # Log raw response for debugging parse failures
             raw = result.raw_response
             if raw:
                 logger.warning("AI vision: 0 elements parsed from response: %.500s",
                                str(raw))
+
+        # (#694) Auto-detect coordinate scale: if the AI returned coords in a
+        # smaller image space (Claude API downscales large images), compute the
+        # ratio from AI-max-coord to actual screenshot size.
+        # Use the screenshot dimensions (img_w, img_h) as ground truth.
+        ai_scale_x, ai_scale_y = 1.0, 1.0
+        if img_w > 0 and img_h > 0 and result.elements:
+            max_ai_x = 0.0
+            max_ai_y = 0.0
+            for raw_el in result.elements:
+                if not isinstance(raw_el, dict):
+                    continue
+                b = raw_el.get("bounds", {})
+                if isinstance(b, (list, tuple)) and len(b) >= 4:
+                    max_ai_x = max(max_ai_x, b[0] + b[2])
+                    max_ai_y = max(max_ai_y, b[1] + b[3])
+                elif isinstance(b, dict):
+                    max_ai_x = max(max_ai_x, b.get("x", 0) + b.get("width", 0))
+                    max_ai_y = max(max_ai_y, b.get("y", 0) + b.get("height", 0))
+            # Only apply scaling if AI coords are significantly smaller than
+            # the actual image (at least 1.5x smaller — means API downscaled)
+            if max_ai_x > 0 and img_w / max_ai_x > 1.5:
+                ai_scale_x = img_w / max_ai_x
+            if max_ai_y > 0 and img_h / max_ai_y > 1.5:
+                ai_scale_y = img_h / max_ai_y
+            if ai_scale_x != 1.0 or ai_scale_y != 1.0:
+                logger.info(
+                    "AI vision: auto-scale %.2fx,%.2fy (AI max: %.0f,%.0f → img: %d,%d)",
+                    ai_scale_x, ai_scale_y, max_ai_x, max_ai_y, img_w, img_h,
+                )
 
         elements: List[ElementInfo] = []
         for i, raw in enumerate(result.elements):
@@ -387,8 +439,6 @@ def _fetch_ai_elements(
                 logger.debug("AI vision: skipping non-dict element at index %d: %r", i, raw)
                 continue
             b = raw.get("bounds", {})
-            # bounds can be a dict {"x":..,"y":..,"width":..,"height":..}
-            # or a list [x, y, width, height]
             if isinstance(b, (list, tuple)) and len(b) >= 4:
                 bx, by, bw, bh = b[0], b[1], b[2], b[3]
             elif isinstance(b, dict):
@@ -399,14 +449,11 @@ def _fetch_ai_elements(
             else:
                 logger.debug("AI vision: skipping element %d with bad bounds: %r", i, b)
                 continue
-            # (#694) AI coords are in screenshot pixel space. capture_window
-            # uses PrintWindow which captures at physical pixel resolution.
-            # UIA also reports physical screen coordinates. Both are in the
-            # same space — just offset by window position, NO DPI scaling.
-            ex = int(bx) + win_x
-            ey = int(by) + win_y
-            ew = int(bw)
-            eh = int(bh)
+            # Scale AI coords to physical screenshot pixels, then offset
+            ex = int(bx * ai_scale_x) + win_x
+            ey = int(by * ai_scale_y) + win_y
+            ew = int(bw * ai_scale_x)
+            eh = int(bh * ai_scale_y)
             role = raw.get("role", "Unknown").capitalize()
             name = raw.get("name", "")
             elements.append(ElementInfo(
