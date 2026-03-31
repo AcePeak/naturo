@@ -542,14 +542,9 @@ def _merge_ai_into_tree(
     - Otherwise, attach it as a child of the deepest UIA node whose
       bounding box contains the AI element's center point.
 
-    Parameters
-    ----------
-    root:
-        Root of the UIA element tree.
-    ai_elements:
-        Flat list of AI-detected elements (already in screen coordinates).
-    iou_threshold:
-        Minimum IoU to consider an AI element a duplicate of a UIA element.
+    Parent lookup uses a snapshot of the UIA tree taken *before* any AI
+    elements are added, so AI elements are always flat siblings under
+    UIA containers and never nest inside each other.
 
     Returns
     -------
@@ -561,8 +556,21 @@ def _merge_ai_into_tree(
     if not ai_elements:
         return [], 0, 0
 
-    # Flatten UIA tree for IoU comparison (only leaf/actionable elements)
+    # Snapshot UIA tree before modifications — used for both IoU comparison
+    # and parent lookup, so AI elements don't affect each other's placement.
     uia_flat = _flatten(root)
+    uia_visible = [e for e in uia_flat if e.width > 0 and e.height > 0]
+
+    # Build a parent lookup list: (node, depth) pairs from the original tree.
+    # This is a frozen snapshot — adding AI children to nodes won't change it.
+    uia_parents: list[tuple[ElementInfo, int]] = []
+
+    def _collect_parents(node: ElementInfo, depth: int) -> None:
+        uia_parents.append((node, depth))
+        for child in node.children:
+            _collect_parents(child, depth + 1)
+
+    _collect_parents(root, 0)
 
     added: List[ElementInfo] = []
     skipped = 0
@@ -590,14 +598,20 @@ def _merge_ai_into_tree(
             )
             continue
 
-        # Find best parent: deepest UIA node containing the AI element's center
+        # Find deepest UIA parent whose bounds contain the AI element's center.
+        # Uses the pre-snapshot parent list, not the live (modified) tree.
         cx = ai_el.x + ai_el.width // 2
         cy = ai_el.y + ai_el.height // 2
-        parent = _find_containing_node(root, cx, cy)
-        if parent is None:
-            parent = root
+        best_parent = root
+        best_depth = -1
+        for node, depth in uia_parents:
+            if (node.x <= cx <= node.x + node.width
+                    and node.y <= cy <= node.y + node.height
+                    and depth > best_depth):
+                best_parent = node
+                best_depth = depth
 
-        parent.children.append(ai_el)
+        best_parent.children.append(ai_el)
         added.append(ai_el)
 
     return added, len(added), skipped
@@ -606,21 +620,12 @@ def _merge_ai_into_tree(
 def _find_containing_node(
     root: ElementInfo, cx: int, cy: int,
 ) -> Optional[ElementInfo]:
-    """Find the deepest UIA tree node whose bounding box contains point (cx, cy).
-
-    Only considers UIA-sourced nodes (not AI vision elements) as potential
-    parents, so AI elements stay flat under their UIA containers instead of
-    nesting inside each other.
-    """
+    """Find the deepest tree node whose bounding box contains point (cx, cy)."""
     best: Optional[ElementInfo] = None
     best_depth = -1
 
     def _walk(node: ElementInfo, depth: int) -> None:
         nonlocal best, best_depth
-        # Only consider UIA-sourced nodes as parents (not other AI elements)
-        source = (node.properties or {}).get("source", "uia")
-        if source == "vision":
-            return
         if (node.x <= cx <= node.x + node.width
                 and node.y <= cy <= node.y + node.height):
             if depth > best_depth:
