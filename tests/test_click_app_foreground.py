@@ -45,7 +45,7 @@ def _make_mock_snapshot_manager(snapshot: Snapshot) -> MagicMock:
     """Create a mock SnapshotManager that resolves refs from the snapshot."""
     mgr = MagicMock()
 
-    def resolve_ref(ref: str):
+    def resolve_ref(ref: str, app_name=None):
         el = snapshot.ui_map.get(ref)
         if el is None:
             return None
@@ -56,7 +56,7 @@ def _make_mock_snapshot_manager(snapshot: Snapshot) -> MagicMock:
         cy = ey + eh // 2
         return (cx, cy, snapshot.snapshot_id)
 
-    def resolve_ref_element(ref: str):
+    def resolve_ref_element(ref: str, app_name=None):
         el = snapshot.ui_map.get(ref)
         if el is None:
             return None

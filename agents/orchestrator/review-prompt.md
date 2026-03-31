@@ -117,10 +117,10 @@ git push origin main
 
 ## Phase 5 — Write Daily Report
 
-Write to `.work/reviews/YYYY-MM-DD-daily-review.md`:
+Write to `.work/reviews/YYYY-MM-DD-HHmm-daily-review.md`:
 
 ```markdown
-# Daily Review — YYYY-MM-DD
+# Daily Review — YYYY-MM-DD HH:mm
 
 ## Summary
 - <1-line: what happened>
@@ -149,7 +149,7 @@ Write to `.work/reviews/YYYY-MM-DD-daily-review.md`:
 Commit the report:
 ```bash
 git add .work/reviews/
-git commit -m "orc: daily review $(date +%Y-%m-%d) [skip ci]"
+git commit -m "orc: daily review $(date +%Y-%m-%d-%H%M) [skip ci]"
 git push origin main
 ```
 

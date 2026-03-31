@@ -124,7 +124,7 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         from naturo.snapshot import get_snapshot_manager
         mgr = get_snapshot_manager()
         _original_ref = target_id  # Save before target_id is cleared
-        resolved = mgr.resolve_ref(target_id)
+        resolved = mgr.resolve_ref(target_id, app_name=app)
         if resolved:
             x, y = resolved[0], resolved[1]
             _snap_id = resolved[2]
@@ -143,16 +143,21 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
             # ElementFromPoint for UWP apps where cached coordinates may
             # resolve to the wrong element.
             try:
-                el_result = mgr.resolve_ref_element(_original_ref)
+                el_result = mgr.resolve_ref_element(_original_ref, app_name=app)
                 if el_result is not None:
                     _ref_element = el_result[0]  # UIElement
+                    # (#662) Show what we're about to click for user verification
+                    if not json_output:
+                        _el = _ref_element
+                        _el_desc = f"{_el.role} \"{_el.title}\"" if _el.title else _el.role
+                        click.echo(f"Clicking {_original_ref} ({_el_desc}) at ({x}, {y})")
             except Exception as exc:
                 logger.debug("Element metadata retrieval failed: %s", exc)
         else:
             # resolve_ref returns None for both "not found" and "zero-bounds".
             # Check resolve_ref_element to distinguish: if the element exists
             # but has zero-bounds, try UIA Invoke pattern (#137/#135).
-            el_result = mgr.resolve_ref_element(target_id)
+            el_result = mgr.resolve_ref_element(target_id, app_name=app)
             if el_result is not None:
                 element, _snap_id = el_result
                 ex, ey, ew, eh = element.frame

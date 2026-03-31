@@ -105,9 +105,18 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
         if _re.fullmatch(r"e\d+", on_element):
             from naturo.snapshot import get_snapshot_manager
             mgr = get_snapshot_manager()
-            resolved = mgr.resolve_ref(on_element)
+            resolved = mgr.resolve_ref(on_element, app_name=app)
             if resolved:
                 click_x, click_y = resolved[0], resolved[1]
+                if not json_output:
+                    try:
+                        _el_info = mgr.resolve_ref_element(on_element, app_name=app)
+                        if _el_info and len(_el_info) >= 2:
+                            _el = _el_info[0]
+                            _el_desc = f"{_el.role} \"{_el.title}\"" if _el.title else _el.role
+                            click.echo(f"Pressing on {on_element} ({_el_desc}) at ({click_x}, {click_y})")
+                    except Exception:
+                        pass
             else:
                 _common._json_err(
                     f"Element ref '{on_element}' not found. Run 'naturo see' first to "
