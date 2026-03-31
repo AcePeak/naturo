@@ -36,6 +36,16 @@ if _CI_WINDOWS:
 
     class _SkippingNaturoCore:
         def __init__(self, *args, **kwargs):
+            import threading
+            if threading.current_thread() is not threading.main_thread():
+                # (#683) pytest.skip() fails in daemon threads (no pytest
+                # request context).  The detection chain runs probes in
+                # daemon threads, so raise a regular exception instead —
+                # the probe's exception handler logs and returns None.
+                raise RuntimeError(
+                    "NaturoCore() blocked on CI Windows (no desktop session, "
+                    "daemon thread context)"
+                )
             pytest.skip(
                 "NaturoCore() skipped on CI Windows (no desktop session). "
                 "Add @pytest.mark.desktop if this test requires a real desktop.",
