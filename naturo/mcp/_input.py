@@ -1,7 +1,13 @@
 """MCP tools for mouse and keyboard input."""
 from __future__ import annotations
 
+import logging
+import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+_EN_REF_RE = re.compile(r"e\d+")
 
 
 def register_input_tools(server, _get_backend, _safe_tool):
@@ -20,12 +26,12 @@ def register_input_tools(server, _get_backend, _safe_tool):
     ) -> dict:
         """Click at coordinates or on a UI element.
 
-        Provide either (x, y) coordinates or an element_id from find_element/see_ui_tree.
+        Provide either (x, y) coordinates or an element_id from see_ui_tree/find_element.
 
         Args:
             x: X coordinate.
             y: Y coordinate.
-            element_id: Element ID to click (from find_element).
+            element_id: Element ID to click (eN ref from see_ui_tree, or selector from find_element).
             button: Mouse button — "left", "right", or "middle".
             double: Double-click if True.
             input_mode: Input method — "normal" (default) or "hardware" (Phys32, bypasses anti-cheat).
@@ -34,6 +40,26 @@ def register_input_tools(server, _get_backend, _safe_tool):
         Returns:
             Dict with success flag.
         """
+        # (#682) Resolve eN refs from see_ui_tree snapshots to coordinates.
+        if element_id and _EN_REF_RE.fullmatch(element_id):
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
+            resolved = mgr.resolve_ref(element_id)
+            if resolved:
+                logger.debug("Resolved MCP ref %s → (%d, %d)", element_id, resolved[0], resolved[1])
+                x, y = resolved[0], resolved[1]
+                element_id = None
+            else:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "ELEMENT_NOT_FOUND",
+                        "message": f"Element ref '{element_id}' not found. "
+                        f"Call see_ui_tree first to capture a snapshot, "
+                        f"then use the eN ref from the response.",
+                    },
+                }
+
         backend = _get_backend()
         backend.click(x=x, y=y, element_id=element_id, button=button, double=double,
                       input_mode=input_mode)
