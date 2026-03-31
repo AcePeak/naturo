@@ -7,8 +7,8 @@ source_issue: 608
 created: 2026-03-29
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 5
-notes: "2026-04-01 R74: PASS — Click e3 in Notepad while Calculator foreground. Text 'BACKGROUND_CLICK_TEST' typed correctly."
+consecutive_passes: 4
+notes: "2026-04-01 R73: PASS — Click e3 in Notepad while Calculator foreground. Type routed correctly. Screenshot confirms text typed."
 
 preconditions:
   - "naturo is installed and in PATH"

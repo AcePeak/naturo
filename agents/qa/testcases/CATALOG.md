@@ -41,7 +41,7 @@
 - [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **active**
 
 ## Real-World Verification (from Ace's v0.3.1 testing — 2026-03-29)
-- [TC-0024](exploratory/click-background-window.yaml) — P0: click --app hits wrong window when target is behind others (#608) — **retired** (5 passes, #608 closed)
+- [TC-0024](exploratory/click-background-window.yaml) — P0: click --app hits wrong window when target is behind others (#608) — **active**
 - [TC-0025](exploratory/dpi-coordinate-verification.yaml) — P0: Element coordinates wrong on 4K + 150% DPI (#613) — **active**
 - [TC-0026](exploratory/ai-vision-fill-gaps.yaml) — P0: AI Vision fill-gaps returns 0 elements, JSON parsing fails (#611) — **active**
 - [TC-0027](exploratory/ai-vision-coverage-false-100.yaml) — P0: AI Vision skipped because coverage falsely reports 100% (#609) — **active**
@@ -51,4 +51,4 @@
 - [TC-0032](exploratory/app-title-matching-multiwindow.yaml) — P1: --app cannot match by window title for multi-window processes — **active**
 - [TC-0033](exploratory/mcp-click-element-id-fails.yaml) — P1: MCP click by element_id fails, see_ui_tree refs not usable in click tool — **active**
 - [TC-0035](exploratory/press-standalone-modifier.yaml) — P2: naturo press fails for standalone modifier keys (alt, ctrl, shift) — **active**
-- [TC-0036](exploratory/mcp-see-ui-tree-empty-elements.yaml) — P1: MCP see_ui_tree returns 0 elements when CLI returns 178 — **active**
+- [TC-0036](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **active**
