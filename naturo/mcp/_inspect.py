@@ -14,6 +14,9 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
     @_safe_tool
     def see_ui_tree(
         window_title: Optional[str] = None,
+        app: Optional[str] = None,
+        hwnd: Optional[int] = None,
+        pid: Optional[int] = None,
         depth: int = 7,
         accessibility_backend: str = "uia",
     ) -> dict:
@@ -25,6 +28,10 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
 
         Args:
             window_title: Target window (partial match). None = foreground window.
+            app: Target application name (partial match). When provided without
+                hwnd, enumerates ALL windows of the app and merges their trees.
+            hwnd: Window handle (integer). Overrides app/window_title.
+            pid: Process ID. Filters windows to this process only.
             depth: How deep to traverse the tree (1-10).
             accessibility_backend: "uia" (default), "msaa" (for legacy apps like
                 MFC, VB6, Delphi), "ia2" (for Firefox, Thunderbird, LibreOffice),
@@ -38,8 +45,50 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         if accessibility_backend not in ("uia", "msaa", "ia2", "jab", "auto"):
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"accessibility_backend must be uia, msaa, ia2, jab, or auto, got {accessibility_backend}"}}
         backend = _get_backend()
-        tree = backend.get_element_tree(window_title=window_title, depth=depth,
-                                        backend=accessibility_backend)
+
+        # (#737) When --app is used without --hwnd, enumerate ALL windows
+        # of the application and merge their UI trees (matching CLI behavior).
+        if app and not hwnd and hasattr(backend, "_resolve_hwnds"):
+            hwnds = backend._resolve_hwnds(app=app)
+            if not hwnds:
+                return {"success": False, "error": {"code": "NO_WINDOW", "message": f"No windows found for app '{app}'"}}
+
+            from naturo.backends.base import ElementInfo as BaseElementInfo
+            window_trees = []
+            for h in hwnds:
+                subtree = backend.get_element_tree(
+                    hwnd=h, depth=depth, backend=accessibility_backend,
+                )
+                if subtree:
+                    window_trees.append((h, subtree))
+
+            if not window_trees:
+                return {"success": False, "error": {"code": "NO_WINDOW", "message": "All windows have empty UI trees"}}
+
+            # Single window: use its tree directly
+            if len(window_trees) == 1:
+                tree = window_trees[0][1]
+            else:
+                # Merge into a virtual root with each window as a child
+                tree = BaseElementInfo(
+                    id="app_root", role="Application", name=app,
+                    value=None, x=0, y=0, width=0, height=0,
+                    children=[], properties={},
+                )
+                for h, subtree in window_trees:
+                    window_node = BaseElementInfo(
+                        id=f"window_{h}", role="WindowGroup",
+                        name=f"{subtree.name} (HWND:{h})",
+                        value=None, x=subtree.x, y=subtree.y,
+                        width=subtree.width, height=subtree.height,
+                        children=[subtree], properties={},
+                    )
+                    tree.children.append(window_node)
+        else:
+            tree = backend.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=depth, backend=accessibility_backend,
+            )
         if tree is None:
             return {"success": False, "error": {"code": "NO_WINDOW", "message": "No matching window found"}}
 
