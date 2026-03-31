@@ -95,8 +95,8 @@ def test_all_visible_commands_respond():
 )
 def test_no_visible_command_prints_not_implemented():
     """Invoking any visible leaf command (with no args) must not print 'Not implemented'."""
-    # Long-running server commands that take over stdio — skip bare invocation
-    SKIP_BARE_INVOKE = {("mcp", "start")}
+    # Commands that block on interactive prompts or take over stdio
+    SKIP_BARE_INVOKE = {("mcp", "start"), ("config", "setup", "anthropic")}
     for args, cmd in _visible_subcommands(main):
         # Skip groups — they just show help when invoked bare
         if hasattr(cmd, "commands"):

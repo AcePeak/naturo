@@ -12,6 +12,7 @@ Covers:
 
 import json
 import platform
+import sys
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,10 @@ import pytest
 from click.testing import CliRunner
 
 from naturo.cli import main
+
+# Resolve the *module* (not the Click Command object that shadows it in
+# naturo.cli's namespace).  See test_get_cmd.py for detailed explanation.
+_set_cmd_mod = sys.modules["naturo.cli.set_cmd"]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,11 +58,11 @@ def _apply_patches(mock_backend, resolve_aid=None, resolve_role=None,
     resolver = _mock_resolve_identifiers(
         aid=resolve_aid, role=resolve_role, name=resolve_name,
     )
-    with patch("naturo.cli.set_cmd._get_backend", return_value=mock_backend), \
-         patch("naturo.cli.set_cmd._resolve_element_identifiers",
-               side_effect=resolver):
+    with patch.object(_set_cmd_mod, "_get_backend", return_value=mock_backend), \
+         patch.object(_set_cmd_mod, "_resolve_element_identifiers",
+                      side_effect=resolver):
         if platform.system() not in ("Windows",):
-            with patch("naturo.cli.set_cmd.platform") as mock_plat:
+            with patch.object(_set_cmd_mod, "platform") as mock_plat:
                 mock_plat.system.return_value = "Windows"
                 yield
         else:
