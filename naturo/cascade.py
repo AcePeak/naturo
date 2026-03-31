@@ -606,12 +606,21 @@ def _merge_ai_into_tree(
 def _find_containing_node(
     root: ElementInfo, cx: int, cy: int,
 ) -> Optional[ElementInfo]:
-    """Find the deepest tree node whose bounding box contains point (cx, cy)."""
+    """Find the deepest UIA tree node whose bounding box contains point (cx, cy).
+
+    Only considers UIA-sourced nodes (not AI vision elements) as potential
+    parents, so AI elements stay flat under their UIA containers instead of
+    nesting inside each other.
+    """
     best: Optional[ElementInfo] = None
     best_depth = -1
 
     def _walk(node: ElementInfo, depth: int) -> None:
         nonlocal best, best_depth
+        # Only consider UIA-sourced nodes as parents (not other AI elements)
+        source = (node.properties or {}).get("source", "uia")
+        if source == "vision":
+            return
         if (node.x <= cx <= node.x + node.width
                 and node.y <= cy <= node.y + node.height):
             if depth > best_depth:
