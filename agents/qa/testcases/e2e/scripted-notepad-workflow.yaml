@@ -8,7 +8,7 @@ created: 2026-03-28
 last_run: 2026-04-01
 last_result: pass
 consecutive_passes: 19
-notes: "2026-04-01 R74: PASS — Full workflow: launch→JSON parse→click e3→type→verify. Screenshot shows 'Script automation works!'"
+notes: "2026-04-01 R74: PASS — Full flow: launch→click e3→type→screenshot verify→ctrl+a→delete→verify clean→quit. JSON valid."
 
 preconditions:
   - "naturo is installed and in PATH"

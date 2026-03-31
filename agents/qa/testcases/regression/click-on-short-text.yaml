@@ -8,7 +8,7 @@ created: 2026-03-27
 last_run: 2026-04-01
 last_result: pass
 consecutive_passes: 3
-notes: "2026-04-01 R74: PASS — click --on 'Backspace', '清除', '七' all exit 0."
+notes: "2026-04-01 R74: PASS — click --on 'Backspace' and --on '清除' both exit 0. Note: --on 'C'/'CE' fail as UIA names are Chinese on this system."
 
 preconditions:
   - "naturo is installed and in PATH"

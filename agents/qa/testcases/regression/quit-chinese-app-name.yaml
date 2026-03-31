@@ -1,0 +1,35 @@
+id: TC-0037
+title: "app quit fails with Chinese app names — targets wrong PID and leaves app running"
+status: active
+category: regression
+priority: P1
+source_issue: 743
+created: 2026-04-01
+last_run: 2026-04-01
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-01 R74: FAIL — naturo app quit 记事本 targets wrong PID (37476 vs actual 89080), Notepad stays open. naturo app quit notepad works."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is NOT running"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens successfully, note PID from output"
+  - description: "Verify Notepad is running"
+    command: "naturo list apps | grep -i notepad"
+    expect: "Notepad appears in app list with correct PID"
+  - description: "Try to quit using Chinese name"
+    command: "naturo app quit 记事本"
+    expect: "Notepad should close successfully"
+  - description: "Verify Notepad is actually closed"
+    command: "naturo list apps | grep -i notepad"
+    expect: "No Notepad in list (app was closed). If still present = FAIL."
+  - description: "Cleanup"
+    command: "naturo app quit notepad 2>/dev/null; true"
+    expect: "Force cleanup via English name"
+
+pass_criteria: "naturo app quit with Chinese app name (记事本) successfully closes the app"
+fail_action: "File P1 bug: app quit with Chinese app name targets wrong PID"

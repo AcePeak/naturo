@@ -6,9 +6,9 @@ priority: P2
 source_issue: null
 created: 2026-03-31
 last_run: 2026-04-01
-last_result: fail
-consecutive_passes: 0
-notes: "2026-04-01 R74: FAIL — naturo press 'alt'/'ctrl'/'shift' still return 'Invalid argument'. Issue #704 open."
+last_result: pass
+consecutive_passes: 1
+notes: "2026-04-01 R74: PASS — alt/ctrl/shift all press successfully. Fix in PR #732 verified. Screenshot confirms alt activates menu bar."
 
 preconditions:
   - "naturo is installed and in PATH"

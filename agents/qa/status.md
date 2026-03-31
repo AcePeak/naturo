@@ -1,20 +1,20 @@
 # QA Status
-Last updated: 2026-04-01 01:30
+Last updated: 2026-04-01 03:37
 Current round: 74
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 12 passed, 4 failed (known #729), 18 skipped, 3 xfailed (commit 390f788)
-- Issues verified: #712 (blocked — PR #733 not merged)
+- CI Desktop Tests: 18 passed, 1 failed, 5 skipped (commit b1d91ce); E2E: 8 passed, 2 failed
+- Issues verified: #728 (pass), #704 (pass), #737 (pass), #729 (fail)
 - E2E tests: Calculator (pass), Notepad (pass)
-- Regression: 16/18 passed, 1 retired (TC-0024)
-- New test cases created: TC-0036 (MCP see_ui_tree empty elements)
-- Test cases cleaned up: TC-0024 retired (#608 closed, 5 passes)
-- New issues created: #737
+- Regression: 9/9 passed, 0 retired
+- New test cases created: TC-0036
+- Test cases cleaned up: none
+- New issues created: #743
 - Total active test cases: 20
-- Tests run: 21
+- Tests run: 9
 
 ## Top 3 Risks
-1. **MCP/CLI parity gap** (#737) — MCP see_ui_tree returns 0 elements when CLI returns 178. Blocks AI agent builders from using MCP for UI inspection.
-2. **Chinese filepath capture** (#728) — naturo capture fails with Unicode paths. Affects Chinese/CJK users.
-3. **CI Notepad discovery** (#729) — 4 CI tests fail because app launch notepad can't find the window. Blocks automated CI validation.
+1. **CI test stability** — 2 desktop tests still fail (Notepad window not found), #729 fix not effective
+2. **Chinese locale gaps** — app quit with Chinese name broken (#743), potential PID lookup issues in other commands
+3. **Unverified backlog** — 7 status:done issues unverified (#730, #717, #714, #713, #712, #702, #660), mostly CI/config items

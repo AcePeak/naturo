@@ -52,3 +52,4 @@
 - [TC-0033](exploratory/mcp-click-element-id-fails.yaml) — P1: MCP click by element_id fails, see_ui_tree refs not usable in click tool — **active**
 - [TC-0035](exploratory/press-standalone-modifier.yaml) — P2: naturo press fails for standalone modifier keys (alt, ctrl, shift) — **active**
 - [TC-0036](exploratory/mcp-see-ui-tree-empty-elements.yaml) — P1: MCP see_ui_tree returns 0 elements when CLI returns 178 — **active**
+- [TC-0037](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **active**
