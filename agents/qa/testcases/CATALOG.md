@@ -46,3 +46,5 @@
 - [TC-0027](exploratory/ai-vision-coverage-false-100.yaml) — P0: AI Vision skipped because coverage falsely reports 100% (#609) — **active**
 - [TC-0028](exploratory/uwp-multi-tab-quit.yaml) — P1: app quit fails to close UWP Notepad with multiple tabs (#586) — **active**
 - [TC-0029](exploratory/hybrid-mode-enrichment.yaml) — P1: Hybrid mode should discover more elements than UIA-only — **active**
+- [TC-0031](exploratory/notepad-menu-click-targeting.yaml) — P1: click eN on Notepad UWP menu item does not open menu — **active**
+- [TC-0032](exploratory/app-title-matching-multiwindow.yaml) — P1: --app cannot match by window title for multi-window processes — **active**

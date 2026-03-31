@@ -5,9 +5,9 @@ category: regression
 priority: P1
 source_issue: 469
 created: 2026-03-28
-last_run: 2026-03-29
+last_run: 2026-03-31
 last_result: pass
-consecutive_passes: 1
+consecutive_passes: 2
 notes: "2026-03-29 R66: PASS — see --app calculator EXIT:0, --app calc EXIT:0, --app 计算器 EXIT:0. All three name variants match UWP Calculator. Fix landed."
 
 preconditions:

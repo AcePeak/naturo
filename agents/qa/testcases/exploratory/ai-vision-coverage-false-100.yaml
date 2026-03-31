@@ -5,7 +5,7 @@ category: exploratory
 priority: P0
 source_issue: 609
 created: 2026-03-29
-last_run: null
+last_run: 2026-03-31
 consecutive_passes: 0
 
 preconditions:

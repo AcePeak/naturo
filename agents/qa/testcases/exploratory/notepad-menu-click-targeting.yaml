@@ -1,0 +1,33 @@
+id: TC-0031
+title: "click eN on Notepad UWP menu item does not open menu"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-31
+last_run: 2026-03-31
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Windows 11 UWP Notepad is available"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens successfully"
+  - description: "Inspect element tree"
+    command: "naturo see --app notepad"
+    expect: "Element tree shows MenuItem '文件' (File) with eN ref"
+  - description: "Click the File menu item by eN ref"
+    command: "naturo click --app notepad e13"
+    expect: "File menu dropdown opens (New, Open, Save, etc.)"
+  - description: "Screenshot to verify menu opened"
+    command: "naturo capture -o /tmp/tc-0031.png"
+    expect: "Screenshot shows File menu dropdown visible"
+  - description: "Cleanup"
+    command: "naturo app quit notepad"
+    expect: "Notepad closes"
+
+pass_criteria: "Clicking the File menu eN ref opens the File dropdown menu, visible in screenshot"
+fail_action: "File GitHub issue: click eN on UWP Notepad menu items does not open menu"

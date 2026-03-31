@@ -1,41 +1,51 @@
 # QA Status
-Last updated: 2026-03-29 18:23 UTC (Round 66)
-Current round: 66
-Current milestone: v0.3.1
-Simulated user: Enterprise RPA Dev (persona index 2)
+Last updated: 2026-03-31 12:29 UTC (Round 29)
+Current round: 29
+Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: skipped (no new commits since fda8530)
-- Issues verified: #612 (pass), #168 (skip — PR #607 not merged)
-- E2E tests: Calculator (pass), Notepad (pass)
-- Regression: 7/8 passed, 1 failed (TC-0012), 2 retired (TC-0020, TC-0021)
-- New test cases created: TC-0030 (type backslash escape)
-- Test cases retired: TC-0020 (5 passes, #533 closed), TC-0021 (5 passes, #563 closed)
-- New issues created: #619 (type backslash escape), #620 (app quit false failure)
-- Total active test cases: 18
-- Tests run: 8
+- CI Desktop Tests: 4 passed, 1 failed (timeout), 17 skipped, 1 xpass (commit a7ba5c1)
+- CI E2E Tests: 7 passed, 3 failed, 2 xfail, 1 xpass (commit a7ba5c1)
+- Issues verified: #651 (pass)
+- E2E tests: Notepad (pass, menu click fail), Calculator (pass)
+- Regression: 13/19 passed, 2 failed, 4 skipped
+- New test cases created: TC-0031, TC-0032
+- Test cases cleaned up: none
+- New issues created: #671, #672
+- Total active test cases: 21
+- Tests run: 19
 
-## Regression Details (Round 66)
-| TC | Name | Result | Consecutive Passes |
-|----|------|--------|--------------------|
-| TC-0003 | Chinese app name matching | PASS | 1 |
-| TC-0004 | Calculator E2E | PASS | 20 |
-| TC-0012 | --pid targeting | FAIL | 0 |
-| TC-0014 | Scripted Notepad workflow | PASS | 14 |
-| TC-0015 | app quit silent failure | PASS | 6 |
-| TC-0016 | UWP app name matching | PASS | 1 |
-| TC-0020 | click nonexistent app | RETIRED | 5 |
-| TC-0021 | type escape sequences | RETIRED | 5 |
-| TC-0030 | type backslash escape | FAIL | 0 |
+## Regression Details (Round 29)
+| TC | Name | Result |
+|----|------|--------|
+| TC-0003 | Chinese app name matching | PASS |
+| TC-0004 | Calculator E2E | PASS |
+| TC-0007 | Click short text | SKIP (Chinese locale) |
+| TC-0008 | Multi-window targeting | PASS |
+| TC-0010 | MCP agent workflow | PASS (partial) |
+| TC-0011 | App filter cross-process | PASS |
+| TC-0012 | --pid targeting | FAIL |
+| TC-0014 | Scripted Notepad workflow | PASS |
+| TC-0015 | app quit silent failure | PASS |
+| TC-0016 | UWP app name matching | PASS |
+| TC-0018 | get value unreadable | PASS |
+| TC-0023 | MCP launch missing PID | PASS |
+| TC-0024 | Click background window | PASS |
+| TC-0025 | DPI coordinate verification | PASS (baseline) |
+| TC-0026 | AI Vision fill-gaps | SKIP (no API key) |
+| TC-0027 | AI Vision coverage | SKIP (no API key) |
+| TC-0028 | UWP multi-tab quit | PASS |
+| TC-0029 | Hybrid mode enrichment | SKIP (no Electron) |
+| TC-0030 | type backslash escape | FAIL |
 
-## Phase 4 Findings (Enterprise RPA Dev Simulation)
-- **10-step Notepad workflow completed**: launch, inspect, click, type (3 lines), save-as dialog, cancel, cleanup
-- **BUG #619**: `naturo type` interprets `\r`, `\n`, `\t` as escape sequences but has no `\\` literal backslash escape. Windows file paths like `C:\Users\test\report.txt` get corrupted. Critical for enterprise RPA.
-- **BUG #620**: `app quit` exits 1 with error about parent PID but app IS actually closed. False failure breaks scripted workflows using exit codes.
-- **UWP app matching FIXED**: `--app calculator`, `--app calc`, `--app 计算器` all work now (TC-0016 passing after previous failures).
-- **Stale element refs are a UX trap**: Using eN refs from a previous `see` call silently clicks wrong targets. Enterprise users doing rapid see->click chains could hit this.
+## Phase 4 Findings (Power User Simulation)
+- **8 apps open on desktop**: Calculator, 2x Explorer, 3x Terminal, Settings, Program Manager
+- **--app filter precision**: Correctly targets apps by process name, fails to target by window title
+- **BUG #671**: Cannot target specific window by title when multiple windows of same process exist
+- **BUG #672**: Click eN on UWP Notepad menu items misses target (File menu doesn't open)
+- **Rapid see calls**: ~4.7s each — functional but slow for power users doing rapid automation
 
 ## Top 3 Risks
-1. **v0.3.1 has 4 open P0 bugs** (#608, #609, #611, #613) — coordinates wrong on 4K, AI Vision broken, click not foregrounding
-2. **type command corrupts Windows paths** (#619) — enterprise users typing file paths will hit this immediately
-3. **app quit false failures** (#620) — any scripted workflow using exit codes will break on successful app closes
+1. **PID targeting broken for UWP apps** (TC-0012) — all UWP share ApplicationFrameHost.exe PID
+2. **type command corrupts Windows paths** (TC-0030) — backslash escape sequences break file paths
+3. **Element click targeting on UWP menus** (#672) — coordinates from see tree don't produce expected clicks

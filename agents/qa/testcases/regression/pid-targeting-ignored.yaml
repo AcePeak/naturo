@@ -5,7 +5,7 @@ category: regression
 priority: P0
 source_issue: 471
 created: 2026-03-28
-last_run: 2026-03-29
+last_run: 2026-03-31
 last_result: fail
 consecutive_passes: 0
 notes: "2026-03-29 R66: FAIL — see --pid 61828 returns Settings (设置) instead of Calculator (计算器). Both UWP apps share PID 61828 (ApplicationFrameHost.exe). PID targeting cannot distinguish apps under the same host process."

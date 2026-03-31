@@ -1,0 +1,27 @@
+id: TC-0032
+title: "--app flag cannot match by window title when multiple windows of same process exist"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-31
+last_run: 2026-03-31
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Multiple windows of the same process are open (e.g., 3 Terminal windows)"
+
+steps:
+  - description: "List apps to confirm multiple windows from same process"
+    command: "naturo list apps"
+    expect: "Multiple windows of WindowsTerminal (or similar) with different titles visible"
+  - description: "Try to target a specific window by its title"
+    command: "naturo see --app claude"
+    expect: "Returns element tree for the window titled 'claude'"
+  - description: "Try partial title match"
+    command: "naturo see --app 'GitHub'"
+    expect: "Returns element tree for the window with 'GitHub' in title"
+
+pass_criteria: "--app flag can distinguish between multiple windows of the same process by matching window title"
+fail_action: "File GitHub issue or enhancement request: --app cannot match by window title for multi-window processes"
