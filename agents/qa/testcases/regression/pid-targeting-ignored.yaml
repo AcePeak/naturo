@@ -6,9 +6,9 @@ priority: P0
 source_issue: 471
 created: 2026-03-28
 last_run: 2026-03-31
-last_result: fail
-consecutive_passes: 0
-notes: "2026-03-31 R67: FAIL — see --pid 61828 returned Calculator this time (was foreground), but both Calculator and Settings share PID 61828 (ApplicationFrameHost.exe). PID targeting is unreliable for UWP apps."
+last_result: pass
+consecutive_passes: 1
+notes: "2026-03-31 R68: PASS — see --pid 82720 correctly returned Calculator tree. capture --pid also showed Calculator screenshot. PID targeting working for CalculatorApp.exe (non-AFH PID)."
 
 preconditions:
   - "naturo is installed and in PATH"
