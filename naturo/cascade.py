@@ -387,11 +387,23 @@ def _fetch_ai_elements(
                 logger.debug("AI vision: skipping non-dict element at index %d: %r", i, raw)
                 continue
             b = raw.get("bounds", {})
+            # bounds can be a dict {"x":..,"y":..,"width":..,"height":..}
+            # or a list [x, y, width, height]
+            if isinstance(b, (list, tuple)) and len(b) >= 4:
+                bx, by, bw, bh = b[0], b[1], b[2], b[3]
+            elif isinstance(b, dict):
+                bx = b.get("x", 0)
+                by = b.get("y", 0)
+                bw = b.get("width", 50)
+                bh = b.get("height", 20)
+            else:
+                logger.debug("AI vision: skipping element %d with bad bounds: %r", i, b)
+                continue
             # Scale AI pixel coords by DPI factor, then offset to screen coords
-            ex = int(b.get("x", 0) * scale_factor) + win_x
-            ey = int(b.get("y", 0) * scale_factor) + win_y
-            ew = int(b.get("width", 50) * scale_factor)
-            eh = int(b.get("height", 20) * scale_factor)
+            ex = int(bx * scale_factor) + win_x
+            ey = int(by * scale_factor) + win_y
+            ew = int(bw * scale_factor)
+            eh = int(bh * scale_factor)
             role = raw.get("role", "Unknown").capitalize()
             name = raw.get("name", "")
             elements.append(ElementInfo(
