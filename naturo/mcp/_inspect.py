@@ -20,7 +20,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         """Inspect the UI accessibility tree of a window.
 
         Returns the hierarchical tree of UI elements (buttons, text fields, etc.)
-        with their roles, names, bounds, and properties.
+        with their roles, names, bounds, and properties. Element IDs (eN) can be
+        used in subsequent ``click``, ``type_text``, and other tool calls.
 
         Args:
             window_title: Target window (partial match). None = foreground window.
@@ -42,9 +43,48 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         if tree is None:
             return {"success": False, "error": {"code": "NO_WINDOW", "message": "No matching window found"}}
 
+        # (#682) Store element tree in the snapshot manager so eN refs can be
+        # resolved by subsequent click/type_text calls in the same session.
+        from naturo.refs import assign_stable_refs
+        from naturo.models.snapshot import UIElement
+        from naturo.snapshot import get_snapshot_manager
+
+        element_obj_to_ref: dict[int, str] = {}
+        ui_map, ref_map = assign_stable_refs(
+            tree, UIElement, element_obj_to_ref=element_obj_to_ref,
+        )
+
+        mgr = get_snapshot_manager()
+        snapshot_id = mgr.create_snapshot()
+        mgr.store_detection_result(snapshot_id, ui_map)
+        mgr.store_ref_map(snapshot_id, ref_map)
+
+        # Store window metadata in the snapshot for coordinate resolution.
+        try:
+            snap_obj = mgr.get_snapshot(snapshot_id)
+            snap_obj.window_bounds = (tree.x, tree.y, tree.width, tree.height)
+            snap_obj.application_name = window_title
+            snap_obj.window_title = window_title
+            mgr._write_json_atomic(
+                mgr._snap_dir(snapshot_id) / "snapshot.json",
+                snap_obj.to_dict(),
+            )
+        except Exception as exc:
+            logger.debug("Snapshot metadata write failed: %s", exc)
+
+        # Build display ref map: sequential e1,e2,… → stable hash-based refs.
+        # The serialized tree uses stable refs; this mapping lets click resolve
+        # both sequential and stable refs.
+        display_ref_map: dict[str, str] = {}
+        _counter = [1]
+
         def _serialize(el) -> dict:
+            stable_ref = element_obj_to_ref.get(id(el), el.id)
+            display_ref = f"e{_counter[0]}"
+            _counter[0] += 1
+            display_ref_map[display_ref] = stable_ref
             d = {
-                "id": el.id,
+                "id": stable_ref,
                 "role": el.role,
                 "name": el.name,
                 "value": el.value,
@@ -55,7 +95,14 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 d["children"] = [_serialize(c) for c in el.children]
             return d
 
-        return {"success": True, "tree": _serialize(tree)}
+        result = {"success": True, "tree": _serialize(tree), "snapshot_id": snapshot_id}
+
+        # Store display ref mapping so sequential refs from tree output
+        # can be translated to stable refs during click resolution.
+        if display_ref_map:
+            mgr.store_display_ref_map(snapshot_id, display_ref_map)
+
+        return result
 
     @server.tool()
     @_safe_tool
