@@ -55,6 +55,43 @@ def _patch_platform(supports=True):
 # to read the fake file path from FakeCaptureResult.
 
 
+class TestUnicodePathCapture:
+    """Verify capture accepts Chinese/Unicode output paths (#693)."""
+
+    def test_capture_unicode_output_path(self, runner, mock_backend):
+        unicode_path = "/tmp/中文路径/截图.png"
+        mock_backend.capture_screen.return_value = FakeCaptureResult(path=unicode_path)
+        with _patch_platform(), _patch_backend(mock_backend):
+            result = runner.invoke(capture, [
+                "-p", unicode_path, "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.capture_screen.assert_called_once_with(
+            screen_index=0, output_path=unicode_path,
+        )
+
+    def test_capture_unicode_json_output(self, runner, mock_backend):
+        unicode_path = "/tmp/テスト/スクリーンショット.png"
+        mock_backend.capture_screen.return_value = FakeCaptureResult(path=unicode_path)
+        with _patch_platform(), _patch_backend(mock_backend):
+            result = runner.invoke(capture, [
+                "-p", unicode_path, "--json", "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+
+    def test_capture_window_unicode_path(self, runner, mock_backend):
+        unicode_path = "/tmp/中文/窗口.png"
+        mock_backend.capture_window.return_value = FakeCaptureResult(path=unicode_path)
+        with _patch_platform(), _patch_backend(mock_backend):
+            result = runner.invoke(capture, [
+                "--hwnd", "12345", "-p", unicode_path, "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.capture_window.assert_called_once()
+
+
 # ── Full screen capture ─────────────────────────────────────────────
 
 
