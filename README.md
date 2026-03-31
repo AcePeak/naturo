@@ -27,6 +27,7 @@
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
 - 🍎 **macOS Support** — Coming soon (native implementation in development)
+- 🔬 **Cascade Recognition** — UIA + CDP + AI Vision multi-source fusion for Electron/CEF apps where single-source fails
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
 ## Platform Support
@@ -178,6 +179,41 @@ naturo highlight e11 --app notepad         # Highlight specific ref
 naturo highlight --app notepad -A out.png  # Save annotated screenshot
 ```
 
+## Cascade Recognition
+
+Most desktop automation tools rely on a single accessibility API (UIA) — when
+it fails (Electron apps, custom-rendered UI), you're stuck. Naturo cascades
+through multiple recognition sources automatically:
+
+```
+UIA → CDP → AI Vision
+ ↓      ↓       ↓
+Win32  Chrome   Claude/GPT
+native DevTools  screenshot
+```
+
+```bash
+# Progressive multi-source recognition
+naturo see --app feishu --cascade --fill-gaps --stats
+
+# Result: UIA finds 700+ elements, AI Vision adds 130+ that UIA missed
+#   uia      705 elements    6s   [ok]
+#   cdp        0 elements   15s   [skipped]
+#   vision   133 elements   72s   [ok]
+
+# Click an AI-discovered element by ref
+naturo click e805 --app feishu    # "视频会议" found by AI Vision
+```
+
+**How it works:**
+- **UIA/MSAA** finds native Win32/WPF/UWP controls (fastest, most accurate)
+- **CDP** reaches into Electron/Chrome web content via DevTools Protocol
+- **AI Vision** screenshots the window and asks Claude/GPT to enumerate every visible element — catches anything the other sources miss
+- **IoU dedup** prevents duplicates: if UIA already found an element, AI Vision skips it
+- **Tree merge** attaches AI-discovered elements to the correct UIA parent container
+
+Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_MODEL` to choose the model (default: `claude-sonnet-4-20250514`).
+
 ## CLI Commands
 
 ### See (observe the desktop)
@@ -315,7 +351,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 |---------|--------|-----------|-----------|--------|--------------|
 | **MCP Server** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ |
 | **AI Agent Ready** | ✅ JSON output, agent CLI | ❌ | ❌ | ❌ | ❌ |
-| **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP | None (image only) | UIA, Win32 | Win32 messages | UIA only |
+| **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP + AI Vision | None (image only) | UIA, Win32 | Win32 messages | UIA only |
+| **Cascade Recognition** | ✅ Multi-source fusion with auto-dedup | ❌ | ❌ | ❌ | ❌ |
 | **Auto-Detection** | ✅ Picks best framework per app | N/A | Manual backend choice | N/A | N/A |
 | **Element Tree** | ✅ Full hierarchy | ❌ | ✅ | ❌ | ✅ |
 | **Post-Action Verify** | ✅ Confirms actions took effect | ❌ | ❌ | ❌ | ❌ |

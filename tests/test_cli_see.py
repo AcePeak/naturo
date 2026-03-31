@@ -41,6 +41,9 @@ class FakeCaptureResult:
     path: str = "/tmp/test.png"
     width: int = 1920
     height: int = 1080
+    format: str = "png"
+    scale_factor: float = 1.0
+    dpi: int = 96
 
 
 @dataclass
@@ -648,10 +651,10 @@ class TestCascadeMode:
         assert call_kwargs.kwargs.get("hwnd") == 99999 or call_kwargs[1].get("hwnd") == 99999
 
     def test_cascade_capture_fallback_on_resolve_failure(self, runner, mock_backend):
-        """#694: if hwnd resolution fails, still attempt capture_window (with hwnd=None)."""
+        """#694: if hwnd resolution fails, fall back to capture_screen."""
         fake_result = FakeCascadeResult()
         mock_backend._resolve_hwnd.side_effect = RuntimeError("no window")
-        mock_backend.capture_window.return_value = FakeCaptureResult()
+        mock_backend.capture_screen.return_value = FakeCaptureResult()
         with (
             _patch_platform(),
             _patch_backend(mock_backend),
@@ -661,8 +664,8 @@ class TestCascadeMode:
                 "--cascade", "--app", "feishu", "--no-snapshot",
             ], catch_exceptions=False)
         assert result.exit_code == 0
-        # capture_window still called even if resolve failed
-        mock_backend.capture_window.assert_called_once()
+        # Falls back to capture_screen when resolve fails
+        mock_backend.capture_screen.assert_called_once()
 
 
 # ── Error handling ─────────────────────────────────────────────────────
