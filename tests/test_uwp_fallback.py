@@ -312,6 +312,85 @@ class TestClickElementUia:
             result = backend.click_element_uia(x=100, y=200)
         assert result is False
 
+    def test_click_element_uia_tries_expand_collapse_before_invoke(self, backend):
+        """ExpandCollapsePattern should be tried before InvokePattern (#672).
+
+        Menu items (File, Edit, View…) support ExpandCollapsePattern to open
+        their dropdown.  InvokePattern fires the command action instead of
+        expanding, causing wrong behaviour on UWP apps.
+        """
+        mock_mod = MagicMock()
+        mock_uia = MagicMock()
+
+        # Element supports both ExpandCollapse and Invoke
+        mock_element = MagicMock()
+        mock_element.CurrentName = "File"
+        mock_uia.ElementFromPoint.return_value = mock_element
+
+        # ExpandCollapsePattern mock — state=collapsed (0)
+        mock_ecp_pattern = MagicMock()
+        mock_ecp = MagicMock()
+        mock_ecp.CurrentExpandCollapseState = 0  # Collapsed
+        mock_ecp_pattern.QueryInterface.return_value = mock_ecp
+
+        # InvokePattern mock
+        mock_invoke_pattern = MagicMock()
+        mock_invoke = MagicMock()
+        mock_invoke_pattern.QueryInterface.return_value = mock_invoke
+
+        def _get_pattern(pattern_id):
+            if pattern_id == mock_mod.UIA_ExpandCollapsePatternId:
+                return mock_ecp_pattern
+            if pattern_id == mock_mod.UIA_InvokePatternId:
+                return mock_invoke_pattern
+            return None
+
+        mock_element.GetCurrentPattern.side_effect = _get_pattern
+
+        # Mock ctypes.wintypes and comtypes.COMError for non-Windows
+        mock_wintypes = MagicMock()
+        mock_comtypes = MagicMock()
+        with patch.object(backend, "_init_comtypes_uia", return_value=(mock_uia, mock_mod)), \
+             patch.dict("sys.modules", {
+                 "ctypes.wintypes": mock_wintypes,
+                 "comtypes": mock_comtypes,
+             }):
+            result = backend.click_element_uia(x=100, y=200)
+
+        assert result is True
+        # ExpandCollapsePattern.Expand() should have been called
+        mock_ecp.Expand.assert_called_once()
+        # InvokePattern should NOT have been called
+        mock_invoke.Invoke.assert_not_called()
+
+    def test_click_element_uia_collapses_expanded_element(self, backend):
+        """Clicking an already-expanded menu item should collapse it (#672)."""
+        mock_mod = MagicMock()
+        mock_uia = MagicMock()
+
+        mock_element = MagicMock()
+        mock_element.CurrentName = "File"
+        mock_uia.ElementFromPoint.return_value = mock_element
+
+        mock_ecp_pattern = MagicMock()
+        mock_ecp = MagicMock()
+        mock_ecp.CurrentExpandCollapseState = 1  # Expanded
+        mock_ecp_pattern.QueryInterface.return_value = mock_ecp
+
+        mock_element.GetCurrentPattern.return_value = mock_ecp_pattern
+
+        mock_wintypes = MagicMock()
+        mock_comtypes = MagicMock()
+        with patch.object(backend, "_init_comtypes_uia", return_value=(mock_uia, mock_mod)), \
+             patch.dict("sys.modules", {
+                 "ctypes.wintypes": mock_wintypes,
+                 "comtypes": mock_comtypes,
+             }):
+            result = backend.click_element_uia(x=100, y=200)
+
+        assert result is True
+        mock_ecp.Collapse.assert_called_once()
+
 
 class TestMsaaUwpFallback:
     """Tests for MSAA UWP child window fallback (#394)."""

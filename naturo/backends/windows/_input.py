@@ -105,7 +105,30 @@ class InputMixin:
             elem_name = element.CurrentName or ""
             logger.debug("UIA click: found element %r at (%d, %d)", elem_name, x, y)
 
-            # Try InvokePattern first (buttons, links, menu items)
+            # (#672) Try ExpandCollapsePattern first (menu items, combo boxes,
+            # tree items).  Top-level menu bar items (File, Edit, View…) support
+            # ExpandCollapsePattern to open their dropdown.  InvokePattern on
+            # these elements fires the command action instead of expanding,
+            # causing wrong behaviour on UWP apps like Notepad.
+            try:
+                pattern = element.GetCurrentPattern(mod.UIA_ExpandCollapsePatternId)
+                if pattern is not None:
+                    ecp = pattern.QueryInterface(mod.IUIAutomationExpandCollapsePattern)
+                    # Only expand if currently collapsed — avoids toggling an
+                    # already-open menu closed.
+                    state = ecp.CurrentExpandCollapseState
+                    if state == 0:  # ExpandCollapseState_Collapsed
+                        ecp.Expand()
+                        logger.info("UIA click: expanded %r via ExpandCollapsePattern", elem_name)
+                        return True
+                    elif state == 1:  # ExpandCollapseState_Expanded
+                        ecp.Collapse()
+                        logger.info("UIA click: collapsed %r via ExpandCollapsePattern", elem_name)
+                        return True
+            except (COMError, AttributeError):
+                pass
+
+            # Try InvokePattern (buttons, links, simple menu items)
             try:
                 pattern = element.GetCurrentPattern(mod.UIA_InvokePatternId)
                 if pattern is not None:
@@ -139,7 +162,7 @@ class InputMixin:
                 pass
 
             logger.debug(
-                "UIA click: element %r at (%d, %d) supports no invoke/toggle/select pattern",
+                "UIA click: element %r at (%d, %d) supports no expand/invoke/toggle/select pattern",
                 elem_name, x, y,
             )
             return False

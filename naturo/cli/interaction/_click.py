@@ -205,9 +205,9 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
             logger.debug("HWND resolution for focus failed: %s", exc)
     if _focus_hwnd:
         # Detect UWP apps for UIA click fallback (#248)
-        if hasattr(backend, "_is_applicationframehost"):
+        if hasattr(backend, "_is_afh_window"):
             try:
-                _is_uwp = backend._is_applicationframehost(_focus_hwnd)
+                _is_uwp = backend._is_afh_window(_focus_hwnd)
             except Exception as exc:
                 logger.debug("UWP detection failed (hwnd=%s): %s", _focus_hwnd, exc)
         try:
