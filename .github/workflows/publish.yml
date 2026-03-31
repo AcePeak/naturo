@@ -38,12 +38,24 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Download DLL
         uses: actions/download-artifact@v8
         with:
           name: naturo-core-dll
           path: naturo/bin/
+
+      - name: Flatten DLL into naturo/bin
+        shell: bash
+        run: |
+          # download-artifact may preserve directory structure from upload
+          if [ -d "naturo/bin/bin/Release" ]; then
+            cp naturo/bin/bin/Release/*.dll naturo/bin/ 2>/dev/null || true
+          fi
+          # Verify DLL is in place
+          ls -la naturo/bin/
+          test -f naturo/bin/naturo_core.dll || { echo "ERROR: naturo_core.dll not found in naturo/bin/"; exit 1; }
 
       - name: Install build tools
         run: pip install build
