@@ -83,13 +83,16 @@ class VisionProvider(Protocol):
         element_description: str,
         *,
         max_tokens: int = 4096,
+        raw_prompt: bool = False,
     ) -> VisionResult:
         """Find a specific UI element in a screenshot.
 
         Args:
             image_path: Path to screenshot file.
-            element_description: Natural language description (e.g., "the Save button").
+            element_description: Natural language description (e.g., "the Save button"),
+                or a complete prompt when ``raw_prompt=True``.
             max_tokens: Maximum tokens in the response.
+            raw_prompt: When True, use element_description as-is without template wrapping.
 
         Returns:
             VisionResult with element location info.

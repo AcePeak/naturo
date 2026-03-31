@@ -495,13 +495,18 @@ class AnthropicVisionProvider:
         element_description: str,
         *,
         max_tokens: int = 4096,
+        raw_prompt: bool = False,
     ) -> VisionResult:
         """Find a specific UI element in a screenshot.
 
         Args:
             image_path: Path to screenshot file.
-            element_description: Natural language description of the element.
+            element_description: Natural language description of the element,
+                or a complete prompt when ``raw_prompt=True``.
             max_tokens: Maximum tokens in the response.
+            raw_prompt: When True, use *element_description* as the full text
+                prompt without wrapping it in the default identify template.
+                Used by cascade AI vision to send a custom enumeration prompt.
 
         Returns:
             VisionResult with element location info in the elements list.
@@ -520,9 +525,12 @@ class AnthropicVisionProvider:
         image_data = encode_image_base64(image_path)
         media_type = detect_media_type(image_path)
 
-        text_prompt = _DEFAULT_IDENTIFY_PROMPT.format(
-            element_description=element_description
-        )
+        if raw_prompt:
+            text_prompt = element_description
+        else:
+            text_prompt = _DEFAULT_IDENTIFY_PROMPT.format(
+                element_description=element_description
+            )
 
         try:
             response = client.messages.create(

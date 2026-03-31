@@ -388,12 +388,12 @@ def _fetch_ai_elements(
                 + dim_hint
             ),
             max_tokens=16384,
+            raw_prompt=True,
         )
 
         # (#694) Window offset: AI coords are relative to the screenshot
         # (which is a window capture). Add window position to get screen coords.
         win_x, win_y = window_bounds[0], window_bounds[1]
-        win_w, win_h = window_bounds[2], window_bounds[3]
 
         logger.info("AI vision: provider returned %d elements (window offset: %d,%d)",
                      len(result.elements), win_x, win_y)
