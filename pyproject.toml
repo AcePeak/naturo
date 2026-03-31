@@ -32,7 +32,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "click>=8.0",
+    "click>=8.0,<9.0",
 ]
 
 [project.urls]
@@ -51,24 +51,24 @@ dev = [
     "mypy>=1.10",
 ]
 ai = [
-    "anthropic>=0.20",
-    "openai>=1.0",
+    "anthropic>=0.20,<2.0",
+    "openai>=1.0,<3.0",
 ]
 mcp = [
-    "mcp>=1.0",
+    "mcp>=1.0,<2.0",
 ]
 cdp = [
-    "websocket-client>=1.0",
+    "websocket-client>=1.0,<2.0",
 ]
 annotate = [
-    "Pillow>=9.0",
+    "Pillow>=9.0,<12.0",
 ]
 desktop = [
-    "pyvda>=0.4.0; sys_platform == 'win32'",
+    "pyvda>=0.4.0,<1.0; sys_platform == 'win32'",
 ]
 windows = [
-    "pywin32>=306; sys_platform == 'win32'",
-    "comtypes>=1.2.0; sys_platform == 'win32'",
+    "pywin32>=306,<400; sys_platform == 'win32'",
+    "comtypes>=1.2.0,<2.0; sys_platform == 'win32'",
 ]
 
 [project.scripts]
