@@ -256,18 +256,38 @@ class TestTypePasteFallbackOnIME:
 
 
 class TestTypeEscapeSequences:
-    """type should interpret C-style escape sequences (\\t, \\n, \\r, \\\\)."""
+    """#661: Text is typed literally by default. Escape sequences require -E."""
 
     @_win_only
-    def test_type_tab_escape(self, runner):
-        """type 'A\\tB' should send text with real tab character."""
+    def test_type_windows_path_literal_by_default(self, runner):
+        """#661: Windows paths typed without flags are preserved literally."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [
+                r"C:\Users\test\report.txt", "--json", "--no-verify",
+            ])
+
+        data = json.loads(result.output)
+        assert data["success"] is True
+        typed_text = mock_backend.type_text.call_args[0][0]
+        assert typed_text == r"C:\Users\test\report.txt"
+        assert "\t" not in typed_text
+        assert "\r" not in typed_text
+
+    @_win_only
+    def test_type_tab_escape_with_flag(self, runner):
+        """type -E 'A\\tB' should send text with real tab character."""
+        from naturo.cli.interaction import type_cmd
+
+        mock_backend = MagicMock()
+
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route", return_value={}):
+            result = runner.invoke(type_cmd, [r"A\tB", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -276,15 +296,15 @@ class TestTypeEscapeSequences:
         assert typed_text == "A\tB"
 
     @_win_only
-    def test_type_newline_escape(self, runner):
-        """type 'Line1\\nLine2' should send text with real newline."""
+    def test_type_newline_escape_with_flag(self, runner):
+        """type -E 'Line1\\nLine2' should send text with real newline."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"Line1\nLine2", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -292,15 +312,15 @@ class TestTypeEscapeSequences:
         assert typed_text == "Line1\nLine2"
 
     @_win_only
-    def test_type_carriage_return_escape(self, runner):
-        """type 'A\\rB' should send text with real carriage return."""
+    def test_type_carriage_return_escape_with_flag(self, runner):
+        """type -E 'A\\rB' should send text with real carriage return."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"A\rB", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -308,15 +328,15 @@ class TestTypeEscapeSequences:
         assert typed_text == "A\rB"
 
     @_win_only
-    def test_type_literal_backslash(self, runner):
-        """type 'path\\\\file' should produce single backslash."""
+    def test_type_literal_backslash_with_flag(self, runner):
+        """type -E 'path\\\\file' should produce single backslash."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, ["path\\\\file", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, ["path\\\\file", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -324,15 +344,15 @@ class TestTypeEscapeSequences:
         assert typed_text == "path\\file"
 
     @_win_only
-    def test_type_mixed_escapes(self, runner):
-        """type 'Col1\\tCol2\\nRow2' should handle mixed escapes."""
+    def test_type_mixed_escapes_with_flag(self, runner):
+        """type -E 'Col1\\tCol2\\nRow2' should handle mixed escapes."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, [r"Col1\tCol2\nRow2", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"Col1\tCol2\nRow2", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -340,8 +360,8 @@ class TestTypeEscapeSequences:
         assert typed_text == "Col1\tCol2\nRow2"
 
     @_win_only
-    def test_type_paste_mode_also_gets_escapes(self, runner):
-        """Escape sequences should also work in --paste mode."""
+    def test_type_paste_mode_escapes_with_flag(self, runner):
+        """Escape sequences in --paste mode require -E."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -349,16 +369,15 @@ class TestTypeEscapeSequences:
 
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value={}):
-            result = runner.invoke(type_cmd, [r"A\tB", "--paste", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"A\tB", "--paste", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
-        # Clipboard should receive the processed text with real tab
         mock_backend.clipboard_set.assert_called_once_with("A\tB")
 
     @_win_only
-    def test_type_raw_disables_escape_interpretation(self, runner):
-        """#619: --raw flag types text literally without escape processing."""
+    def test_type_raw_flag_still_accepted(self, runner):
+        """--raw is deprecated but still accepted (literal is now default)."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -372,14 +391,13 @@ class TestTypeEscapeSequences:
         data = json.loads(result.output)
         assert data["success"] is True
         typed_text = mock_backend.type_text.call_args[0][0]
-        # With --raw, backslash sequences should NOT be interpreted
         assert typed_text == r"C:\Users\test\report.txt"
         assert "\t" not in typed_text
         assert "\r" not in typed_text
 
     @_win_only
-    def test_type_without_raw_still_interprets_escapes(self, runner):
-        """Without --raw, escape sequences are still interpreted as before."""
+    def test_type_without_flag_is_literal(self, runner):
+        """Without -E, backslash sequences are NOT interpreted."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -391,7 +409,7 @@ class TestTypeEscapeSequences:
         data = json.loads(result.output)
         assert data["success"] is True
         typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "A\tB"  # \t still becomes real tab
+        assert typed_text == r"A\tB"  # literal backslash+t, NOT tab
 
 
 class TestTypeNewlineBypassesUIA:
@@ -404,7 +422,7 @@ class TestTypeNewlineBypassesUIA:
 
     @_win_only
     def test_newline_text_skips_uia_uses_sendinput(self, runner):
-        """type 'Line1\\nLine2' with UIA route should bypass SetValue."""
+        """type -E 'Line1\\nLine2' with UIA route should bypass SetValue."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -414,7 +432,7 @@ class TestTypeNewlineBypassesUIA:
         route_info = {"method": "uia"}
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
-            result = runner.invoke(type_cmd, [r"Line1\nLine2", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"Line1\nLine2", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -427,7 +445,7 @@ class TestTypeNewlineBypassesUIA:
 
     @_win_only
     def test_cr_text_skips_uia_uses_sendinput(self, runner):
-        """type 'A\\rB' with UIA route should bypass SetValue."""
+        """type -E 'A\\rB' with UIA route should bypass SetValue."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -436,7 +454,7 @@ class TestTypeNewlineBypassesUIA:
         route_info = {"method": "uia"}
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
-            result = runner.invoke(type_cmd, [r"A\rB", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"A\rB", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True
@@ -447,7 +465,7 @@ class TestTypeNewlineBypassesUIA:
 
     @_win_only
     def test_tab_text_still_uses_uia(self, runner):
-        """type 'A\\tB' with UIA route should still use SetValue (tabs are safe)."""
+        """type -E 'A\\tB' with UIA route should still use SetValue (tabs are safe)."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -456,7 +474,7 @@ class TestTypeNewlineBypassesUIA:
         route_info = {"method": "uia"}
         with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
              patch("naturo.cli.interaction._common._auto_route", return_value=route_info):
-            result = runner.invoke(type_cmd, [r"A\tB", "--json", "--no-verify"])
+            result = runner.invoke(type_cmd, [r"A\tB", "-E", "--json", "--no-verify"])
 
         data = json.loads(result.output)
         assert data["success"] is True

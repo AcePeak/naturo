@@ -49,13 +49,17 @@ logger = logging.getLogger(__name__)
 @_common._app_id_option
 @_common._verify_options
 @_common._see_options
-@click.option("--raw", is_flag=True, help="Disable escape sequence interpretation (type text literally)")
+@click.option("--raw", is_flag=True, hidden=True, help="Deprecated: text is now literal by default")
+@click.option(
+    "--interpret-escapes", "-E", is_flag=True,
+    help=r"Interpret C-style escape sequences (\t, \n, \r, \\) in text",
+)
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
              window_title, hwnd, input_mode, method, selector, app_id, verify, see_after,
-             settle, raw, json_output):
+             settle, raw, interpret_escapes, json_output):
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -110,11 +114,12 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                   json_output, code="INVALID_INPUT")
         return
 
-    # Interpret C-style escape sequences (\t, \n, \r, \\) in text so that
-    # shell-provided literal backslash+letter sequences become real whitespace
-    # characters.  File-sourced text (--file) already contains real characters,
-    # so skip processing for that path.  --raw disables this entirely (#619).
-    if text and not file_path and not raw:
+    # (#661) Text is typed literally by default — Windows paths like
+    # C:\Users\test\report.txt are preserved without corruption.
+    # Use --interpret-escapes / -E to opt-in to C-style escape processing
+    # (\t → tab, \n → newline, \r → CR, \\ → literal backslash).
+    # File-sourced text (--file) already contains real characters.
+    if text and not file_path and interpret_escapes:
         text = (
             text.replace("\\\\", "\x00")   # placeholder for literal backslash
             .replace("\\t", "\t")
