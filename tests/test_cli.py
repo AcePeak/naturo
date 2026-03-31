@@ -89,12 +89,6 @@ def test_see_help(runner):
     assert "--json" in result.output
 
 
-@pytest.mark.skip(reason="learn command removed in v0.2.0")
-def test_learn_no_args(runner):
-    result = runner.invoke(main, ["learn"])
-    assert result.exit_code == 0
-    assert "Naturo" in result.output
-
 
 @pytest.mark.skip(reason='command hidden — stub not exposed to users')
 def test_tools_help(runner):
