@@ -23,8 +23,8 @@ Read agents/dev/SOUL.md for your complete responsibilities.
 
 ### 0b. What happened since last session?
 ```bash
-# Recent commits on main — what got merged?
-git log --oneline -10 main
+# Recent commits on develop — what got merged?
+git log --oneline -10 develop
 
 # My PRs — are they merged, pending, or rejected?
 gh pr list --author @me --state all --limit 5
@@ -38,7 +38,7 @@ gh pr list --author @me --state open --json number,title,reviewDecision --jq '.[
 3. **PR CI passed but not merged** → enable auto-merge: `gh pr merge <number> --auto --squash`
 4. **PR has merge conflicts** → rebase onto latest main and force-push:
    ```bash
-   git checkout <branch> && git fetch origin main && git rebase origin/main && git push --force-with-lease
+   git checkout <branch> && git fetch origin develop && git rebase origin/develop && git push --force-with-lease
    ```
 5. **PR is clean and mergeable but auto-merge not set** → `gh pr merge <number> --auto --squash`
 
@@ -137,21 +137,21 @@ You are scheduled to run every hour. The next session starts whether you're done
 - **Never leave an issue half-done.** Finish current issue before starting the next.
 
 ### Before coding
-1. **Always start from latest main:**
+1. **Always start from latest `develop`** (NOT `main` — main is release-only):
    ```bash
-   git checkout main && git pull origin main
+   git checkout develop && git pull origin develop
    ```
 2. Assign yourself:
    ```bash
    gh issue edit N --add-assignee @me --add-label "status:in-progress"
    gh issue comment N --body "**[Dev-Sirius]** Starting work on this issue."
    ```
-3. Create branch from updated main: `git checkout -b fix/issue-N-short-desc`
+3. Create branch from updated develop: `git checkout -b fix/issue-N-short-desc`
 4. Read the issue carefully. Understand the root cause, not just the symptom.
 5. Check related code. Read the files you'll need to change BEFORE changing them.
 
 ### Coding
-1. Create a feature branch: `git checkout -b fix/issue-N-short-desc` (or `feat/` for features)
+1. Create a feature branch from `develop`: `git checkout -b fix/issue-N-short-desc` (or `feat/` for features)
 2. **Write a failing test first** (TDD). If you can't write a test, think harder about what "fixed" means.
 3. Implement the minimum change to fix the issue
 4. Run tests AND lint:

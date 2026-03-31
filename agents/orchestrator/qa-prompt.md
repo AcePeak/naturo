@@ -59,7 +59,7 @@ When filing issues found during simulation, note: `Discovered during: <user type
 The self-hosted GitHub Actions runner is NOT running. You are responsible for running the CI desktop test suite when needed.
 
 ### When to run
-Check if there are new commits on main since your last run:
+Check if there are new commits on develop since your last run:
 ```bash
 LAST_RUN_SHA=$(cat agents/qa/.last-ci-sha 2>/dev/null || echo "none")
 CURRENT_SHA=$(git rev-parse HEAD)
@@ -72,7 +72,7 @@ echo "Current HEAD:   $CURRENT_SHA"
 ### How to run
 ```bash
 # 1. Pull latest and reinstall
-git pull origin main
+git pull origin develop
 pip install -e ".[dev,windows]" --quiet
 
 # 2. Build C++ core if needed
@@ -308,7 +308,7 @@ Then git add, commit, and push it:
 ```bash
 git add tests/qa-reports/QA-Mariana-*.md agents/qa/status.md agents/qa/testcases/
 git commit -m "qa: round <N> report [skip ci]"
-git push origin main
+git push origin develop
 ```
 
 ### 2. Local status file

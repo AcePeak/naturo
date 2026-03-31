@@ -112,7 +112,7 @@ If milestones or priorities changed significantly:
 # Update ROADMAP.md if items completed
 git add agents/STATE.md docs/ROADMAP.md
 git commit -m "orc: update project state after daily review [skip ci]"
-git push origin main
+git push origin develop
 ```
 
 ## Phase 5 — Write Daily Report
@@ -150,7 +150,7 @@ Commit the report:
 ```bash
 git add .work/reviews/
 git commit -m "orc: daily review $(date +%Y-%m-%d-%H%M) [skip ci]"
-git push origin main
+git push origin develop
 ```
 
 ## Rules

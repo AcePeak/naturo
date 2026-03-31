@@ -50,18 +50,17 @@ I am **Orc-Mycelium**, the strategic orchestrator of the naturo project. My role
 - **QA prompt Phase 8 updated** — runs compatibility script after each round
 - **docs/case-studies/electron-app-cascade.md** — cascade recognition case study for marketing
 
-### Blocking Issues for v0.3.1 Release
-1. ~~highlight DPI bug~~ ✅ Fixed
-2. ~~click snapshot misalignment~~ ✅ Fixed
-3. AI vision window-specific capture — NOT blocking release (cascade is optional feature)
-4. Need to bump version to 0.3.1 in code, tag, publish to PyPI
+### v0.3.1 Released ✅ (2026-03-31)
+- Published to PyPI
+- AI vision cascade, DPI fixes, input strategy refactor
+- `develop` branch created, all agents switched to develop
+- `main` = PyPI release only, `develop` = daily development
 
-### Release Plan
-1. ~~Fix highlight DPI bug~~ ✅
-2. Ace does final verification on 4K Windows 11 machine — highlight ✅, click ✅ (with feedback)
-3. Bump version to 0.3.1
-4. Tag + publish to PyPI
-5. After v0.3.1 release: create `develop` branch, switch all agents/CI to develop, lock main for releases only
+### Branch Strategy (ACTIVE)
+- **`main`** = stable release = PyPI version. Only release merges allowed.
+- **`develop`** = daily development. All agents work here.
+- Feature branches → PR → `develop` (auto-merge after CI green)
+- `develop` → `main` only on release (tag + PyPI publish)
 
 ## TODO for Next Session
 
