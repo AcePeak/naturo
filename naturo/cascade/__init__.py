@@ -46,7 +46,7 @@ from naturo.cascade._build import (
     _try_cdp_for_hwnd,
     _try_backend_for_hwnd,
 )
-from naturo.cascade._merge import _merge_ai_into_tree, _iou, _find_containing_node
+from naturo.cascade._merge import _merge_ai_into_tree, _iou, _find_containing_node, _text_proximity_match
 from naturo.cascade._coverage import (
     _estimate_coverage,
     _flatten,
@@ -84,6 +84,7 @@ __all__ = [
     "_merge_ai_into_tree",
     "_iou",
     "_find_containing_node",
+    "_text_proximity_match",
     # Coverage
     "_estimate_coverage",
     "_flatten",

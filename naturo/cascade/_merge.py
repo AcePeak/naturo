@@ -1,7 +1,8 @@
-"""Tree merging: AI-to-UIA tree merge with IoU deduplication."""
+"""Tree merging: AI-to-UIA tree merge with IoU + text/proximity deduplication."""
 from __future__ import annotations
 
 import logging
+import math
 from typing import List, Optional
 
 from naturo.backends.base import ElementInfo
@@ -25,29 +26,85 @@ def _iou(a: ElementInfo, b: ElementInfo) -> float:
     return inter / union if union > 0 else 0.0
 
 
+def _text_proximity_match(
+    ai_el: ElementInfo,
+    uia_visible: List[ElementInfo],
+    proximity_px: float = 200.0,
+) -> Optional[ElementInfo]:
+    """Check if an AI element duplicates a UIA element by text + proximity.
+
+    Returns the matching UIA element if:
+    - Both have non-empty names
+    - One name contains the other (case-insensitive)
+    - Their center-to-center distance is within ``proximity_px`` pixels
+
+    This catches duplicates that IoU misses due to coordinate precision
+    differences between UIA (exact pixel bounds) and AI vision (estimated
+    bounds that can vary by 50-200px).
+
+    Args:
+        ai_el: The AI vision element to check.
+        uia_visible: Visible UIA elements to match against.
+        proximity_px: Maximum center-to-center distance for a match.
+
+    Returns:
+        The matching UIA element, or None if no match.
+    """
+    ai_name = (ai_el.name or "").strip().lower()
+    if not ai_name:
+        return None
+
+    ai_cx = ai_el.x + ai_el.width / 2
+    ai_cy = ai_el.y + ai_el.height / 2
+
+    for uia_el in uia_visible:
+        uia_name = (uia_el.name or "").strip().lower()
+        if not uia_name:
+            continue
+
+        # Text match: one name contains the other
+        if uia_name not in ai_name and ai_name not in uia_name:
+            continue
+
+        # Proximity check: center-to-center distance
+        uia_cx = uia_el.x + uia_el.width / 2
+        uia_cy = uia_el.y + uia_el.height / 2
+        dist = math.hypot(ai_cx - uia_cx, ai_cy - uia_cy)
+        if dist <= proximity_px:
+            return uia_el
+
+    return None
+
+
 def _merge_ai_into_tree(
     root: ElementInfo,
     ai_elements: List[ElementInfo],
     iou_threshold: float = 0.3,
+    proximity_px: float = 200.0,
 ) -> tuple[List[ElementInfo], int, int]:
-    """Merge AI vision elements into the UIA tree, deduplicating by IoU.
+    """Merge AI vision elements into the UIA tree, deduplicating by IoU
+    and text similarity + proximity.
 
     For each AI element:
-    - If it overlaps an existing UIA leaf with IoU >= threshold, skip it
-      (UIA already found this element).
-    - Otherwise, attach it as a child of the deepest UIA node whose
-      bounding box contains the AI element's center point.
+    1. If it overlaps an existing UIA element with IoU >= threshold, skip it.
+    2. If it has similar text to a nearby UIA element (within proximity_px),
+       skip it (#702).
+    3. Otherwise, attach it as a child of the deepest UIA node whose
+       bounding box contains the AI element's center point.
 
     Parent lookup uses a snapshot of the UIA tree taken *before* any AI
     elements are added, so AI elements are always flat siblings under
     UIA containers and never nest inside each other.
 
-    Returns
-    -------
-    (novel_elements, added_count, skipped_count)
-        novel_elements: AI elements that were added (for stats).
-        added_count: Number of elements inserted into tree.
-        skipped_count: Number of duplicates skipped.
+    Args:
+        root: The UIA element tree root.
+        ai_elements: AI vision elements to merge.
+        iou_threshold: Minimum IoU to consider elements as duplicates.
+        proximity_px: Maximum center-to-center distance for text+proximity
+            dedup (#702).
+
+    Returns:
+        (novel_elements, added_count, skipped_count)
     """
     if not ai_elements:
         return [], 0, 0
@@ -76,7 +133,7 @@ def _merge_ai_into_tree(
             skipped += 1
             continue
 
-        # Check if any existing UIA element overlaps significantly
+        # --- Pass 1: IoU geometric dedup (fast path) ---
         is_duplicate = False
         best_iou = 0.0
         best_match: Optional[ElementInfo] = None
@@ -95,6 +152,19 @@ def _merge_ai_into_tree(
                 "AI merge: skip '%s' (%d,%d %dx%d) IoU=%.2f with UIA '%s'",
                 ai_el.name, ai_el.x, ai_el.y, ai_el.width, ai_el.height,
                 best_iou, best_match.name if best_match else "?",
+            )
+            continue
+
+        # --- Pass 2: text + proximity dedup (#702) ---
+        text_match = _text_proximity_match(ai_el, uia_visible, proximity_px)
+        if text_match is not None:
+            skipped += 1
+            logger.debug(
+                "AI merge: skip '%s' (%d,%d %dx%d) text+proximity match "
+                "with UIA '%s' (%d,%d %dx%d)",
+                ai_el.name, ai_el.x, ai_el.y, ai_el.width, ai_el.height,
+                text_match.name, text_match.x, text_match.y,
+                text_match.width, text_match.height,
             )
             continue
 
