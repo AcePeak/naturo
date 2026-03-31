@@ -105,7 +105,8 @@ def _get_console_session_id() -> int:
         if session_id == 0xFFFFFFFF:
             return -1
         return session_id
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to get console session ID: %s", exc)
         return -1
 
 
@@ -130,7 +131,8 @@ def _get_process_session_id(pid: int) -> int:
         if success:
             return session_id.value
         return -1
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to get session ID for PID %d: %s", pid, exc)
         return -1
 
 
@@ -703,8 +705,8 @@ def _force_kill(pid: int, system: str) -> None:
             )
         else:
             os.kill(pid, signal.SIGKILL)
-    except (ProcessLookupError, OSError, subprocess.TimeoutExpired):
-        pass  # Already dead
+    except (ProcessLookupError, OSError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Force kill of PID %d failed (may already be dead): %s", pid, exc)
 
 
 def relaunch_app(

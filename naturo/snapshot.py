@@ -406,7 +406,8 @@ class SnapshotManager:
 
         try:
             snapshot = self.get_snapshot(recent_id)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load snapshot %s for ref resolution: %s", recent_id, exc)
             return None
 
         # (#237) ui_map may be keyed by ref ("e1") or by backend id,
@@ -484,7 +485,8 @@ class SnapshotManager:
 
         try:
             snapshot = self.get_snapshot(recent_id)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load snapshot %s for ref element resolution: %s", recent_id, exc)
             return None
 
         # (#237) ui_map may be keyed by ref or by backend id.
@@ -762,8 +764,8 @@ class SnapshotManager:
             try:
                 data = json.loads(json_path.read_text(encoding="utf-8"))
                 return Snapshot.from_dict(data)
-            except (OSError, json.JSONDecodeError, KeyError):
-                pass
+            except (OSError, json.JSONDecodeError, KeyError) as exc:
+                logger.debug("Failed to load snapshot %s, creating new skeleton: %s", snapshot_id, exc)
         return Snapshot(snapshot_id=snapshot_id)
 
     @staticmethod
@@ -797,6 +799,6 @@ class SnapshotManager:
             if f.is_file():
                 try:
                     total += f.stat().st_size
-                except OSError:
-                    pass
+                except OSError as exc:
+                    logger.debug("Failed to stat %s: %s", f, exc)
         return total
