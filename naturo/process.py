@@ -462,6 +462,38 @@ def launch_app(
     return info
 
 
+def _matches_app_by_process_name(proc_name_lower: str, name_lower: str) -> bool:
+    """Check if a process name matches the given app name or its aliases.
+
+    Uses process-name matching only (no title matching) to avoid
+    cross-process contamination (#465, #743).  For example, "记事本"
+    resolves via ``_LAUNCH_ALIASES`` to "notepad" which matches
+    "notepad.exe".
+
+    Args:
+        proc_name_lower: Lowercase process basename (e.g. "notepad.exe").
+        name_lower: Lowercase user-provided app name (e.g. "记事本").
+
+    Returns:
+        True if the process matches by direct name or alias.
+    """
+    # Strip .exe suffix for stem matching
+    proc_stem = proc_name_lower.removesuffix(".exe")
+
+    # Direct match: user name appears in process name
+    if name_lower in proc_name_lower:
+        return True
+
+    # Alias match: resolve CJK/friendly names to English process names
+    aliases = _LAUNCH_ALIASES.get(name_lower, [])
+    for alias in aliases:
+        alias_lower = alias.lower()
+        if alias_lower == proc_stem or alias_lower in proc_name_lower:
+            return True
+
+    return False
+
+
 def _resolve_pid_from_backend(name: str) -> int | None:
     """Resolve a PID via the window backend for UWP-aware lookup (#505).
 
@@ -469,6 +501,9 @@ def _resolve_pid_from_backend(name: str) -> int | None:
     (finding the real app PID inside ApplicationFrameHost), which raw
     ``tasklist`` does not.  This ensures ``app quit notepad`` targets the
     actual Notepad process, not the stale AFH host PID.
+
+    Uses process-name matching only (no title matching) to avoid
+    cross-process contamination (#465, #743).
     """
     try:
         from naturo.backends.base import get_backend
@@ -477,7 +512,7 @@ def _resolve_pid_from_backend(name: str) -> int | None:
         name_lower = name.lower()
         for w in be.list_windows():
             proc_name = os.path.basename(w.process_name).lower()
-            if name_lower in proc_name or name_lower in w.title.lower():
+            if _matches_app_by_process_name(proc_name, name_lower):
                 return w.pid
     except Exception:
         logger.debug("Backend PID resolution failed for %r, falling back", name)
@@ -492,7 +527,7 @@ def _close_all_windows_for_app(name: str) -> list[int]:
     does not activate Windows session restore (unlike ``taskkill /F``).
 
     Args:
-        name: Application name (fuzzy-matched against process names and titles).
+        name: Application name (matched against process names and aliases).
 
     Returns:
         List of PIDs that had windows closed.
@@ -511,7 +546,7 @@ def _close_all_windows_for_app(name: str) -> list[int]:
 
     for w in windows:
         proc_name = os.path.basename(w.process_name).lower()
-        if name_lower in proc_name or name_lower in w.title.lower():
+        if _matches_app_by_process_name(proc_name, name_lower):
             try:
                 be.close_window(hwnd=w.handle)
                 if w.pid not in closed_pids:
@@ -664,7 +699,7 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
     from a ghost host process with no windows (#620).
 
     Args:
-        name: Application name (fuzzy-matched against process names/titles).
+        name: Application name (matched against process names and aliases).
         exclude_pid: PID to ignore (the already-killed target).
 
     Returns:
@@ -679,7 +714,7 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
             if exclude_pid is not None and w.pid == exclude_pid:
                 continue
             proc_name = os.path.basename(w.process_name).lower()
-            if name_lower in proc_name or name_lower in w.title.lower():
+            if _matches_app_by_process_name(proc_name, name_lower):
                 return True
     except Exception:
         logger.debug("Backend unavailable for window check of %r", name)
