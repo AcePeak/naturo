@@ -610,6 +610,60 @@ class TestCascadeMode:
         assert result.exit_code == 0
         mock_cascade.assert_called_once()
 
+    def test_cascade_captures_target_window_not_screen(self, runner, mock_backend):
+        """#694: cascade screenshot should use capture_window with hwnd, not capture_screen."""
+        fake_result = FakeCascadeResult()
+        mock_backend.capture_window.return_value = FakeCaptureResult()
+        with (
+            _patch_platform(),
+            _patch_backend(mock_backend),
+            patch("naturo.cascade.run_cascade", return_value=fake_result),
+        ):
+            result = runner.invoke(see, [
+                "--cascade", "--hwnd", "12345", "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        # Must use capture_window with the target hwnd, not capture_screen
+        mock_backend.capture_window.assert_called_once()
+        call_kwargs = mock_backend.capture_window.call_args
+        assert call_kwargs.kwargs.get("hwnd") == 12345 or call_kwargs[1].get("hwnd") == 12345
+
+    def test_cascade_resolves_hwnd_from_app(self, runner, mock_backend):
+        """#694: when --app is given without --hwnd, resolve hwnd before capturing."""
+        fake_result = FakeCascadeResult()
+        mock_backend._resolve_hwnd.return_value = 99999
+        mock_backend.capture_window.return_value = FakeCaptureResult()
+        with (
+            _patch_platform(),
+            _patch_backend(mock_backend),
+            patch("naturo.cascade.run_cascade", return_value=fake_result),
+        ):
+            result = runner.invoke(see, [
+                "--cascade", "--app", "feishu", "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend._resolve_hwnd.assert_called_once()
+        mock_backend.capture_window.assert_called_once()
+        call_kwargs = mock_backend.capture_window.call_args
+        assert call_kwargs.kwargs.get("hwnd") == 99999 or call_kwargs[1].get("hwnd") == 99999
+
+    def test_cascade_capture_fallback_on_resolve_failure(self, runner, mock_backend):
+        """#694: if hwnd resolution fails, still attempt capture_window (with hwnd=None)."""
+        fake_result = FakeCascadeResult()
+        mock_backend._resolve_hwnd.side_effect = RuntimeError("no window")
+        mock_backend.capture_window.return_value = FakeCaptureResult()
+        with (
+            _patch_platform(),
+            _patch_backend(mock_backend),
+            patch("naturo.cascade.run_cascade", return_value=fake_result),
+        ):
+            result = runner.invoke(see, [
+                "--cascade", "--app", "feishu", "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        # capture_window still called even if resolve failed
+        mock_backend.capture_window.assert_called_once()
+
 
 # ── Error handling ─────────────────────────────────────────────────────
 

@@ -135,8 +135,21 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 )
                 _cascade_tmp_screenshot.close()
                 try:
-                    _cap_result = be.capture_screen(
-                        output_path=_cascade_tmp_screenshot.name
+                    # (#694) Capture the TARGET window, not the foreground
+                    # window (which is often the terminal running naturo).
+                    _cascade_hwnd = hwnd
+                    if _cascade_hwnd is None and hasattr(be, "_resolve_hwnd"):
+                        try:
+                            _cascade_hwnd = be._resolve_hwnd(
+                                app=app, window_title=window_title,
+                                hwnd=hwnd, pid=pid,
+                            )
+                        except Exception:
+                            pass
+                    _cap_result = be.capture_window(
+                        hwnd=_cascade_hwnd,
+                        window_title=window_title,
+                        output_path=_cascade_tmp_screenshot.name,
                     )
                     cascade_screenshot = _cap_result.path
                 except Exception:
