@@ -577,6 +577,10 @@ def _merge_ai_into_tree(
     skipped = 0
 
     for ai_el in ai_elements:
+        if ai_el.width <= 0 or ai_el.height <= 0:
+            skipped += 1
+            continue
+
         # Check if any existing UIA element overlaps significantly
         is_duplicate = False
         best_iou = 0.0
