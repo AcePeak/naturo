@@ -14,7 +14,7 @@ def learn(topic):
     """
     topics = {
         "capture": {
-            "summary": "Capture screenshots, video, or watch for changes.",
+            "summary": "Capture screenshots and compare UI snapshots.",
             "guide": """\
   Screenshots
   -----------
@@ -28,12 +28,6 @@ def learn(topic):
     naturo snapshot list                         List saved snapshots
     naturo snapshot clean                        Remove old snapshots
 
-  Recording
-  ---------
-    naturo record start                         Start screen recording
-    naturo record stop                          Stop and save recording
-    naturo record list                          List recordings
-
   Watch for Changes
   -----------------
     naturo diff --snapshot ID1 --snapshot ID2    Compare two snapshots
@@ -46,7 +40,7 @@ def learn(topic):
     \u2022 Snapshots annotate UI elements for AI-assisted automation""",
         },
         "interaction": {
-            "summary": "Click, type, press, hotkey, scroll, drag, move, paste.",
+            "summary": "Click, type, press, hotkey, scroll, drag, move.",
             "guide": """\
   Mouse
   -----
@@ -54,6 +48,8 @@ def learn(topic):
     naturo click --coords 500 300 --right        Right-click
     naturo click --coords 500 300 --double       Double-click
     naturo click "Submit"                        Click element by text
+    naturo click e5                              Click element by eN ref
+    naturo click e5 --paste                      Click then paste clipboard
     naturo drag --from-coords 100 200 --to-coords 400 500
                                                 Drag from (100,200) to (400,500)
     naturo move --coords 500 300                Move mouse cursor
@@ -63,24 +59,26 @@ def learn(topic):
   Keyboard
   --------
     naturo type "Hello, World!"                 Type text
+    naturo type --paste "long text"             Paste via clipboard (fast)
     naturo press enter                          Press a single key
     naturo hotkey ctrl+s                        Key combination (Ctrl+S)
     naturo hotkey alt+f4                        Close active window
     naturo hotkey ctrl+shift+esc                Open Task Manager
 
-  AI-Powered Interaction
-  ----------------------
+  Element Finding
+  ---------------
+    naturo see                                  Show UI tree with eN refs
+    naturo see --app notepad                    UI tree for specific app
     naturo find "Submit button"                 Find element by description
-    naturo see                                  Describe what's on screen
 
   Tips
   ----
-    \u2022 Use naturo find to locate elements without knowing coordinates
-    \u2022 Combine with naturo capture to verify actions visually
+    \u2022 Run naturo see first, then click eN refs by number
+    \u2022 Use --app to target a specific application
     \u2022 All commands support --json for automation pipelines""",
         },
         "system": {
-            "summary": "App, window, menu, clipboard, dialog, open.",
+            "summary": "App, window, dialog, menu management.",
             "guide": """\
   Applications
   ------------
@@ -88,7 +86,7 @@ def learn(topic):
     naturo app launch notepad                   Launch an application
     naturo app quit notepad                     Close an application
     naturo app switch "Google Chrome"            Switch to an app
-    naturo app find "Visual Studio"             Find apps by name
+    naturo app inspect notepad                  Detect app framework
 
   Windows
   -------
@@ -100,21 +98,15 @@ def learn(topic):
     naturo window move --title "Notepad" --x 100 --y 100
     naturo window resize --title "Notepad" --width 800 --height 600
 
-  Clipboard
-  ---------
-    naturo clipboard get                        Read clipboard content
-    naturo clipboard set "copied text"          Write to clipboard
-
   Dialogs
   -------
     naturo dialog detect                        Detect open dialogs
     naturo dialog accept                        Accept/OK a dialog
     naturo dialog dismiss                       Cancel/dismiss a dialog
 
-  Opening Files & URLs
-  --------------------
-    naturo open https://example.com             Open URL in browser
-    naturo open document.pdf                    Open file with default app
+  Menus
+  -----
+    naturo menu-inspect --app notepad           Extract menu structure
 
   Tips
   ----
@@ -123,7 +115,7 @@ def learn(topic):
     \u2022 App names are case-insensitive for most commands""",
         },
         "windows": {
-            "summary": "Windows-specific: taskbar, tray, desktop, registry, service.",
+            "summary": "Windows-specific: taskbar, tray, virtual desktops.",
             "guide": """\
   Taskbar & System Tray
   ---------------------
@@ -131,22 +123,6 @@ def learn(topic):
     naturo taskbar click "Chrome"               Click a taskbar icon
     naturo tray list                            List system tray icons
     naturo tray click "Volume"                  Click a tray icon
-
-  Registry
-  --------
-    naturo registry list HKCU\\Software          List registry subkeys
-    naturo registry get HKCU\\Software\\MyApp -v Setting
-    naturo registry set HKCU\\Software\\MyApp -v Key -d "value"
-    naturo registry search HKCU\\Software "keyword"
-
-  Services
-  --------
-    naturo service list                         List all services
-    naturo service list --state running         Only running services
-    naturo service status Spooler               Get service details
-    naturo service start Spooler                Start a service
-    naturo service stop Spooler                 Stop a service
-    naturo service restart Spooler              Restart a service
 
   Virtual Desktops
   ----------------
@@ -156,70 +132,23 @@ def learn(topic):
 
   Tips
   ----
-    \u2022 Registry operations support HKCU, HKLM, HKCR, HKU, HKCC
-    \u2022 Service commands require appropriate permissions
-    \u2022 Use --json for automation-friendly output""",
+    \u2022 Use --json for automation-friendly output
+    \u2022 App names are case-insensitive""",
         },
-        "extensions": {
-            "summary": "Enterprise: excel, java, sap automation.",
-            "guide": """\
-  Excel (COM Automation)
-  ----------------------
-    naturo excel open report.xlsx               Open a workbook
-    naturo excel read report.xlsx A1             Read a cell
-    naturo excel read report.xlsx "A1:D10"       Read a range
-    naturo excel write report.xlsx B2 "Hello"    Write to a cell
-    naturo excel list-sheets report.xlsx         List sheets
-    naturo excel run-macro data.xlsm "MyMacro"   Run a VBA macro
-    naturo excel info report.xlsx                Used range info
-    (Requires Microsoft Excel and pywin32)
-
-  Electron/Chrome (Removed in v0.2.0)
-  ------------------------------------
-    Use Playwright or browser automation tools for Electron/Chrome.
-    Backend modules retained for Unified App Model internal use.
-
-  Java Access Bridge (planned)
-  ----------------------------
-    Java UI automation via JAB is on the roadmap.
-    Will enable inspection and control of Swing/AWT applications.
-
-  SAP GUI Scripting (planned)
-  ---------------------------
-    SAP GUI automation via scripting API is on the roadmap.
-    Will enable transaction execution and form interaction.
-
-  Tips
-  ----
-    \u2022 Electron automation unlocks DOM access for desktop apps
-    \u2022 Excel operations preserve formatting and formulas
-    \u2022 Use --json for all commands for pipeline integration""",
-        },
-        "ai": {
-            "summary": "AI agent and MCP server integration.",
+        "mcp": {
+            "summary": "MCP server for AI agent integration.",
             "guide": """\
   MCP Server (Model Context Protocol)
   ------------------------------------
     naturo mcp start                            Start MCP server (stdio)
+    naturo mcp start --transport sse            Start over SSE (HTTP)
     naturo mcp tools                            List all MCP tools
     naturo mcp tools --json                     Tool list as JSON
 
-  AI Agent
-  --------
-    naturo agent "Open Notepad and type hello"
-    naturo agent --model gpt-4o "Fill in the form"
-    (Provides autonomous UI automation via AI vision)
-
-  AI-Powered Commands
-  -------------------
-    naturo see                                  Describe current screen
-    naturo find "Login button"                  Find UI element by description
-    naturo describe                             Detailed screen analysis
-
-  Integration with LLM Frameworks
-  --------------------------------
-    Use naturo as an MCP server in Claude Desktop, Cursor, or any
-    MCP-compatible client:
+  Integration with AI Agents
+  ---------------------------
+    Use naturo as an MCP server in Claude Desktop, Claude Code,
+    Cursor, or any MCP-compatible client:
 
     {
       "mcpServers": {
@@ -233,9 +162,8 @@ def learn(topic):
   Tips
   ----
     \u2022 MCP server exposes all naturo capabilities as tools
-    \u2022 82 tools covering capture, interaction, system, and more
-    \u2022 Use --json output format for reliable LLM parsing
-    \u2022 AI find works best with descriptive element names""",
+    \u2022 Supports stdio, SSE, and streamable-http transports
+    \u2022 Use --json output format for reliable LLM parsing""",
         },
     }
     topic_names = list(topics.keys())
