@@ -126,8 +126,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         if cascade or backend == "auto" or backend == "hybrid":
             # (#275) Auto-capture screenshot for cascade mode so AI vision
             # fallback can trigger when UIA tree is too shallow.
+            # (#694) Use capture_window with resolved hwnd so the screenshot
+            # captures the target app, not the foreground terminal window.
             cascade_screenshot = path
             _cascade_tmp_screenshot = None
+            cascade_capture_result = None
             if not cascade_screenshot and cascade:
                 import tempfile as _tmpfile
                 _cascade_tmp_screenshot = _tmpfile.NamedTemporaryFile(
@@ -138,20 +141,23 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     # (#694) Capture the TARGET window, not the foreground
                     # window (which is often the terminal running naturo).
                     _cascade_hwnd = hwnd
-                    if _cascade_hwnd is None and hasattr(be, "_resolve_hwnd"):
+                    if not _cascade_hwnd and hasattr(be, "_resolve_hwnd"):
                         try:
                             _cascade_hwnd = be._resolve_hwnd(
-                                app=app, window_title=window_title,
-                                hwnd=hwnd, pid=pid,
+                                app=app, window_title=window_title, pid=pid,
                             )
                         except Exception:
-                            pass
-                    _cap_result = be.capture_window(
-                        hwnd=_cascade_hwnd,
-                        window_title=window_title,
-                        output_path=_cascade_tmp_screenshot.name,
-                    )
-                    cascade_screenshot = _cap_result.path
+                            _cascade_hwnd = None
+                    if _cascade_hwnd:
+                        cascade_capture_result = be.capture_window(
+                            hwnd=_cascade_hwnd,
+                            output_path=_cascade_tmp_screenshot.name,
+                        )
+                    else:
+                        cascade_capture_result = be.capture_screen(
+                            output_path=_cascade_tmp_screenshot.name,
+                        )
+                    cascade_screenshot = cascade_capture_result.path
                 except Exception:
                     cascade_screenshot = None
 
@@ -167,6 +173,10 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 coverage_target=coverage_target,
                 fill_gaps_ai=fill_gaps,
                 screenshot_path=cascade_screenshot,
+                screenshot_scale_factor=(
+                    cascade_capture_result.scale_factor
+                    if cascade_capture_result else 1.0
+                ),
             )
             tree = cascade_result.tree
             cascade_stats = cascade_result.stats

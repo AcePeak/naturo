@@ -29,6 +29,9 @@ from naturo.cascade import (
     ProviderStat,
     _estimate_coverage,
     _flatten,
+    _iou,
+    _merge_ai_into_tree,
+    _find_containing_node,
     _rect_area,
     _tag_source,
     _detect_backend_for_class,
@@ -709,3 +712,110 @@ class TestRunCascadeHybrid:
         assert result.tree is None
         assert result.primary_provider == "hybrid"
         assert any(p.status == "error" for p in result.stats.providers)
+
+
+# ── IoU and AI→tree merge tests (#694) ──────────────────────────────────────
+
+
+def _mkbox(x, y, w, h, role="Button", name="", eid="e1", children=None):
+    return ElementInfo(
+        id=eid, role=role, name=name, value=None,
+        x=x, y=y, width=w, height=h,
+        children=children or [],
+        properties={},
+    )
+
+
+class TestIoU:
+    """Test _iou bounding-box overlap calculation."""
+
+    def test_no_overlap(self):
+        a = _mkbox(0, 0, 10, 10)
+        b = _mkbox(20, 20, 10, 10)
+        assert _iou(a, b) == 0.0
+
+    def test_identical(self):
+        a = _mkbox(10, 10, 50, 50)
+        b = _mkbox(10, 10, 50, 50)
+        assert _iou(a, b) == 1.0
+
+    def test_partial_overlap(self):
+        a = _mkbox(0, 0, 20, 20)   # area = 400
+        b = _mkbox(10, 10, 20, 20)  # area = 400, overlap = 10x10 = 100
+        # union = 400 + 400 - 100 = 700
+        assert abs(_iou(a, b) - 100 / 700) < 1e-6
+
+    def test_zero_area(self):
+        a = _mkbox(0, 0, 0, 0)
+        b = _mkbox(0, 0, 10, 10)
+        assert _iou(a, b) == 0.0
+
+
+class TestMergeAiIntoTree:
+    """Test _merge_ai_into_tree IoU dedup and parent attachment."""
+
+    def test_duplicate_skipped(self):
+        """AI element overlapping UIA element is skipped."""
+        root = _mkbox(0, 0, 200, 200, role="Window", eid="root", children=[
+            _mkbox(10, 10, 40, 40, name="OK", eid="uia_btn"),
+        ])
+        ai_els = [_mkbox(10, 10, 40, 40, name="OK", eid="ai_0")]
+
+        novel, added, skipped = _merge_ai_into_tree(root, ai_els)
+        assert added == 0
+        assert skipped == 1
+        assert len(novel) == 0
+        # Root should still have only the original child
+        assert len(root.children) == 1
+
+    def test_novel_element_attached(self):
+        """AI element in uncovered area is attached to the tree."""
+        root = _mkbox(0, 0, 200, 200, role="Window", eid="root", children=[
+            _mkbox(10, 10, 40, 40, name="OK", eid="uia_btn"),
+        ])
+        ai_els = [_mkbox(150, 150, 30, 30, name="New", eid="ai_0")]
+
+        novel, added, skipped = _merge_ai_into_tree(root, ai_els)
+        assert added == 1
+        assert skipped == 0
+        assert len(root.children) == 2
+        assert root.children[1].name == "New"
+
+    def test_attached_to_deepest_parent(self):
+        """AI element is attached to the deepest containing node."""
+        inner = _mkbox(50, 50, 100, 100, role="Pane", eid="inner")
+        root = _mkbox(0, 0, 300, 300, role="Window", eid="root", children=[inner])
+        ai_els = [_mkbox(60, 60, 20, 20, name="Deep", eid="ai_0")]
+
+        novel, added, skipped = _merge_ai_into_tree(root, ai_els)
+        assert added == 1
+        # Should be attached to inner (deeper), not root
+        assert len(inner.children) == 1
+        assert inner.children[0].name == "Deep"
+
+    def test_empty_ai_list(self):
+        root = _mkbox(0, 0, 200, 200, role="Window", eid="root")
+        novel, added, skipped = _merge_ai_into_tree(root, [])
+        assert added == 0
+        assert skipped == 0
+
+
+class TestFindContainingNode:
+    """Test _find_containing_node center-point lookup."""
+
+    def test_finds_deepest(self):
+        inner = _mkbox(50, 50, 100, 100, role="Pane", eid="inner")
+        root = _mkbox(0, 0, 300, 300, role="Window", eid="root", children=[inner])
+        node = _find_containing_node(root, 80, 80)
+        assert node is inner
+
+    def test_returns_root_for_outer_point(self):
+        inner = _mkbox(50, 50, 100, 100, role="Pane", eid="inner")
+        root = _mkbox(0, 0, 300, 300, role="Window", eid="root", children=[inner])
+        node = _find_containing_node(root, 10, 10)
+        assert node is root
+
+    def test_returns_none_outside_tree(self):
+        root = _mkbox(100, 100, 50, 50, role="Window", eid="root")
+        node = _find_containing_node(root, 0, 0)
+        assert node is None
