@@ -368,8 +368,8 @@ def _fetch_ai_elements(
             max_tokens=16384,
         )
 
-        logger.info("AI vision: provider returned %d elements",
-                     len(result.elements))
+        logger.info("AI vision: provider returned %d elements (window offset: %d,%d)",
+                     len(result.elements), win_x, win_y)
         if not result.elements:
             # Log raw response for debugging parse failures
             raw = result.raw_response
@@ -399,11 +399,14 @@ def _fetch_ai_elements(
             else:
                 logger.debug("AI vision: skipping element %d with bad bounds: %r", i, b)
                 continue
-            # Scale AI pixel coords by DPI factor, then offset to screen coords
-            ex = int(bx * scale_factor) + win_x
-            ey = int(by * scale_factor) + win_y
-            ew = int(bw * scale_factor)
-            eh = int(bh * scale_factor)
+            # (#694) AI coords are in screenshot pixel space. capture_window
+            # uses PrintWindow which captures at physical pixel resolution.
+            # UIA also reports physical screen coordinates. Both are in the
+            # same space — just offset by window position, NO DPI scaling.
+            ex = int(bx) + win_x
+            ey = int(by) + win_y
+            ew = int(bw)
+            eh = int(bh)
             role = raw.get("role", "Unknown").capitalize()
             name = raw.get("name", "")
             elements.append(ElementInfo(
@@ -480,13 +483,24 @@ def _merge_ai_into_tree(
     for ai_el in ai_elements:
         # Check if any existing UIA element overlaps significantly
         is_duplicate = False
-        for uia_el in uia_flat:
-            if _iou(ai_el, uia_el) >= iou_threshold:
+        best_iou = 0.0
+        best_match: Optional[ElementInfo] = None
+        for uia_el in uia_visible:
+            score = _iou(ai_el, uia_el)
+            if score > best_iou:
+                best_iou = score
+                best_match = uia_el
+            if score >= iou_threshold:
                 is_duplicate = True
                 break
 
         if is_duplicate:
             skipped += 1
+            logger.debug(
+                "AI merge: skip '%s' (%d,%d %dx%d) IoU=%.2f with UIA '%s'",
+                ai_el.name, ai_el.x, ai_el.y, ai_el.width, ai_el.height,
+                best_iou, best_match.name if best_match else "?",
+            )
             continue
 
         # Find best parent: deepest UIA node containing the AI element's center
