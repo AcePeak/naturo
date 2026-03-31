@@ -368,6 +368,10 @@ def _fetch_ai_elements(
             max_tokens=16384,
         )
 
+        # (#694) Window offset: AI coords are relative to the screenshot
+        # (which is a window capture). Add window position to get screen coords.
+        win_x, win_y = window_bounds[0], window_bounds[1]
+
         logger.info("AI vision: provider returned %d elements (window offset: %d,%d)",
                      len(result.elements), win_x, win_y)
         if not result.elements:
@@ -376,10 +380,6 @@ def _fetch_ai_elements(
             if raw:
                 logger.warning("AI vision: 0 elements parsed from response: %.500s",
                                str(raw))
-
-        # (#694) Window offset: AI coords are relative to the screenshot
-        # (which is a window capture). Add window position to get screen coords.
-        win_x, win_y = window_bounds[0], window_bounds[1]
 
         elements: List[ElementInfo] = []
         for i, raw in enumerate(result.elements):
