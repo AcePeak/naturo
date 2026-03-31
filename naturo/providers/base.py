@@ -198,11 +198,29 @@ def parse_ai_elements_json(raw_text: str) -> list[dict[str, Any]]:
     try:
         parsed = json.loads(json_text)
     except json.JSONDecodeError:
-        logger.warning(
-            "Failed to parse element identification as JSON: %s",
-            raw_text[:200],
+        # AI sometimes returns Python tuples (x, y, w, h) instead of
+        # JSON arrays [x, y, w, h]. Convert and retry.
+        import re as _re
+        fixed = _re.sub(
+            r'"bounds"\s*:\s*\(([^)]+)\)',
+            r'"bounds": [\1]',
+            json_text,
         )
-        return []
+        if fixed != json_text:
+            try:
+                parsed = json.loads(fixed)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Failed to parse element identification as JSON: %s",
+                    raw_text[:200],
+                )
+                return []
+        else:
+            logger.warning(
+                "Failed to parse element identification as JSON: %s",
+                raw_text[:200],
+            )
+            return []
 
     return _normalize_parsed(parsed)
 

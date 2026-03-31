@@ -74,6 +74,21 @@ class TestMarkdownCodeFences:
         assert len(result) == 1
 
 
+    def test_python_tuple_bounds(self) -> None:
+        """AI returns bounds as Python tuples instead of JSON arrays."""
+        raw = '[{"role": "Button", "name": "Close", "bounds": (100, 200, 40, 40)}]'
+        result = parse_ai_elements_json(raw)
+        assert len(result) == 1
+        assert result[0]["bounds"] == [100, 200, 40, 40]
+
+    def test_python_tuple_bounds_in_fenced(self) -> None:
+        """Tuple bounds inside code fence."""
+        raw = '```json\n[{"role": "Tab", "name": "消息", "bounds": (50, 210, 100, 50)}]\n```'
+        result = parse_ai_elements_json(raw)
+        assert len(result) == 1
+        assert result[0]["name"] == "消息"
+
+
 class TestProseWithEmbeddedJson:
     """AI returns prose with JSON embedded (no code fences)."""
 

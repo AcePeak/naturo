@@ -383,7 +383,7 @@ def _fetch_ai_elements(
                 "- Use standard roles: Button, Link, Tab, MenuItem, Edit, Text, Image, "
                 "CheckBox, ListItem, TreeItem.\n\n"
                 "Return a JSON array where each item has: "
-                "role, name, bounds (x, y, width, height). "
+                'role, name, bounds [x, y, width, height] (use JSON arrays like [100, 200, 50, 30], NOT tuples). '
                 "Return ONLY the JSON array, no markdown fences, no explanation."
                 + dim_hint
             ),
