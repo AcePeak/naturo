@@ -489,9 +489,10 @@ def _fetch_ai_elements(
             if is_xyxy:
                 bw = bw - bx  # x2 - x1 = width
                 bh = bh - by  # y2 - y1 = height
-            # Scale AI coords to physical screenshot pixels, then offset
-            ex = int(bx * ai_scale_x) + win_x
-            ey = int(by * ai_scale_y) + win_y
+            # Scale AI coords to physical screenshot pixels, then offset.
+            # Clamp to >= 0 since negative screen coords aren't useful.
+            ex = max(0, int(bx * ai_scale_x) + win_x)
+            ey = max(0, int(by * ai_scale_y) + win_y)
             ew = int(bw * ai_scale_x)
             eh = int(bh * ai_scale_y)
             role = raw.get("role", "Unknown").capitalize()
