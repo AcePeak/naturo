@@ -68,19 +68,33 @@ class InputMixin:
         y: int,
         app: Optional[str] = None,
         hwnd: Optional[int] = None,
+        element_name: Optional[str] = None,
+        element_automation_id: Optional[str] = None,
+        element_role: Optional[str] = None,
     ) -> bool:
-        """Click a UI element at (x, y) using UIA patterns instead of SendInput.
+        """Click a UI element using UIA patterns instead of SendInput.
 
         For UWP apps hosted by ApplicationFrameHost.exe, SendInput clicks
-        don't reach the inner content.  This method uses UIA to find the
-        element at the given point and invokes it via InvokePattern,
+        don't reach the inner content.  This method finds the element via
+        UIA and invokes it via ExpandCollapsePattern, InvokePattern,
         TogglePattern, or SelectionItemPattern (#248).
+
+        When ``element_name`` or ``element_automation_id`` is provided (e.g.
+        from a cached snapshot), the element is located by identity via
+        ``_find_uia_element`` first — this is more reliable than
+        ``ElementFromPoint`` which can resolve to the wrong element when
+        coordinates are slightly stale or the window has repositioned (#681).
+        Falls back to ``ElementFromPoint(x, y)`` if the identity search
+        finds nothing.
 
         Args:
             x: Screen X coordinate of the target element center.
             y: Screen Y coordinate of the target element center.
             app: Application name (used to resolve window handle).
             hwnd: Direct window handle.
+            element_name: Accessible name from snapshot (e.g. "File").
+            element_automation_id: UIA AutomationId from snapshot.
+            element_role: UIA control type from snapshot (e.g. "MenuItem").
 
         Returns:
             True if UIA invoke succeeded, False otherwise.
@@ -95,15 +109,40 @@ class InputMixin:
             from ctypes import wintypes
             from comtypes import COMError  # type: ignore[import-untyped]
 
-            # Use UIA.ElementFromPoint to find the element at coordinates
-            point = wintypes.POINT(x, y)
-            element = uia.ElementFromPoint(point)
+            element = None
+
+            # (#681) Prefer identity-based lookup over coordinate-based when
+            # element metadata is available from the snapshot.  This avoids
+            # ElementFromPoint resolving to the wrong element when cached
+            # coordinates are slightly off (e.g. after window reposition).
+            if element_name or element_automation_id:
+                search_hwnd = hwnd or 0
+                if not search_hwnd and app:
+                    try:
+                        search_hwnd = self._resolve_hwnd(app=app)
+                    except Exception:
+                        search_hwnd = 0
+                element = self._find_uia_element(
+                    uia, mod, hwnd=search_hwnd,
+                    name=element_name,
+                    automation_id=element_automation_id,
+                )
+                if element is not None:
+                    logger.debug(
+                        "UIA click: found element by identity (name=%r, id=%r)",
+                        element_name, element_automation_id,
+                    )
+
+            # Fallback: locate element by screen coordinates
             if element is None:
-                logger.debug("UIA click: no element found at (%d, %d)", x, y)
-                return False
+                point = wintypes.POINT(x, y)
+                element = uia.ElementFromPoint(point)
+                if element is None:
+                    logger.debug("UIA click: no element found at (%d, %d)", x, y)
+                    return False
 
             elem_name = element.CurrentName or ""
-            logger.debug("UIA click: found element %r at (%d, %d)", elem_name, x, y)
+            logger.debug("UIA click: target element %r at (%d, %d)", elem_name, x, y)
 
             # (#672) Try ExpandCollapsePattern first (menu items, combo boxes,
             # tree items).  Top-level menu bar items (File, Edit, View…) support
