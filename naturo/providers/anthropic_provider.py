@@ -25,6 +25,12 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from naturo.config import (
+    CREDENTIALS_PATH as _CREDENTIALS_PATH,
+    ENV_AI_MODEL,
+    load_credentials as _load_credentials,
+    save_credentials as _save_credentials,
+)
 from naturo.errors import AIAnalysisFailedError, AIProviderUnavailableError
 from naturo.providers.base import (
     VisionResult,
@@ -46,9 +52,6 @@ _MODEL_ALIASES: dict[str, str] = {
     "haiku": "claude-3-haiku-20240307",
 }
 
-# Credentials file location
-_CREDENTIALS_PATH: Path = Path.home() / ".config" / "naturo" / "credentials.json"
-
 # OAuth constants (from Anthropic CLI / pi-ai SDK)
 _OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 _OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
@@ -58,40 +61,6 @@ _OAUTH_SCOPE = (
 )
 # Buffer (seconds) to treat an access token as expired before it actually is
 _OAUTH_EXPIRY_BUFFER = 300  # 5 minutes
-
-
-def _load_credentials() -> dict:
-    """Load credentials from ``~/.config/naturo/credentials.json``.
-
-    Returns an empty dict if the file does not exist or cannot be parsed.
-    """
-    try:
-        if _CREDENTIALS_PATH.exists():
-            return json.loads(_CREDENTIALS_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.debug("Could not read credentials file %s: %s", _CREDENTIALS_PATH, exc)
-    return {}
-
-
-def _save_credentials(data: dict) -> None:
-    """Write credentials dict to ``~/.config/naturo/credentials.json`` atomically."""
-    import tempfile
-    _CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=_CREDENTIALS_PATH.parent,
-        prefix=".tmp_",
-        suffix=".json",
-        delete=False,
-    ) as tmp:
-        json.dump(data, tmp, indent=2, ensure_ascii=False)
-        tmp_path = tmp.name
-    try:
-        os.replace(tmp_path, _CREDENTIALS_PATH)
-    except OSError:
-        os.unlink(tmp_path)
-        raise
 
 
 def _is_oauth_refresh_token(token: str) -> bool:
@@ -333,7 +302,7 @@ class AnthropicVisionProvider:
         else:
             self._auth_mode, self._token = _resolve_auth()
 
-        raw_model = model or os.environ.get("NATURO_AI_MODEL", _DEFAULT_MODEL)
+        raw_model = model or os.environ.get(ENV_AI_MODEL, _DEFAULT_MODEL)
         self._model = _resolve_model(raw_model)
 
     @property

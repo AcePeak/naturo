@@ -58,6 +58,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from naturo.config import ENV_SESSION, ENV_SNAPSHOT_TTL
 from naturo.models.snapshot import (
     Snapshot,
     SnapshotInfo,
@@ -80,10 +81,10 @@ DEFAULT_STORAGE_ROOT: Path = Path.home() / ".naturo" / "snapshots"
 DEFAULT_SESSION: str = "default"
 
 #: Environment variable used to set the active session for snapshot isolation.
-SESSION_ENV_VAR: str = "NATURO_SESSION"
+SESSION_ENV_VAR: str = ENV_SESSION
 
 #: Environment variable for overriding snapshot TTL (seconds).
-TTL_ENV_VAR: str = "NATURO_SNAPSHOT_TTL"
+TTL_ENV_VAR: str = ENV_SNAPSHOT_TTL
 
 
 def get_active_session() -> str:
