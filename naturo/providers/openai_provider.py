@@ -176,7 +176,7 @@ class OpenAIVisionProvider:
         image_path: str,
         element_description: str,
         *,
-        max_tokens: int = 512,
+        max_tokens: int = 4096,
     ) -> VisionResult:
         """Find a specific UI element in a screenshot.
 

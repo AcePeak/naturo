@@ -53,6 +53,27 @@ class TestMarkdownCodeFences:
         assert result[0]["role"] == "Link"
 
 
+    def test_fenced_no_trailing_newline(self) -> None:
+        """Code fence where closing ``` is right after JSON (no newline)."""
+        raw = '```json\n[{"role": "Button", "name": "OK"}]```'
+        result = parse_ai_elements_json(raw)
+        assert len(result) == 1
+        assert result[0]["name"] == "OK"
+
+    def test_fenced_windows_line_endings(self) -> None:
+        """Code fence with \\r\\n line endings."""
+        raw = '```json\r\n[{"role": "Edit", "name": "Search"}]\r\n```'
+        result = parse_ai_elements_json(raw)
+        assert len(result) == 1
+        assert result[0]["role"] == "Edit"
+
+    def test_fenced_with_spaces_after_lang(self) -> None:
+        """Code fence with trailing spaces after language tag."""
+        raw = '```json   \n[{"role": "Tab", "name": "Home"}]\n```'
+        result = parse_ai_elements_json(raw)
+        assert len(result) == 1
+
+
 class TestProseWithEmbeddedJson:
     """AI returns prose with JSON embedded (no code fences)."""
 

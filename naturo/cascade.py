@@ -330,10 +330,24 @@ def _fetch_ai_elements(
         result = provider.identify_element(
             screenshot_path,
             element_description=(
-                "List all visible interactive UI elements (buttons, inputs, links, "
-                "checkboxes, tabs, menus). Return a JSON array where each item has: "
-                "role, name, bounds (x, y, width, height)."
+                "You are a UI element detector. Analyze this screenshot and list EVERY "
+                "individual clickable or interactive element you can see. Be exhaustive.\n\n"
+                "Rules:\n"
+                "- List LEAF elements, not containers. For example, list each individual "
+                "conversation item in a chat list, not a generic 'conversation_list'.\n"
+                "- List each button, link, tab, menu item, text input, checkbox, icon, "
+                "avatar, timestamp, and clickable text separately.\n"
+                "- For each element, estimate its PIXEL bounding box (x, y, width, height) "
+                "as precisely as possible based on the screenshot.\n"
+                "- 'x' and 'y' are the top-left corner of the element in pixels.\n"
+                "- Include the visible text or label as 'name'.\n"
+                "- Use standard roles: Button, Link, Tab, MenuItem, Edit, Text, Image, "
+                "CheckBox, ListItem, TreeItem.\n\n"
+                "Return a JSON array where each item has: "
+                "role, name, bounds (x, y, width, height). "
+                "Return ONLY the JSON array, no markdown fences, no explanation."
             ),
+            max_tokens=16384,
         )
 
         elements: List[ElementInfo] = []

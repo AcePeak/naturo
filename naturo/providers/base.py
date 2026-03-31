@@ -82,7 +82,7 @@ class VisionProvider(Protocol):
         image_path: str,
         element_description: str,
         *,
-        max_tokens: int = 512,
+        max_tokens: int = 4096,
     ) -> VisionResult:
         """Find a specific UI element in a screenshot.
 
@@ -142,7 +142,8 @@ def detect_media_type(image_path: str) -> str:
 logger = logging.getLogger(__name__)
 
 # Regex to extract JSON from markdown code fences (```json ... ``` or ``` ... ```)
-_CODE_FENCE_RE = re.compile(r"```(?:json)?\s*\n(.*?)\n\s*```", re.DOTALL)
+# Flexible: handles \n, \r\n, or spaces after opening fence; closing fence on its own line or inline
+_CODE_FENCE_RE = re.compile(r"```(?:json)?[ \t]*[\r\n]+(.*?)[\r\n]+\s*```", re.DOTALL)
 
 
 def parse_ai_elements_json(raw_text: str) -> list[dict[str, Any]]:
@@ -200,10 +201,23 @@ def _extract_json_text(raw_text: str) -> Optional[str]:
     """
     text = raw_text.strip()
 
-    # 1. Try markdown code fences
+    # 1. Try markdown code fences (regex handles newlines)
     match = _CODE_FENCE_RE.search(text)
     if match:
         return match.group(1).strip()
+
+    # 1b. Fallback: strip code fences manually if regex missed
+    #     Handles edge cases like no newline before closing ```
+    if text.startswith("```"):
+        # Remove opening fence line
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            inner = text[first_newline + 1:]
+            # Remove closing fence
+            last_fence = inner.rfind("```")
+            if last_fence != -1:
+                inner = inner[:last_fence]
+            return inner.strip()
 
     # 2. Try to find a JSON array
     arr_start = text.find("[")
