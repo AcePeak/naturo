@@ -15,6 +15,28 @@ def _is_combo(key_str: str) -> bool:
     return "+" in key_str
 
 
+# Modifier keys that can be pressed standalone (e.g. Alt activates the menu bar).
+# These cannot go through key_press() which only handles regular named keys;
+# instead they are routed through hotkey() with modifier-only flags.
+_MODIFIER_NORMALIZE: dict[str, str] = {
+    "alt": "alt", "lalt": "alt", "ralt": "alt",
+    "ctrl": "ctrl", "control": "ctrl", "lctrl": "ctrl", "rctrl": "ctrl",
+    "shift": "shift", "lshift": "shift", "rshift": "shift",
+    "win": "win", "meta": "win", "super": "win",
+    "command": "win", "cmd": "win", "lwin": "win", "rwin": "win",
+}
+
+
+def _is_standalone_modifier(key_str: str) -> bool:
+    """Return True if *key_str* is a modifier key pressed alone."""
+    return key_str.lower().strip() in _MODIFIER_NORMALIZE
+
+
+def _normalize_modifier(key_str: str) -> str:
+    """Normalize a modifier alias to the canonical name used by the bridge."""
+    return _MODIFIER_NORMALIZE[key_str.lower().strip()]
+
+
 @click.command()
 @click.argument("keys", nargs=-1)
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
@@ -230,6 +252,18 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     )
                     _common._record_action("hotkey", {"keys": key_list, "hold_duration": hold_duration or 0.05})
                     results.append({"action": "hotkey", "combo": "+".join(key_list)})
+                elif _is_standalone_modifier(key_spec):
+                    # Standalone modifier keys (alt, ctrl, shift, win) are
+                    # routed through hotkey() because key_press() in the DLL
+                    # only handles regular named keys.  hotkey() with a
+                    # modifier-only bitmask performs press-then-release (#704).
+                    backend.hotkey(
+                        _normalize_modifier(key_spec),
+                        hold_duration_ms=int(hold_duration) if hold_duration else 50,
+                        input_mode=input_mode,
+                    )
+                    _common._record_action("press", {"key": key_spec, "count": 1})
+                    results.append({"action": "pressed", "key": key_spec})
                 else:
                     backend.press_key(key_spec, input_mode=input_mode)
                     _common._record_action("press", {"key": key_spec, "count": 1})

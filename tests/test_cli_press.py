@@ -8,7 +8,9 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.interaction._press import _is_combo, press, hotkey
+from naturo.cli.interaction._press import (
+    _is_combo, _is_standalone_modifier, _normalize_modifier, press, hotkey,
+)
 
 
 @pytest.fixture
@@ -40,6 +42,115 @@ class TestIsCombo:
     def test_plus_only_is_combo(self):
         # "+" by itself has a + character
         assert _is_combo("+") is True
+
+
+# ── _is_standalone_modifier / _normalize_modifier (#704) ────
+
+
+class TestStandaloneModifier:
+    """Tests for standalone modifier key detection and normalization (#704)."""
+
+    @pytest.mark.parametrize("key", ["alt", "Alt", "ALT", "ctrl", "Ctrl", "shift", "win"])
+    def test_common_modifiers_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["control", "meta", "super", "command", "cmd"])
+    def test_modifier_aliases_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["lalt", "ralt", "lctrl", "rctrl", "lshift", "rshift", "lwin", "rwin"])
+    def test_left_right_variants_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["enter", "tab", "escape", "f1", "a", "space"])
+    def test_regular_keys_not_modifiers(self, key):
+        assert _is_standalone_modifier(key) is False
+
+    def test_normalize_alt(self):
+        assert _normalize_modifier("alt") == "alt"
+        assert _normalize_modifier("lalt") == "alt"
+        assert _normalize_modifier("ralt") == "alt"
+
+    def test_normalize_ctrl_aliases(self):
+        assert _normalize_modifier("ctrl") == "ctrl"
+        assert _normalize_modifier("control") == "ctrl"
+        assert _normalize_modifier("lctrl") == "ctrl"
+
+    def test_normalize_win_aliases(self):
+        assert _normalize_modifier("win") == "win"
+        assert _normalize_modifier("meta") == "win"
+        assert _normalize_modifier("super") == "win"
+        assert _normalize_modifier("command") == "win"
+        assert _normalize_modifier("cmd") == "win"
+
+
+class TestStandaloneModifierPress:
+    """Test that standalone modifier keys are routed through hotkey() (#704)."""
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_alt_uses_hotkey(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press alt`` routes through hotkey(), not press_key()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["alt"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.hotkey.assert_called_once()
+        mock_be.press_key.assert_not_called()
+        # Verify the normalized key name was passed
+        args = mock_be.hotkey.call_args
+        assert args[0] == ("alt",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_control_normalizes_to_ctrl(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press control`` normalizes to ``ctrl`` for bridge compat."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["control"], catch_exceptions=False)
+        assert result.exit_code == 0
+        args = mock_be.hotkey.call_args
+        assert args[0] == ("ctrl",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_shift_uses_hotkey(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press shift`` routes through hotkey()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["shift"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.hotkey.assert_called_once()
+        assert mock_be.hotkey.call_args[0] == ("shift",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_regular_key_still_uses_press_key(self, mock_resolve, mock_get_be, mock_route, runner):
+        """Regular keys like ``enter`` still use press_key()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["enter"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.press_key.assert_called_once_with("enter", input_mode="normal")
+        mock_be.hotkey.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_alt_json_output(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press alt --json`` returns proper JSON result."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["alt", "--json"], catch_exceptions=False)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["data"]["action"] == "pressed"
+        assert data["data"]["key"] == "alt"
 
 
 # ── press command — validation ───────────────────
