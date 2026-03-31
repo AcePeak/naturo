@@ -38,6 +38,30 @@ class ProcessInfo:
     window_count: int = 0
 
 
+def _parse_tasklist_csv_line(line: str) -> tuple[str, int] | None:
+    """Parse a single ``tasklist /FO CSV`` output line into (name, pid).
+
+    Args:
+        line: A single CSV line from ``tasklist /FO CSV /NH`` output.
+
+    Returns:
+        A ``(process_name, pid)`` tuple, or ``None`` if the line is
+        malformed or empty.
+    """
+    line = line.strip()
+    if not line:
+        return None
+    parts = line.strip('"').split('","')
+    if len(parts) >= 2:
+        name = parts[0]
+        try:
+            pid = int(parts[1])
+            return (name, pid)
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
 def _list_processes() -> list[ProcessInfo]:
     """List running processes using platform-appropriate methods."""
     system = platform.system()
@@ -53,16 +77,9 @@ def _list_processes() -> list[ProcessInfo]:
                 errors="replace", timeout=10,
             )
             for line in result.stdout.strip().split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
-                parts = line.split('","')
-                if len(parts) >= 2:
-                    name = parts[0].strip('"')
-                    try:
-                        pid = int(parts[1].strip('"'))
-                    except (ValueError, IndexError):
-                        continue
+                parsed = _parse_tasklist_csv_line(line)
+                if parsed:
+                    name, pid = parsed
                     processes.append(ProcessInfo(pid=pid, name=name, is_running=True))
         except Exception as exc:
             logger.debug("Failed to list processes on Windows: %s", exc)

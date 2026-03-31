@@ -7,6 +7,7 @@ from naturo.process import (
     relaunch_app, list_apps, _list_processes, _verify_quit,
     _close_all_windows_for_app, _app_has_visible_windows,
     _get_console_session_id, _get_process_session_id,
+    _parse_tasklist_csv_line,
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
     _matches_app_by_process_name,
 )
@@ -238,6 +239,27 @@ class TestFindProcessAliasResolution:
         result = find_process(name="记事本")
         assert result is not None
         assert result.pid == 200, "Alias match should prefer interactive session"
+
+
+class TestParseTasklistCsvLine:
+    """Tests for _parse_tasklist_csv_line utility."""
+
+    def test_normal_line(self):
+        assert _parse_tasklist_csv_line('"notepad.exe","1234","Console","1","12,345 K"') == ("notepad.exe", 1234)
+
+    def test_empty_line(self):
+        assert _parse_tasklist_csv_line("") is None
+        assert _parse_tasklist_csv_line("   ") is None
+
+    def test_malformed_line(self):
+        assert _parse_tasklist_csv_line("garbage") is None
+
+    def test_non_numeric_pid(self):
+        assert _parse_tasklist_csv_line('"notepad.exe","abc"') is None
+
+    def test_unicode_process_name(self):
+        result = _parse_tasklist_csv_line('"记事本.exe","5678","Console","1","8,192 K"')
+        assert result == ("记事本.exe", 5678)
 
 
 class TestSessionHelpers:

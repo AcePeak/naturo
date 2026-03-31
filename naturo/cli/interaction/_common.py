@@ -586,16 +586,14 @@ def _is_current_session_interactive() -> bool:
     try:
         import ctypes
         import ctypes.wintypes
+        import os
+
+        from naturo.process import _get_process_session_id
 
         # --------------- session ID for current process ---------------
-        pid = ctypes.windll.kernel32.GetCurrentProcessId()  # type: ignore[attr-defined]
-        session_id = ctypes.wintypes.DWORD(0)
-        ok = ctypes.windll.kernel32.ProcessIdToSessionId(  # type: ignore[attr-defined]
-            pid, ctypes.byref(session_id),
-        )
-        if not ok:
+        sid = _get_process_session_id(os.getpid())
+        if sid == -1:
             return False
-        sid = session_id.value
 
         # Session 0 is always the non-interactive services session.
         if sid == 0:

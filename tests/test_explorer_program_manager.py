@@ -22,8 +22,17 @@ def _make_backend():
         pytest.skip("WindowsBackend not available on this platform")
 
 
+_SESSION_PATCH_BASE = "naturo.backends.windows._element"
+
+
 class TestExplorerProgramManager:
     """Verify --app explorer prefers File Explorer over Program Manager (#524)."""
+
+    @pytest.fixture(autouse=True)
+    def _patch_session(self):
+        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=-1), \
+             patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
+            yield
 
     def _make_explorer_windows(self):
         """Program Manager (desktop) + File Explorer window."""
@@ -57,8 +66,6 @@ class TestExplorerProgramManager:
         backend = MagicMock(spec=BackendClass)
         backend.list_windows = MagicMock(return_value=windows)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
-        backend._get_console_session_id = MagicMock(return_value=-1)
-        backend._get_process_session_id = MagicMock(return_value=1)
         backend._get_foreground_hwnd = MagicMock(return_value=0)
         backend._APP_ALIASES = BackendClass._APP_ALIASES
         backend._DESKTOP_SHELL_CLASSES = BackendClass._DESKTOP_SHELL_CLASSES

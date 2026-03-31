@@ -820,15 +820,17 @@ def _find_window_by_process_name(pid: int, exe: str) -> Optional[int]:
             proc_name = os.path.basename(exe).lower()
         if not proc_name:
             try:
+                from naturo.process import _parse_tasklist_csv_line
+
                 result = subprocess.run(
                     ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
                     capture_output=True, text=True, encoding="utf-8",
                     errors="replace", timeout=5,
                 )
                 for line in result.stdout.strip().splitlines():
-                    parts = line.strip('"').split('","')
-                    if len(parts) >= 2:
-                        proc_name = parts[0].lower()
+                    parsed = _parse_tasklist_csv_line(line)
+                    if parsed:
+                        proc_name = parsed[0].lower()
                         break
             except Exception:
                 return None
