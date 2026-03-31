@@ -1,51 +1,44 @@
 # QA Status
-Last updated: 2026-03-31 12:29 UTC (Round 29)
-Current round: 29
+Last updated: 2026-03-31 17:26
+Current round: 67
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 4 passed, 1 failed (timeout), 17 skipped, 1 xpass (commit a7ba5c1)
-- CI E2E Tests: 7 passed, 3 failed, 2 xfail, 1 xpass (commit a7ba5c1)
-- Issues verified: #651 (pass)
-- E2E tests: Notepad (pass, menu click fail), Calculator (pass)
-- Regression: 13/19 passed, 2 failed, 4 skipped
-- New test cases created: TC-0031, TC-0032
+- CI Desktop Tests: 24 passed, 5 failed, 3 xfailed (commit 7a52fc1)
+- Issues verified: none (no status:done issues)
+- E2E tests: Notepad (pass), Calculator (pass)
+- Regression: 10/12 passed, 1 failed (TC-0012), 1 blocked (TC-0007)
+- New test cases created: TC-0033 (MCP click element_id)
 - Test cases cleaned up: none
-- New issues created: #671, #672
-- Total active test cases: 21
-- Tests run: 19
+- New issues created: #682 (MCP click element_id), #683 (CI regression)
+- Total active test cases: 18
+- Tests run: 12
 
-## Regression Details (Round 29)
+## Regression Details (Round 67)
 | TC | Name | Result |
 |----|------|--------|
-| TC-0003 | Chinese app name matching | PASS |
-| TC-0004 | Calculator E2E | PASS |
-| TC-0007 | Click short text | SKIP (Chinese locale) |
-| TC-0008 | Multi-window targeting | PASS |
-| TC-0010 | MCP agent workflow | PASS (partial) |
-| TC-0011 | App filter cross-process | PASS |
-| TC-0012 | --pid targeting | FAIL |
-| TC-0014 | Scripted Notepad workflow | PASS |
-| TC-0015 | app quit silent failure | PASS |
-| TC-0016 | UWP app name matching | PASS |
-| TC-0018 | get value unreadable | PASS |
-| TC-0023 | MCP launch missing PID | PASS |
-| TC-0024 | Click background window | PASS |
-| TC-0025 | DPI coordinate verification | PASS (baseline) |
-| TC-0026 | AI Vision fill-gaps | SKIP (no API key) |
-| TC-0027 | AI Vision coverage | SKIP (no API key) |
-| TC-0028 | UWP multi-tab quit | PASS |
-| TC-0029 | Hybrid mode enrichment | SKIP (no Electron) |
-| TC-0030 | type backslash escape | FAIL |
+| TC-0003 | Chinese app name matching | PASS (3) |
+| TC-0004 | Calculator E2E | PASS (22) |
+| TC-0007 | Click short text | BLOCKED (Chinese locale) |
+| TC-0008 | Multi-window targeting | PASS (8) |
+| TC-0010 | MCP agent workflow | PASS (21) |
+| TC-0012 | --pid targeting | FAIL (UWP shared PID) |
+| TC-0015 | app quit silent failure | PASS (8) |
+| TC-0016 | UWP app name matching | PASS (3) |
+| TC-0018 | get value unreadable | PASS (7) |
+| TC-0023 | MCP launch missing PID | PASS (2) |
+| TC-0030 | type backslash escape | PASS (1) — previously failing, now fixed |
+| TC-0031 | Notepad menu click | PASS (1) |
+| TC-0033 | MCP click element_id | FAIL (0) — NEW |
 
-## Phase 4 Findings (Power User Simulation)
-- **8 apps open on desktop**: Calculator, 2x Explorer, 3x Terminal, Settings, Program Manager
-- **--app filter precision**: Correctly targets apps by process name, fails to target by window title
-- **BUG #671**: Cannot target specific window by title when multiple windows of same process exist
-- **BUG #672**: Click eN on UWP Notepad menu items misses target (File menu doesn't open)
-- **Rapid see calls**: ~4.7s each — functional but slow for power users doing rapid automation
+## Phase 4 Findings (AI Agent Builder Simulation)
+- MCP server starts and accepts JSON-RPC requests correctly
+- tools/list returns 64 tools with proper schemas
+- type_text, list_windows work end-to-end via MCP
+- **BUG #682**: click by element_id fails — see_ui_tree refs not usable in click tool within MCP session
+- Coordinate-based clicking works as workaround but defeats purpose of element tree
 
 ## Top 3 Risks
-1. **PID targeting broken for UWP apps** (TC-0012) — all UWP share ApplicationFrameHost.exe PID
-2. **type command corrupts Windows paths** (TC-0030) — backslash escape sequences break file paths
-3. **Element click targeting on UWP menus** (#672) — coordinates from see tree don't produce expected clicks
+1. **MCP element_id click broken (#682)** — core AI agent workflow broken, any agent builder hits this immediately
+2. **CI tests regressing (#683)** — 5 tests failing including 2 previously fixed regressions
+3. **PID targeting unreliable for UWP apps** — ApplicationFrameHost.exe hosts multiple UWP apps under one PID

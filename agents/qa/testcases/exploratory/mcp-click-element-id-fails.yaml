@@ -1,0 +1,29 @@
+id: TC-0033
+title: "MCP click by element_id fails — see_ui_tree/create_snapshot refs not usable in click tool"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-03-31
+last_run: 2026-03-31
+last_result: fail
+consecutive_passes: 0
+notes: "2026-03-31 R67: FAIL — MCP see_ui_tree returns element refs (e1, e45 etc.) but click with element_id='e45' returns ELEMENT_NOT_FOUND. create_snapshot also doesn't help. Click by coordinates works. Discovered during: AI Agent Builder simulation."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Calculator is running"
+
+steps:
+  - description: "Start MCP, initialize, then see_ui_tree for Calculator"
+    command: "Send initialize + see_ui_tree(app='计算器') via MCP stdio"
+    expect: "Returns element tree with eN refs for buttons"
+  - description: "Click element by element_id in same MCP session"
+    command: "Send tools/call click(app='计算器', element_id='e45') via MCP stdio"
+    expect: "Click succeeds, calculator button is pressed"
+  - description: "Verify with screenshot"
+    command: "naturo capture --app 计算器"
+    expect: "Calculator display shows the clicked button's number"
+
+pass_criteria: "MCP click tool can use element_id refs from see_ui_tree in the same session"
+fail_action: "File P1 issue: MCP element_id click broken, forces AI agents to use coordinate-based clicking"

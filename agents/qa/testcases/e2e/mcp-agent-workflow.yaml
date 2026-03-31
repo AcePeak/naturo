@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-03-28
 last_run: 2026-03-31
 last_result: pass
-consecutive_passes: 20
-notes: "2026-03-29 R65: PASS — MCP initialize returns valid JSON-RPC with serverInfo naturo v1.26.0. tools/call list_apps returns structured JSON. launch_app returns success:true but missing PID."
+consecutive_passes: 21
+notes: "2026-03-31 R67: PASS — MCP initialize, tools/list, type_text all work. type_text typed 'MCP_E2E_TEST' into Notepad, screenshot confirmed."
 
 preconditions:
   - "naturo is installed and in PATH"
