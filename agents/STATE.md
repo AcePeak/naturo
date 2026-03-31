@@ -2,7 +2,7 @@
 > Auto-maintained by Orc-Mycelium. Agents: read on every startup.
 
 ## Current Version
-v0.3.0 (PyPI + GitHub Release)
+v0.3.1 (PyPI + GitHub Release)
 
 ## Active Work
 Query live data — do not rely on this section for specific issue numbers:

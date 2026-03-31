@@ -5,6 +5,23 @@ All notable changes to Naturo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-03-31
+
+### Added
+- AI vision cascade: window capture, coordinate scaling, tree merge ([#694](https://github.com/AcePeak/naturo/pull/694), [#701](https://github.com/AcePeak/naturo/pull/701))
+- Input strategy refactor ([#412](https://github.com/AcePeak/naturo/issues/412), [#692](https://github.com/AcePeak/naturo/pull/692))
+- MCP click resolves eN refs ([#682](https://github.com/AcePeak/naturo/issues/682), [#688](https://github.com/AcePeak/naturo/pull/688))
+
+### Fixed
+- Highlight DPI positioning fix ([#662](https://github.com/AcePeak/naturo/issues/662), [#687](https://github.com/AcePeak/naturo/pull/687))
+- Click snapshot alignment ([#687](https://github.com/AcePeak/naturo/pull/687))
+- AI vision JSON parsing — code fence regex, tuple bounds ([#691](https://github.com/AcePeak/naturo/pull/691))
+- Unicode file paths in capture ([#693](https://github.com/AcePeak/naturo/pull/693))
+- CI UIA detection regression fix ([#683](https://github.com/AcePeak/naturo/issues/683), [#690](https://github.com/AcePeak/naturo/pull/690))
+
+### Removed
+- Remove dead _learn.py ([#686](https://github.com/AcePeak/naturo/issues/686), [#689](https://github.com/AcePeak/naturo/pull/689))
+
 ## [0.3.0] — 2026-03-27
 
 ### Added
@@ -25,21 +42,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] — 2026-03-23
 
 ### Added
-- **Auto-routing for action commands** — intelligent command dispatch ([#28](https://github.com/user/naturo/issues/28))
-- **`naturo get` command** — read element text/value via UIA patterns ([#109](https://github.com/user/naturo/issues/109))
-- **Version bump script** — `scripts/bump_version.py` for release automation ([#30](https://github.com/user/naturo/issues/30))
+- **Auto-routing for action commands** — intelligent command dispatch ([#28](https://github.com/AcePeak/naturo/issues/28))
+- **`naturo get` command** — read element text/value via UIA patterns ([#109](https://github.com/AcePeak/naturo/issues/109))
+- **Version bump script** — `scripts/bump_version.py` for release automation ([#30](https://github.com/AcePeak/naturo/issues/30))
 
 ### Fixed
-- `find --all` flag for SSH-safe wildcard search ([#112](https://github.com/user/naturo/issues/112))
-- `list apps` now correctly delegates to `app list` ([#114](https://github.com/user/naturo/issues/114))
-- `find --actionable` works without QUERY; `press --json` returns proper error ([#123](https://github.com/user/naturo/issues/123), [#124](https://github.com/user/naturo/issues/124))
-- Standardized `get` command JSON error format ([#121](https://github.com/user/naturo/issues/121))
-- `find --query` option and improved SSH desktop detection ([#112](https://github.com/user/naturo/issues/112), [#113](https://github.com/user/naturo/issues/113))
+- `find --all` flag for SSH-safe wildcard search ([#112](https://github.com/AcePeak/naturo/issues/112))
+- `list apps` now correctly delegates to `app list` ([#114](https://github.com/AcePeak/naturo/issues/114))
+- `find --actionable` works without QUERY; `press --json` returns proper error ([#123](https://github.com/AcePeak/naturo/issues/123), [#124](https://github.com/AcePeak/naturo/issues/124))
+- Standardized `get` command JSON error format ([#121](https://github.com/AcePeak/naturo/issues/121))
+- `find --query` option and improved SSH desktop detection ([#112](https://github.com/AcePeak/naturo/issues/112), [#113](https://github.com/AcePeak/naturo/issues/113))
 - Missing `--method` override code in interaction.py
 
 ### Tests
-- Integration test suite for Unified App Model ([#37](https://github.com/user/naturo/issues/37))
-- Method override tests ([#34](https://github.com/user/naturo/issues/34) partially)
+- Integration test suite for Unified App Model ([#37](https://github.com/AcePeak/naturo/issues/37))
+- Method override tests ([#34](https://github.com/AcePeak/naturo/issues/34) partially)
 
 ### Docs
 - Enforce PR workflow, no direct push to main
@@ -47,19 +64,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] — 2026-03-22
 
 ### Added
-- **App inspect** — probe app frameworks + interaction methods ([#27](https://github.com/user/naturo/issues/27))
-- **Detection chain orchestrator** with public API + 35 tests ([#26](https://github.com/user/naturo/issues/26))
+- **App inspect** — probe app frameworks + interaction methods ([#27](https://github.com/AcePeak/naturo/issues/27))
+- **Detection chain orchestrator** with public API + 35 tests ([#26](https://github.com/AcePeak/naturo/issues/26))
 - **Unified Selector system** — format spec + roadmap + issues
-- **`app_inspect` MCP tool** for framework detection ([#36](https://github.com/user/naturo/issues/36) partial)
+- **`app_inspect` MCP tool** for framework detection ([#36](https://github.com/AcePeak/naturo/issues/36) partial)
 
 ### Breaking
 - Removed 12 non-core commands — focus on Eyes+Hands
 
 ### Fixed
-- Unified error handling for headless/SSH environments ([#99](https://github.com/user/naturo/issues/99))
-- Filter system processes from app list, show only user apps with windows ([#98](https://github.com/user/naturo/issues/98))
-- DPI handling via `SetThreadDpiAwarenessContext` for reliable coordinates ([#16](https://github.com/user/naturo/issues/16))
-- `open_uri` uses Popen for URLs to avoid blocking ([#31](https://github.com/user/naturo/issues/31))
+- Unified error handling for headless/SSH environments ([#99](https://github.com/AcePeak/naturo/issues/99))
+- Filter system processes from app list, show only user apps with windows ([#98](https://github.com/AcePeak/naturo/issues/98))
+- DPI handling via `SetThreadDpiAwarenessContext` for reliable coordinates ([#16](https://github.com/AcePeak/naturo/issues/16))
+- `open_uri` uses Popen for URLs to avoid blocking ([#31](https://github.com/AcePeak/naturo/issues/31))
 - `--json` flag implies `--yes` for snapshot clean
 - README corrections: `press→hotkey`, `app quit` accepts positional arg, `scroll` accepts positional direction
 - Electron list hang due to per-PID wmic calls
