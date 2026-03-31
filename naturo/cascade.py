@@ -407,6 +407,38 @@ def _fetch_ai_elements(
         # ratio from AI-max-coord to actual screenshot size.
         # Use the screenshot dimensions (img_w, img_h) as ground truth.
         ai_scale_x, ai_scale_y = 1.0, 1.0
+
+        # (#694) Auto-detect bounds format: AI may return [x1,y1,x2,y2]
+        # (top-left + bottom-right) instead of the requested [x,y,w,h].
+        # Detect by checking if 3rd value >= 1st value for most elements.
+        is_xyxy = False
+        if result.elements:
+            xyxy_count = 0
+            total_checked = 0
+            for raw_el in result.elements:
+                if not isinstance(raw_el, dict):
+                    continue
+                b = raw_el.get("bounds", {})
+                if isinstance(b, (list, tuple)) and len(b) >= 4:
+                    v0, v1, v2, v3 = b[0], b[1], b[2], b[3]
+                elif isinstance(b, dict):
+                    v0 = b.get("x", 0)
+                    v1 = b.get("y", 0)
+                    v2 = b.get("width", 0)
+                    v3 = b.get("height", 0)
+                else:
+                    continue
+                total_checked += 1
+                # In [x1,y1,x2,y2] format, x2 > x1 and y2 > y1 always.
+                # In [x,y,w,h] format, w is typically much smaller than x
+                # for elements not at the left edge.
+                if v2 >= v0 and v3 >= v1:
+                    xyxy_count += 1
+            if total_checked > 0 and xyxy_count / total_checked > 0.8:
+                is_xyxy = True
+                logger.info("AI vision: detected [x1,y1,x2,y2] bounds format (%d/%d)",
+                            xyxy_count, total_checked)
+
         if img_w > 0 and img_h > 0 and result.elements:
             max_ai_x = 0.0
             max_ai_y = 0.0
@@ -415,8 +447,13 @@ def _fetch_ai_elements(
                     continue
                 b = raw_el.get("bounds", {})
                 if isinstance(b, (list, tuple)) and len(b) >= 4:
-                    max_ai_x = max(max_ai_x, b[0] + b[2])
-                    max_ai_y = max(max_ai_y, b[1] + b[3])
+                    if is_xyxy:
+                        # b[2],b[3] are already x2,y2 (max coords)
+                        max_ai_x = max(max_ai_x, b[2])
+                        max_ai_y = max(max_ai_y, b[3])
+                    else:
+                        max_ai_x = max(max_ai_x, b[0] + b[2])
+                        max_ai_y = max(max_ai_y, b[1] + b[3])
                 elif isinstance(b, dict):
                     max_ai_x = max(max_ai_x, b.get("x", 0) + b.get("width", 0))
                     max_ai_y = max(max_ai_y, b.get("y", 0) + b.get("height", 0))
@@ -448,6 +485,10 @@ def _fetch_ai_elements(
             else:
                 logger.debug("AI vision: skipping element %d with bad bounds: %r", i, b)
                 continue
+            # Convert [x1,y1,x2,y2] → [x,y,w,h] if detected
+            if is_xyxy:
+                bw = bw - bx  # x2 - x1 = width
+                bh = bh - by  # y2 - y1 = height
             # Scale AI coords to physical screenshot pixels, then offset
             ex = int(bx * ai_scale_x) + win_x
             ey = int(by * ai_scale_y) + win_y
