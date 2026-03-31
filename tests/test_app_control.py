@@ -450,17 +450,18 @@ class TestAppLifecycleE2EWindows:
         return False
 
     @staticmethod
-    def _poll_for_notepad(backend, is_notepad_fn, timeout=15.0, interval=0.5):
-        """Poll for a visible Notepad window with retry (#560, #697).
+    def _poll_for_notepad(backend, is_notepad_fn, timeout=20.0, interval=0.5):
+        """Poll for a Notepad window with retry (#560, #697, #729).
 
         UWP Notepad on Windows 11 launches through a broker process;
         the actual window may take several seconds to appear.
 
-        Timeout reduced from 30s to 15s (#697) to prevent hanging the
-        CI pipeline when --timeout-method=thread is used with ctypes.
+        Does NOT filter by ``is_visible`` during polling — UWP windows
+        may not report ``is_visible=True`` immediately after launch,
+        causing the poll to time out on CI (#729).
 
         Returns:
-            List of matching visible WindowInfo objects.
+            List of matching WindowInfo objects.
         """
         import time
         deadline = time.monotonic() + timeout
@@ -468,7 +469,7 @@ class TestAppLifecycleE2EWindows:
             windows = backend.list_windows()
             notepad_wins = [
                 w for w in windows
-                if is_notepad_fn(w) and w.is_visible
+                if is_notepad_fn(w)
             ]
             if notepad_wins:
                 return notepad_wins

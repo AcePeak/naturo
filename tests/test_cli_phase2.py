@@ -550,13 +550,15 @@ class TestNotepadAutomation:
                     return True
                 return False
 
-            # (#560, #729) Poll for Notepad window — UWP launch is slow
-            deadline = time.monotonic() + 15.0
+            # (#560, #729) Poll for Notepad window — UWP launch is slow.
+            # Do NOT filter by is_visible during polling: UWP windows may
+            # not report visibility immediately after launch (#729).
+            deadline = time.monotonic() + 20.0
             notepad = None
             while notepad is None and time.monotonic() < deadline:
                 windows = core.list_windows()
                 notepad = next(
-                    (w for w in windows if _is_notepad(w) and w.is_visible),
+                    (w for w in windows if _is_notepad(w)),
                     None
                 )
                 if notepad is None:
