@@ -17,7 +17,16 @@ from naturo.cli import main
 
 @pytest.fixture
 def runner():
-    """Click CLI test runner."""
+    """Click CLI test runner with stderr captured separately.
+
+    Click 8.0 defaults mix_stderr=True which prevents accessing
+    result.stderr.  Click 8.2+ removed the parameter entirely and
+    always separates stderr.  Use inspect to stay compatible with both.
+    """
+    import inspect
+    sig = inspect.signature(CliRunner.__init__)
+    if "mix_stderr" in sig.parameters:
+        return CliRunner(mix_stderr=False)
     return CliRunner()
 
 
