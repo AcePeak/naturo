@@ -136,6 +136,7 @@ module = [
     "naturo.registry",
     "naturo.bridge",
     "naturo.cascade",
+    "naturo.cascade.*",
     "naturo.detect.probes",
     "naturo.detect.chain",
     "naturo.detect.models",
