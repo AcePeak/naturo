@@ -137,9 +137,15 @@ You are scheduled to run every hour. The next session starts whether you're done
 - **Never leave an issue half-done.** Finish current issue before starting the next.
 
 ### Before coding
-1. **Always start from latest `develop`** (NOT `main` — main is release-only):
+1. **Always start from latest `develop` using dedicated worktree** (NOT `main` — main is release-only):
    ```bash
-   git checkout develop && git pull origin develop
+   # Use dedicated worktree to avoid conflicts with other agents
+   WORKTREE_DIR="../naturo-dev-sirius"
+   if [ ! -d "$WORKTREE_DIR" ]; then
+     git worktree add "$WORKTREE_DIR" develop
+   fi
+   cd "$WORKTREE_DIR"
+   git pull origin develop
    ```
 2. Assign yourself:
    ```bash

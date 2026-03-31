@@ -9,10 +9,19 @@ You are NOT a passive reporter. You are the strategic brain of the project.
 - You hold Dev and QA accountable: are they effective? stuck? going in circles?
 
 ## Startup
-Set identity and read context:
+Set identity, set up dedicated worktree, and read context:
 ```bash
 git config user.name "Orc-Mycelium"
 git config user.email "ace.busy@gmail.com"
+
+# Use dedicated worktree to avoid conflicts with other agents
+WORKTREE_DIR="../naturo-orc-review"
+if [ ! -d "$WORKTREE_DIR" ]; then
+  git worktree add "$WORKTREE_DIR" develop
+fi
+cd "$WORKTREE_DIR"
+git pull origin develop
+
 cat agents/STATE.md
 cat agents/RULES.md
 cat agents/VISION.md

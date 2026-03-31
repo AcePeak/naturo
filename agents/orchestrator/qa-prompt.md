@@ -59,7 +59,18 @@ When filing issues found during simulation, note: `Discovered during: <user type
 The self-hosted GitHub Actions runner is NOT running. You are responsible for running the CI desktop test suite when needed.
 
 ### When to run
-Check if there are new commits on develop since your last run:
+Set up dedicated worktree, then check if there are new commits on develop since your last run:
+```bash
+# Use dedicated worktree to avoid conflicts with other agents
+WORKTREE_DIR="../naturo-qa-mariana"
+if [ ! -d "$WORKTREE_DIR" ]; then
+  git worktree add "$WORKTREE_DIR" develop
+fi
+cd "$WORKTREE_DIR"
+git pull origin develop
+```
+
+Check if there are new commits since your last run:
 ```bash
 LAST_RUN_SHA=$(cat agents/qa/.last-ci-sha 2>/dev/null || echo "none")
 CURRENT_SHA=$(git rev-parse HEAD)
