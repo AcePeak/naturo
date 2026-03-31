@@ -17,8 +17,12 @@ from naturo.cli import main
 
 @pytest.fixture
 def runner():
-    """Click CLI test runner."""
-    return CliRunner()
+    """Click CLI test runner with stderr captured separately.
+
+    Click 8.0 defaults mix_stderr=True which prevents accessing
+    result.stderr.  Explicitly set False for all Click 8.x versions.
+    """
+    return CliRunner(mix_stderr=False)
 
 
 # ── #277: Positional argument on window subcommands ──────────────────────
