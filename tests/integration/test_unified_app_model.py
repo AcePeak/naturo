@@ -18,17 +18,47 @@ Test matrix:
 import json
 import platform
 import subprocess
+import time
 from typing import Any, Dict
 
 import pytest
 
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.desktop,
     pytest.mark.skipif(
         platform.system() != "Windows",
         reason="Integration tests require Windows desktop",
     ),
 ]
+
+
+def _detect_with_retry(detect_chain, *, retries: int = 3, delay: float = 2.0,
+                        **kwargs) -> Any:
+    """Run detection chain with retries for UIA readiness (#697).
+
+    UWP Notepad on Win11 may need several seconds after window creation
+    before its UIA tree is fully initialized. The first detection attempt
+    may fall back to vision-only; retrying gives UIA time to become ready.
+
+    Args:
+        detect_chain: The detect function from naturo.detect.chain.
+        retries: Number of attempts.
+        delay: Seconds to wait between retries.
+        **kwargs: Arguments forwarded to detect_chain.
+
+    Returns:
+        DetectionResult from the last attempt.
+    """
+    result = None
+    for attempt in range(retries):
+        result = detect_chain(**kwargs)
+        method_names = [m.method.value for m in result.methods]
+        if "uia" in method_names or "msaa" in method_names:
+            return result
+        if attempt < retries - 1:
+            time.sleep(delay)
+    return result
 
 
 def _run_naturo(*args: str, timeout: int = 15) -> Dict[str, Any]:
@@ -71,8 +101,12 @@ class TestDetectionChainNotepad:
 
     def test_detect_notepad_has_uia(self, notepad_app, detect_chain):
         """Notepad should support UIA interaction method."""
-        result = detect_chain(pid=notepad_app, exe="notepad.exe",
-                              app_name="Notepad")
+        # (#697) Retry detection — UWP Notepad UIA tree may not be ready
+        # immediately after window creation.
+        result = _detect_with_retry(
+            detect_chain, pid=notepad_app, exe="notepad.exe",
+            app_name="Notepad",
+        )
 
         method_names = [m.method.value for m in result.methods]
         assert "uia" in method_names, (
@@ -81,8 +115,11 @@ class TestDetectionChainNotepad:
 
     def test_detect_notepad_best_method(self, notepad_app, detect_chain):
         """Notepad's best method should be UIA (native Win32 app)."""
-        result = detect_chain(pid=notepad_app, exe="notepad.exe",
-                              app_name="Notepad")
+        # (#697) Retry detection — UIA tree may need extra init time.
+        result = _detect_with_retry(
+            detect_chain, pid=notepad_app, exe="notepad.exe",
+            app_name="Notepad",
+        )
 
         best = result.best_method()
         assert best is not None, "Should have a best method"
