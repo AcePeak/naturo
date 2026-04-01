@@ -79,3 +79,19 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: feat/issue-758-chrome-profiles
+- **Base**: develop
+- **Title**: feat: add Chrome profile management — launch, list, delete (fixes #758)
+- **Body**: New `_launcher.py` module with Chrome/Chromium auto-discovery across Windows/Mac/Linux, profile-based user-data directories (`~/.config/naturo/browser-profiles/<name>/`), and CDP startup health check. ChromeProcess wrapper for graceful termination. Three new CLI commands: `browser launch` (--profile, --headless, --chrome-path, --extra-args), `browser profiles` (list with size/date), `browser profile-delete` (with --force). 51 new tests, all mocked (no desktop needed). Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
+
+## PR Request: feat/issue-760-anti-detection
+- **Base**: develop
+- **Title**: feat: add anti-detection defaults — stealth flags and JS patches (fixes #760)
+- **Body**: New `_stealth.py` module with Chrome launch flags (disable AutomationControlled, infobars, extensions, realistic window size) and 6 runtime JS patches (navigator.webdriver, plugins, languages, permissions, chrome.runtime, WebGL vendor). Patches registered via `Page.addScriptToEvaluateOnNewDocument` for persistence across navigations. Two CLI commands: `browser stealth` (apply to running browser), `browser stealth-flags` (print flags for manual launch). `get_stealth_flags()` helper for programmatic use. 28 new tests, all mocked. Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending

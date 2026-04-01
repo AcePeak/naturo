@@ -2,29 +2,29 @@
 > Date: 2026-04-01
 
 ## Completed
-- feat/issue-762-browser-wait-mechanisms: added 4 browser wait methods + 4 CLI commands (fixes #762)
-  - BrowserPage.wait_for_navigation() — URL change + page load polling
-  - BrowserPage.wait_for_url(pattern) — substring/regex URL matching
-  - BrowserPage.wait_for_function(expression) — JS expression polling
-  - BrowserPage.wait_for_network_idle() — resource count stabilisation (replaces simplistic private method)
-  - CLI: wait-navigation, wait-url, wait-function, wait-network-idle
-  - 11 new unit tests, all 4184 tests pass, ruff clean, mypy clean
+- feat/issue-758-chrome-profiles: Chrome profile management — launcher, profile CRUD, CLI (fixes #758)
+  - `_launcher.py`: Chrome auto-discovery (Win/Mac/Linux), profile dirs, ChromeProcess wrapper
+  - CLI: `browser launch` (--profile, --headless, --chrome-path), `browser profiles`, `browser profile-delete`
+  - 51 new tests, ruff clean, mypy clean
+- feat/issue-760-anti-detection: Anti-detection defaults — stealth flags + JS patches (fixes #760)
+  - `_stealth.py`: 7 Chrome flags + 6 JS patches (webdriver, plugins, languages, permissions, chrome.runtime, WebGL)
+  - CLI: `browser stealth`, `browser stealth-flags`
+  - 28 new tests, ruff clean, mypy clean
 
 ## Pushed branches (awaiting PR)
-- feat/issue-762-browser-wait-mechanisms: browser wait mechanisms (fixes #762)
+- feat/issue-758-chrome-profiles: Chrome profile management (fixes #758)
+- feat/issue-760-anti-detection: Anti-detection defaults (fixes #760)
 
 ## Rebased branches
-- refactor/config-cmd-deduplicate-credentials: rebased onto develop, pushed
-- docs/issue-721-example-scripts: rebased onto develop, pushed
-- docs/issue-722-mcp-server-reference: rebased onto develop, pushed
-- refactor/issue-719-cli-by-domain: rebased onto develop, pushed
+- None (no stale branches found)
 
 ## Issues found but not fixed
-- No iframe support in browser module (#764) — needs CDP frame context switching for cross-origin iframes
-- _wait_for_network_idle (private) on BrowserPage still used by navigate(wait_until="networkidle") — could be updated to use the new public method
+- 5 previously pushed branches missing from remote (lost between sessions): refactor/config-cmd-deduplicate-credentials, docs/issue-721-example-scripts, docs/issue-722-mcp-server-reference, refactor/issue-719-cli-by-domain, feat/issue-762-browser-wait-mechanisms — PR requests still say "pending" but branches don't exist. Orc-Mycelium should mark these as needing recreation or close the PR requests.
+- navigate() still uses private _wait_for_network_idle internally (noted in previous session log too)
 
 ## Next session should
-- Verify 5 pushed branches have PRs created by Orc-Mycelium (4 rebased + 1 new)
-- Implement #764 (iframe support) — foundation for real-world browser automation
-- Consider #760 (anti-detection defaults) — important for production browser automation
-- Update navigate() to use the new public wait_for_network_idle instead of private _wait_for_network_idle
+- Check if PRs for #758 and #760 were created by Orc-Mycelium
+- Implement #764 (iframe support) — critical for real-world browser automation
+- Implement #761 (captcha handling architecture) — design pattern for pluggable solvers
+- Investigate missing branches and decide whether to recreate the work (#719, #721, #722, #762)
+- Update navigate() to use public wait_for_network_idle (small cleanup)
