@@ -55,5 +55,6 @@
 - [TC-0032](exploratory/app-title-matching-multiwindow.yaml) — P1: --app cannot match by window title for multi-window processes — **active**
 - [TC-0033](exploratory/mcp-click-element-id-fails.yaml) — P1: MCP click by element_id fails, see_ui_tree refs not usable in click tool — **active**
 - [TC-0035](exploratory/press-standalone-modifier.yaml) — P2: naturo press fails for standalone modifier keys (alt, ctrl, shift) — **active**
-- [TC-0036](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **active**
-- [TC-0039](exploratory/app-id-filter-see.yaml) — P1: --app aN (app ID) fails for see/click but --app-id aN works — **active**
+- [TC-0036](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **retired** (5 passes, #743 closed)
+- [TC-0039](exploratory/app-id-filter-see.yaml) — P1: --app aN (app ID) fails for see/click but --app-id aN works — **retired** (5 passes, #752 closed)
+- [TC-0042](exploratory/json-stderr-duplicate-error.yaml) — P2: JSON mode (-j) emits duplicate error to stderr, breaks 2>&1 pipe — **active**

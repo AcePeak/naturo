@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-03-28
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 13
-notes: "2026-04-01 R81: PASS — see --app notepad returned 'No window found' (exit 1) when Notepad closed. No cross-process contamination."
+consecutive_passes: 14
+notes: "2026-04-01 R82: PASS — see --app notepad returned 'No window found' exit 1 when closed. No cross-process contamination."
 
 preconditions:
   - "naturo is installed and in PATH"
