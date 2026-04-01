@@ -220,6 +220,33 @@ class TestListAliases:
 
 
 # ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """Edge case handling for empty/None inputs."""
+
+    def test_resolve_model_empty_string(self) -> None:
+        assert resolve_model("") == ""
+
+    def test_get_default_model_empty_provider(self) -> None:
+        assert get_default_model("") == ""
+
+    def test_get_default_model_unknown_provider(self) -> None:
+        assert get_default_model("nonexistent-provider") == ""
+
+    def test_list_models_empty_provider_returns_all(self) -> None:
+        # Empty string is falsy, same as None — returns all models
+        all_models = list_models()
+        result = list_models(provider="")
+        assert result == all_models
+
+    def test_list_models_unknown_capability(self) -> None:
+        result = list_models(capability="nonexistent")
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
 # ModelInfo frozen dataclass
 # ---------------------------------------------------------------------------
 

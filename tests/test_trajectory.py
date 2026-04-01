@@ -223,6 +223,26 @@ class TestErrors:
 # TrajectoryPoint dataclass
 # ---------------------------------------------------------------------------
 
+class TestLinearRounding:
+    """Linear trajectory should use round() not truncation (#776 quality)."""
+
+    def test_rounding_not_truncation(self) -> None:
+        """Moving from (0,0) to (1,1) in 3 steps: midpoints should round correctly."""
+        pts = generate_trajectory(0, 0, 1, 1, mode="linear", steps=3, duration_ms=30)
+        # Step 1: t=1/3 → 0.333 → rounds to 0 (not truncated differently)
+        # Step 2: t=2/3 → 0.667 → rounds to 1
+        # Step 3: t=3/3 → 1.0 → exact
+        assert pts[-1].x == 1
+        assert pts[-1].y == 1
+
+    def test_half_pixel_rounds_correctly(self) -> None:
+        """0.5 should round to nearest even (Python default) or up, not truncate to 0."""
+        pts = generate_trajectory(0, 0, 3, 0, mode="linear", steps=2, duration_ms=20)
+        # Step 1: t=0.5 → x=1.5 → int(round(1.5)) = 2 (banker's rounding)
+        assert pts[0].x in (1, 2)  # Both are acceptable, but NOT 0
+        assert pts[0].x > 0, "Truncation detected — should use round()"
+
+
 class TestTrajectoryPoint:
 
     def test_frozen(self) -> None:

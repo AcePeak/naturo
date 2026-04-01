@@ -182,6 +182,8 @@ def resolve_model(name: str, provider: Optional[str] = None) -> str:
         If *name* is not recognized, it is returned unchanged so that
         users can pass arbitrary model IDs (e.g. fine-tunes).
     """
+    if not name:
+        return name or ""
     canonical = _ALIAS_MAP.get(name)
     if canonical is not None:
         return canonical
@@ -205,6 +207,8 @@ def get_default_model(provider: str, use_case: str = "vision") -> str:
         Canonical model ID. Falls back to the first registered model
         for that provider if no explicit default is configured.
     """
+    if not provider:
+        return ""
     key = (provider, use_case)
     if key in _DEFAULTS:
         return _DEFAULTS[key]

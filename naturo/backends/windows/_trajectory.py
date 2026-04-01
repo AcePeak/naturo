@@ -103,8 +103,8 @@ def _linear_trajectory(
     points: list[TrajectoryPoint] = []
     for i in range(1, n + 1):
         t = i / n
-        x = int(sx + (ex - sx) * t)
-        y = int(sy + (ey - sy) * t)
+        x = int(round(sx + (ex - sx) * t))
+        y = int(round(sy + (ey - sy) * t))
         points.append(TrajectoryPoint(x=x, y=y, delay_s=delay))
     # Ensure last point is exact target
     if points:
