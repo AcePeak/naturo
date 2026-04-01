@@ -21,7 +21,7 @@ cat docs/ROADMAP.md
 ```
 Read agents/dev/SOUL.md for your complete responsibilities.
 
-### 0b. Verify GitHub tools are available (CRITICAL — do NOT skip)
+### 0b. Verify GitHub tools are available
 
 GitHub access is provided via MCP tools (not `gh` CLI). These tools may take 10-30 seconds to initialize at session start. You MUST verify they work before proceeding:
 
@@ -30,8 +30,33 @@ GitHub access is provided via MCP tools (not `gh` CLI). These tools may take 10-
    - Wait 15 seconds, then retry
    - Retry up to 3 times total
    - If still unavailable after 3 retries, check if the tools need to be explicitly loaded (search for deferred tools)
-3. **NEVER skip GitHub operations.** If you cannot interact with GitHub, you cannot create PRs, check issues, or manage branches. Without GitHub access, your session is severely limited — focus only on tasks that don't require GitHub (running tests, code review), and clearly state in your session summary that GitHub tools were unavailable.
-4. **NEVER conclude "gh CLI not available" and move on.** The tools will load — be patient and retry.
+
+**If GitHub tools are unavailable after all retries**, you can still do productive work. Use the GitHub handoff queue:
+
+3. **Reading issues**: check `agents/github-queue/pending-issues.md` — Orc-Mycelium maintains a snapshot of open issues with priorities for you.
+4. **Creating PRs**: after pushing a branch, write a request to `agents/github-queue/pr-requests.md`:
+   ```markdown
+   ## PR Request: <branch-name>
+   - **Base**: develop
+   - **Title**: <type>: <description> (fixes #N)
+   - **Body**: <what changed, how tested>
+   - **Auto-merge**: yes
+   - **Date**: <today>
+   ```
+   Then commit and push. Orc-Mycelium will create the PR for you.
+5. **Issue status updates**: append to `agents/github-queue/status-updates.md`:
+   ```markdown
+   ## Issue #N
+   - **Action**: add label status:done / remove label status:in-progress / comment
+   - **Comment**: <your message>
+   - **Date**: <today>
+   ```
+6. **Branch cleanup requests**: append to `agents/github-queue/branch-cleanup.md`:
+   ```markdown
+   - Delete branch: <branch-name> (merged in PR #X)
+   ```
+
+**IMPORTANT**: Always push the github-queue files in the SAME push as your code branch, so Orc-Mycelium sees them on develop.
 
 ### 0c. What happened since last session?
 ```bash

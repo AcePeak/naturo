@@ -28,6 +28,33 @@ cat agents/VISION.md
 cat docs/ROADMAP.md
 ```
 
+## Phase 0.5 — Process Dev-Sirius GitHub Queue
+
+Dev-Sirius may not have GitHub MCP tools in scheduled sessions. Check for queued requests:
+
+```bash
+cat agents/github-queue/pr-requests.md
+cat agents/github-queue/status-updates.md
+cat agents/github-queue/branch-cleanup.md
+```
+
+For each **pending** PR request:
+1. Verify the branch exists: `gh api repos/AcePeak/naturo/branches/<branch-name>`
+2. Check if branch has conflicts with develop: `gh api repos/AcePeak/naturo/compare/develop...<branch>`
+3. If clean: create the PR with `gh pr create --head <branch> --base develop --title "..." --body "..."`
+4. Enable auto-merge: `gh pr merge <number> --auto --squash`
+5. Mark the request as `created (PR #X)` in the file
+
+For each **pending** status update:
+1. Apply the label/comment/assignment change on GitHub
+2. Mark as `done` in the file
+
+For each **pending** branch cleanup:
+1. Delete the branch: `gh api -X DELETE repos/AcePeak/naturo/git/refs/heads/<branch>`
+2. Mark as `done` in the file
+
+After processing, update `agents/github-queue/pending-issues.md` with current open issues snapshot, then commit and push.
+
 ## Phase 1 — Progress Assessment
 
 ### What happened since last review?
