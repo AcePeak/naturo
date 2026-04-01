@@ -7,7 +7,7 @@ source_issue: null
 created: 2026-03-27
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 15
+consecutive_passes: 16
 notes: "2026-04-01 R75: PASS — type and capture both target same window. Verified during Power User multi-app sim."
 
 preconditions:

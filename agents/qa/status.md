@@ -1,20 +1,20 @@
 # QA Status
-Last updated: 2026-04-01 07:45
-Current round: 76
+Last updated: 2026-04-01 09:12
+Current round: 77
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 21 passed, 4 failed, 18 skipped (commit 17a4e1c)
-- Issues verified: #718 (pass), #716 (pass), #729 (fail), #702 (blocked)
-- E2E tests: Calculator (pass), Notepad (fail)
-- Regression: 6/7 passed, 1 retired
-- New test cases created: TC-0038
-- Test cases cleaned up: TC-0007 (retired — 5 passes, #442 closed)
-- New issues created: #749, #750
-- Total active test cases: ~20
-- Tests run: 14
+- CI Desktop Tests: 9 passed, 3 failed, 3 xfailed (commit cf607cb)
+- Issues verified: #729 (partial — `--app notepad` works, `--app a1` doesn't), #702 (blocked)
+- E2E tests: Calculator (pass), Notepad (pass)
+- Regression: 9/11 passed, 0 retired
+- New test cases created: TC-0039
+- Test cases cleaned up: none
+- New issues created: #752
+- Total active test cases: 23
+- Tests run: 11
 
 ## Top 3 Risks
-1. **UWP window enumeration broken on Chinese Windows** (#749) — basic Notepad workflow fails, pywinauto handles it fine
-2. **Silent failure in app quit** (#750) — reports success but leaves apps running
-3. **CI tests still failing** (#729) — timing fix insufficient, root cause is UWP enumeration
+1. UWP Notepad enumeration on Chinese Windows (#749) — blocks CI and multiple test cases
+2. App ID filter discoverability (#752) — first-time user friction
+3. Zombie UWP processes accumulating — system-level process lifecycle issue

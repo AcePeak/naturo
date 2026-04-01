@@ -7,7 +7,7 @@ source_issue: 743
 created: 2026-04-01
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 2
+consecutive_passes: 0
 notes: "2026-04-01 R76: PASS — naturo app quit 计算器 by Chinese name closes Calculator, verified removed from list apps."
 
 preconditions:
