@@ -71,3 +71,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: feat/issue-762-browser-wait-mechanisms
+- **Base**: develop
+- **Title**: feat: add browser wait mechanisms — navigation, URL, function, network idle (fixes #762)
+- **Body**: Four new BrowserPage methods: wait_for_navigation (URL change + load), wait_for_url (substring/regex match), wait_for_function (JS expression polling), wait_for_network_idle (resource count stabilisation). Four corresponding CLI commands: wait-navigation, wait-url, wait-function, wait-network-idle. Public wait_for_network_idle replaces the private _wait_for_network_idle with a proper implementation using performance.getEntriesByType polling. 11 unit tests covering success and timeout paths. All 4184 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
