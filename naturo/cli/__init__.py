@@ -44,6 +44,7 @@ from naturo.cli.window_cmd import window
 from naturo.cli.diff_cmd import diff
 from naturo.cli.ai import mcp
 from naturo.cli.extensions import excel
+from naturo.cli.browser_cmd import browser
 
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 
@@ -151,6 +152,9 @@ main.add_command(mcp)
 
 # ── Phase 5C: Enterprise Features ──────────────
 main.add_command(excel)
+
+# ── Browser Automation ─────────────────────────
+main.add_command(browser)
 
 
 
