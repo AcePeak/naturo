@@ -750,11 +750,13 @@ class InputMixin:
         strategy.scroll(delta, horizontal)
 
     def drag(self, from_x: int = 0, from_y: int = 0, to_x: int = 0, to_y: int = 0,
-             duration_ms: int = 500, steps: int = 10) -> None:
+             duration_ms: int = 500, steps: int = 10,
+             trajectory: str = "linear", jitter: float = 0.0,
+             overshoot: float = 0.0, release_delay_ms: int = 0) -> None:
         """Drag from one point to another.
 
-        Moves mouse to (from_x, from_y), holds left button, interpolates to
-        (to_x, to_y) in `steps` increments, then releases the button.
+        Moves mouse to (from_x, from_y), holds left button, follows a
+        trajectory to (to_x, to_y), then releases the button.
 
         Args:
             from_x: Source X coordinate.
@@ -763,42 +765,90 @@ class InputMixin:
             to_y: Destination Y coordinate.
             duration_ms: Total drag duration in milliseconds.
             steps: Number of intermediate move steps.
+            trajectory: Motion mode — ``"linear"`` (default), ``"bezier"``,
+                or ``"instant"``.
+            jitter: Max random perpendicular offset per step (pixels).
+            overshoot: Pixels to overshoot past target then correct back.
+            release_delay_ms: Pause in ms before releasing the button.
 
         Raises:
             NaturoCoreError: On system error.
         """
         import time
+        from naturo.backends.windows._trajectory import generate_trajectory
+
         core = self._ensure_core()
 
-        steps = max(1, steps)
-        delay_s = (duration_ms / 1000.0) / steps
+        points = generate_trajectory(
+            from_x, from_y, to_x, to_y,
+            mode=trajectory, duration_ms=duration_ms, steps=steps,
+            jitter=jitter, overshoot=overshoot,
+        )
 
         core.mouse_move(from_x, from_y)
         time.sleep(0.05)  # Brief settle before pressing
         core.mouse_down(0)  # Press and hold left button
 
         try:
-            for i in range(1, steps + 1):
-                t = i / steps
-                ix = int(from_x + (to_x - from_x) * t)
-                iy = int(from_y + (to_y - from_y) * t)
-                core.mouse_move(ix, iy)
-                time.sleep(delay_s)
+            for pt in points:
+                core.mouse_move(pt.x, pt.y)
+                if pt.delay_s > 0:
+                    time.sleep(pt.delay_s)
+            if release_delay_ms > 0:
+                time.sleep(release_delay_ms / 1000.0)
         finally:
             core.mouse_up(0)  # Always release, even on error
 
-    def move_mouse(self, x: int = 0, y: int = 0) -> None:
+    def move_mouse(self, x: int = 0, y: int = 0, *,
+                   trajectory: str = "instant",
+                   duration_ms: int = 500, steps: int | None = None,
+                   jitter: float = 0.0, overshoot: float = 0.0) -> None:
         """Move the mouse cursor to absolute screen coordinates.
 
         Args:
             x: Target X coordinate.
             y: Target Y coordinate.
+            trajectory: Motion mode — ``"instant"`` (default, teleport),
+                ``"linear"``, or ``"bezier"`` (human-like).
+            duration_ms: Total movement time in milliseconds (non-instant modes).
+            steps: Number of intermediate points (auto-calculated if omitted).
+            jitter: Max random perpendicular offset per step (pixels).
+            overshoot: Pixels to overshoot past target then correct back.
 
         Raises:
             NaturoCoreError: On system error.
         """
+        import time
+        from naturo.backends.windows._trajectory import generate_trajectory
+
         core = self._ensure_core()
-        core.mouse_move(x, y)
+
+        if trajectory == "instant":
+            core.mouse_move(x, y)
+            return
+
+        # Get current cursor position as trajectory start
+        try:
+            import ctypes
+            from ctypes import wintypes
+            point = wintypes.POINT()
+            ctypes.windll.user32.GetCursorPos(ctypes.byref(point))  # type: ignore[union-attr]
+            start_x, start_y = point.x, point.y
+        except Exception:
+            # Non-Windows or error: just teleport
+            core.mouse_move(x, y)
+            return
+
+        points = generate_trajectory(
+            start_x, start_y, x, y,
+            mode=trajectory, duration_ms=duration_ms, steps=steps,
+            jitter=jitter, overshoot=overshoot,
+        )
+
+        for pt in points:
+            core.mouse_move(pt.x, pt.y)
+            if pt.delay_s > 0:
+                time.sleep(pt.delay_s)
 
     def clipboard_get(self) -> str:
         """Get text content from the clipboard.

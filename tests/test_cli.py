@@ -171,7 +171,7 @@ def test_drag_help(runner):
     assert "--duration" in result.output
     assert "--steps" in result.output
     assert "--modifiers" in result.output
-    assert "--profile" in result.output
+    assert "--trajectory" in result.output
 
 
 def test_move_help(runner):

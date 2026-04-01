@@ -326,19 +326,23 @@ class TestBug035ClickWaitForHidden:
         assert "No such option" not in (result.output or "")
 
 
-class TestBug036MoveDurationHidden:
-    """BUG-036: move --duration is declared but not passed to backend; should be hidden."""
+class TestBug036MoveDurationVisible:
+    """BUG-036 resolved: move --duration is now wired to trajectory backend (#757)."""
 
     @pytest.fixture
     def runner(self):
         return CliRunner()
 
-    def test_duration_not_in_help(self, runner):
+    def test_duration_in_help(self, runner):
         result = runner.invoke(main, ["move", "--help"])
-        assert "--duration" not in result.output
+        assert "--duration" in result.output
+
+    def test_trajectory_in_help(self, runner):
+        result = runner.invoke(main, ["move", "--help"])
+        assert "--trajectory" in result.output
 
     def test_duration_still_accepted(self, runner):
-        """Hidden options should still be accepted."""
+        """Duration option should still be accepted."""
         result = runner.invoke(main, ["move", "--duration", "2", "--coords", "100", "100"])
         assert "No such option" not in (result.output or "")
 

@@ -189,10 +189,20 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @click.option("--steps", type=int, default=10, help="Interpolation steps", show_default=True)
 @click.option("--modifiers", multiple=True, help="Modifier keys to hold (ctrl, shift, alt)")
 @click.option(
+    "--trajectory",
+    type=click.Choice(["linear", "bezier", "instant"]),
+    default="linear",
+    help="Motion mode: linear (default), bezier (human-like), instant (teleport)",
+)
+@click.option("--jitter", type=float, default=0.0, help="Random perpendicular offset per step (pixels)")
+@click.option("--overshoot", type=float, default=0.0, help="Pixels to overshoot past target then correct back")
+@click.option("--release-delay", type=float, default=0.0, help="Pause before releasing button (seconds)")
+@click.option(
     "--profile",
     type=click.Choice(["linear", "ease-in-out"]),
     default="linear",
-    help="Motion profile",
+    hidden=True,
+    help="Deprecated: use --trajectory instead",
 )
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -203,7 +213,8 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
-         duration, steps, modifiers, profile, app, pid, window_title, hwnd, method,
+         duration, steps, modifiers, trajectory, jitter, overshoot, release_delay,
+         profile, app, pid, window_title, hwnd, method,
          app_id, json_output) -> None:
     """Drag from one element/position to another.
 
@@ -309,7 +320,10 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 
     try:
         backend.drag(from_x=fx, from_y=fy, to_x=tx, to_y=ty,
-                     duration_ms=duration_ms, steps=steps)
+                     duration_ms=duration_ms, steps=steps,
+                     trajectory=trajectory, jitter=jitter,
+                     overshoot=overshoot,
+                     release_delay_ms=int(release_delay * 1000))
     except Exception as exc:
         _common._json_err(str(exc), json_output)
         return
@@ -340,7 +354,16 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @click.option("--to", "to_text", help="Target element text")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Target X Y coordinates")
 @click.option("--id", "element_id", help="Target element automation ID")
-@click.option("--duration", type=float, default=0.0, help="Move duration (seconds)", hidden=True)
+@click.option(
+    "--trajectory",
+    type=click.Choice(["instant", "linear", "bezier"]),
+    default="instant",
+    help="Motion mode: instant (default, teleport), linear, bezier (human-like)",
+)
+@click.option("--duration", type=float, default=0.5, help="Movement duration in seconds (non-instant modes)")
+@click.option("--steps", type=int, default=None, help="Number of intermediate points (auto if omitted)")
+@click.option("--jitter", type=float, default=0.0, help="Random perpendicular offset per step (pixels)")
+@click.option("--overshoot", type=float, default=0.0, help="Pixels to overshoot past target then correct back")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
@@ -350,8 +373,8 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @_common._method_option
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
-         selector, method, app_id, json_output) -> None:
+def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overshoot,
+         app, pid, window_title, hwnd, selector, method, app_id, json_output) -> None:
     """Move the mouse cursor to a target element or coordinates.
 
     \b
@@ -383,12 +406,19 @@ def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
         return
 
     try:
-        backend.move_mouse(x, y)
+        backend.move_mouse(
+            x, y,
+            trajectory=trajectory,
+            duration_ms=int(duration * 1000),
+            steps=steps,
+            jitter=jitter,
+            overshoot=overshoot,
+        )
     except Exception as exc:
         _common._json_err(str(exc), json_output)
         return
 
     # Record the action
-    _common._record_action("move", {"x": x, "y": y})
+    _common._record_action("move", {"x": x, "y": y, "trajectory": trajectory})
 
-    _common._json_ok({"action": "moved", "x": x, "y": y}, json_output)
+    _common._json_ok({"action": "moved", "x": x, "y": y, "trajectory": trajectory}, json_output)

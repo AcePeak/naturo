@@ -94,10 +94,12 @@ class LinuxBackend(Backend):
     def scroll(self, direction="down", amount=3, x=None, y=None, smooth=False) -> None:
         raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
-    def drag(self, from_x=0, from_y=0, to_x=0, to_y=0, duration_ms=500, steps=10) -> None:
+    def drag(self, from_x=0, from_y=0, to_x=0, to_y=0, duration_ms=500, steps=10,
+             trajectory="linear", jitter=0.0, overshoot=0.0, release_delay_ms=0) -> None:
         raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
-    def move_mouse(self, x=0, y=0) -> None:
+    def move_mouse(self, x=0, y=0, *, trajectory="instant", duration_ms=500,
+                   steps=None, jitter=0.0, overshoot=0.0) -> None:
         raise NotImplementedError("Linux desktop automation is not yet supported. See https://github.com/AcePeak/naturo#platform-support")
 
     def clipboard_get(self) -> str:

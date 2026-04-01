@@ -368,7 +368,9 @@ class TestMoveSelectorFlag:
                 "--json",
             ])
             assert result.exit_code == 0, f"output: {result.output}"
-            mock_be.move_mouse.assert_called_once_with(140, 215)
+            mock_be.move_mouse.assert_called_once()
+            args, kwargs = mock_be.move_mouse.call_args
+            assert args == (140, 215)
         finally:
             for p in patches:
                 p.stop()
