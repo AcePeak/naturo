@@ -27,6 +27,10 @@ def menu_inspect(app, app_id, flat, json_output) -> None:
       naturo menu-inspect --flat              # Flat path list
       naturo menu-inspect --app notepad --json # JSON output
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#593) Resolve --app-id to hwnd before any other logic
     hwnd = None
     if app_id is not None:

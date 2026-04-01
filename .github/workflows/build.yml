@@ -12,6 +12,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  author-check:
+    name: Commit Author Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit authors
+        shell: bash
+        run: |
+          # Allowlist of known commit authors (agents + maintainers + bots)
+          ALLOWED_AUTHORS=(
+            "Dev-Sirius"
+            "QA-Mariana"
+            "Orc-Mycelium"
+            "AcePeak"
+            "dependabot[bot]"
+            "github-actions[bot]"
+          )
+
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          echo "Checking commits ${BASE}..${HEAD}"
+          UNKNOWN=()
+
+          while IFS= read -r author; do
+            FOUND=false
+            for allowed in "${ALLOWED_AUTHORS[@]}"; do
+              if [[ "$author" == "$allowed" ]]; then
+                FOUND=true
+                break
+              fi
+            done
+            if [[ "$FOUND" == false ]]; then
+              UNKNOWN+=("$author")
+            fi
+          done < <(git log --format='%an' "${BASE}..${HEAD}" | sort -u)
+
+          if [[ ${#UNKNOWN[@]} -gt 0 ]]; then
+            echo "::warning::Unknown commit author(s) detected: ${UNKNOWN[*]}"
+            echo "Allowed authors: ${ALLOWED_AUTHORS[*]}"
+            echo "If this is a new contributor, this is expected."
+          else
+            echo "All commit authors are in the allowlist."
+          fi
+
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest

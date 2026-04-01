@@ -44,6 +44,10 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # Resolve --app-id to hwnd (#595)
     resolved_hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id is not None and resolved_hwnd is None:

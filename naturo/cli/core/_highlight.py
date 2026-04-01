@@ -71,6 +71,10 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
       naturo highlight --app notepad --duration 10
       naturo highlight --app legacy --backend win32
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#593) Resolve --app-id to hwnd before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
