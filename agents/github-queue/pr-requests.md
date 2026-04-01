@@ -127,3 +127,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: fix/issue-784-type-newline-drop
+- **Base**: develop
+- **Title**: fix: send Enter/Tab for control chars in keystroke simulation (fixes #784)
+- **Body**: `naturo_key_type()` and `naturo_phys_key_type()` in `core/src/input.cpp` sent `\n`, `\r`, and `\t` characters as `KEYEVENTF_UNICODE` events which Windows silently dropped. Now detects these control characters and sends `VK_RETURN` / `VK_TAB` virtual-key (or scan code for hardware mode) events instead. Both normal and hardware input modes are fixed. Needs desktop CI verification.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
