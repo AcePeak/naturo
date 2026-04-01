@@ -1,4 +1,4 @@
-"""Tests for naturo.cli.dialog_cmd — dialog detect, accept, dismiss, click-button, type."""
+"""Tests for naturo.cli.system._dialog — dialog detect, accept, dismiss, click-button, type."""
 
 import json
 from unittest.mock import MagicMock, patch
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.dialog_cmd import dialog
+from naturo.cli.system import dialog
 from naturo.dialog import DialogButton, DialogInfo, DialogType
 
 
@@ -496,7 +496,7 @@ class TestDialogAppIdPromotion:
         """--app a1 should be treated as --app-id a1 in dialog detect."""
         mock_backend.detect_dialogs.return_value = []
         with patch("naturo.backends.base.get_backend", return_value=mock_backend), \
-             patch("naturo.cli.dialog_cmd.resolve_app_id_to_hwnd", return_value=99999) as mock_resolve:
+             patch("naturo.cli.system._dialog.resolve_app_id_to_hwnd", return_value=99999) as mock_resolve:
             result = runner.invoke(dialog, ["detect", "--app", "a1"])
         mock_resolve.assert_called_once_with("a1", None, False)
         assert result.exit_code == 0

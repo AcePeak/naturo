@@ -23,7 +23,7 @@ from naturo.cli import main
 # ``_importer`` which walks ``getattr`` and finds the Command; on 3.11+
 # it uses ``pkgutil.resolve_name`` which finds the module.  Using
 # ``patch.object`` with the real module works on every Python version.
-_get_cmd_mod = sys.modules["naturo.cli.get_cmd"]
+_get_cmd_mod = sys.modules["naturo.cli.values._get"]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

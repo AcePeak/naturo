@@ -23,17 +23,12 @@ from naturo.version import __version__
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, highlight
-from naturo.cli.get_cmd import get_cmd
-from naturo.cli.set_cmd import set_cmd
+from naturo.cli.values import get_cmd, set_cmd
 from naturo.cli.interaction import (
     click_cmd, type_cmd, press, hotkey, scroll, drag, move,
 )
-from naturo.cli.system import app
-from naturo.cli.clipboard_cmd import clipboard
-from naturo.cli.dialog_cmd import dialog
-from naturo.cli.taskbar_cmd import taskbar
-from naturo.cli.tray_cmd import tray
-from naturo.cli.desktop_cmd import desktop
+from naturo.cli._app_group import app
+from naturo.cli.system import clipboard, dialog, taskbar, tray, desktop
 from naturo.cli.snapshot import snapshot
 from naturo.cli.wait_cmd import wait
 from naturo.cli.app_cmd import (

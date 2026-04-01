@@ -1,4 +1,4 @@
-"""Tests for naturo.cli.clipboard_cmd — clipboard get, set, clear, info."""
+"""Tests for naturo.cli.system._clipboard — clipboard get, set, clear, info."""
 
 import json
 from unittest.mock import MagicMock, patch
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.clipboard_cmd import clipboard
+from naturo.cli.system import clipboard
 
 
 @pytest.fixture
