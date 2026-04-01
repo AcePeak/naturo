@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 6
-notes: "2026-04-02 R85: PASS — JSON mode returns exit 1 on failure, stderr clean."
+consecutive_passes: 7
+notes: "2026-04-02 R86: PASS — see/click -j return exit 1 on failure with JSON {success:false}."
 
 preconditions:
   - "naturo is installed and in PATH"

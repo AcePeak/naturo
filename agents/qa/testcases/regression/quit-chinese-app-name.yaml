@@ -5,10 +5,10 @@ category: regression
 priority: P1
 source_issue: 743
 created: 2026-04-01
-last_run: 2026-04-01
+last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 5
-notes: "2026-04-01 R82: PASS — naturo app quit 记事本 closes Notepad. Verified not in list apps."
+consecutive_passes: 6
+notes: "2026-04-02 R86: PASS — app quit 记事本 exit 0. Notepad verified closed via list apps."
 
 preconditions:
   - "naturo is installed and in PATH"

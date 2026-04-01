@@ -7,8 +7,8 @@ source_issue: 777
 created: 2026-04-01
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 7
-notes: "2026-04-02 R85: PASS — capture to /tmp/测试截图.png succeeded. CI DLL test still fails (#777)."
+consecutive_passes: 8
+notes: "2026-04-02 R86: PASS — capture to /tmp/中文路径/测试截图.png succeeded. CI test via DLL still fails (#777)."
 
 preconditions:
   - "naturo is installed and in PATH"
