@@ -151,3 +151,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: test/browser-page-element-coverage
+- **Base**: develop
+- **Title**: test: add 76 tests for BrowserPage and BrowserElement (CDP mocked)
+- **Body**: Fills the last major test coverage gap in the browser package. BrowserPage tests (44) cover construction, connection errors, properties, navigation, element finding, wait_for states, screenshot, evaluate, tabs, scrolling, lifecycle, and internal event waiting. BrowserElement tests (32) cover properties, attributes, click/hover/type interactions, scroll_into_view, child finding (CSS/XPath), bounding-rect calculation, and repr. All tests use mocked CDPClient — no Chrome required. 4242 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
