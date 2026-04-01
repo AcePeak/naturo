@@ -829,6 +829,10 @@ class MacOSBackend(Backend):
         to_y: int = 0,
         duration_ms: int = 500,
         steps: int = 10,
+        trajectory: str = "linear",
+        jitter: float = 0.0,
+        overshoot: float = 0.0,
+        release_delay_ms: int = 0,
     ) -> None:
         """Drag from one point to another.
 
@@ -839,6 +843,10 @@ class MacOSBackend(Backend):
             to_y: Ending Y coordinate.
             duration_ms: Drag duration in milliseconds.
             steps: Number of intermediate steps.
+            trajectory: Motion mode (ignored on macOS — uses Peekaboo drag).
+            jitter: Perpendicular jitter pixels (ignored on macOS).
+            overshoot: Overshoot pixels (ignored on macOS).
+            release_delay_ms: Pause before release (ignored on macOS).
         """
         args = [
             "drag",
@@ -849,12 +857,20 @@ class MacOSBackend(Backend):
             args += ["--duration", str(duration_ms / 1000.0)]
         self._run(args)
 
-    def move_mouse(self, x: int = 0, y: int = 0) -> None:
+    def move_mouse(self, x: int = 0, y: int = 0, *,
+                   trajectory: str = "instant",
+                   duration_ms: int = 500, steps: int | None = None,
+                   jitter: float = 0.0, overshoot: float = 0.0) -> None:
         """Move the mouse cursor to coordinates.
 
         Args:
             x: Target X coordinate.
             y: Target Y coordinate.
+            trajectory: Motion mode (ignored on macOS — always teleports).
+            duration_ms: Movement duration (ignored on macOS).
+            steps: Interpolation steps (ignored on macOS).
+            jitter: Perpendicular jitter (ignored on macOS).
+            overshoot: Overshoot pixels (ignored on macOS).
         """
         self._run(["move", "--x", str(x), "--y", str(y)])
 

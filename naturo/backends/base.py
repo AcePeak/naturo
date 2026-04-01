@@ -337,11 +337,16 @@ class Backend(ABC):
 
     @abstractmethod
     def drag(self, from_x: int, from_y: int, to_x: int, to_y: int,
-             duration_ms: int = 500, steps: int = 10) -> None:
+             duration_ms: int = 500, steps: int = 10,
+             trajectory: str = "linear", jitter: float = 0.0,
+             overshoot: float = 0.0, release_delay_ms: int = 0) -> None:
         ...
 
     @abstractmethod
-    def move_mouse(self, x: int, y: int) -> None:
+    def move_mouse(self, x: int, y: int, *,
+                   trajectory: str = "instant",
+                   duration_ms: int = 500, steps: int | None = None,
+                   jitter: float = 0.0, overshoot: float = 0.0) -> None:
         ...
 
     # === Clipboard ===
