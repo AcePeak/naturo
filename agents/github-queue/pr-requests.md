@@ -143,3 +143,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: test/browser-cmd-coverage
+- **Base**: develop
+- **Title**: test: add 56 tests for browser CLI subcommands
+- **Body**: Covers all 16 browser commands (navigate, find, click, type, text, attr, html, screenshot, eval, url, title, wait, tabs, tab, scroll, hover, close) plus group options and connection error handling. All tests use mocked BrowserPage — no Chrome required. 4222 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
