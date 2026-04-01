@@ -167,6 +167,8 @@ def run_cascade(
     coverage_target: float = 0.0,
     fill_gaps_ai: bool = False,
     ai_provider: str = "auto",
+    ai_model: Optional[str] = None,
+    ai_api_key: Optional[str] = None,
     screenshot_path: Optional[str] = None,
     screenshot_scale_factor: float = 1.0,
 ) -> CascadeResult:
@@ -385,6 +387,8 @@ def run_cascade(
             ai_elements = _get_cascade_pkg()._fetch_ai_elements(
                 screenshot_path, bounds, ai_provider,
                 scale_factor=screenshot_scale_factor,
+                model=ai_model,
+                api_key=ai_api_key,
             )
             elapsed = (time.monotonic() - t0) * 1000
 

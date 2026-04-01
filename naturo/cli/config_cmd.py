@@ -207,6 +207,67 @@ def config_show(json_output: bool) -> None:
             click.echo(f"  {var}: {display}")
 
 
+@config_cmd.command("models")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def config_models(json_output: bool) -> None:
+    """List available AI models for vision commands.
+
+    Shows all known models grouped by provider, with aliases and
+    availability status based on current credentials.
+
+    \b
+    Examples:
+        naturo config models
+        naturo config models --json
+    """
+    from naturo.config import MODEL_REGISTRY, MODEL_ALIASES
+    from naturo.providers.base import list_available_providers
+
+    available_providers = list_available_providers()
+
+    # Group models by provider
+    by_provider: dict[str, list[dict[str, str]]] = {}
+    for model_id, info in MODEL_REGISTRY.items():
+        provider = info["provider"]
+        by_provider.setdefault(provider, []).append({
+            "id": model_id,
+            "display": info["display"],
+        })
+
+    # Build alias reverse map
+    alias_map: dict[str, list[str]] = {}
+    for alias, canonical in MODEL_ALIASES.items():
+        alias_map.setdefault(canonical, []).append(alias)
+
+    if json_output:
+        result: dict = {"providers": {}}
+        for provider, models in sorted(by_provider.items()):
+            result["providers"][provider] = {
+                "available": provider in available_providers,
+                "models": [
+                    {
+                        "id": m["id"],
+                        "display": m["display"],
+                        "aliases": alias_map.get(m["id"], []),
+                    }
+                    for m in models
+                ],
+            }
+        click.echo(json.dumps(result, indent=2))
+    else:
+        click.echo("Available AI models for vision commands:\n")
+        for provider in sorted(by_provider):
+            status = "configured" if provider in available_providers else "not configured"
+            click.echo(f"  {provider} ({status}):")
+            for m in by_provider[provider]:
+                aliases = alias_map.get(m["id"], [])
+                alias_str = f"  (aliases: {', '.join(aliases)})" if aliases else ""
+                click.echo(f"    {m['id']:<35} {m['display']}{alias_str}")
+            click.echo()
+        click.echo("Usage: naturo see --model <model-id> --cascade --fill-gaps")
+        click.echo("       naturo find --model <model-id> --ai \"search query\"")
+
+
 @config_cmd.command("clear")
 @click.argument("provider", default="all")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")

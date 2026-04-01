@@ -325,9 +325,14 @@ def register_provider(name: str, cls: type) -> None:
 def get_vision_provider(name: str = "auto", **kwargs: Any) -> VisionProvider:
     """Get a vision provider by name, with auto-detection fallback.
 
+    When *name* is ``"auto"`` and a ``model`` kwarg is provided, the provider
+    is inferred from the model name (e.g. ``gpt-4o`` → ``openai``).
+
     Args:
-        name: Provider name ('anthropic', 'openai', 'ollama', or 'auto').
+        name: Provider name ('anthropic', 'openai', 'google', 'ollama',
+            or 'auto').
         **kwargs: Extra arguments passed to the provider constructor.
+            Commonly ``model`` and ``api_key``.
 
     Returns:
         Configured VisionProvider instance.
@@ -337,6 +342,13 @@ def get_vision_provider(name: str = "auto", **kwargs: Any) -> VisionProvider:
     """
     # Lazy-import providers to register them
     _ensure_providers_registered()
+
+    # When provider is "auto" and a model is specified, infer the provider
+    if name == "auto" and kwargs.get("model"):
+        from naturo.config import infer_provider_from_model
+        inferred = infer_provider_from_model(kwargs["model"])
+        if inferred and inferred in _PROVIDER_CLASSES:
+            name = inferred
 
     if name == "auto":
         return _auto_detect_provider(**kwargs)
@@ -360,7 +372,7 @@ def get_vision_provider(name: str = "auto", **kwargs: Any) -> VisionProvider:
 
 def _auto_detect_provider(**kwargs: Any) -> VisionProvider:
     """Try providers in priority order, return first available."""
-    priority = ["anthropic", "openai", "ollama"]
+    priority = ["anthropic", "openai", "google", "ollama"]
     for pname in priority:
         cls = _PROVIDER_CLASSES.get(pname)
         if cls is None:
@@ -416,6 +428,10 @@ def _ensure_providers_registered() -> None:
         pass
     try:
         import naturo.providers.openai_provider  # noqa: F401
+    except ImportError:
+        pass
+    try:
+        import naturo.providers.google_provider  # noqa: F401
     except ImportError:
         pass
     try:
