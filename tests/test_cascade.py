@@ -316,6 +316,49 @@ class TestRunCascade:
         assert vision_stat.elements == 1
         assert vision_stat.status == "ok"
 
+    def test_ai_model_and_api_key_threaded_to_fetch(self, tmp_path):
+        """ai_model and ai_api_key are forwarded to _fetch_ai_elements."""
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+
+        fake_screenshot = str(tmp_path / "screen.png")
+        Path(fake_screenshot).write_bytes(b"fake")
+
+        with patch("naturo.cascade._fetch_ai_elements", return_value=[]) as mock_ai:
+            run_cascade(
+                be, backend_name="uia",
+                fill_gaps_ai=True,
+                ai_provider="anthropic",
+                ai_model="claude-opus-4-6",
+                ai_api_key="sk-test-key",
+                screenshot_path=fake_screenshot,
+            )
+
+        mock_ai.assert_called_once()
+        call_kwargs = mock_ai.call_args
+        assert call_kwargs.kwargs.get("model") == "claude-opus-4-6"
+        assert call_kwargs.kwargs.get("api_key") == "sk-test-key"
+
+    def test_ai_model_defaults_to_none(self, tmp_path):
+        """When ai_model is not specified, None is passed to _fetch_ai_elements."""
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+
+        fake_screenshot = str(tmp_path / "screen.png")
+        Path(fake_screenshot).write_bytes(b"fake")
+
+        with patch("naturo.cascade._fetch_ai_elements", return_value=[]) as mock_ai:
+            run_cascade(
+                be, backend_name="uia",
+                fill_gaps_ai=True,
+                screenshot_path=fake_screenshot,
+            )
+
+        mock_ai.assert_called_once()
+        call_kwargs = mock_ai.call_args
+        assert call_kwargs.kwargs.get("model") is None
+        assert call_kwargs.kwargs.get("api_key") is None
+
 
 # ── CLI integration ───────────────────────────────────────────────────────────
 
@@ -349,6 +392,21 @@ class TestSeeCascadeCLI:
         runner = CliRunner()
         result = runner.invoke(main, ["see", "--help"])
         assert "--coverage" in result.output
+
+    def test_ai_provider_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-provider" in result.output
+
+    def test_ai_model_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-model" in result.output
+
+    def test_ai_api_key_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-api-key" in result.output
 
     def test_cascade_invokes_run_cascade(self):
         """When --cascade is passed, run_cascade() is called."""

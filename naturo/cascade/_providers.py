@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from naturo.backends.base import ElementInfo
 
@@ -102,6 +102,8 @@ def _fetch_ai_elements(
     window_bounds: tuple[int, int, int, int],
     provider_name: str = "auto",
     scale_factor: float = 1.0,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> List[ElementInfo]:
     """Use AI vision to identify additional elements from a screenshot.
 
@@ -118,6 +120,12 @@ def _fetch_ai_elements(
         DPI scale factor of the captured monitor (e.g. 1.5 for 150% DPI).
         AI returns coords in screenshot pixels; UIA uses physical (scaled)
         pixels.  We multiply AI coords by scale_factor to align them.
+    model:
+        AI model override (e.g. ``"claude-opus-4-6"``, ``"gpt-4o"``).
+        When ``None``, uses the provider's default model.
+    api_key:
+        API key override.  When ``None``, uses the provider's default
+        credentials (env var or credentials file).
 
     Returns a flat list of elements identified by the AI provider.
     Falls back gracefully if the provider is unavailable.
@@ -127,7 +135,12 @@ def _fetch_ai_elements(
         from naturo.errors import AIProviderUnavailableError
 
         try:
-            provider = get_vision_provider(provider_name)
+            kwargs: dict[str, str] = {}
+            if model:
+                kwargs["model"] = model
+            if api_key:
+                kwargs["api_key"] = api_key
+            provider = get_vision_provider(provider_name, **kwargs)
         except AIProviderUnavailableError:
             return []
 

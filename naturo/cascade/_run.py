@@ -167,6 +167,8 @@ def run_cascade(
     coverage_target: float = 0.0,
     fill_gaps_ai: bool = False,
     ai_provider: str = "auto",
+    ai_model: Optional[str] = None,
+    ai_api_key: Optional[str] = None,
     screenshot_path: Optional[str] = None,
     screenshot_scale_factor: float = 1.0,
 ) -> CascadeResult:
@@ -199,6 +201,12 @@ def run_cascade(
         When True, add AI vision as the final fallback provider.
     ai_provider:
         AI provider name (``"auto"`` | ``"anthropic"`` | ``"openai"`` | ``"ollama"``).
+    ai_model:
+        AI model override (e.g. ``"claude-opus-4-6"``, ``"gpt-4o"``).
+        When ``None``, uses the provider's default model.
+    ai_api_key:
+        API key override.  When ``None``, uses the provider's default
+        credentials (env var or credentials file).
     screenshot_path:
         Path to existing screenshot for AI vision (avoids re-capture).
     screenshot_scale_factor:
@@ -385,6 +393,8 @@ def run_cascade(
             ai_elements = _get_cascade_pkg()._fetch_ai_elements(
                 screenshot_path, bounds, ai_provider,
                 scale_factor=screenshot_scale_factor,
+                model=ai_model,
+                api_key=ai_api_key,
             )
             elapsed = (time.monotonic() - t0) * 1000
 
