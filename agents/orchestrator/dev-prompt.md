@@ -182,11 +182,11 @@ You are scheduled to run every hour. The next session starts whether you're done
    git commit -m "<type>: <description> (fixes #N)"
    ```
    Types: `fix:` (bug), `feat:` (feature), `refactor:` (restructure), `test:` (tests), `docs:` (documentation)
-2. Push, create PR, and enable auto-merge:
+2. Push and create PR **targeting develop** (NOT main):
    ```bash
    git push origin <branch>
-   gh pr create --title "<type>: <description> (fixes #N)" --body "## Changes\n- <what changed>\n\n## Testing\n- <how you tested>\n\n**[Dev-Sirius]**"
-   # Enable auto-merge — PR will merge automatically when CI passes
+   gh pr create --base develop --title "<type>: <description> (fixes #N)" --body "## Changes\n- <what changed>\n\n## Testing\n- <how you tested>\n\n**[Dev-Sirius]**"
+   # Enable auto-merge — PR will merge into develop when CI passes
    gh pr merge --auto --squash
    ```
 3. Comment on the issue:
@@ -254,8 +254,8 @@ Just make sure all your PRs have auto-merge enabled before ending the session.
 
 ## Absolute Rules
 - **Never leave an issue half-done.** Finish current issue before starting the next. But do as many as you can per session.
-- **Never push directly to main** (except status.md updates). All code goes through PR + CI.
-- **Never close issues** without a merged commit. Cite the exact commit hash.
+- **Never push directly to main OR develop.** All code goes through feature branch → PR → develop. Main is release-only.
+- **Never close issues.** Only QA can close issues after verification. Dev marks `status:done`, QA verifies and closes.
 - **Never work on a later milestone** while an earlier one has open issues.
 - **All code in English.** Comments, docstrings, commit messages, issue comments.
 - **Self-review before PR.** Read your own diff. Would you approve this PR from someone else?

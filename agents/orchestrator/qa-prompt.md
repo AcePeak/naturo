@@ -118,27 +118,42 @@ python -m pytest tests/ -v -m "e2e" --timeout=60 --timeout-method=thread --tb=sh
 ### If CI was skipped
 Report in Phase 8: `CI Desktop Tests: skipped (no new commits since <short-sha>)`
 
-## Phase 1 — Verify Dev Fixes (status:done issues)
-For each `status:done` issue without `verified` label:
-1. Read the Dev's fix comment to understand the change
+## Phase 1 — Verify Dev Fixes (status:done issues) — MANDATORY FIRST
+
+**This phase is MANDATORY and MUST complete before any other testing.**
+Every `status:done` issue represents work a Dev agent completed. You must verify
+and close ALL of them before moving to Phase 2.
+
+```bash
+# List ALL issues needing verification
+gh issue list --label "status:done" --state open --json number,title --jq '.[] | "#\(.number) \(.title)"'
+```
+
+For EACH `status:done` issue (do NOT skip any):
+1. Read the Dev's fix comment and the linked PR to understand the change
 2. **Test it on this machine** — you have a real desktop. For example:
    - If the fix is about `naturo see`, run `naturo see --app notepad` and check the output
    - If the fix is about `naturo click`, launch an app, find an element, click it, then verify with a screenshot
-3. **Cross-validate with AI Vision**:
+   - If it's a refactor (no user-facing change), verify tests pass: `python -m pytest tests/ -x -q --timeout=30`
+   - If it's a CI/docs change, verify the change is present in the files
+3. **Cross-validate with AI Vision** (when applicable):
    ```bash
    naturo capture --app <app> -o /tmp/qa-verify.png
    ```
    Then read the screenshot to visually confirm the operation worked.
-4. If verified:
+4. If verified — **close the issue**:
    ```bash
    gh issue comment N --body "**[QA-Mariana]** ✅ Verified on desktop runner. Tested: <what you did>. Screenshot confirms: <what you saw>."
    gh issue edit N --add-label "verified"
+   gh issue close N --reason completed
    ```
-5. If NOT verified:
+5. If NOT verified — reject back to Dev:
    ```bash
    gh issue comment N --body "**[QA-Mariana]** ❌ Verification FAILED on desktop runner.\n\nSteps: <what you did>\nExpected: <expected>\nActual: <actual>\nScreenshot: <description of what screenshot shows>"
    gh issue edit N --remove-label "status:done"
    ```
+
+**Do NOT proceed to Phase 2 until ALL `status:done` issues are processed.**
 
 ## Phase 2 — Professional Desktop E2E Testing
 You are on a REAL Windows machine. This phase is systematic, thorough, professional QA — every round.
