@@ -29,7 +29,7 @@ def runner() -> CliRunner:
 @pytest.fixture(autouse=True)
 def _patch_creds_path(creds_path: Path):
     """Redirect all credential I/O to temp path for every test."""
-    with patch("naturo.cli.config_cmd._CREDENTIALS_PATH", creds_path):
+    with patch("naturo.config.CREDENTIALS_PATH", creds_path):
         yield
 
 
@@ -40,32 +40,32 @@ class TestCredentialIO:
     """Test low-level credential file operations."""
 
     def test_load_empty(self, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials
+        from naturo.config import load_credentials
 
-        assert _load_credentials() == {}
+        assert load_credentials() == {}
 
     def test_save_and_load(self, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials, _save_credentials
+        from naturo.config import load_credentials, save_credentials
 
         data = {"anthropic": {"auth_mode": "api_key", "token": "sk-ant-test123"}}
-        _save_credentials(data)
+        save_credentials(data)
         assert creds_path.exists()
-        loaded = _load_credentials()
+        loaded = load_credentials()
         assert loaded == data
 
     def test_load_corrupt_json(self, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials
+        from naturo.config import load_credentials
 
         creds_path.parent.mkdir(parents=True, exist_ok=True)
         creds_path.write_text("not valid json{{{", encoding="utf-8")
-        assert _load_credentials() == {}
+        assert load_credentials() == {}
 
     def test_save_creates_parent_dirs(self, tmp_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
         deep_path = tmp_path / "a" / "b" / "c" / "credentials.json"
-        with patch("naturo.cli.config_cmd._CREDENTIALS_PATH", deep_path):
-            _save_credentials({"test": True})
+        with patch("naturo.config.CREDENTIALS_PATH", deep_path):
+            save_credentials({"test": True})
         assert deep_path.exists()
 
 
@@ -81,9 +81,9 @@ class TestConfigShow:
         assert "No credentials stored" in result.output
 
     def test_show_with_credentials(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
-        _save_credentials({"anthropic": {"auth_mode": "api_key", "token": "sk-ant-abcdef123456"}})
+        save_credentials({"anthropic": {"auth_mode": "api_key", "token": "sk-ant-abcdef123456"}})
         result = runner.invoke(main, ["config", "show"])
         assert result.exit_code == 0
         assert "anthropic" in result.output
@@ -94,9 +94,9 @@ class TestConfigShow:
         assert "3456" in result.output  # suffix shown
 
     def test_show_json(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
-        _save_credentials({"anthropic": {"auth_mode": "oauth", "token": "session-token-abcdefghij"}})
+        save_credentials({"anthropic": {"auth_mode": "oauth", "token": "session-token-abcdefghij"}})
         result = runner.invoke(main, ["config", "show", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -133,31 +133,31 @@ class TestConfigClear:
         assert "No stored credentials" in result.output
 
     def test_clear_specific_provider(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials, _save_credentials
+        from naturo.config import load_credentials, save_credentials
 
-        _save_credentials({
+        save_credentials({
             "anthropic": {"auth_mode": "api_key", "token": "sk-test"},
             "openai": {"auth_mode": "api_key", "token": "sk-openai"},
         })
         result = runner.invoke(main, ["config", "clear", "anthropic", "--yes"])
         assert result.exit_code == 0
         assert "anthropic" in result.output
-        remaining = _load_credentials()
+        remaining = load_credentials()
         assert "anthropic" not in remaining
         assert "openai" in remaining
 
     def test_clear_all(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials, _save_credentials
+        from naturo.config import load_credentials, save_credentials
 
-        _save_credentials({"anthropic": {"token": "a"}, "openai": {"token": "b"}})
+        save_credentials({"anthropic": {"token": "a"}, "openai": {"token": "b"}})
         result = runner.invoke(main, ["config", "clear", "all", "--yes"])
         assert result.exit_code == 0
-        assert _load_credentials() == {}
+        assert load_credentials() == {}
 
     def test_clear_json(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
-        _save_credentials({"anthropic": {"auth_mode": "api_key", "token": "sk-test"}})
+        save_credentials({"anthropic": {"auth_mode": "api_key", "token": "sk-test"}})
         result = runner.invoke(main, ["config", "clear", "anthropic", "--yes", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -172,12 +172,12 @@ class TestConfigClear:
         assert data["cleared"] == []
 
     def test_clear_abort_without_yes(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials, _save_credentials
+        from naturo.config import load_credentials, save_credentials
 
-        _save_credentials({"anthropic": {"token": "sk-test"}})
+        save_credentials({"anthropic": {"token": "sk-test"}})
         result = runner.invoke(main, ["config", "clear", "anthropic"], input="n\n")
         assert "Aborted" in result.output
-        assert _load_credentials() != {}
+        assert load_credentials() != {}
 
 
 # ── config setup anthropic ───────────────────────────────────────────────────
@@ -187,7 +187,7 @@ class TestConfigSetupAnthropic:
     """Test 'naturo config setup anthropic' command."""
 
     def test_setup_api_key_noninteractive(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials
+        from naturo.config import load_credentials
 
         result = runner.invoke(main, [
             "config", "setup", "anthropic",
@@ -199,12 +199,12 @@ class TestConfigSetupAnthropic:
         data = json.loads(result.output)
         assert data["success"] is True
         assert data["auth_mode"] == "api_key"
-        creds = _load_credentials()
+        creds = load_credentials()
         assert creds["anthropic"]["token"] == "sk-ant-testkey123456"
         assert creds["anthropic"]["auth_mode"] == "api_key"
 
     def test_setup_oauth_noninteractive(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials
+        from naturo.config import load_credentials
 
         result = runner.invoke(main, [
             "config", "setup", "anthropic",
@@ -216,7 +216,7 @@ class TestConfigSetupAnthropic:
         data = json.loads(result.output)
         assert data["success"] is True
         assert data["auth_mode"] == "oauth"
-        creds = _load_credentials()
+        creds = load_credentials()
         assert creds["anthropic"]["auth_mode"] == "oauth"
 
     def test_setup_empty_token_fails(self, runner: CliRunner):
@@ -243,16 +243,16 @@ class TestConfigSetupAnthropic:
         assert "token" in data["error"]["message"].lower()
 
     def test_setup_overwrites_existing(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _load_credentials, _save_credentials
+        from naturo.config import load_credentials, save_credentials
 
-        _save_credentials({"anthropic": {"auth_mode": "api_key", "token": "old-key"}})
+        save_credentials({"anthropic": {"auth_mode": "api_key", "token": "old-key"}})
         runner.invoke(main, [
             "config", "setup", "anthropic",
             "--mode", "oauth",
             "--token", "new-session-token",
             "--json",
         ])
-        creds = _load_credentials()
+        creds = load_credentials()
         assert creds["anthropic"]["auth_mode"] == "oauth"
         assert creds["anthropic"]["token"] == "new-session-token"
 
@@ -271,10 +271,10 @@ class TestRedaction:
         pass
 
     def test_redact_via_show_output(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
         token = "sk-ant-api03-verylongtokenvalue123456789"
-        _save_credentials({"anthropic": {"auth_mode": "api_key", "token": token}})
+        save_credentials({"anthropic": {"auth_mode": "api_key", "token": token}})
         result = runner.invoke(main, ["config", "show", "--json"])
         data = json.loads(result.output)
         redacted = data["providers"]["anthropic"]["token"]
@@ -286,9 +286,9 @@ class TestRedaction:
         assert "..." in redacted
 
     def test_redact_short_token(self, runner: CliRunner, creds_path: Path):
-        from naturo.cli.config_cmd import _save_credentials
+        from naturo.config import save_credentials
 
-        _save_credentials({"anthropic": {"auth_mode": "api_key", "token": "short"}})
+        save_credentials({"anthropic": {"auth_mode": "api_key", "token": "short"}})
         result = runner.invoke(main, ["config", "show", "--json"])
         data = json.loads(result.output)
         redacted = data["providers"]["anthropic"]["token"]

@@ -16,43 +16,12 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Optional
 
 import click
 
 from naturo.cli.fuzzy_group import FuzzyGroup
-
-_CREDENTIALS_PATH: Path = Path.home() / ".config" / "naturo" / "credentials.json"
-
-
-def _load_credentials() -> dict:
-    try:
-        if _CREDENTIALS_PATH.exists():
-            return json.loads(_CREDENTIALS_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        pass
-    return {}
-
-
-def _save_credentials(data: dict) -> None:
-    import tempfile
-    _CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=_CREDENTIALS_PATH.parent,
-        prefix=".tmp_",
-        suffix=".json",
-        delete=False,
-    ) as tmp:
-        json.dump(data, tmp, indent=2, ensure_ascii=False)
-        tmp_path = tmp.name
-    try:
-        os.replace(tmp_path, _CREDENTIALS_PATH)
-    except OSError:
-        os.unlink(tmp_path)
-        raise
+from naturo.config import CREDENTIALS_PATH, load_credentials, save_credentials
 
 
 @click.group(cls=FuzzyGroup)
@@ -136,22 +105,22 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
         raise SystemExit(1)
 
     # Persist
-    creds = _load_credentials()
+    creds = load_credentials()
     creds.setdefault("anthropic", {})
     creds["anthropic"]["auth_mode"] = mode
     creds["anthropic"]["token"] = token
-    _save_credentials(creds)
+    save_credentials(creds)
 
     if json_output:
         click.echo(json.dumps({
             "success": True,
             "provider": "anthropic",
             "auth_mode": mode,
-            "credentials_path": str(_CREDENTIALS_PATH),
+            "credentials_path": str(CREDENTIALS_PATH),
         }))
     else:
         click.echo(f"\n✅ Saved {mode} credentials for Anthropic.")
-        click.echo(f"   Path: {_CREDENTIALS_PATH}")
+        click.echo(f"   Path: {CREDENTIALS_PATH}")
         click.echo("\nVerify with: naturo config show")
 
 
@@ -165,7 +134,7 @@ def config_show(json_output: bool) -> None:
         naturo config show
         naturo config show --json
     """
-    creds = _load_credentials()
+    creds = load_credentials()
     env_vars = {
         "ANTHROPIC_API_KEY": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "ANTHROPIC_AUTH_TOKEN": bool(os.environ.get("ANTHROPIC_AUTH_TOKEN")),
@@ -179,7 +148,7 @@ def config_show(json_output: bool) -> None:
         return value[:6] + "..." + value[-4:] if len(value) > 12 else "***"
 
     if json_output:
-        result: dict = {"success": True, "credentials_path": str(_CREDENTIALS_PATH), "providers": {}, "env": {}}
+        result: dict = {"success": True, "credentials_path": str(CREDENTIALS_PATH), "providers": {}, "env": {}}
         for provider, data in creds.items():
             result["providers"][provider] = {
                 "auth_mode": data.get("auth_mode", "api_key"),
@@ -189,7 +158,7 @@ def config_show(json_output: bool) -> None:
             result["env"][var] = "set" if val else "not set"
         click.echo(json.dumps(result, indent=2))
     else:
-        click.echo(f"Credentials: {_CREDENTIALS_PATH}")
+        click.echo(f"Credentials: {CREDENTIALS_PATH}")
         click.echo("")
 
         if not creds:
@@ -219,7 +188,7 @@ def config_clear(provider: str, yes: bool, json_output: bool) -> None:
         naturo config clear anthropic
         naturo config clear all --yes
     """
-    creds = _load_credentials()
+    creds = load_credentials()
 
     if provider == "all":
         targets = list(creds.keys())
@@ -241,7 +210,7 @@ def config_clear(provider: str, yes: bool, json_output: bool) -> None:
 
     for t in targets:
         creds.pop(t, None)
-    _save_credentials(creds)
+    save_credentials(creds)
 
     if json_output:
         click.echo(json.dumps({"success": True, "cleared": targets}))
