@@ -24,3 +24,11 @@ Format:
 - **Date**: 2026-04-01
 - **Status**: pending
 
+## PR Request: docs/issue-774-roadmap-browser-scope
+- **Base**: develop
+- **Title**: docs: update ROADMAP.md with v0.3.1 shipped features and v0.3.2 browser scope (fixes #774)
+- **Body**: Added v0.3.1 section documenting the quality sprint (15+ bug fixes), AI vision improvements (model registry, provider CLI params), and input enhancements (mouse trajectories, strategy pattern). Added v0.3.2 section with browser automation scope (9 issues from #758-#766). No code changes.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
+
