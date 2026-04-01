@@ -23,7 +23,7 @@ import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
-from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
+from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
 
 
 @click.group(cls=FuzzyGroup)
@@ -67,6 +67,8 @@ def detect(app, hwnd, app_id, json_output) -> None:
         naturo dialog detect --app-id a1       # Filter by app ID
         naturo dialog detect --json            # JSON output
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -130,6 +132,8 @@ def accept(app, hwnd, app_id, json_output) -> None:
         naturo dialog accept --app-id a1       # Accept by app ID
         naturo dialog accept --json            # JSON output
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -202,6 +206,8 @@ def dismiss(app, hwnd, app_id, json_output) -> None:
         naturo dialog dismiss --app-id a1      # Dismiss by app ID
         naturo dialog dismiss --json           # JSON output
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -274,6 +280,8 @@ def click_button(button, app, hwnd, app_id, json_output) -> None:
         naturo dialog click-button "Don't Save"        # Click Don't Save
         naturo dialog click-button "Retry" --app-id a1 # By app ID
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -324,6 +332,8 @@ def dialog_type(text, do_accept, app, hwnd, app_id, json_output) -> None:
         naturo dialog type "hello.txt" --accept         # Type then click OK
         naturo dialog type "C:\\Users" --app-id a1       # By app ID
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:

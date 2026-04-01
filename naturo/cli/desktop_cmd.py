@@ -23,7 +23,7 @@ import click as _click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
-from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
+from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
 
 
 def _ensure_pyvda() -> None:
@@ -241,6 +241,8 @@ def desktop_move_window(
         naturo desktop move-window 1 --app-id a1        # Move by app ID
         naturo desktop move-window 2                    # Move foreground
     """
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:

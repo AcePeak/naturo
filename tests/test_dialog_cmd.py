@@ -483,3 +483,20 @@ class TestDialogHelp:
     def test_dismiss_help(self, runner):
         result = runner.invoke(dialog, ["dismiss", "--help"])
         assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# App ID promotion (#776): --app aN must be promoted to --app-id
+# ---------------------------------------------------------------------------
+
+class TestDialogAppIdPromotion:
+    """Verify --app aN is promoted to --app-id in dialog commands (#776)."""
+
+    def test_app_a1_promoted_in_detect(self, runner, mock_backend):
+        """--app a1 should be treated as --app-id a1 in dialog detect."""
+        mock_backend.detect_dialogs.return_value = []
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend), \
+             patch("naturo.cli.dialog_cmd.resolve_app_id_to_hwnd", return_value=99999) as mock_resolve:
+            result = runner.invoke(dialog, ["detect", "--app", "a1"])
+        mock_resolve.assert_called_once_with("a1", None, False)
+        assert result.exit_code == 0

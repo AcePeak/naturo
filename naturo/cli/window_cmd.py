@@ -14,7 +14,7 @@ import click
 from naturo.backends.base import get_backend as _get_backend_impl
 from naturo.cli.error_helpers import json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
-from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
+from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
 
 
 def _safe_echo(text: str, **kwargs) -> None:
@@ -94,6 +94,8 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     # Support positional NAME for backward compat: naturo window focus "Notepad"
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -146,6 +148,8 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output) -> None:
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -199,6 +203,8 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -249,6 +255,8 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -299,6 +307,8 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -348,6 +358,8 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output) -> None:
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -406,6 +418,8 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output) -> None:
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -475,6 +489,8 @@ def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output) 
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
