@@ -21,7 +21,19 @@ cat docs/ROADMAP.md
 ```
 Read agents/dev/SOUL.md for your complete responsibilities.
 
-### 0b. What happened since last session?
+### 0b. Verify GitHub tools are available (CRITICAL — do NOT skip)
+
+GitHub access is provided via MCP tools (not `gh` CLI). These tools may take 10-30 seconds to initialize at session start. You MUST verify they work before proceeding:
+
+1. Try to list issues: use the GitHub MCP tools or run `gh issue list -R AcePeak/naturo --limit 1`
+2. If the tool call fails or returns "not available":
+   - Wait 15 seconds, then retry
+   - Retry up to 3 times total
+   - If still unavailable after 3 retries, check if the tools need to be explicitly loaded (search for deferred tools)
+3. **NEVER skip GitHub operations.** If you cannot interact with GitHub, you cannot create PRs, check issues, or manage branches. Without GitHub access, your session is severely limited — focus only on tasks that don't require GitHub (running tests, code review), and clearly state in your session summary that GitHub tools were unavailable.
+4. **NEVER conclude "gh CLI not available" and move on.** The tools will load — be patient and retry.
+
+### 0c. What happened since last session?
 ```bash
 # Recent commits on develop — what got merged?
 git log --oneline -10 develop
@@ -41,6 +53,11 @@ gh pr list --author @me --state open --json number,title,reviewDecision --jq '.[
    git checkout <branch> && git fetch origin develop && git rebase origin/develop && git push --force-with-lease
    ```
 5. **PR is clean and mergeable but auto-merge not set** → `gh pr merge <number> --auto --squash`
+6. **PR merged but source branch still exists** → delete it immediately:
+   ```bash
+   gh api -X DELETE repos/AcePeak/naturo/git/refs/heads/<branch-name>
+   ```
+   Always verify after merge: `gh api repos/AcePeak/naturo/branches --jq '.[].name'` — only `main`, `develop`, and your active working branches should exist.
 
 **Also check ALL open PRs in the repo** (not just yours) — if any PR is stuck with CI green but not merged, help it:
 ```bash
@@ -48,7 +65,7 @@ gh pr list --state open --json number,title,author,mergeable,autoMergeRequest --
 ```
 For any PR where auto-merge is not enabled and CI is green → `gh pr merge <number> --auto --squash`
 
-### 0c. CI health check — DEEP DIAGNOSIS
+### 0d. CI health check — DEEP DIAGNOSIS
 ```bash
 gh run list --limit 5
 ```
@@ -85,7 +102,7 @@ gh run list --limit 5
    # For each: gh api repos/AcePeak/naturo/pulls/<number>/update-branch -X PUT
    ```
 
-### 0d. Determine what to work on
+### 0e. Determine what to work on
 ```bash
 # Get ALL open issues, grouped by milestone, sorted by priority
 gh issue list --state open --limit 100 --json number,title,labels,milestone \
@@ -106,7 +123,7 @@ gh issue list --state open --limit 100 --json number,title,labels,milestone \
 
 **NEVER work on a later milestone while the earlier one has open issues.**
 
-### 0e. Check for conflicts
+### 0f. Check for conflicts
 ```bash
 # Is anyone else working on the issue I want to pick?
 gh issue view N --json assignees,labels --jq '{assignees: .assignees | map(.login), labels: .labels | map(.name)}'
@@ -116,7 +133,7 @@ gh issue view N --json assignees,labels --jq '{assignees: .assignees | map(.logi
 
 ## Phase 1 — Execute (work through issues continuously)
 
-**Work through issues by priority. After completing each issue, loop back to Phase 0d to pick the next.**
+**Work through issues by priority. After completing each issue, loop back to Phase 0e to pick the next.**
 
 ### Time management (CRITICAL — sessions run hourly, must not overlap)
 You are scheduled to run every hour. The next session starts whether you're done or not. To avoid conflicts:

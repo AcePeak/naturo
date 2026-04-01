@@ -42,7 +42,10 @@ When filing issues found during simulation, note: `Discovered during: <user type
    - agents/qa/SOUL.md (your full responsibilities)
 3. Determine your persona for this round (see table above).
 
-2. Check current milestone status:
+4. **Verify GitHub tools are available (CRITICAL):**
+   GitHub access is provided via MCP tools, which may take 10-30 seconds to initialize. Try listing issues — if it fails, wait 15 seconds and retry (up to 3 times). NEVER skip GitHub operations or conclude tools are unavailable without retrying.
+
+5. Check current milestone status:
    ```bash
    # Get all open issues grouped by milestone (earliest first)
    gh issue list --state open --limit 100 --json number,title,labels,milestone \
