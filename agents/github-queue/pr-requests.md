@@ -83,15 +83,23 @@ Format:
 ## PR Request: feat/issue-758-chrome-profiles
 - **Base**: develop
 - **Title**: feat: add Chrome profile management — launch, list, delete (fixes #758)
-- **Body**: New `_launcher.py` module with Chrome/Chromium auto-discovery across Windows/Mac/Linux, profile-based user-data directories (`~/.config/naturo/browser-profiles/<name>/`), and CDP startup health check. ChromeProcess wrapper for graceful termination. Three new CLI commands: `browser launch` (--profile, --headless, --chrome-path, --extra-args), `browser profiles` (list with size/date), `browser profile-delete` (with --force). 51 new tests, all mocked (no desktop needed). Ruff clean, mypy clean.
+- **Body**: New `_launcher.py` module with Chrome/Chromium auto-discovery across Windows/Mac/Linux, profile-based user-data directories (`~/.config/naturo/browser-profiles/<name>/`), and CDP startup health check. ChromeProcess wrapper for graceful termination. Three new CLI commands: `browser launch` (--profile, --headless, --chrome-path, --extra-args), `browser profiles` (list with size/date), `browser profile-delete` (with --force). 53 new tests, all mocked (no desktop needed). Ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
-- **Status**: pending
+- **Status**: pending (branch recreated and force-pushed 2026-04-01)
 
 ## PR Request: feat/issue-760-anti-detection
 - **Base**: develop
 - **Title**: feat: add anti-detection defaults — stealth flags and JS patches (fixes #760)
-- **Body**: New `_stealth.py` module with Chrome launch flags (disable AutomationControlled, infobars, extensions, realistic window size) and 6 runtime JS patches (navigator.webdriver, plugins, languages, permissions, chrome.runtime, WebGL vendor). Patches registered via `Page.addScriptToEvaluateOnNewDocument` for persistence across navigations. Two CLI commands: `browser stealth` (apply to running browser), `browser stealth-flags` (print flags for manual launch). `get_stealth_flags()` helper for programmatic use. 28 new tests, all mocked. Ruff clean, mypy clean.
+- **Body**: New `_stealth.py` module with Chrome launch flags (disable AutomationControlled, infobars, extensions, realistic window size) and 6 runtime JS patches (navigator.webdriver, plugins, languages, permissions, chrome.runtime, WebGL vendor). Patches registered via `Page.addScriptToEvaluateOnNewDocument` for persistence across navigations. Two CLI commands: `browser stealth` (apply to running browser), `browser stealth-flags` (print flags for manual launch). 22 new tests, all mocked. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending (branch recreated and force-pushed 2026-04-01)
+
+## PR Request: feat/issue-764-iframe-support
+- **Base**: develop
+- **Title**: feat: add iframe support — frame listing, context switching (fixes #764)
+- **Body**: BrowserPage gains `frames()`, `frame(selector)`, `parent_frame()`, and `main_frame()` methods for navigating iframe hierarchies. Frame context uses `Page.createIsolatedWorld` so `find`/`find_all`/`evaluate` execute inside the target iframe. Supports nested frames with a context stack. One CLI command: `browser frames` (list all frames). 20 new tests, all mocked. Ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
