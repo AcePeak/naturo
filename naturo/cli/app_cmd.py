@@ -263,25 +263,46 @@ def app_list(ctx, show_all, json_output) -> None:
         if hasattr(backend, '_SYSTEM_PROCESS_NAMES'):
             system_processes = backend._SYSTEM_PROCESS_NAMES
         
+        # Resolve UWP host process name for ApplicationFrameHost windows
+        # so that UWP apps (Notepad, Calculator, Settings) display with
+        # their real process name instead of "ApplicationFrameHost.exe" (#749).
+        uwp_host = getattr(backend, '_UWP_HOST_PROCESS', 'applicationframehost.exe')
+        resolve_uwp = hasattr(backend, '_resolve_uwp_child_pid')
+
         filtered_windows = []
         seen_keys = set()
-        
+
         for w in windows:
             if not w.is_visible or w.is_minimized:
                 continue
             if not w.title or not w.title.strip():
                 continue
-            
+
             basename = os.path.basename(w.process_name).lower()
             if basename in system_processes:
                 continue
-            
+
+            # UWP apps: resolve real child process inside AFH (#749)
+            if resolve_uwp and basename == uwp_host:
+                real_pid, real_exe = backend._resolve_uwp_child_pid(w.handle)  # type: ignore[attr-defined]
+                if real_pid and real_exe:
+                    w = type(w)(
+                        handle=w.handle,
+                        title=w.title,
+                        process_name=real_exe,
+                        pid=real_pid,
+                        x=w.x, y=w.y,
+                        width=w.width, height=w.height,
+                        is_visible=w.is_visible,
+                        is_minimized=w.is_minimized,
+                    )
+
             # Deduplicate by (PID, title) to match backend.list_apps behavior for UWP apps
             key = (w.pid, w.title)
             if key in seen_keys:
                 continue
             seen_keys.add(key)
-            
+
             filtered_windows.append(w)
         
         windows = filtered_windows

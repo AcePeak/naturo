@@ -819,7 +819,7 @@ class ElementMixin:
 
             # Strategy 2: Enumerate all child windows and find one with
             # a different PID (fallback for WinUI 3 / non-CoreWindow apps).
-            children = self._find_uwp_content_children(afh_hwnd)
+            children = self._find_uwp_content_hwnd(afh_hwnd)
             logger.debug(
                 "UWP child PID resolution: AFH hwnd=%s pid=%d, children=%d",
                 afh_hwnd, afh_pid_val, len(children),
