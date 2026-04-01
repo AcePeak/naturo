@@ -103,3 +103,19 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: feat/issue-765-network-interception
+- **Base**: develop
+- **Title**: feat: add network request interception — monitor, intercept, mock (fixes #765)
+- **Body**: New `_network.py` module with `NetworkMonitor` class wrapping CDP Network/Fetch domains. Features: `capture_snapshot` (performance API), `find_requests` (glob filtering), `intercept` (continue/abort/fulfill with header/body overrides), `abort_pattern`/`mock_response` shorthands, JS-based fallback injection. `BrowserPage.network` property for lazy access. Two CLI commands: `browser requests` (list with filters) and `browser intercept` (add rules). 25 unit tests, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
+
+## PR Request: feat/issue-761-captcha-handling
+- **Base**: develop
+- **Title**: feat: add captcha handling architecture — detect, solve, inject (fixes #761)
+- **Body**: Pluggable captcha solver pattern with `CaptchaManager`, `CaptchaSolver` ABC, and two built-in solvers: `ManualSolver` (polls for user solution) and `TokenInjectionSolver` (injects pre-obtained tokens from external services). Detection via JS covers reCAPTCHA v2/v3, hCaptcha, Cloudflare Turnstile, and generic iframe captchas. Two CLI commands: `browser captcha-detect` and `browser captcha-solve` (--solver manual|token:TOKEN). 33 unit tests, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
