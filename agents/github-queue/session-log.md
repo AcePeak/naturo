@@ -2,27 +2,29 @@
 > Date: 2026-04-01
 
 ## Completed
-- refactor/issue-719-cli-by-domain: reorganized CLI commands by domain (fixes #719)
-  - Moved 5 system commands (clipboard, dialog, desktop, taskbar, tray) into `cli/system/` subdirectory
-  - Moved 2 value commands (get, set) into `cli/values/` subdirectory
-  - Renamed `system.py` to `_app_group.py` and removed 100+ lines of dead code (unused menu/taskbar/tray stubs)
-  - Updated all test imports and mock patch paths (9 test files)
-  - 4166 tests pass, ruff clean, mypy clean
+- feat/issue-762-browser-wait-mechanisms: added 4 browser wait methods + 4 CLI commands (fixes #762)
+  - BrowserPage.wait_for_navigation() — URL change + page load polling
+  - BrowserPage.wait_for_url(pattern) — substring/regex URL matching
+  - BrowserPage.wait_for_function(expression) — JS expression polling
+  - BrowserPage.wait_for_network_idle() — resource count stabilisation (replaces simplistic private method)
+  - CLI: wait-navigation, wait-url, wait-function, wait-network-idle
+  - 11 new unit tests, all 4184 tests pass, ruff clean, mypy clean
 
 ## Pushed branches (awaiting PR)
-- refactor/issue-719-cli-by-domain: CLI domain reorganization (fixes #719)
+- feat/issue-762-browser-wait-mechanisms: browser wait mechanisms (fixes #762)
 
 ## Rebased branches
 - refactor/config-cmd-deduplicate-credentials: rebased onto develop, pushed
 - docs/issue-721-example-scripts: rebased onto develop, pushed
 - docs/issue-722-mcp-server-reference: rebased onto develop, pushed
+- refactor/issue-719-cli-by-domain: rebased onto develop, pushed
 
 ## Issues found but not fixed
-- app_cmd.py (1,237 lines) and window_cmd.py (616 lines) could be further split into subdirectories
-- wait_cmd.py, diff_cmd.py, config_cmd.py remain flat in cli/ — could be grouped in future passes
-- browser_cmd.py (628 lines) could move to cli/browser/ subdirectory
+- No iframe support in browser module (#764) — needs CDP frame context switching for cross-origin iframes
+- _wait_for_network_idle (private) on BrowserPage still used by navigate(wait_until="networkidle") — could be updated to use the new public method
 
 ## Next session should
-- Verify 4 pushed branches have PRs created by Orc-Mycelium (3 from last session + 1 new)
-- Consider moving remaining flat *_cmd.py files (app, window, browser, wait, diff, config) into domain subdirectories
-- If all PRs merged, pick next P2 items: #723 (cost guardrails), #727 (good-first-issues)
+- Verify 5 pushed branches have PRs created by Orc-Mycelium (4 rebased + 1 new)
+- Implement #764 (iframe support) — foundation for real-world browser automation
+- Consider #760 (anti-detection defaults) — important for production browser automation
+- Update navigate() to use the new public wait_for_network_idle instead of private _wait_for_network_idle
