@@ -119,3 +119,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending
+
+## PR Request: fix/issue-785-uwp-launch-pid
+- **Base**: develop
+- **Title**: fix: resolve real app PID after Windows cmd /c start launch (fixes #785)
+- **Body**: On Windows, `launch_app` used `cmd /c start` which returns cmd.exe's PID, not the actual application PID. For UWP apps like Calculator, the real process runs under a completely different PID. Now waits for cmd.exe to exit, then polls `find_process` to locate the actual app process by name/alias. Falls back to cmd.exe PID if the process isn't found within 3 seconds (or the full timeout if `--wait-until-ready`). 5 new tests covering PID resolution, alias fallback, wait-until-ready, and timeout. All 94 process tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
