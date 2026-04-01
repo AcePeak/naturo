@@ -56,3 +56,11 @@ Format:
 - **Date**: 2026-04-01
 - **Status**: pending (rebased 2026-04-01)
 
+## PR Request: refactor/config-cmd-deduplicate-credentials
+- **Base**: develop
+- **Title**: refactor: deduplicate credential functions in config_cmd.py
+- **Body**: config_cmd.py had private _load_credentials(), _save_credentials(), and _CREDENTIALS_PATH that duplicated the public API in naturo.config. Replaced with imports from naturo.config to ensure consistent behavior (e.g. debug logging on read failure) and reduce maintenance burden. Removed 31 lines of duplicate code. Tests updated to use naturo.config directly. All 25 config_cmd tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
+
