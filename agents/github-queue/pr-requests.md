@@ -40,6 +40,14 @@ Format:
 - **Date**: 2026-04-01
 - **Status**: pending
 
+## PR Request: docs/issue-722-mcp-server-reference
+- **Base**: develop
+- **Title**: docs: create dedicated MCP server reference (fixes #722)
+- **Body**: Comprehensive reference for all 60+ MCP tools across 11 modules (capture, window, UI inspection, input, app control, wait, snapshot, clipboard, dialog, system, Excel). Includes setup instructions for stdio/SSE/HTTP transports, parameter details, common patterns, error handling, and a worked Notepad automation example.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
+
 ## PR Request: fix/trajectory-and-registry-quality
 - **Base**: develop
 - **Title**: fix: consistent rounding in trajectory + model registry edge cases
