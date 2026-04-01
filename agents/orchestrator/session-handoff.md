@@ -37,7 +37,7 @@ Major features and improvements planned:
 | Category | Issues |
 |----------|--------|
 | **Selector system** | #104 (built-in templates for top 20 apps), #105 (save/load/list/export) |
-| **Browser automation** | #758 (Chrome profile mgmt), #759 (`naturo browser` subcommand), #760 (anti-detection defaults), #762 (wait mechanisms) |
+| **Browser automation** | #758 (Chrome profile mgmt), #759 (`naturo browser` subcommand + hover/scroll/click-offset/download), #760 (anti-detection defaults), #762 (wait mechanisms), #764 (iframe support), #765 (network interception/listening) |
 | **Input primitives** | #757 (human-like mouse motion: bezier, jitter, overshoot) |
 | **Captcha architecture** | #761 (hooks, motion primitives, cookie mgmt, third-party integration) |
 | **Validation** | #763 (client script equivalence: 5-phase validation against rpa-client-* patterns) |
