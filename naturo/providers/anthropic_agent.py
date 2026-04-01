@@ -20,9 +20,11 @@ from naturo.providers.agent_base import (
     get_system_prompt,
 )
 
+from naturo.providers.model_registry import get_default_model
+
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "claude-sonnet-4-20250514"
+_DEFAULT_MODEL = get_default_model("anthropic", "agent")
 
 _SYSTEM_PROMPT = get_system_prompt(tool_noun="tool")
 

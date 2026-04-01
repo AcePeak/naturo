@@ -95,10 +95,10 @@ class TestResolveModel:
         assert _resolve_model("sonnet") == "claude-sonnet-4-20250514"
 
     def test_alias_haiku(self) -> None:
-        assert _resolve_model("haiku") == "claude-3-haiku-20240307"
+        assert _resolve_model("haiku") == "claude-haiku-4-5-20251001"
 
     def test_alias_opus(self) -> None:
-        assert _resolve_model("opus") == "claude-opus-4-20250514"
+        assert _resolve_model("opus") == "claude-opus-4-6"
 
     def test_passthrough(self) -> None:
         assert _resolve_model("claude-sonnet-4-20250514") == "claude-sonnet-4-20250514"
@@ -331,7 +331,7 @@ class TestAnthropicVisionProviderInit:
 
     def test_model_alias(self) -> None:
         p = AnthropicVisionProvider(api_key="sk-ant-api03-test", model="haiku")
-        assert p._model == "claude-3-haiku-20240307"
+        assert p._model == "claude-haiku-4-5-20251001"
 
     def test_model_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("NATURO_AI_MODEL", "claude-3-opus-20240229")
@@ -408,7 +408,7 @@ class TestAnthropicDescribeScreenshot:
         result = p.describe_screenshot(fake_image)
 
         assert result.description == "Notepad window"
-        assert result.model == "claude-sonnet-4-20250514"
+        assert result.model == "claude-opus-4-6"
         assert result.tokens_used == 150
 
     @patch("naturo.providers.anthropic_provider.AnthropicVisionProvider._get_client")
