@@ -48,11 +48,20 @@ import naturo.cli.core._common as _common
 )
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
+@click.option("--ai-provider", "ai_provider",
+              type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+              default="auto",
+              help="AI vision provider for --cascade/--fill-gaps (default: auto)")
+@click.option("--ai-model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
+              help="AI model override (e.g. claude-opus-4-6, gpt-4o)")
+@click.option("--ai-api-key", "ai_api_key", default=None,
+              help="AI provider API key (overrides env var / credentials file)")
 def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | None,
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
-        json_output: bool, backend: str, app_id: str | None) -> None:
+        json_output: bool, backend: str, app_id: str | None,
+        ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -80,6 +89,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     Examples:
         naturo see --app feishu --cascade      # UIA + CDP for Electron content
         naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
+        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # Use specific AI model
         naturo see --app feishu --cascade --stats      # Show provider breakdown
         naturo see --app feishu --backend auto         # Try all A11y backends
         naturo see --app feishu --backend hybrid       # Per-node backend selection
@@ -176,6 +186,9 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 backend_name=backend,
                 coverage_target=coverage_target,
                 fill_gaps_ai=fill_gaps,
+                ai_provider=ai_provider,
+                ai_model=ai_model,
+                ai_api_key=ai_api_key,
                 screenshot_path=cascade_screenshot,
                 screenshot_scale_factor=(
                     cascade_capture_result.scale_factor
