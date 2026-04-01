@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 1
-notes: "2026-04-01 R80: PASS — see/capture/click/type -j all return exit 1 on failure. JSON to stdout, error to stderr. Issue #781 appears fixed."
+consecutive_passes: 2
+notes: "2026-04-01 R81: PASS — see/capture -j return exit 1 on failure with JSON {success:false}. Issue #781 fix holding."
 
 preconditions:
   - "naturo is installed and in PATH"
