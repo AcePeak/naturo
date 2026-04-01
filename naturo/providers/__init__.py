@@ -12,10 +12,24 @@ from naturo.providers.base import (
     get_vision_provider,
     list_available_providers,
 )
+from naturo.providers.model_registry import (
+    ModelInfo,
+    get_default_model,
+    get_model_info,
+    list_aliases,
+    list_models,
+    resolve_model,
+)
 
 __all__ = [
+    "ModelInfo",
     "VisionProvider",
     "VisionResult",
+    "get_default_model",
+    "get_model_info",
     "get_vision_provider",
+    "list_aliases",
     "list_available_providers",
+    "list_models",
+    "resolve_model",
 ]

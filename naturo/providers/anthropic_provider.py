@@ -39,17 +39,11 @@ from naturo.providers.base import (
     register_provider,
 )
 
+from naturo.providers.model_registry import get_default_model, resolve_model
+
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "claude-sonnet-4-20250514"
-
-# Model aliases — resolve shorthand to canonical model IDs
-_MODEL_ALIASES: dict[str, str] = {
-    "opus-4-6": "claude-opus-4-6",
-    "opus": "claude-opus-4-20250514",
-    "sonnet": "claude-sonnet-4-20250514",
-    "haiku": "claude-3-haiku-20240307",
-}
+_DEFAULT_MODEL = get_default_model("anthropic", "vision")
 
 # OAuth constants (from Anthropic CLI / pi-ai SDK)
 _OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
@@ -105,7 +99,7 @@ def _resolve_auth() -> tuple[str, str]:
 
 def _resolve_model(model: str) -> str:
     """Resolve a model alias or return *model* unchanged if not an alias."""
-    return _MODEL_ALIASES.get(model, model)
+    return resolve_model(model, provider="anthropic")
 
 
 # ---------------------------------------------------------------------------

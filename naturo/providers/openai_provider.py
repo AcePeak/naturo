@@ -18,9 +18,11 @@ from naturo.providers.base import (
     register_provider,
 )
 
+from naturo.providers.model_registry import get_default_model, resolve_model
+
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "gpt-4o"
+_DEFAULT_MODEL = get_default_model("openai", "vision")
 _DEFAULT_DESCRIBE_PROMPT = """\
 Analyze this screenshot and describe what you see. Include:
 1. The application name and window state
@@ -60,7 +62,8 @@ class OpenAIVisionProvider:
         base_url: Optional[str] = None,
     ) -> None:
         self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-        self._model = model or os.environ.get("NATURO_AI_MODEL", _DEFAULT_MODEL)
+        raw_model = model or os.environ.get("NATURO_AI_MODEL", _DEFAULT_MODEL)
+        self._model = resolve_model(raw_model, provider="openai")
         self._base_url = base_url or os.environ.get("OPENAI_BASE_URL")
 
     @property

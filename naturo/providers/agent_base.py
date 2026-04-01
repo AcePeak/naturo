@@ -310,7 +310,9 @@ class BaseAgentProvider(abc.ABC):
     ) -> None:
         self._api_key = api_key or os.environ.get(api_key_env, "")
         self._api_key_env = api_key_env
-        self._model = model or os.environ.get("NATURO_AGENT_MODEL", default_model)
+        from naturo.providers.model_registry import resolve_model
+        raw_model = model or os.environ.get("NATURO_AGENT_MODEL", default_model)
+        self._model = resolve_model(raw_model)
         self._conversation: list[dict[str, Any]] = []
 
     # -- Abstract interface --------------------------------------------------

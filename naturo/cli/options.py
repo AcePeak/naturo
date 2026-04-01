@@ -202,13 +202,13 @@ def ai_provider_options(func):
     )(func)
     func = click.option(
         "--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
-        help="AI model name (e.g. claude-sonnet-4-20250514, gpt-4o)",
+        help="AI model name or alias (e.g. opus-4.6, sonnet, 4o, gemini-pro)",
     )(func)
     func = click.option(
         "--provider", "ai_provider",
-        type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+        type=click.Choice(["auto", "anthropic", "openai", "google", "ollama"]),
         default="auto",
-        help="AI provider: auto (default), anthropic, openai, ollama",
+        help="AI provider: auto, anthropic, openai, google (Gemini), ollama",
     )(func)
     return func
 
@@ -240,9 +240,10 @@ def get_vision_provider_from_options(
         If no provider is configured.
     """
     from naturo.providers.base import get_vision_provider
+    from naturo.providers.model_registry import resolve_model as _resolve
     kwargs: dict = {}
     if model:
-        kwargs["model"] = model
+        kwargs["model"] = _resolve(model)
     if api_key:
         kwargs["api_key"] = api_key
     return get_vision_provider(provider, **kwargs)
