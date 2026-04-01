@@ -60,3 +60,4 @@
 - [TC-0036](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **retired** (5 passes, #743 closed)
 - [TC-0039](exploratory/app-id-filter-see.yaml) — P1: --app aN (app ID) fails for see/click but --app-id aN works — **retired** (5 passes, #752 closed)
 - [TC-0042](exploratory/json-stderr-duplicate-error.yaml) — P2: JSON mode (-j) emits duplicate error to stderr, breaks 2>&1 pipe — **active**
+- [TC-0044](exploratory/click-coords-out-of-bounds.yaml) — P2: click --coords accepts out-of-bounds coordinates without warning — **active**

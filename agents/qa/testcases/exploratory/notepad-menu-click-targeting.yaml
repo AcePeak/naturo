@@ -8,7 +8,7 @@ created: 2026-03-31
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R87: FAIL — click e14 (文件 menu) reported success but screenshot shows no dropdown opened."
+notes: "2026-04-02 R88: FAIL — click e16 (MenuItem 文件) reported success but screenshot shows no dropdown opened. Also confirmed via keyboard Alt+F."
 
 preconditions:
   - "naturo is installed and in PATH"

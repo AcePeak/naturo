@@ -7,8 +7,8 @@ source_issue: 777
 created: 2026-04-01
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 9
-notes: "2026-04-02 R87: PASS — capture to /tmp/中文路径/测试截图.png succeeded."
+consecutive_passes: 10
+notes: "2026-04-02 R88: PASS — capture to /tmp/中文路径/测试截图.png succeeded."
 
 preconditions:
   - "naturo is installed and in PATH"
