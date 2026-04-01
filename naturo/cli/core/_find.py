@@ -63,6 +63,10 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#593) Resolve --app-id to hwnd before any other logic
     hwnd = None
     if app_id is not None:

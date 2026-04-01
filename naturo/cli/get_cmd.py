@@ -104,6 +104,10 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
     if json_output is None:
         json_output = ctx.obj.get("json", False) if ctx.obj else False
 
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#522) Resolve --app-id to hwnd override (consistent with
     # see/click/capture/type which all accept --app-id).
     # (#582) Do NOT leak process_name as app — it may be a full path

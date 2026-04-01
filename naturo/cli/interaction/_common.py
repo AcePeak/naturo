@@ -395,6 +395,11 @@ def _resolve_app_id(
         Tuple of (app, hwnd, pid) — possibly overridden from the ID map.
         Returns (None, None, None) with error emitted if ID is invalid.
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    if app_id is None and app is not None:
+        from naturo.cli.options import maybe_promote_app_to_app_id
+        app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     if app_id is None:
         return app, hwnd, pid
 

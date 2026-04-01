@@ -121,6 +121,10 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
     if json_output is None:
         json_output = ctx.obj.get("json", False) if ctx.obj else False
 
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#582) Resolve --app-id to hwnd override.
     # Use hwnd only, not process_name (avoids #576 full-path bug).
     if app_id is not None:

@@ -53,6 +53,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
         naturo capture --app-id a1 --element e12        # element by app ID
         naturo capture -o output.png                    # save to output.png
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#361) Resolve --app-id to app/hwnd before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map

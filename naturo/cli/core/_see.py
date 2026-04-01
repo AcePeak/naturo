@@ -84,6 +84,10 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         naturo see --app feishu --backend auto         # Try all A11y backends
         naturo see --app feishu --backend hybrid       # Per-node backend selection
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
