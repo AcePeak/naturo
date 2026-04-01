@@ -16,6 +16,7 @@
 - [TC-0041](regression/json-mode-exit-code-zero-on-failure.yaml) — P1: JSON mode (-j) returns exit code 0 on failure, breaking scripts — **active**
 - [TC-0042](regression/type-escape-newline-dropped.yaml) — P1: type -E silently drops newline chars during keystroke simulation — **active**
 - [TC-0043](regression/calculator-uwp-invisible.yaml) — P0: app launch calculator reports success but Calculator invisible to list/see (#785) — **active**
+- [TC-0045](regression/type-stale-pid-silent-failure.yaml) — P0: type --app routes to stale PID after app restart, silently drops keystrokes — **active**
 
 ## E2E Tests
 - [TC-0004](e2e/calculator-basic-flow.yaml) — P1: Calculator see→click→verify flow — **active**
