@@ -124,6 +124,44 @@ See [design doc](design/UNIFIED_APP_MODEL.md).
 - [x] Unified Selector format specification ([design doc](design/UNIFIED_SELECTOR.md))
 - [x] Post-action verification engine (`--verify/--no-verify` on type/click/press, #231)
 
+## 0.3.1 ✅ — Quality Sprint + AI Vision + Input Enhancements
+
+Bug-fix and quality release with 15+ fixes, AI vision improvements, and input layer enhancements.
+
+### Bug Fixes
+- [x] JSON mode exit code consistency (exit 1 on failure with `{success: false}`)
+- [x] UWP app enumeration and quit (#749, #750)
+- [x] Chinese app name matching and file path encoding (#738, #743)
+- [x] `--app` flag accepting app IDs (`--app a1` → `--app-id a1`) (#752)
+- [x] Window/dialog/desktop command app ID promotion (#776)
+- [x] Commit author validation in CI (#724)
+
+### AI Vision
+- [x] Centralized AI model registry with friendly aliases (`opus`, `4o`, `gemini-2.5-pro`)
+- [x] `--ai-provider`/`--ai-model`/`--ai-api-key` CLI parameters for `see --cascade`
+- [x] Gemini vision provider support
+
+### Input Enhancements
+- [x] Human-like mouse trajectory primitives (linear, bezier, overshoot modes)
+- [x] Strategy pattern for mouse movement (instant, linear, bezier, auto)
+- [x] Consistent coordinate rounding across trajectory modes
+
+## 0.3.2 — Browser Automation
+
+Native browser automation via Chrome DevTools Protocol, bridging the gap between desktop and web automation.
+
+See issues #758–#766 for detailed specifications.
+
+- [ ] Chrome profile management (#758)
+- [ ] Browser subcommand (`naturo browser`) (#759)
+- [ ] Anti-detection defaults (#760)
+- [ ] Captcha handling architecture (#761)
+- [ ] Browser wait mechanisms (#762)
+- [ ] iframe support (#764)
+- [ ] Network request interception (#765)
+- [ ] Client script validation (#763)
+- [ ] Migration guide acceptance tests (#766)
+
 ## 0.4.0 — Unified Selector Engine + Enterprise Features + Open Source Polish
 
 Unified Selector system, deep enterprise automation capabilities from Naturobot engine, and continued open source launch efforts.
