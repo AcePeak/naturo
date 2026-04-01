@@ -514,10 +514,11 @@ def _matches_app_by_process_name(proc_name_lower: str, name_lower: str) -> bool:
 def _resolve_pid_from_backend(name: str) -> int | None:
     """Resolve a PID via the window backend for UWP-aware lookup (#505).
 
-    The backend's ``list_windows()`` applies UWP child process resolution
-    (finding the real app PID inside ApplicationFrameHost), which raw
-    ``tasklist`` does not.  This ensures ``app quit notepad`` targets the
-    actual Notepad process, not the stale AFH host PID.
+    First tries ``list_windows()`` with direct process-name matching.
+    Falls back to ``list_apps()`` which applies UWP child process
+    resolution (finding the real app PID inside ApplicationFrameHost).
+    This ensures ``app quit "计算器"`` targets the actual CalculatorApp
+    process, not the stale AFH host PID (#750).
 
     Uses process-name matching only (no title matching) to avoid
     cross-process contamination (#465, #743).
@@ -531,6 +532,15 @@ def _resolve_pid_from_backend(name: str) -> int | None:
             proc_name = os.path.basename(w.process_name).lower()
             if _matches_app_by_process_name(proc_name, name_lower):
                 return w.pid
+
+        # Fallback: list_apps() resolves UWP child PIDs inside
+        # ApplicationFrameHost windows (#750).  list_windows() reports
+        # UWP apps as "ApplicationFrameHost.exe" which never matches
+        # user-facing names like "计算器".
+        for app in be.list_apps():
+            proc_name = os.path.basename(app.get("process", "")).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
+                return app["pid"]
     except Exception:
         logger.debug("Backend PID resolution failed for %r, falling back", name)
     return None
@@ -543,11 +553,16 @@ def _close_all_windows_for_app(name: str) -> list[int]:
     matching the app name.  WM_CLOSE triggers a proper graceful close that
     does not activate Windows session restore (unlike ``taskkill /F``).
 
+    For UWP apps hosted by ApplicationFrameHost.exe, uses ``list_apps()``
+    to resolve the real child process and identify the correct AFH windows
+    to close (#750).
+
     Args:
         name: Application name (matched against process names and aliases).
 
     Returns:
-        List of PIDs that had windows closed.
+        List of PIDs that had windows closed (includes resolved UWP child
+        PIDs so the caller can wait for the real app process to exit).
     """
     try:
         from naturo.backends.base import get_backend
@@ -561,15 +576,46 @@ def _close_all_windows_for_app(name: str) -> list[int]:
     name_lower = name.lower()
     closed_pids: list[int] = []
 
+    # Resolve UWP app PIDs and their AFH window titles via list_apps()
+    # (#750).  list_windows() reports UWP apps as ApplicationFrameHost.exe,
+    # so process-name matching alone misses them.
+    uwp_resolved_pids: set[int] = set()
+    uwp_afh_titles: set[str] = set()
+    try:
+        for app in be.list_apps():
+            proc_name = os.path.basename(app.get("process", "")).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
+                uwp_resolved_pids.add(app["pid"])
+                if app.get("title"):
+                    uwp_afh_titles.add(app["title"])
+    except Exception:
+        logger.debug("list_apps() fallback failed for %r", name)
+
     for w in windows:
         proc_name = os.path.basename(w.process_name).lower()
-        if _matches_app_by_process_name(proc_name, name_lower):
+        match = _matches_app_by_process_name(proc_name, name_lower)
+
+        # For AFH windows: match by UWP-resolved title (#750).
+        # This is safe because we only check AFH windows whose titles
+        # were confirmed by list_apps() to belong to matching UWP apps.
+        if not match and w.title in uwp_afh_titles:
+            proc_stem = proc_name.removesuffix(".exe")
+            if proc_stem == "applicationframehost":
+                match = True
+
+        if match:
             try:
                 be.close_window(hwnd=w.handle)
                 if w.pid not in closed_pids:
                     closed_pids.append(w.pid)
             except Exception:
                 logger.debug("Failed to close window hwnd=%s for %r", w.handle, name)
+
+    # Include resolved UWP child PIDs so the caller can wait for the
+    # real app process to exit, not just the AFH host (#750).
+    for pid in uwp_resolved_pids:
+        if pid not in closed_pids:
+            closed_pids.append(pid)
 
     return closed_pids
 
@@ -715,6 +761,10 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
     Used by ``_verify_quit`` to distinguish a true respawn (windows visible)
     from a ghost host process with no windows (#620).
 
+    Checks both ``list_windows()`` (direct process-name match) and
+    ``list_apps()`` (UWP-resolved match) to correctly detect UWP apps
+    hosted by ApplicationFrameHost (#750).
+
     Args:
         name: Application name (matched against process names and aliases).
         exclude_pid: PID to ignore (the already-killed target).
@@ -731,6 +781,16 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
             if exclude_pid is not None and w.pid == exclude_pid:
                 continue
             proc_name = os.path.basename(w.process_name).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
+                return True
+
+        # Also check list_apps() which resolves UWP child PIDs (#750).
+        # list_windows() reports UWP apps as ApplicationFrameHost.exe,
+        # so the loop above never matches them by process name.
+        for app in be.list_apps():
+            if exclude_pid is not None and app["pid"] == exclude_pid:
+                continue
+            proc_name = os.path.basename(app.get("process", "")).lower()
             if _matches_app_by_process_name(proc_name, name_lower):
                 return True
     except Exception:

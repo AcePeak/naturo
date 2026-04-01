@@ -962,3 +962,122 @@ class TestListApps:
     def test_empty(self, mock_list):
         mock_list.return_value = []
         assert list_apps() == []
+
+
+class TestUWPQuitResolution:
+    """#750: app quit must handle UWP apps hosted by ApplicationFrameHost."""
+
+    @patch("naturo.backends.base.get_backend")
+    def test_resolve_pid_falls_back_to_list_apps_for_uwp(self, mock_get_backend):
+        """_resolve_pid_from_backend uses list_apps() when list_windows()
+        reports ApplicationFrameHost instead of the real app name (#750)."""
+        # list_windows() returns AFH — no process-name match for "计算器"
+        afh_window = MagicMock()
+        afh_window.process_name = "C:\\Windows\\ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000  # AFH PID
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        # list_apps() resolves the real child process
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "C:\\Program Files\\CalculatorApp.exe",
+             "process": "C:\\Program Files\\CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("计算器")
+        assert pid == 2000  # Resolved child PID, not AFH PID
+
+    @patch("naturo.backends.base.get_backend")
+    def test_close_all_windows_closes_afh_for_uwp(self, mock_get_backend):
+        """_close_all_windows_for_app sends WM_CLOSE to AFH window
+        hosting a matching UWP app (#750)."""
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000
+        afh_window.handle = 0xAF01
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("计算器")
+
+        mock_be.close_window.assert_called_once_with(hwnd=0xAF01)
+        assert 1000 in pids  # AFH PID (window was closed)
+        assert 2000 in pids  # Resolved child PID (for wait/verify)
+
+    @patch("naturo.backends.base.get_backend")
+    def test_close_all_windows_no_false_positive_on_afh(self, mock_get_backend):
+        """AFH windows that do NOT host a matching app are NOT closed (#743)."""
+        # Calculator AFH window — should NOT be closed when quitting "notepad"
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000
+        afh_window.handle = 0xAF01
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        mock_be.close_window.assert_not_called()
+        assert pids == []
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_has_visible_windows_detects_uwp(self, mock_get_backend):
+        """_app_has_visible_windows detects UWP apps via list_apps() (#750)."""
+        # list_windows() only shows AFH — no process-name match
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.pid = 1000
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        assert _app_has_visible_windows("计算器") is True
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_has_visible_windows_excludes_killed_uwp_pid(self, mock_get_backend):
+        """_app_has_visible_windows respects exclude_pid for UWP apps (#750)."""
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = []
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        # When the killed PID matches the resolved app PID, should return False
+        assert _app_has_visible_windows("计算器", exclude_pid=2000) is False
+
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
+    @patch("naturo.process.find_process")
+    def test_verify_quit_catches_surviving_uwp_app(self, mock_find, mock_has_windows):
+        """_verify_quit raises when UWP app survives quit attempt (#750)."""
+        # Target PID (AFH) is dead, but app respawned/survived under new PID
+        mock_find.side_effect = [
+            None,  # target_pid dead
+            ProcessInfo(pid=3000, name="calculatorapp.exe"),  # respawn check
+        ]
+
+        with pytest.raises(InteractionFailedError, match="still running"):
+            _verify_quit("计算器", None, target_pid=1000, timeout=0.5)
