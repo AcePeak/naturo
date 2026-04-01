@@ -177,9 +177,9 @@ def ai_provider_options(func):
     )(func)
     func = click.option(
         "--provider", "ai_provider",
-        type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+        type=click.Choice(["auto", "anthropic", "openai", "gemini", "ollama"]),
         default="auto",
-        help="AI provider: auto (default), anthropic, openai, ollama",
+        help="AI provider: auto (default), anthropic, openai, gemini, ollama",
     )(func)
     return func
 

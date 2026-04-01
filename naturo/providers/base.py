@@ -360,7 +360,7 @@ def get_vision_provider(name: str = "auto", **kwargs: Any) -> VisionProvider:
 
 def _auto_detect_provider(**kwargs: Any) -> VisionProvider:
     """Try providers in priority order, return first available."""
-    priority = ["anthropic", "openai", "ollama"]
+    priority = ["anthropic", "openai", "gemini", "ollama"]
     for pname in priority:
         cls = _PROVIDER_CLASSES.get(pname)
         if cls is None:
@@ -420,5 +420,9 @@ def _ensure_providers_registered() -> None:
         pass
     try:
         import naturo.providers.ollama_provider  # noqa: F401
+    except ImportError:
+        pass
+    try:
+        import naturo.providers.gemini_provider  # noqa: F401
     except ImportError:
         pass

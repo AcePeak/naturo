@@ -44,6 +44,7 @@ class TestFindCommandProviderFlags:
         result = runner.invoke(main, ["find", "--help"])
         assert "anthropic" in result.output
         assert "openai" in result.output
+        assert "gemini" in result.output
         assert "ollama" in result.output
 
 

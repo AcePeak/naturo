@@ -1,6 +1,6 @@
 """AI provider implementations for Naturo vision and agent capabilities.
 
-Supports multiple AI backends: Anthropic (Claude), OpenAI (GPT-4), Ollama (local).
+Supports multiple AI backends: Anthropic (Claude), OpenAI (GPT-4), Google Gemini, Ollama (local).
 Each provider implements the VisionProvider protocol for screenshot analysis
 and the AIProvider protocol for agentic tool-use loops.
 """

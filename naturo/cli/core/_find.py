@@ -33,8 +33,8 @@ import naturo.cli.core._common as _common
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
 @click.option("--provider", "ai_provider",
-              type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
-              default="auto", help="AI provider for --ai mode (auto, anthropic, openai, ollama)")
+              type=click.Choice(["auto", "anthropic", "openai", "gemini", "ollama"]),
+              default="auto", help="AI provider for --ai mode (auto, anthropic, openai, gemini, ollama)")
 @click.option("--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
               help="AI model name override (e.g. claude-sonnet-4-20250514, gpt-4o)")
 @click.option("--api-key", "ai_api_key", default=None,
