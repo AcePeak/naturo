@@ -12,6 +12,7 @@
 - [TC-0003](regression/chinese-app-name-matching.yaml) — P1: --app with Chinese titles inconsistent across commands — **active**
 
 - [TC-0038](regression/uwp-notepad-enumeration.yaml) — P0: UWP Notepad intermittently invisible to list apps after launch — **active**
+- [TC-0040](regression/capture-unicode-path-dll.yaml) — P1: naturo_core.dll capture_screen fails with Unicode file path — **active**
 
 ## E2E Tests
 - [TC-0004](e2e/calculator-basic-flow.yaml) — P1: Calculator see→click→verify flow — **active**
@@ -47,7 +48,7 @@
 - [TC-0025](exploratory/dpi-coordinate-verification.yaml) — P0: Element coordinates wrong on 4K + 150% DPI (#613) — **active**
 - [TC-0026](exploratory/ai-vision-fill-gaps.yaml) — P0: AI Vision fill-gaps returns 0 elements, JSON parsing fails (#611) — **active**
 - [TC-0027](exploratory/ai-vision-coverage-false-100.yaml) — P0: AI Vision skipped because coverage falsely reports 100% (#609) — **active**
-- [TC-0028](exploratory/uwp-multi-tab-quit.yaml) — P1: app quit fails to close UWP Notepad with multiple tabs (#586) — **active**
+- [TC-0028](exploratory/uwp-multi-tab-quit.yaml) — P1: app quit fails to close UWP Notepad with multiple tabs (#586) — **retired** (5 passes, #586 closed)
 - [TC-0029](exploratory/hybrid-mode-enrichment.yaml) — P1: Hybrid mode should discover more elements than UIA-only — **active**
 - [TC-0031](exploratory/notepad-menu-click-targeting.yaml) — P1: click eN on Notepad UWP menu item does not open menu — **active**
 - [TC-0032](exploratory/app-title-matching-multiwindow.yaml) — P1: --app cannot match by window title for multi-window processes — **active**

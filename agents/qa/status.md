@@ -1,20 +1,20 @@
 # QA Status
-Last updated: 2026-04-01 09:12
-Current round: 77
+Last updated: 2026-04-01 18:16
+Current round: 78
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 9 passed, 3 failed, 3 xfailed (commit cf607cb)
-- Issues verified: #729 (partial — `--app notepad` works, `--app a1` doesn't), #702 (blocked)
+- CI Desktop Tests: 5 passed, 1 failed, 18 skipped, 2 xpassed (commit 2434ab1)
+- Issues verified: #724, #729, #749, #750, #752, #754, #757, #702 (all pass, all closed)
 - E2E tests: Calculator (pass), Notepad (pass)
-- Regression: 9/11 passed, 0 retired
-- New test cases created: TC-0039
-- Test cases cleaned up: none
-- New issues created: #752
-- Total active test cases: 23
-- Tests run: 11
+- Regression: 19/19 passed, 1 retired (TC-0028)
+- New test cases created: TC-0040
+- Test cases cleaned up: TC-0028 (retired — #586 closed, 5 passes)
+- New issues created: #777
+- Total active test cases: 25
+- Tests run: 19 regression + 2 E2E + 5 exploratory + 14 CI = 40
 
 ## Top 3 Risks
-1. UWP Notepad enumeration on Chinese Windows (#749) — blocks CI and multiple test cases
-2. App ID filter discoverability (#752) — first-time user friction
-3. Zombie UWP processes accumulating — system-level process lifecycle issue
+1. CI unicode path failure (#777) — naturo_core.dll cannot save to paths with Chinese chars, affects 35%+ of Chinese Windows users
+2. AI vision dedup untestable without API key on runner — #702 verified only via unit tests, not live
+3. v0.3.2 scope tripled (31 open issues) — browser automation + AI registry + original UWP fixes may delay release

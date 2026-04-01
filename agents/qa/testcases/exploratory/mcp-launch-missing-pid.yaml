@@ -7,8 +7,8 @@ source_issue: 575
 created: 2026-03-29
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 3
-notes: "2026-04-01 R74: PASS — MCP launch_app returns {success: true, pid: 90100}."
+consecutive_passes: 4
+notes: "2026-04-01 R75: PASS — MCP launch_app returns {success: true, pid: 74700}."
 
 preconditions:
   - "naturo is installed and in PATH"
