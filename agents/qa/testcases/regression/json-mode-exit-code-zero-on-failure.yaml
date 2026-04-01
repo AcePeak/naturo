@@ -6,9 +6,9 @@ priority: P1
 source_issue: 781
 created: 2026-04-01
 last_run: 2026-04-01
-last_result: fail
-consecutive_passes: 0
-notes: "2026-04-01 R79: FAIL — see --app notepad -j returns exit 0 with success:false. capture --app notepad -j also exit 0 with success:false. Non-JSON mode correctly returns exit 1. Affects all commands with -j flag."
+last_result: pass
+consecutive_passes: 1
+notes: "2026-04-01 R80: PASS — see/capture/click/type -j all return exit 1 on failure. JSON to stdout, error to stderr. Issue #781 appears fixed."
 
 preconditions:
   - "naturo is installed and in PATH"

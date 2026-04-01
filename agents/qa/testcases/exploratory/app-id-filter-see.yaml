@@ -7,8 +7,8 @@ source_issue: 752
 created: 2026-04-01
 last_run: 2026-04-01
 last_result: pass
-consecutive_passes: 2
-notes: "2026-04-01 R79: PASS — Both --app a1 and --app-id a1 return identical element trees for Calculator."
+consecutive_passes: 3
+notes: "2026-04-01 R80: PASS — Both --app a1 and --app-id a1 return identical element trees."
 
 preconditions:
   - "naturo is installed and in PATH"
