@@ -2,35 +2,40 @@
 > Date: 2026-04-01
 
 ## Completed
-- feat/issue-765-network-interception: Network request interception — monitor, intercept, mock responses (fixes #765)
-  - `_network.py`: NetworkMonitor with CDP Network/Fetch domain wrappers, InterceptRule pattern matching, JS fallback injection
-  - CLI: `browser requests` (list with URL/type filters), `browser intercept` (continue/abort/fulfill)
-  - 25 new tests, ruff clean, mypy clean
-- feat/issue-761-captcha-handling: Captcha handling architecture — pluggable solver pattern (fixes #761)
-  - `_captcha.py`: CaptchaManager, CaptchaSolver ABC, ManualSolver, TokenInjectionSolver, detect_captcha (reCAPTCHA v2/v3, hCaptcha, Turnstile)
-  - CLI: `browser captcha-detect`, `browser captcha-solve` (--solver manual|token:TOKEN)
-  - 33 new tests, ruff clean, mypy clean
+- fix/issue-785-uwp-launch-pid: Resolve real app PID after Windows cmd /c start launch (fixes #785)
+  - `launch_app()` now waits for cmd.exe to exit, then polls `find_process` to locate the actual app process
+  - Handles both `wait_until_ready` and normal launch modes
+  - Falls back to cmd.exe PID if process not found within 3s
+  - 5 new tests, all 94 process tests pass, ruff clean, mypy clean
+- fix/issue-784-type-newline-drop: Send Enter/Tab for control chars in keystroke simulation (fixes #784)
+  - `naturo_key_type()` and `naturo_phys_key_type()` in input.cpp now detect \n, \r, \t
+  - Sends VK_RETURN/VK_TAB virtual-key (or scan code) events instead of Unicode events
+  - Both normal and hardware input modes fixed
+  - Needs desktop CI verification
 
 ## Pushed branches (awaiting PR)
-- feat/issue-765-network-interception: Network request interception (fixes #765)
-- feat/issue-761-captcha-handling: Captcha handling architecture (fixes #761)
+- fix/issue-785-uwp-launch-pid: Resolve real app PID after Windows cmd /c start launch (fixes #785)
+- fix/issue-784-type-newline-drop: Send Enter/Tab for control chars in keystroke simulation (fixes #784)
 
 ## Rebased branches
-- feat/issue-762-browser-wait-mechanisms: rebased onto develop, force-pushed
-- feat/issue-758-chrome-profiles: rebased onto develop, force-pushed
-- feat/issue-760-anti-detection: rebased onto develop, force-pushed
-- feat/issue-764-iframe-support: rebased onto develop, force-pushed
-- refactor/config-cmd-deduplicate-credentials: rebased onto develop, force-pushed
 - docs/issue-721-example-scripts: rebased onto develop, force-pushed
 - docs/issue-722-mcp-server-reference: rebased onto develop, force-pushed
-- refactor/issue-719-cli-by-domain: rebased onto develop, force-pushed
+- feat/issue-758-chrome-profiles: rebased onto develop, force-pushed
+- feat/issue-760-anti-detection: rebased onto develop, force-pushed
+- feat/issue-761-captcha-handling: rebased onto develop, force-pushed
+- feat/issue-762-browser-wait-mechanisms: rebased onto develop, force-pushed
+- feat/issue-764-iframe-support: rebased onto develop, force-pushed
+- feat/issue-765-network-interception: rebased onto develop, force-pushed
+- refactor/config-cmd-deduplicate-credentials: rebased onto develop, force-pushed
 
 ## Issues found but not fixed
-- Many PR requests are pending — Orc-Mycelium needs to process them and create PRs
-- #763 (client script validation) and #766 (migration guide) still blocked on dependencies merging
+- #786 (P1 menu click regression): No code changed between pass (R86) and fail (R87) — intermittent UWP desktop issue. Needs desktop debugging session to diagnose timing/focus root cause.
+- Many PR requests still pending — Orc-Mycelium needs to process and create PRs for 9+ branches
+- #763 (client script validation) and #766 (migration guide) still blocked on browser dependency PRs merging
 
 ## Next session should
-- Check if any PRs were created/merged by Orc-Mycelium and handle accordingly
-- If dependencies merged: implement #763 (client script validation) and #766 (migration guide acceptance tests)
-- If not: work on remaining P2 items (#723 cost guardrails, #726 hero GIF, #727 good-first-issue tasks)
-- Consider test coverage gaps for browser modules
+- Check if Orc-Mycelium created/merged any PRs from the queue
+- If browser PRs merged: implement #763 and #766
+- Desktop debug #786 (menu click intermittent failure) if desktop runner available
+- Work on P2 items (#723 cost guardrails, #727 good-first-issue tasks)
+- Consider adding tests for browser_cmd.py once browser PRs merge
