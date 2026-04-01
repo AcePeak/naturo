@@ -63,3 +63,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-01
 - **Status**: pending (branch recreated and force-pushed 2026-04-01)
+
+## PR Request: refactor/issue-719-cli-by-domain
+- **Base**: develop
+- **Title**: refactor: reorganize CLI commands by domain (fixes #719)
+- **Body**: Moved system commands (clipboard, dialog, desktop, taskbar, tray) into `cli/system/` subdirectory and value commands (get, set) into `cli/values/`, following the existing pattern established by `cli/core/` and `cli/interaction/`. Renamed `system.py` to `_app_group.py` (it only defines the app Click group stub) and removed 100+ lines of dead code (unused menu, taskbar, tray stubs superseded by dedicated cmd files). All test mock patch paths updated. 4166 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-01
+- **Status**: pending
