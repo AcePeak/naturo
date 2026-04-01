@@ -37,7 +37,10 @@ Major features and improvements planned:
 | Category | Issues |
 |----------|--------|
 | **Selector system** | #104 (built-in templates for top 20 apps), #105 (save/load/list/export) |
-| **Browser automation** | Planned: `naturo browser` subcommand with CDP + DrissionPage adapter |
+| **Browser automation** | #758 (Chrome profile mgmt), #759 (`naturo browser` subcommand), #760 (anti-detection defaults), #762 (wait mechanisms) |
+| **Input primitives** | #757 (human-like mouse motion: bezier, jitter, overshoot) |
+| **Captcha architecture** | #761 (hooks, motion primitives, cookie mgmt, third-party integration) |
+| **Validation** | #763 (client script equivalence: 5-phase validation against rpa-client-* patterns) |
 | **AI Vision** | #754 (--ai-model/--ai-provider CLI params, model registry, Google Gemini provider) |
 | **Recording/Playback** | #90 (enterprise recording engine) |
 | **Visual regression** | #91 (screenshot comparison testing) |
@@ -61,12 +64,19 @@ Major features and improvements planned:
 
 #### Browser Automation Strategy
 - naturo is an orchestration layer — integrate best tools, not reimplement
-- Current: CDP client (687 lines) for Electron/Chrome interaction
-- Planned: `naturo browser` subcommand with pluggable engines
-  - CDP (built-in, zero deps)
-  - DrissionPage (optional, `pip install naturo[browser]`) — Ace has production experience
-  - Playwright (optional, future)
+- Current: CDP client (688 lines) for Electron/Chrome interaction
+- v0.3.2 scope (all tracked with issues):
+  - #758: Chrome profile management (create/list/switch/persist)
+  - #759: `naturo browser` subcommand (launch/navigate/find/click/type/wait/screenshot)
+  - #760: Anti-detection defaults (stealth ON by default, `navigator.webdriver` suppression)
+  - #762: Wait mechanisms (DOM events, network idle, element states)
+  - #757: Human-like mouse motion (bezier, 4-phase acceleration, jitter, overshoot)
+  - #761: Captcha architecture (hooks + motion primitives + cookie management)
+  - #763: Validation against 23 rpa-client-* production scripts
+- Design principle: anti-detection is default behavior, not opt-in
+- Design principle: captcha handling = naturo primitives + user hooks + third-party services
 - Browser provider pattern mirrors AI vision provider pattern
+- Future: DrissionPage adapter (optional), Playwright (optional)
 
 #### Platform Focus
 - **Windows-first** — all development focused here
