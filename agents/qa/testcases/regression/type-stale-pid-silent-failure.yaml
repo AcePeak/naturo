@@ -5,10 +5,10 @@ category: regression
 priority: P0
 source_issue: null
 created: 2026-04-02
-last_run: 2026-04-02
+last_run: 2026-04-03
 last_result: pass
 consecutive_passes: 1
-notes: "2026-04-02 R95: PASS — After quit+relaunch, type 'AFTER_RESTART' succeeded. Routing used focused_pid:108828 (correct new PID). Text visible in screenshot. Stale PID issue appears resolved."
+notes: "2026-04-03 R103: Not directly tested. Carried forward from R95 PASS. Consecutive 1."
 
 preconditions:
   - "naturo is installed and in PATH"

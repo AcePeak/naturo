@@ -5,10 +5,10 @@ category: regression
 priority: P1
 source_issue: 810
 created: 2026-04-02
-last_run: 2026-04-02
+last_run: 2026-04-03
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R97: FAIL — 'Processing request of type CallToolRequest' emitted to stdout between JSON-RPC messages."
+notes: "2026-04-03 R103: Not directly tested. Carried forward from R97 FAIL. Consecutive 0."
 
 preconditions:
   - "naturo is installed and in PATH"

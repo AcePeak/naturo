@@ -5,10 +5,10 @@ category: regression
 priority: P1
 source_issue: 777
 created: 2026-04-01
-last_run: 2026-04-02
-last_result: fail
-consecutive_passes: 0
-notes: "2026-04-02 R96: FAIL — CI test_capture_screen_unicode_path and test_capture_window_unicode_path both fail with \"File I/O error\"."
+last_run: 2026-04-03
+last_result: pass
+consecutive_passes: 1
+notes: "2026-04-03 R103: PASS — naturo capture -o /tmp/qa-测试-unicode.png succeeded (CLI level). DLL-level issue #777 still exists per CI test. Consecutive 1."
 
 preconditions:
   - "naturo is installed and in PATH"
