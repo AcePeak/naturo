@@ -495,6 +495,14 @@ class TestEnterpriseCLI:
         data = json.loads(result.output)
         assert data["success"] is True
 
+    def test_baseline_json(self, runner, tmp_dirs, red_image):
+        result = runner.invoke(main, [
+            "visual", "baseline", "screen1", "--from", str(red_image), "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+
     def test_update_all_command(self, runner, tmp_dirs, red_image, blue_image):
         bd, _ = tmp_dirs
         runner.invoke(main, ["visual", "baseline", "red", "--from", str(red_image)])
@@ -663,3 +671,199 @@ class TestEnterpriseCLI:
             "--current-dir", str(current_dir),
         ])
         assert result.exit_code != 0
+
+        assert data["name"] == "screen1"
+
+    def test_list_json(self, runner, tmp_dirs, red_image):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, ["visual", "list", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["baselines"]) == 1
+        assert data["baselines"][0]["name"] == "s1"
+
+    def test_list_json_empty(self, runner, tmp_dirs):
+        result = runner.invoke(main, ["visual", "list", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["baselines"] == []
+
+    def test_delete_nonexistent(self, runner, tmp_dirs):
+        result = runner.invoke(main, ["visual", "delete", "nope", "--force"])
+        assert result.exit_code == 0
+        assert "not found" in result.output
+
+    def test_delete_json(self, runner, tmp_dirs, red_image):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, ["visual", "delete", "s1", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["name"] == "s1"
+
+    def test_compare_missing_baseline(self, runner, tmp_dirs, red_image):
+        result = runner.invoke(main, [
+            "visual", "compare", "nonexistent", "--current", str(red_image),
+        ])
+        assert result.exit_code != 0
+        assert "Error" in result.output or "not found" in result.output.lower()
+
+    def test_compare_missing_baseline_json(self, runner, tmp_dirs, red_image):
+        result = runner.invoke(main, [
+            "visual", "compare", "nonexistent", "--current", str(red_image), "--json",
+        ])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+
+    def test_diff_json(self, runner, red_image, blue_image):
+        result = runner.invoke(main, [
+            "visual", "diff", str(red_image), str(blue_image), "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["match"] is False
+        assert data["diff_pixels"] == 10000
+
+    def test_diff_match_json(self, runner, red_image, red_copy):
+        result = runner.invoke(main, [
+            "visual", "diff", str(red_image), str(red_copy), "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["match"] is True
+        assert data["similarity"] == 1.0
+
+
+class TestVisualReportCLI:
+    """Tests for the 'naturo visual report' CLI command."""
+
+    def test_report_no_current_dir(self, runner):
+        result = runner.invoke(main, ["visual", "report", "something"])
+        assert result.exit_code != 0
+        assert "current-dir" in result.output.lower()
+
+    def test_report_pass(self, runner, tmp_dirs, red_image, red_copy, tmp_path):
+        bd, _ = tmp_dirs
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        # Put matching screenshot in current dir
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "s1.png")
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code == 0
+        assert "PASS" in result.output
+        assert "1 passed, 0 failed" in result.output
+
+    def test_report_fail_exits_nonzero(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (0, 0, 255)).save(current_dir / "s1.png")
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code != 0
+        assert "FAIL" in result.output
+        assert "0 passed, 1 failed" in result.output
+
+    def test_report_skip_missing_screenshot(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        # No s1.png in current_dir
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code == 0
+        assert "SKIP" in result.output
+
+    def test_report_auto_detect_baselines(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "a1", "--from", str(red_image)])
+        runner.invoke(main, ["visual", "baseline", "a2", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "a1.png")
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "a2.png")
+        # No name args → auto-detect all baselines
+        result = runner.invoke(main, [
+            "visual", "report", "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code == 0
+        assert "2 passed" in result.output
+
+    def test_report_json(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "s1.png")
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(current_dir), "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["all_passed"] is True
+        assert data["passed"] == 1
+        assert data["failed"] == 0
+        assert len(data["results"]) == 1
+
+    def test_report_with_html_output(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "s1.png")
+        html_out = tmp_path / "report.html"
+        result = runner.invoke(main, [
+            "visual", "report", "s1",
+            "--current-dir", str(current_dir),
+            "-o", str(html_out),
+        ])
+        assert result.exit_code == 0
+        assert html_out.exists()
+        assert "Report saved" in result.output
+
+    def test_report_with_custom_threshold(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        # Slightly different image
+        img = Image.new("RGB", (100, 100), (255, 0, 0))
+        for x in range(5):
+            for y in range(5):
+                img.putpixel((x, y), (0, 255, 0))
+        img.save(current_dir / "s1.png")
+        # Strict threshold — should fail
+        result = runner.invoke(main, [
+            "visual", "report", "s1",
+            "--current-dir", str(current_dir),
+            "--threshold", "0.999",
+        ])
+        assert result.exit_code != 0
+        assert "FAIL" in result.output
+
+    def test_report_no_baselines(self, runner, tmp_dirs, tmp_path):
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        result = runner.invoke(main, [
+            "visual", "report", "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code == 0
+        assert "No baselines" in result.output
+
+    def test_report_named_report(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        Image.new("RGB", (100, 100), (255, 0, 0)).save(current_dir / "s1.png")
+        html_out = tmp_path / "report.html"
+        result = runner.invoke(main, [
+            "visual", "report", "s1",
+            "--current-dir", str(current_dir),
+            "--name", "Sprint 42 Regression",
+            "-o", str(html_out),
+        ])
+        assert result.exit_code == 0
+        content = html_out.read_text()
+        assert "Sprint 42 Regression" in content
