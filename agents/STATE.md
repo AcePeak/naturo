@@ -12,30 +12,36 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-04-01 morning)
-- **v0.3.2**: 31 open / 50 closed — scope tripled since Mar 29. Now includes browser automation (#758-#766), AI model registry (#754, #767), mouse trajectories (#757), plus original UWP fixes and tech debt. 8 issues awaiting QA verification (#773). Ace needs to decide on scope split (#775).
-- **v0.3.4**: 18 open / 8 closed — launch & community tasks, blocked on v0.3.2.
-- **Backlog**: 63 open issues including Linux platform work, enterprise features, community tasks.
-- **Pipeline**: 3 open PRs (#770 Gemini provider, #771 AI CLI params, #772 browser subcommand). 3 in-progress issues (#759 browser, #725 triage, #720 _element.py split). 8 status:done awaiting QA.
+## Milestone Summary (2026-04-02 afternoon)
+- **v0.3.2**: Massive progress — 16 PRs merged since last review. Browser automation core (#759 merged), anti-detection (#760 merged), network interception (#765 merged). Selector management (#105) and visual regression testing (#91) shipped. 13 more PRs queued pending GitHub access (chrome profiles, iframe, captcha, wait mechanisms, plus 7 bug fixes). QA-Mariana active again (18 rounds, 6 bugs filed).
+- **v0.3.4**: Blocked on v0.3.2.
+- **Backlog**: ~63 open issues including Linux platform work, enterprise features, community tasks.
+- **Pipeline**: 13 pending PR requests in pr-requests.md awaiting Orc-Mycelium GitHub access. Key pending: #758 chrome profiles, #761 captcha, #762 browser wait, #764 iframe, plus bug fixes #786 #787 #788 #789 #781 #783.
 
 ## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Reads: dev-prompt.md
-- **QA-Mariana**: Quality cofounder. Reads: qa-prompt.md — **inactive 48+ hours, 8-issue verification backlog**
-- **Orc-Mycelium**: Strategic orchestrator. Maintains this file.
+- **Dev-Sirius**: Technical cofounder. Reads: dev-prompt.md — highly productive, 3 new features completed today (stealth-check, browser download, drag --from-element)
+- **QA-Mariana**: Quality cofounder. Reads: qa-prompt.md — **back online**, 18 QA rounds, 6 bugs filed, regression at 6/16 pass (known issues with pending fixes)
+- **Orc-Mycelium**: Strategic orchestrator. Maintains this file. **BLOCKED: no GitHub MCP tools available — cannot create PRs or manage issues**
 
 ## Coordination
 - Bug tracking: GitHub Issues only
 - State flow: status:in-progress -> status:done -> verified -> close
 - CI must be green before any merge
 
-## Recent Activity (2026-03-31 to 2026-04-01)
-- **15 PRs merged** — another highly productive sprint
-- Bug fixes: UWP app quit (#751), Chinese app name wrong PID (#744), UWP invisible (#753), app ID pattern (#755)
-- Features: AI vision text+proximity dedup (#742), mouse trajectory primitives (#768), AI model registry (#767), AI CLI params (#769)
-- Refactors: agent base class extraction (#748), return type annotations (#747), shared session utilities (#745), cascade split (#707 done earlier)
-- CI: coverage threshold 70% (#741), commit author validation (#756), Notepad test polling fix (#746), dependency upper bounds (#740)
-- **Browser automation pivot**: Ace created 8 issues (#758-#766) and #759 is actively in-progress with PR #772 open
-- Created #773 (QA verification backlog), #774 (ROADMAP update), #775 (scope split decision)
+## Recent Activity (2026-04-01 to 2026-04-02)
+- **16 PRs merged** — continuing the sprint pace
+- Features: browser subcommand foundation (#759/#772), anti-detection stealth (#760/#794), network interception (#765/#798), selector management (#105/#805), visual regression testing (#91/#808)
+- Bug fixes: app ID resolution in all subcommands (#776/#799), UWP launch PID (#785/#801), type newline drop (#784/#800), trajectory rounding (#778)
+- Docs: example scripts (#721/#790), MCP server reference (#722/#791), ROADMAP update (#774/#779), README recording+selector sections (#806)
+- Tests: 76 BrowserPage/BrowserElement tests (#803)
+- **QA-Mariana reactivated**: 18 rounds (79→96), filed bugs #781 #783 #784 #785 #786 #787 #788 #789
+- **Dev-Sirius completed**: stealth-check (#760), browser download (#759), drag --from-element (#761)
+- **13 PR requests pending** — Orc-Mycelium lacks GitHub tools to create them
+
+## Code Health
+- 42,040 lines Python source, 188 test files
+- Large files needing split: `_element.py` (1,473, #720 open), `app_cmd.py` (1,416, needs issue)
+- Version consistent: 0.3.1 across pyproject.toml, version.py, PyPI
 
 ## Completed Releases
 - v0.1.0 — Core features
