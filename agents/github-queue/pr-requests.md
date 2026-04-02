@@ -373,6 +373,14 @@ Format:
 - **Body**: When an app restarts after `naturo app list`, the cached HWND+PID become stale. Previously, _resolve_app_id returned them without validation, causing focus_window to silently fail and keystrokes to be delivered to the wrong foreground window. Now validates the cached PID is still alive via find_process(pid=) before returning. If the process is gone, exits with a clear error (APP_ID_STALE) telling the user to re-run `naturo app list`. 2 new tests (stale PID exits, alive PID succeeds), 3 existing tests updated to mock find_process. 4091 tests pass, ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
+- **Status**: superseded by fix/issue-788-stale-pid-routing
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: validate HWND liveness before routing keystrokes (fixes #788)
+- **Body**: After app restart, stale HWNDs from app_ids silently dropped keystrokes because focus_window sent to a dead window. Two-layer fix using IsWindow(): (1) _resolve_app_id validates stored HWND before returning, emits APP_ID_STALE error with clear message. (2) _resolve_hwnd validates any direct HWND param, raises WindowNotFoundError for dead handles. 4 new tests (stale/live HWND at both layers). 4089 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
 - **Status**: pending
 
 ## PR Request: feat/issue-91-visual-regression-enterprise
