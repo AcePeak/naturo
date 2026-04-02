@@ -414,3 +414,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: fix/issue-785-winui3-uia-probe
+- **Base**: develop
+- **Title**: fix: detect UIA for standalone WinUI 3 apps like Calculator (fixes #785)
+- **Body**: Win11 Calculator and Paint are standalone WinUI 3 apps not hosted by ApplicationFrameHost. The UIA probe only checked AFH child windows when the main HWND returned an empty tree, so these apps fell through to vision-only detection. Added _find_winui_content_children() that enumerates DesktopWindowXamlSource children regardless of parent class, used as fallback when AFH child search returns empty. 4 new tests. 4088 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
