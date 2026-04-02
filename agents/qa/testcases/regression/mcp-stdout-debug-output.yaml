@@ -1,0 +1,28 @@
+id: TC-0048
+title: "MCP server emits debug text to stdout, breaking JSON-RPC stdio protocol"
+status: active
+category: regression
+priority: P1
+source_issue: 810
+created: 2026-04-02
+last_run: 2026-04-02
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-02 R97: FAIL — 'Processing request of type CallToolRequest' emitted to stdout between JSON-RPC messages."
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "Send initialize + tools/call via MCP stdio"
+    command: "printf '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}\\n{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\\n{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"list_apps\",\"arguments\":{}}}\\n' | timeout 10 naturo mcp start 2>/dev/null > /tmp/tc-0048.txt"
+    expect: "Output file contains only valid JSON-RPC lines"
+  - description: "Verify every line is valid JSON"
+    command: "python -c \"import json; lines=[l.strip() for l in open('/tmp/tc-0048.txt',encoding='utf-8') if l.strip()]; bad=[i for i,l in enumerate(lines) if not l.startswith('{')]; print(f'Lines: {len(lines)}, Bad: {bad}')\""
+    expect: "Bad: [] (no non-JSON lines)"
+  - description: "Check for debug text"
+    command: "grep -v '^{' /tmp/tc-0048.txt"
+    expect: "No output (all lines start with {)"
+
+pass_criteria: "MCP stdout contains only JSON-RPC messages, no debug text"
+fail_action: "File P1 bug: MCP stdout pollution breaks AI agent JSON-RPC parsing"

@@ -64,3 +64,4 @@
 - [TC-0042](exploratory/json-stderr-duplicate-error.yaml) — P2: JSON mode (-j) emits duplicate error to stderr, breaks 2>&1 pipe — **active**
 - [TC-0044](exploratory/click-coords-out-of-bounds.yaml) — P2: click --coords accepts out-of-bounds coordinates without warning — **active**
 - [TC-0047](exploratory/press-app-focus-mismatch.yaml) — P1: press --app hotkey sends to wrong process when target is not focused (#807) — **active**
+- [TC-0048](regression/mcp-stdout-debug-output.yaml) — P1: MCP server emits debug text to stdout, breaking JSON-RPC stdio protocol — **active**
