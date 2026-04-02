@@ -8,7 +8,7 @@ created: 2026-04-01
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R99: FAIL — click -j emits duplicate error to stderr, 2>&1 pipe breaks JSON parsing. #783."
+notes: "2026-04-02 R100: FAIL — click -j still emits duplicate error to stderr. #783."
 
 preconditions:
   - "naturo is installed and in PATH"
