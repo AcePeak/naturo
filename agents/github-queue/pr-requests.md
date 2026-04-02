@@ -354,10 +354,10 @@ Format:
 ## PR Request: fix/issue-787-coords-bounds
 - **Base**: develop
 - **Title**: fix: reject out-of-bounds click coordinates with clear error (fixes #787)
-- **Body**: click --coords silently accepted coordinates outside the virtual screen, resulting in no-op clicks. Now validates against GetSystemMetrics (Windows) or a 65535 generic bound (non-Windows). Out-of-bounds coordinates produce a COORDS_OUT_OF_BOUNDS error in both JSON and text modes. 6 new tests. 4432 tests pass, ruff clean, mypy clean.
+- **Body**: click --coords silently accepted coordinates outside the virtual screen, resulting in no-op clicks. Now validates against GetSystemMetrics (Windows) or 65535 generic bound (non-Windows). 2 new tests. 4367 passed, ruff clean. Branch force-pushed.
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
-- **Status**: pending
+- **Status**: pending (branch force-pushed)
 
 ## PR Request: fix/issue-786-uwp-menu-click
 - **Base**: develop

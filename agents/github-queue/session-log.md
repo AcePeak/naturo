@@ -2,29 +2,28 @@
 > Date: 2026-04-02
 
 ## Completed
-- fix/issue-788-stale-pid-hwnd: Detect stale PID/HWND after app restart, fall back to process name (fixes #788)
-- fix/issue-789-app-filter-basename: Extract process basename before --app matching (fixes #789)
-- fix/issue-781-json-exit-code: Exit non-zero when JSON mode reports failure (fixes #781)
-- fix/issue-783-json-duplicate-stderr: Suppress stderr output in JSON mode (fixes #783)
-- fix/issue-787-coords-bounds: Reject out-of-bounds click coordinates with clear error (fixes #787)
-- fix/issue-786-uwp-menu-click: Detect WinUI 3 apps for UIA click path (fixes #786)
+- fix/issue-788-stale-pid-app-id: Validate cached PID liveness in _resolve_app_id, fail with APP_ID_STALE (fixes #788)
+- fix/issue-789-app-filter-basename: Extract ntpath.basename() in _resolve_hwnd/_resolve_hwnds/_is_afh_window (fixes #789)
+- fix/issue-781-json-exit-code: Change return→sys.exit(1) in selector clear/export and visual report (fixes #781)
+- fix/issue-783-json-duplicate-stderr: NullHandler on root logger in JSON mode + WARNING→DEBUG downgrades (fixes #783)
+- fix/issue-787-coords-bounds: Validate coordinates against GetSystemMetrics/65535 bound (fixes #787)
 
 ## Pushed branches (awaiting PR)
-- fix/issue-788-stale-pid-hwnd: Two-layer PID/HWND validation with process-name fallback
-- fix/issue-789-app-filter-basename: ntpath.basename() in _resolve_hwnd and _resolve_hwnds
-- fix/issue-781-json-exit-code: sys.exit(1) in selector clear/export and visual report
-- fix/issue-783-json-duplicate-stderr: NullHandler + WARNING→DEBUG downgrades
-- fix/issue-787-coords-bounds: Coordinate bounds validation with GetSystemMetrics
-- fix/issue-786-uwp-menu-click: _is_winui_window() DesktopWindowXamlSource detection
+- fix/issue-788-stale-pid-app-id: PID liveness check via find_process before returning stale HWND+PID
+- fix/issue-789-app-filter-basename: ntpath.basename() in 3 locations in _element.py
+- fix/issue-781-json-exit-code: 3 return→sys.exit(1) changes + 3 tests
+- fix/issue-783-json-duplicate-stderr: NullHandler + 2 WARNING→DEBUG downgrades + 1 test
+- fix/issue-787-coords-bounds: Bounds validation with COORDS_OUT_OF_BOUNDS error + 2 tests
 
 ## Rebased branches
 - (none needed — all branches created fresh from current develop)
 
 ## Issues found but not fixed
-- Previous session's pending PRs for #90 (recording), #104 (selector templates), and many others still need Orc-Mycelium to create PRs
+- #785: Desktop-only integration test, already addressed by PR #801 (PID resolution). Needs verification on Windows desktop runner.
+- #786: Desktop-only UWP menu click regression. Previous branch existed but was deleted/superseded. Needs reimplementation on Windows.
+- #784: Already merged (PR #800)
 
 ## Next session should
-- Check if Orc-Mycelium has created PRs for the 6 new branches + previous pending branches
-- If all P0/P1/P2 bugs are merged: enter self-driven mode
-- Consider working on remaining migration guide gaps (#759 download, #761 drag, #760 stealth-check)
-- Update ROADMAP.md to reflect completed features
+- Check if Orc-Mycelium has created/merged PRs for the 5 new branches
+- If P0/P1/P2 bugs are merged: tackle P1 features (#90 recording, #91 visual regression, #104 selectors, #105 selector management) — check which have pending PRs
+- Consider migration guide gaps (#759 download, #761 drag, #760 stealth-check)
