@@ -1,0 +1,29 @@
+id: TC-0046
+title: "see --app returns exit code 0 when no window found (non-JSON mode)"
+status: active
+category: regression
+priority: P1
+source_issue: null
+created: 2026-04-02
+last_run: 2026-04-02
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-02 R94: FAIL — see --app 记事本 returns 'No window found' with exit 0. Non-JSON error paths should return non-zero exit code."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "No app matching '记事本' by process name is running"
+
+steps:
+  - description: "Run see with --app for non-existent app (non-JSON mode)"
+    command: "naturo see --app nonexistent_app_xyz 2>&1; echo EXIT=$?"
+    expect: "Error message AND EXIT=1 (non-zero)"
+  - description: "Run see with --app for Chinese name that doesn't match (non-JSON)"
+    command: "naturo see --app 记事本 2>&1; echo EXIT=$?"
+    expect: "Error message AND EXIT=1 (non-zero)"
+  - description: "Compare with JSON mode behavior"
+    command: "naturo see --app nonexistent_app_xyz -j 2>/dev/null; echo EXIT=$?"
+    expect: "JSON error AND EXIT=1 — JSON mode already correct, non-JSON should match"
+
+pass_criteria: "Non-JSON error paths return non-zero exit code, consistent with JSON mode"
+fail_action: "File P1 bug: see (non-JSON) returns exit 0 on error, breaking script error detection"

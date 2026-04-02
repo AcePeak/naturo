@@ -8,7 +8,7 @@ created: 2026-04-02
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R90: FAIL — after Notepad quit+relaunch, type reported success (pid:37476) but screenshot showed no new text. Routing used stale PID from previous session."
+notes: "2026-04-02 R94: FAIL — routing shows pid:37476 but launched PID was different. Stale PID routing confirmed."
 
 preconditions:
   - "naturo is installed and in PATH"
