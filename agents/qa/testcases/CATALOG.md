@@ -45,7 +45,7 @@
 - [TC-0021](regression/type-escape-sequences-literal.yaml) — P1: naturo type treats \t and \n as literal text, not escape sequences — **retired** (5 passes, #563 closed)
 - [TC-0030](regression/type-backslash-escape-missing.yaml) — P1: naturo type has no \\\\ escape for literal backslash, breaks Windows paths — **retired** (6 passes, #619 closed)
 - [TC-0022](exploratory/capture-missing-pid-flag.yaml) — P2: capture command missing --pid flag (API inconsistency) — **retired** (5 passes, #556 closed)
-- [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **active**
+- [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **retired** (6 passes, #575 closed)
 
 ## Real-World Verification (from Ace's v0.3.1 testing — 2026-03-29)
 - [TC-0024](exploratory/click-background-window.yaml) — P0: click --app hits wrong window when target is behind others (#608) — **active**

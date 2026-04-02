@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 5
-notes: "2026-04-02 R89: PASS — see -j and capture -j both return exit 1 on failure."
+consecutive_passes: 6
+notes: "2026-04-02 R91: PASS — see -j returns exit 1 on failure. Issue #781 still open."
 
 preconditions:
   - "naturo is installed and in PATH"

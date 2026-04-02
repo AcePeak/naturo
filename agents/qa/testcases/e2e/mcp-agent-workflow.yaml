@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-03-28
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 24
-notes: "2026-04-02 R84: PASS — MCP initialize, tools/list (64 tools), list_apps, launch_app, see_ui_tree all work."
+consecutive_passes: 25
+notes: "2026-04-02 R91: PASS — MCP initialize→list_apps→launch_app→see_ui_tree→type_text all functional."
 
 preconditions:
   - "naturo is installed and in PATH"
