@@ -99,10 +99,10 @@ Format:
 ## PR Request: feat/issue-764-iframe-support
 - **Base**: develop
 - **Title**: feat: add iframe support — frame listing, context switching (fixes #764)
-- **Body**: BrowserPage gains `frames()`, `frame(selector)`, `parent_frame()`, and `main_frame()` methods for navigating iframe hierarchies. Frame context uses `Page.createIsolatedWorld` so `find`/`find_all`/`evaluate` execute inside the target iframe. Supports nested frames with a context stack. One CLI command: `browser frames` (list all frames). 20 new tests, all mocked. Ruff clean.
+- **Body**: BrowserPage gains `frames()` and `frame(selector)` methods for navigating iframe hierarchies. Frame context uses `Page.createIsolatedWorld` so `evaluate`/`find`/`find_all` execute inside the target iframe. Supports nested frames with URL matching. One CLI command: `browser frames` (list all frames). 17 new tests, all mocked. Ruff clean, mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-01
-- **Status**: pending
+- **Date**: 2026-04-02
+- **Status**: pending (branch re-created and force-pushed 2026-04-02)
 
 ## PR Request: feat/issue-765-network-interception
 - **Base**: develop
