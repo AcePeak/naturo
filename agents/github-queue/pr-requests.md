@@ -302,3 +302,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: feat/issue-90-recording-playback-cli
+- **Base**: develop
+- **Title**: feat: add recording/playback CLI commands and wire interaction hooks (fixes #90)
+- **Body**: Seven CLI commands under `naturo record`: start, stop, status, list, show, delete, play (with --speed, --dry-run, --json). Wires the existing no-op _record_action stub in _common.py to naturo.recording.append_step_to_active so click, type, press, hotkey, scroll, drag, and move are captured during active recordings. Adds missing type command recording hook. 31 new tests. 4083 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending

@@ -2,14 +2,10 @@
 > Date: 2026-04-02
 
 ## Completed
-- feat/issue-760-stealth-check: Add `naturo browser stealth-check` verification command — 6 JS checks for bot-detection vectors (fixes #760)
-- feat/issue-759-browser-download: Add `naturo browser download --dir/--wait` for file download management via CDP (fixes #759)
-- feat/issue-761-drag-from-element: Add `--from-element`/`--to-element` options to drag command for UI tree name search (fixes #761)
+- feat/issue-90-recording-playback-cli: Add recording/playback CLI commands — 7 subcommands (start, stop, status, list, show, delete, play) under `naturo record`, wire _record_action to recording engine, add missing type command recording hook (fixes #90)
 
 ## Pushed branches (awaiting PR)
-- feat/issue-760-stealth-check: check_stealth() in _stealth.py, stealth-check CLI command, 11 tests
-- feat/issue-759-browser-download: _download.py module, download CLI command, 23 tests
-- feat/issue-761-drag-from-element: --from-element/--to-element in _mouse.py, 8 tests
+- feat/issue-90-recording-playback-cli: recording_cmd.py with 7 CLI commands, _record_action wired to append_step_to_active, type hook added, 31 tests
 
 ## Rebased branches
 - (none — no stale branches this session)
@@ -18,7 +14,8 @@
 - (none)
 
 ## Next session should
-- All three migration guide gaps (#759, #760, #761) are now addressed with PRs queued
 - All P0/P1/P2 bugs have PRs queued from previous sessions
-- Next priority: P1 features #90 (recording/playback engine) or #104 (selector templates) — each is a full-session task
-- #91 and #105 are already merged
+- #90 recording/playback now has PR queued (this session)
+- #91 visual regression and #105 selector management already merged
+- Next priority: #104 (Built-in selector templates for Top 20 Windows apps) — full-session feature
+- Check if any pending PRs have been merged and clean up stale branches
