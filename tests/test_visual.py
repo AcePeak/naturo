@@ -294,3 +294,280 @@ class TestVisualCLI:
         assert "compare" in result.output
         assert "diff" in result.output
         assert "report" in result.output
+
+
+# ── Enterprise feature tests ────────────────────────────────────────────────
+
+
+class TestIgnoreRegions:
+    def test_ignore_region_masks_difference(self, red_image, tmp_path):
+        """A blue patch in a masked region should not cause a diff."""
+        # Create image with blue patch at (0,0)-(10,10)
+        patched = tmp_path / "patched.png"
+        img = Image.new("RGB", (100, 100), (255, 0, 0))
+        for x in range(10):
+            for y in range(10):
+                img.putpixel((x, y), (0, 0, 255))
+        img.save(patched)
+
+        # Without masking: should detect difference (100/10000 = 1% diff)
+        result = visual_mod.compare_images(red_image, patched, threshold=0.999)
+        assert result.match is False
+
+        # With masking over the blue patch: should pass
+        result2 = visual_mod.compare_images(
+            red_image, patched, threshold=0.999,
+            ignore_regions=[(0, 0, 10, 10)],
+        )
+        assert result2.match is True
+        assert result2.similarity == 1.0
+
+    def test_ignore_multiple_regions(self, red_image, tmp_path):
+        """Multiple ignore regions mask independently."""
+        patched = tmp_path / "multi.png"
+        img = Image.new("RGB", (100, 100), (255, 0, 0))
+        # Two blue patches
+        for x in range(5):
+            for y in range(5):
+                img.putpixel((x, y), (0, 0, 255))
+                img.putpixel((90 + x, 90 + y), (0, 0, 255))
+        img.save(patched)
+
+        result = visual_mod.compare_images(
+            red_image, patched, threshold=0.99,
+            ignore_regions=[(0, 0, 5, 5), (90, 90, 10, 10)],
+        )
+        assert result.match is True
+
+
+class TestUpdateBaseline:
+    def test_update_existing(self, tmp_dirs, red_image, blue_image):
+        bd, _ = tmp_dirs
+        visual_mod.save_baseline(red_image, "test_screen", bd)
+        path = visual_mod.update_baseline(blue_image, "test_screen", bd)
+        assert path.exists()
+        # Verify it's now the blue image
+        img = Image.open(path)
+        assert img.getpixel((50, 50)) == (0, 0, 255)
+
+    def test_update_nonexistent_raises(self, tmp_dirs, red_image):
+        bd, _ = tmp_dirs
+        with pytest.raises(FileNotFoundError):
+            visual_mod.update_baseline(red_image, "nonexistent", bd)
+
+
+class TestSuiteLoading:
+    def test_load_valid_suite(self, tmp_path):
+        suite_file = tmp_path / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "Test Suite",
+            "threshold": 0.98,
+            "tests": [
+                {"name": "screen1", "current": "shots/s1.png"},
+                {"name": "screen2", "current": "shots/s2.png",
+                 "threshold": 0.90, "ignore_regions": [[10, 5, 200, 30]]},
+            ],
+        }))
+        suite = visual_mod.load_suite(suite_file)
+        assert suite.name == "Test Suite"
+        assert suite.threshold == 0.98
+        assert len(suite.tests) == 2
+        assert suite.tests[1].threshold == 0.90
+        assert suite.tests[1].ignore_regions == [(10, 5, 200, 30)]
+
+    def test_load_missing_file(self):
+        with pytest.raises(FileNotFoundError):
+            visual_mod.load_suite("/nonexistent.json")
+
+    def test_load_missing_tests_key(self, tmp_path):
+        suite_file = tmp_path / "bad.json"
+        suite_file.write_text(json.dumps({"name": "Bad"}))
+        with pytest.raises(ValueError, match="tests"):
+            visual_mod.load_suite(suite_file)
+
+    def test_load_missing_required_fields(self, tmp_path):
+        suite_file = tmp_path / "bad2.json"
+        suite_file.write_text(json.dumps({
+            "tests": [{"name": "only_name"}],
+        }))
+        with pytest.raises(ValueError, match="current"):
+            visual_mod.load_suite(suite_file)
+
+
+class TestRunSuite:
+    def test_run_suite_all_pass(self, tmp_dirs, red_image, red_copy):
+        bd, rd = tmp_dirs
+        visual_mod.save_baseline(red_image, "screen1", bd)
+
+        suite = visual_mod.Suite(
+            name="Test", threshold=0.95,
+            tests=[visual_mod.SuiteTest(name="screen1", current=str(red_copy))],
+        )
+        report = visual_mod.run_suite(suite, baselines_dir=bd, reports_dir=rd)
+        assert report.all_passed
+        assert report.passed == 1
+
+    def test_run_suite_missing_baseline(self, tmp_dirs, red_image):
+        bd, rd = tmp_dirs
+        suite = visual_mod.Suite(
+            name="Test", threshold=0.95,
+            tests=[visual_mod.SuiteTest(name="missing", current=str(red_image))],
+        )
+        report = visual_mod.run_suite(suite, baselines_dir=bd, reports_dir=rd)
+        assert not report.all_passed
+        assert report.failed == 1
+
+    def test_suite_per_test_threshold(self, tmp_dirs, red_image, slightly_different):
+        bd, rd = tmp_dirs
+        visual_mod.save_baseline(red_image, "screen1", bd)
+
+        suite = visual_mod.Suite(
+            name="Test", threshold=1.0,  # strict global
+            tests=[
+                visual_mod.SuiteTest(
+                    name="screen1",
+                    current=str(slightly_different),
+                    threshold=0.95,  # relaxed per-test
+                ),
+            ],
+        )
+        report = visual_mod.run_suite(suite, baselines_dir=bd, reports_dir=rd)
+        assert report.all_passed  # per-test threshold wins
+
+    def test_suite_with_ignore_regions(self, tmp_dirs, red_image, tmp_path):
+        bd, rd = tmp_dirs
+        visual_mod.save_baseline(red_image, "screen1", bd)
+
+        # Create image with blue corner
+        patched = tmp_path / "patched.png"
+        img = Image.new("RGB", (100, 100), (255, 0, 0))
+        for x in range(10):
+            for y in range(10):
+                img.putpixel((x, y), (0, 0, 255))
+        img.save(patched)
+
+        suite = visual_mod.Suite(
+            name="Test", threshold=0.99,
+            tests=[
+                visual_mod.SuiteTest(
+                    name="screen1",
+                    current=str(patched),
+                    ignore_regions=[(0, 0, 10, 10)],
+                ),
+            ],
+        )
+        report = visual_mod.run_suite(suite, baselines_dir=bd, reports_dir=rd)
+        assert report.all_passed
+
+
+class TestEnterpriseCLI:
+    def test_update_command(self, runner, tmp_dirs, red_image, blue_image):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, [
+            "visual", "update", "s1", "--from", str(blue_image),
+        ])
+        assert result.exit_code == 0
+        assert "updated" in result.output.lower()
+
+    def test_update_nonexistent(self, runner, tmp_dirs, red_image):
+        result = runner.invoke(main, [
+            "visual", "update", "nope", "--from", str(red_image),
+        ])
+        assert result.exit_code != 0
+
+    def test_update_json(self, runner, tmp_dirs, red_image, blue_image):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, [
+            "visual", "update", "s1", "--from", str(blue_image), "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+
+    def test_update_all_command(self, runner, tmp_dirs, red_image, blue_image):
+        bd, _ = tmp_dirs
+        runner.invoke(main, ["visual", "baseline", "red", "--from", str(red_image)])
+        # Create dir with updated screenshot
+        update_dir = bd.parent / "updates"
+        update_dir.mkdir()
+        Image.new("RGB", (100, 100), (0, 255, 0)).save(update_dir / "red.png")
+        Image.new("RGB", (100, 100), (0, 255, 0)).save(update_dir / "unknown.png")
+
+        result = runner.invoke(main, [
+            "visual", "update-all", "--from-dir", str(update_dir),
+        ])
+        assert result.exit_code == 0
+        assert "Updated: red" in result.output
+        assert "Skipped: unknown" in result.output
+
+    def test_compare_with_ignore_region(self, runner, tmp_dirs, red_image, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        # Create image with blue corner
+        patched = tmp_path / "patched.png"
+        img = Image.new("RGB", (100, 100), (255, 0, 0))
+        for x in range(10):
+            for y in range(10):
+                img.putpixel((x, y), (0, 0, 255))
+        img.save(patched)
+
+        # Fails without masking (100/10000 = 1% diff, similarity=0.99)
+        result = runner.invoke(main, [
+            "visual", "compare", "s1", "--current", str(patched),
+            "--threshold", "0.999",
+        ])
+        assert result.exit_code != 0
+
+        # Passes with masking
+        result2 = runner.invoke(main, [
+            "visual", "compare", "s1", "--current", str(patched),
+            "--threshold", "0.999", "--ignore-region", "0,0,10,10",
+        ])
+        assert result2.exit_code == 0
+
+    def test_suite_command(self, runner, tmp_dirs, red_image, red_copy, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        suite_file = tmp_path / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "CI Suite",
+            "tests": [
+                {"name": "s1", "current": str(red_copy)},
+            ],
+        }))
+        result = runner.invoke(main, ["visual", "suite", str(suite_file)])
+        assert result.exit_code == 0
+        assert "PASS" in result.output
+        assert "1 passed" in result.output
+
+    def test_suite_json_output(self, runner, tmp_dirs, red_image, red_copy, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        suite_file = tmp_path / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "CI Suite",
+            "tests": [
+                {"name": "s1", "current": str(red_copy)},
+            ],
+        }))
+        result = runner.invoke(main, ["visual", "suite", str(suite_file), "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["all_passed"] is True
+
+    def test_suite_with_html_report(self, runner, tmp_dirs, red_image, red_copy, tmp_path):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        suite_file = tmp_path / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "CI Suite",
+            "tests": [{"name": "s1", "current": str(red_copy)}],
+        }))
+        report_path = tmp_path / "report.html"
+        result = runner.invoke(main, [
+            "visual", "suite", str(suite_file), "-o", str(report_path),
+        ])
+        assert result.exit_code == 0
+        assert report_path.exists()
+
+    def test_help_includes_new_commands(self, runner):
+        result = runner.invoke(main, ["visual", "--help"])
+        assert result.exit_code == 0
+        assert "update" in result.output
+        assert "suite" in result.output

@@ -180,6 +180,55 @@ def delete_baseline(name: str, directory: Optional[Path] = None) -> bool:
     return deleted
 
 
+def update_baseline(
+    image_path: str | Path,
+    name: str,
+    directory: Optional[Path] = None,
+) -> Path:
+    """Update an existing baseline with a new screenshot.
+
+    Args:
+        image_path: Path to the new screenshot.
+        name: Baseline name to update.
+        directory: Custom baselines directory. Uses default if None.
+
+    Returns:
+        Path to the updated baseline image.
+
+    Raises:
+        FileNotFoundError: If the baseline does not exist.
+    """
+    _require_pil()
+    d = directory or BASELINES_DIR
+    existing = d / f"{name}.png"
+    if not existing.exists():
+        raise FileNotFoundError(f"Baseline not found: {name}")
+
+    return save_baseline(image_path, name, directory)
+
+
+def _apply_ignore_regions(
+    img: "Image.Image",
+    regions: list[tuple[int, int, int, int]],
+    fill: tuple[int, int, int] = (128, 128, 128),
+) -> "Image.Image":
+    """Mask regions of an image with a solid fill color.
+
+    Args:
+        img: PIL Image to mask.
+        regions: List of (x, y, width, height) tuples to mask.
+        fill: RGB fill color for masked regions.
+
+    Returns:
+        New image with masked regions.
+    """
+    masked = img.copy()
+    draw = ImageDraw.Draw(masked)
+    for x, y, w, h in regions:
+        draw.rectangle([x, y, x + w, y + h], fill=fill)
+    return masked
+
+
 def compare_images(
     baseline_path: str | Path,
     current_path: str | Path,
@@ -187,6 +236,7 @@ def compare_images(
     threshold: float = 0.95,
     diff_output: Optional[str | Path] = None,
     highlight_color: tuple = (255, 0, 0),
+    ignore_regions: Optional[list[tuple[int, int, int, int]]] = None,
 ) -> ComparisonResult:
     """Compare two images and generate a diff.
 
@@ -197,6 +247,7 @@ def compare_images(
         threshold: Similarity threshold (0.0-1.0). Above = pass, below = fail.
         diff_output: Path to save the diff image. None = don't save.
         highlight_color: RGB color for highlighting differences.
+        ignore_regions: List of (x, y, width, height) tuples to mask before comparison.
 
     Returns:
         ComparisonResult with similarity score and diff information.
@@ -205,6 +256,10 @@ def compare_images(
 
     baseline = Image.open(baseline_path).convert("RGB")
     current = Image.open(current_path).convert("RGB")
+
+    if ignore_regions:
+        baseline = _apply_ignore_regions(baseline, ignore_regions)
+        current = _apply_ignore_regions(current, ignore_regions)
 
     dimensions_match = baseline.size == current.size
 
@@ -259,6 +314,7 @@ def compare_with_baseline(
     threshold: float = 0.95,
     baselines_dir: Optional[Path] = None,
     reports_dir: Optional[Path] = None,
+    ignore_regions: Optional[list[tuple[int, int, int, int]]] = None,
 ) -> ComparisonResult:
     """Compare a screenshot against its saved baseline.
 
@@ -268,6 +324,7 @@ def compare_with_baseline(
         threshold: Similarity threshold (0.0-1.0).
         baselines_dir: Custom baselines directory.
         reports_dir: Custom reports directory for diff images.
+        ignore_regions: List of (x, y, width, height) tuples to mask before comparison.
 
     Returns:
         ComparisonResult with match/similarity data.
@@ -289,6 +346,7 @@ def compare_with_baseline(
         name=name,
         threshold=threshold,
         diff_output=diff_output,
+        ignore_regions=ignore_regions,
     )
 
 
@@ -456,3 +514,123 @@ def compute_ssim(
             count += 1
 
     return ssim_sum / count if count > 0 else 1.0
+
+
+@dataclass
+class SuiteTest:
+    """A single test case in a visual regression suite."""
+    name: str
+    current: str
+    threshold: Optional[float] = None
+    ignore_regions: Optional[list[tuple[int, int, int, int]]] = None
+
+
+@dataclass
+class Suite:
+    """A visual regression test suite loaded from JSON.
+
+    Suite JSON format::
+
+        {
+          "name": "Login Flow",
+          "threshold": 0.95,
+          "tests": [
+            {"name": "login_screen", "current": "screenshots/login.png"},
+            {"name": "dashboard", "current": "screenshots/dash.png",
+             "threshold": 0.98, "ignore_regions": [[10, 5, 200, 30]]}
+          ]
+        }
+    """
+    name: str
+    tests: list[SuiteTest]
+    threshold: float = 0.95
+
+
+def load_suite(path: str | Path) -> Suite:
+    """Load a visual regression suite from a JSON file.
+
+    Args:
+        path: Path to the suite JSON file.
+
+    Returns:
+        Parsed Suite object.
+
+    Raises:
+        FileNotFoundError: If the suite file does not exist.
+        ValueError: If the suite JSON is invalid.
+    """
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Suite file not found: {path}")
+
+    with open(p, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if "tests" not in data or not isinstance(data["tests"], list):
+        raise ValueError("Suite JSON must contain a 'tests' array")
+
+    suite_threshold = data.get("threshold", 0.95)
+    tests = []
+    for t in data["tests"]:
+        if "name" not in t or "current" not in t:
+            raise ValueError("Each test must have 'name' and 'current' fields")
+        regions = None
+        if "ignore_regions" in t:
+            regions = [tuple(r) for r in t["ignore_regions"]]
+        tests.append(SuiteTest(
+            name=t["name"],
+            current=t["current"],
+            threshold=t.get("threshold"),
+            ignore_regions=regions,
+        ))
+
+    return Suite(
+        name=data.get("name", p.stem),
+        tests=tests,
+        threshold=suite_threshold,
+    )
+
+
+def run_suite(
+    suite: Suite,
+    baselines_dir: Optional[Path] = None,
+    reports_dir: Optional[Path] = None,
+) -> VisualReport:
+    """Run all tests in a visual regression suite.
+
+    Args:
+        suite: Parsed Suite object.
+        baselines_dir: Custom baselines directory.
+        reports_dir: Custom reports directory.
+
+    Returns:
+        VisualReport with all comparison results.
+    """
+    report = VisualReport(
+        name=suite.name,
+        created_at=datetime.now().isoformat(),
+    )
+
+    for test in suite.tests:
+        threshold = test.threshold if test.threshold is not None else suite.threshold
+        try:
+            result = compare_with_baseline(
+                current_path=test.current,
+                name=test.name,
+                threshold=threshold,
+                baselines_dir=baselines_dir,
+                reports_dir=reports_dir,
+                ignore_regions=test.ignore_regions,
+            )
+            report.add_result(result)
+        except FileNotFoundError:
+            report.add_result(ComparisonResult(
+                name=test.name,
+                match=False,
+                similarity=0.0,
+                threshold=threshold,
+                baseline_path="<not found>",
+                current_path=test.current,
+            ))
+
+    return report
