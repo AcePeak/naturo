@@ -132,6 +132,18 @@ class TestBuiltinCLIIntegration:
         assert "No built-in selectors" in result.output
 
 
+class TestPackageData:
+    """Ensure built-in templates are included in package distribution."""
+
+    def test_pyproject_includes_json_templates(self):
+        import tomllib
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        with open(pyproject, "rb") as f:
+            config = tomllib.load(f)
+        package_data = config["tool"]["setuptools"]["package-data"]["naturo"]
+        assert "selectors_builtin/*.json" in package_data
+
+
 class TestBuiltinLoaderFunction:
     """Test the _list_builtin_selectors function directly."""
 
