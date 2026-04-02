@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from naturo.browser._network import NetworkMonitor
 
 from naturo.cdp import CDPClient, CDPError, CDPConnectionError
 from naturo.browser._element import BrowserElement
@@ -87,6 +90,18 @@ class BrowserPage:
         """Get the current page title."""
         result = self._cdp.evaluate("document.title")
         return str(result) if result else ""
+
+    @property
+    def network(self) -> NetworkMonitor:
+        """Lazy-initialized network monitor for this page.
+
+        Returns:
+            :class:`~naturo.browser._network.NetworkMonitor` instance.
+        """
+        if not hasattr(self, "_network"):
+            from naturo.browser._network import NetworkMonitor
+            self._network = NetworkMonitor(self._cdp)
+        return self._network
 
     # ── Navigation ────────────────────────────────────────────────────────
 
