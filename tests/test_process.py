@@ -434,6 +434,119 @@ class TestLaunchApp:
             launch_app(name="app", wait_until_ready=True, timeout=2.0)
 
 
+@patch(
+    "naturo.cli.interaction._is_current_session_interactive",
+    return_value=True,
+)
+class TestLaunchAppPidResolution:
+    """Tests for real PID resolution after cmd /c start (#785).
+
+    On Windows, launch_app uses ``cmd /c start`` which returns cmd.exe's PID,
+    not the actual application.  These tests verify that the real app PID is
+    resolved via find_process.
+    """
+
+    @staticmethod
+    def _make_run_result(returncode=0, stdout="", stderr=""):
+        import subprocess as _sp
+        return _sp.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_resolves_real_pid_after_cmd_start(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When find_process locates the real app, its PID replaces cmd.exe's."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100  # cmd.exe PID
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\notepad.exe")
+        mock_find.return_value = ProcessInfo(pid=5678, name="notepad.exe", path="C:\\notepad.exe")
+
+        info = launch_app(name="notepad")
+        assert info.pid == 5678
+        assert info.name == "notepad.exe"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_falls_back_to_cmd_pid_when_process_not_found(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When find_process returns None, falls back to cmd.exe's PID."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\notepad.exe")
+        mock_find.return_value = None
+
+        info = launch_app(name="notepad", timeout=0.5)
+        assert info.pid == 100  # Fallback to cmd.exe PID
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_resolves_via_alias_fallback(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When the resolved name doesn't match, tries the original name."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\calc.exe")
+
+        # First call (resolved_name) returns None, second call (original name) finds it
+        mock_find.side_effect = [None, ProcessInfo(pid=7777, name="calc.exe", path="C:\\calc.exe")]
+
+        info = launch_app(name="calculator")
+        assert info.pid == 7777
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_wait_until_ready_skips_poll_when_resolved(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """wait_until_ready returns immediately when real PID is already found."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_proc.poll.return_value = 0  # cmd.exe already exited
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\app.exe")
+        mock_find.return_value = ProcessInfo(pid=9999, name="app.exe")
+
+        info = launch_app(name="app", wait_until_ready=True, timeout=1.0)
+        assert info.pid == 9999
+        assert info.is_running is True
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process", return_value=None)
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_path_launch_skips_pid_resolution(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """Launching by --path uses Popen directly, no PID resolution needed."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 4444
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+
+        with patch("os.path.isfile", return_value=True):
+            info = launch_app(path="C:\\notepad.exe")
+        assert info.pid == 4444
+        mock_find.assert_not_called()
+
+
 class TestResolveLaunchName:
     """Tests for _resolve_launch_name alias resolution (#246)."""
 

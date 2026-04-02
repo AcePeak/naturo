@@ -361,6 +361,9 @@ def launch_app(
 
     cmd_args = args or []
     system = platform.system()
+    # Set when launching via cmd /c start — triggers PID resolution (#785)
+    _resolve_real_pid: str | None = None
+    _resolve_real_alias: str | None = None
 
     try:
         if system == "Windows":
@@ -406,6 +409,11 @@ def launch_app(
                     # Launched but already exited — report success with a dummy PID
                     return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
                 proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
+                # cmd.exe exits quickly after launching the target app.
+                # Mark for real PID resolution below — proc.pid is cmd.exe,
+                # not the actual application (#785).
+                _resolve_real_pid = resolved_name
+                _resolve_real_alias = name
         elif system == "Darwin":
             if path:
                 proc = subprocess.Popen([path] + cmd_args)
@@ -448,15 +456,43 @@ def launch_app(
     except OSError as exc:
         raise AppNotFoundError(launch_target, suggested_action=str(exc))
 
+    # Resolve real PID when launched via cmd /c start (#785).
+    # cmd.exe exits after spawning the target app; proc.pid is the wrapper,
+    # not the actual application (especially for UWP apps like Calculator).
+    real_pid = proc.pid
+    real_name = name or os.path.basename(path or "")
+    real_path = path or ""
+    if _resolve_real_pid is not None:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        # Poll for the real process — give UWP apps time to start
+        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 3.0)
+        while time.monotonic() < poll_deadline:
+            found = find_process(name=_resolve_real_pid)
+            if not found and _resolve_real_alias and _resolve_real_alias != _resolve_real_pid:
+                found = find_process(name=_resolve_real_alias)
+            if found:
+                real_pid = found.pid
+                real_name = found.name
+                real_path = found.path or ""
+                break
+            time.sleep(0.3)
+
     info = ProcessInfo(
-        pid=proc.pid,
-        name=name or os.path.basename(path or ""),
-        path=path or "",
+        pid=real_pid,
+        name=real_name,
+        path=real_path,
         is_running=True,
         window_count=0,
     )
 
     if wait_until_ready:
+        # If we already resolved the real PID via find_process (#785),
+        # the app is confirmed running — skip the poll loop.
+        if _resolve_real_pid is not None and real_pid != proc.pid:
+            return info
         start = time.monotonic()
         while time.monotonic() - start < timeout:
             time.sleep(0.5)
