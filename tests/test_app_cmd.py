@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
+from naturo.app_ids import AppIdEntry
 from naturo.cli.app_cmd import (
     app_close,
     app_find,
@@ -25,6 +26,7 @@ from naturo.cli.app_cmd import (
     app_unhide,
     app_windows,
     _match_windows,
+    _resolve_app_id,
 )
 
 
@@ -664,3 +666,175 @@ class TestAppHelp:
     def test_windows_help(self, runner):
         result = runner.invoke(app_windows, ["--help"])
         assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# App ID resolution (#776)
+# ---------------------------------------------------------------------------
+
+def _make_app_id_entry(app_id="a1", pid=1234, handle=5678,
+                       process_name="notepad.exe", title="Untitled"):
+    import time
+    return AppIdEntry(
+        app_id=app_id, pid=pid, handle=handle,
+        process_name=process_name, title=title,
+        timestamp=time.time(),
+    )
+
+
+class TestResolveAppId:
+    """Tests for _resolve_app_id helper."""
+
+    def test_non_app_id_returns_none(self):
+        assert _resolve_app_id("notepad", False) is None
+
+    def test_none_returns_none(self):
+        assert _resolve_app_id(None, False) is None
+
+    @patch("naturo.app_ids.get_app_id_map")
+    def test_valid_id_returns_entry(self, mock_map):
+        entry = _make_app_id_entry()
+        mock_map.return_value.resolve.return_value = entry
+        result = _resolve_app_id("a1", False)
+        assert result is entry
+
+    @patch("naturo.app_ids.get_app_id_map")
+    def test_expired_id_returns_false(self, mock_map):
+        mock_map.return_value.resolve.return_value = None
+        result = _resolve_app_id("a1", False)
+        assert result is False
+
+
+class TestAppIdInCommands:
+    """Tests that app ID resolution works in actual CLI commands (#776)."""
+
+    def test_launch_rejects_app_id(self, runner):
+        result = runner.invoke(app_launch, ["a1"])
+        assert result.exit_code != 0
+        assert "Cannot launch by app ID" in result.output
+
+    def test_launch_rejects_app_id_json(self, runner):
+        result = runner.invoke(app_launch, ["a1", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.process.quit_app")
+    def test_quit_resolves_app_id(self, mock_quit, mock_map, runner):
+        entry = _make_app_id_entry()
+        mock_map.return_value.resolve.return_value = entry
+        result = runner.invoke(app_quit, ["a1"])
+        assert result.exit_code == 0
+        mock_quit.assert_called_once_with(
+            name="notepad.exe", pid=1234, force=False, timeout=10.0,
+        )
+
+    @patch("naturo.app_ids.get_app_id_map")
+    def test_quit_expired_app_id(self, mock_map, runner):
+        mock_map.return_value.resolve.return_value = None
+        result = runner.invoke(app_quit, ["a1"])
+        assert result.exit_code != 0
+        assert "not found or expired" in result.output
+
+    @patch("naturo.app_ids.get_app_id_map")
+    def test_quit_expired_app_id_json(self, mock_map, runner):
+        mock_map.return_value.resolve.return_value = None
+        result = runner.invoke(app_quit, ["a1", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "APP_ID_NOT_FOUND"
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.process.relaunch_app")
+    def test_relaunch_resolves_app_id(self, mock_relaunch, mock_map, runner):
+        entry = _make_app_id_entry()
+        mock_map.return_value.resolve.return_value = entry
+        mock_relaunch.return_value = _make_process_info()
+        result = runner.invoke(app_relaunch, ["a1"])
+        assert result.exit_code == 0
+        mock_relaunch.assert_called_once()
+        assert mock_relaunch.call_args.kwargs["name"] == "notepad.exe"
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_focus_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_focus, ["a1"])
+        assert result.exit_code == 0
+        backend.focus_window.assert_called_once_with(title=None, hwnd=9999)
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_close_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_close, ["a1"])
+        assert result.exit_code == 0
+        backend.close_window.assert_called_once_with(title=None, hwnd=9999, force=False)
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_minimize_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_minimize, ["a1"])
+        assert result.exit_code == 0
+        backend.minimize_window.assert_called_once_with(title=None, hwnd=9999)
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_maximize_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_maximize, ["a1"])
+        assert result.exit_code == 0
+        backend.maximize_window.assert_called_once_with(title=None, hwnd=9999)
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_restore_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_restore, ["a1"])
+        assert result.exit_code == 0
+        backend.restore_window.assert_called_once_with(title=None, hwnd=9999)
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.backends.base.get_backend")
+    def test_move_resolves_app_id_to_hwnd(self, mock_get_backend, mock_map, runner):
+        entry = _make_app_id_entry(handle=9999)
+        mock_map.return_value.resolve.return_value = entry
+        backend = MagicMock()
+        mock_get_backend.return_value = backend
+        result = runner.invoke(app_move, ["a1", "--x", "100", "--y", "200"])
+        assert result.exit_code == 0
+        backend.move_window.assert_called_once_with(x=100, y=200, title=None, hwnd=9999)
+
+    def test_normal_name_not_treated_as_app_id(self, runner):
+        """Names like 'app' or 'acrobat' should NOT match the a<N> pattern."""
+        # 'acrobat' starts with 'a' but has letters after digits — should not match
+        result = runner.invoke(app_launch, ["acrobat", "--help"])
+        # --help should work — the name is not rejected as an app ID
+        assert result.exit_code == 0
+
+    @patch("naturo.app_ids.get_app_id_map")
+    @patch("naturo.process.find_process")
+    def test_find_resolves_app_id(self, mock_find, mock_map, runner):
+        entry = _make_app_id_entry()
+        mock_map.return_value.resolve.return_value = entry
+        mock_find.return_value = _make_process_info()
+        result = runner.invoke(app_find, ["a1"])
+        assert result.exit_code == 0
+        mock_find.assert_called_once_with(name="notepad.exe", pid=1234)

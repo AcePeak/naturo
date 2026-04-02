@@ -8,6 +8,7 @@ also registered here, unifying app + window into a single namespace.
 import json
 import logging
 import os
+import re
 import sys
 
 import click
@@ -15,6 +16,8 @@ import click
 from naturo.cli.error_helpers import json_error as _json_error_str
 
 logger = logging.getLogger(__name__)
+
+_APP_ID_RE = re.compile(r"a\d+$")
 
 
 def _match_windows(windows, name_lower):
@@ -60,6 +63,35 @@ def _safe_echo(text: str, **kwargs) -> None:
         click.echo(encoded.decode(sys.stdout.encoding or "utf-8", errors="replace"), **kwargs)
 
 
+def _resolve_app_id(name, json_output):
+    """If *name* is an app ID (``a1``, ``a2``, …), resolve it via the session map.
+
+    Args:
+        name: Potential app ID string (positional NAME or ``--app`` value).
+        json_output: Whether to emit JSON error output.
+
+    Returns:
+        The :class:`~naturo.app_ids.AppIdEntry` when the ID resolves
+        successfully, ``False`` when the ID pattern matched but the entry
+        is expired or unknown (error already emitted), or ``None`` when
+        *name* does not match the ``a<N>`` pattern at all.
+    """
+    if name is None or not _APP_ID_RE.fullmatch(name):
+        return None
+
+    from naturo.app_ids import get_app_id_map
+
+    entry = get_app_id_map().resolve(name)
+    if entry is None:
+        msg = f'App ID "{name}" not found or expired. Run "naturo app list" to refresh.'
+        if json_output:
+            click.echo(_json_error_str("APP_ID_NOT_FOUND", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        return False
+    return entry
+
+
 @click.command("launch")
 @click.argument("name", required=False, default=None)
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
@@ -77,6 +109,16 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
         name = app_name
     if not name and not path:
         msg = "Specify application name or --path"
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return
+
+    # (#776) Reject app IDs — launch requires an app name/path, not a running-app ID
+    if name and _APP_ID_RE.fullmatch(name):
+        msg = f'Cannot launch by app ID "{name}". Use an app name or --path instead.'
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
@@ -145,6 +187,16 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
     if not name and app_name:
         name = app_name
 
+    # (#776) Resolve app ID (a1, a2, …) to process name/PID
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+        if pid is None:
+            pid = entry.pid
+
     if not name and pid is None:
         msg = "Specify application name or --pid"
         if json_output:
@@ -183,6 +235,15 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) ->
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to process name
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+
     if not name:
         msg = "Specify application name"
         if json_output:
@@ -388,6 +449,15 @@ def app_hide(ctx, name, app_name, json_output) -> None:
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to process name
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+
     if not name:
         msg = "Specify application name"
         if json_output:
@@ -436,6 +506,15 @@ def app_unhide(ctx, name, app_name, json_output) -> None:
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to process name
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+
     if not name:
         msg = "Specify application name"
         if json_output:
@@ -484,6 +563,15 @@ def app_switch(ctx, name, app_name, json_output) -> None:
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to process name
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 
@@ -528,6 +616,16 @@ def app_find(ctx, name, pid, json_output) -> None:
             _safe_echo(f"Error: {msg}", err=True)
         sys.exit(1)
         return
+
+    # (#776) Resolve app ID (a1, a2, …) to process name/PID
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+        if pid is None:
+            pid = entry.pid
 
     from naturo.process import find_process
 
@@ -588,6 +686,16 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output) -> None:
     # Accept --app as alias for positional NAME (#289)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to process name/PID
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+        if pid is None:
+            pid = entry.pid
 
     from naturo.detect import detect
 
@@ -915,6 +1023,16 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
     # --app flag overrides positional NAME when both absent
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -955,6 +1073,16 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> No
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
         name = app_name
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -991,6 +1119,16 @@ def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
       naturo app minimize --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -1025,6 +1163,16 @@ def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
       naturo app maximize --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -1059,6 +1207,16 @@ def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
       naturo app restore --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -1101,6 +1259,16 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) ->
       naturo app move feishu --width 800 --height 600
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#776) Resolve app ID (a1, a2, …) to window handle
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        hwnd = entry.handle
+        name = None
+
     from naturo.errors import NaturoError
 
     if not _require_target(name, window_title, hwnd, json_output):
@@ -1193,6 +1361,17 @@ def app_windows(ctx, name, pid, json_output) -> None:
       naturo app windows --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#776) Resolve app ID (a1, a2, …) to process name/PID for filtering
+    entry = _resolve_app_id(name, json_output)
+    if entry is False:
+        sys.exit(1)
+        return
+    if entry is not None:
+        name = entry.process_name
+        if pid is None:
+            pid = entry.pid
+
     from naturo.errors import NaturoError
 
     try:
