@@ -271,3 +271,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: fix/issue-783-json-duplicate-stderr
+- **Base**: develop
+- **Title**: fix: suppress stderr output in JSON mode (fixes #783)
+- **Body**: Python's logging lastResort handler emits WARNING+ to stderr when no handlers are configured. In JSON mode, this caused human-readable error text to mix with JSON stdout, breaking piping workflows. Three-part fix: (1) add NullHandler to root logger when --json is active, (2) downgrade routing.py app-not-found from WARNING to DEBUG (caller handles the condition), (3) downgrade press focus-failure from WARNING to DEBUG. 4 new tests. 4215 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
