@@ -2,27 +2,36 @@
 > Date: 2026-04-02
 
 ## Completed
-- fix/issue-788-stale-pid-app-id: Validate cached PID liveness via find_process(pid=) in both _resolve_app_id callers, fail with APP_ID_STALE error (fixes #788)
-- fix/issue-789-app-filter-basename: Extract ntpath.basename() in _resolve_hwnd/_resolve_hwnds/_is_afh_window to prevent full-path directory matching (fixes #789)
-- fix/issue-781-json-exit-code: Change return→sys.exit(1) in selector clear/export and visual report when success:false (fixes #781)
-- fix/issue-783-json-duplicate-stderr: Add NullHandler to root logger in JSON mode + downgrade routing/press WARNING→DEBUG (fixes #783)
-- fix/issue-787-coords-bounds: Validate coordinates against GetSystemMetrics/65535 with COORDS_OUT_OF_BOUNDS error (fixes #787)
+- feat/issue-91-visual-regression-enterprise: Enterprise visual regression features — ignore regions, baseline update/update-all, suite runner from JSON (fixes #91)
 
 ## Pushed branches (awaiting PR)
-- fix/issue-788-stale-pid-app-id: PID liveness check in both _resolve_app_id callers + 4 new tests + 13 existing tests updated
-- fix/issue-789-app-filter-basename: ntpath.basename() in 3 locations in _element.py + 3 new tests
-- fix/issue-781-json-exit-code: 3 return→sys.exit(1) changes + 4 new tests
-- fix/issue-783-json-duplicate-stderr: NullHandler + 2 WARNING→DEBUG downgrades + 1 new test
-- fix/issue-787-coords-bounds: _get_max_screen_coord() helper + bounds validation + 2 new tests
+- feat/issue-91-visual-regression-enterprise: 3 enterprise features (ignore regions, update workflow, suite runner), 21 new tests
 
 ## Rebased branches
-- All 5 branches force-pushed over stale previous versions (clean re-implementation from current develop)
+- fix/issue-788-stale-pid-app-id: rebased onto develop, force-pushed
+- fix/issue-789-app-filter-basename: rebased onto develop, force-pushed
+- fix/issue-781-json-exit-code: rebased onto develop, force-pushed
+- fix/issue-786-uwp-menu-click: rebased onto develop, force-pushed
+- fix/issue-787-coords-bounds: rebased onto develop, force-pushed
+- fix/issue-783-json-duplicate-stderr: rebased onto develop, force-pushed
+- feat/issue-758-chrome-profiles: rebased onto develop (conflict resolved in browser_cmd.py), force-pushed
+- feat/issue-759-browser-download: rebased onto develop, force-pushed
+- feat/issue-760-stealth-check: rebased onto develop (conflict resolved in browser_cmd.py), force-pushed
+- feat/issue-761-drag-from-element: rebased onto develop, force-pushed
+- feat/issue-762-browser-wait: rebased onto develop (conflict resolved in browser_cmd.py), force-pushed
+- feat/issue-764-iframe-support: rebased onto develop, force-pushed
+- feat/issue-90-recording-playback-cli: rebased onto develop, force-pushed
+- feat/issue-104-builtin-selector-templates: rebased onto develop, force-pushed
+- feat/issue-723-cost-guardrails: rebased onto develop, force-pushed
+- refactor/config-cmd-deduplicate-credentials: rebased onto develop, force-pushed
+- refactor/issue-719-cli-by-domain: rebased onto develop (was 71 behind), force-pushed
+- test/browser-cmd-coverage: rebased onto develop, force-pushed
 
 ## Issues found but not fixed
-- #786: Desktop-only UWP menu click regression. Requires WinUI 3 detection which needs Windows desktop testing.
-- #785: Desktop-only CI test. Already addressed by PR #801 (merged). Needs verification on Windows desktop runner.
+- #105 (User selector management) appears to be already fully implemented in develop — all 8 CLI commands exist with tests. Orc-Mycelium should verify and close.
+- Stale remote branches need cleanup: fix/issue-788-stale-pid-hwnd (superseded), feat/issue-90-recording-cli (superseded), docs/issue-722-mcp-reference (already merged). Could not delete due to 403 — Orc-Mycelium should handle.
 
 ## Next session should
-- Check if Orc-Mycelium has created/merged PRs for the 5 new branches
-- If bugs are cleared: tackle remaining P1 features (#90 recording, #104 selector templates) — previous implementations were lost
-- Consider #786 (UWP menu click) if desktop testing capability is available
+- Check if Orc-Mycelium has created/merged PRs for the 18 rebased branches + 1 new branch
+- If #91 PR is merged, all P1 features (#90, #91, #104, #105) will have branches or be done
+- Remaining: verify #105 is truly done, then focus on P2 items or self-driven mode

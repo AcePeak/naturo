@@ -374,3 +374,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: feat/issue-91-visual-regression-enterprise
+- **Base**: develop
+- **Title**: feat: add enterprise visual regression features — ignore regions, update, suite (fixes #91)
+- **Body**: Three enterprise features for CI/CD visual regression workflows: (1) Ignore regions — mask dynamic UI areas (timestamps, ads, spinners) before pixel comparison via --ignore-region x,y,w,h on compare and report commands; also supported per-test in suite JSON. (2) Baseline update workflow — `naturo visual update` replaces existing baseline, `naturo visual update-all --from-dir` batch-updates all baselines from a directory. (3) Suite runner — `naturo visual suite regression.json` runs batch test definitions from JSON with per-test thresholds, ignore regions, and HTML report output for CI pipelines. 21 new tests. 4447 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
