@@ -2,37 +2,29 @@
 > Date: 2026-04-02
 
 ## Completed
-- feat/issue-104-builtin-selector-templates: Built-in selector templates for Top 20 Windows apps — 20 JSON files with 119 selectors, package-data config, 71 tests (fixes #104)
+- fix/issue-788-stale-pid-hwnd: Detect stale PID/HWND after app restart, fall back to process name (fixes #788)
+- fix/issue-789-app-filter-basename: Extract process basename before --app matching (fixes #789)
+- fix/issue-781-json-exit-code: Exit non-zero when JSON mode reports failure (fixes #781)
+- fix/issue-783-json-duplicate-stderr: Suppress stderr output in JSON mode (fixes #783)
+- fix/issue-787-coords-bounds: Reject out-of-bounds click coordinates with clear error (fixes #787)
+- fix/issue-786-uwp-menu-click: Detect WinUI 3 apps for UIA click path (fixes #786)
 
 ## Pushed branches (awaiting PR)
-- feat/issue-104-builtin-selector-templates: 20 app templates (Notepad, Chrome, Firefox, Edge, Explorer, VS Code, Word, Excel, PowerPoint, Calculator, Settings, Task Manager, Windows Terminal, Outlook, Teams, CMD, Paint, Snipping Tool, Control Panel, Registry Editor), pyproject.toml package-data update, 71 tests
+- fix/issue-788-stale-pid-hwnd: Two-layer PID/HWND validation with process-name fallback
+- fix/issue-789-app-filter-basename: ntpath.basename() in _resolve_hwnd and _resolve_hwnds
+- fix/issue-781-json-exit-code: sys.exit(1) in selector clear/export and visual report
+- fix/issue-783-json-duplicate-stderr: NullHandler + WARNING→DEBUG downgrades
+- fix/issue-787-coords-bounds: Coordinate bounds validation with GetSystemMetrics
+- fix/issue-786-uwp-menu-click: _is_winui_window() DesktopWindowXamlSource detection
 
 ## Rebased branches
-- feat/issue-90-recording-playback-cli: rebased onto develop, pushed
-- fix/issue-788-stale-pid-hwnd: rebased onto develop, pushed
-- fix/issue-789-app-filter-basename: rebased onto develop, pushed
-- fix/issue-781-json-exit-code: rebased onto develop, pushed
-- fix/issue-783-json-duplicate-stderr: rebased onto develop, pushed
-- fix/issue-786-uwp-menu-click: rebased onto develop, pushed
-- fix/issue-787-coords-bounds: rebased onto develop, pushed
-- feat/issue-759-browser-download: rebased onto develop, pushed
-- feat/issue-760-stealth-check: rebased onto develop, pushed
-- feat/issue-761-drag-from-element: rebased onto develop, pushed
-- feat/issue-764-iframe-support: rebased onto develop, pushed
-- feat/issue-723-cost-guardrails: rebased onto develop, pushed
-- test/browser-cmd-coverage: rebased onto develop, pushed
-- refactor/config-cmd-deduplicate-credentials: rebased onto develop, pushed
-- docs/issue-722-mcp-reference: rebased onto develop, pushed
-- feat/issue-758-chrome-profiles: rebased with conflict resolution (browser_cmd.py), pushed
-- feat/issue-761-captcha-handling: rebased with conflict resolution (browser_cmd.py), pushed
-- feat/issue-762-browser-wait: rebased with conflict resolution (browser_cmd.py), pushed
+- (none needed — all branches created fresh from current develop)
 
 ## Issues found but not fixed
-- feat/issue-90-recording-cli (old branch, superseded by -playback-cli): has conflict in cli/__init__.py — can be deleted since -playback-cli variant is the active branch
-- docs/ROADMAP.md lines 175-176: #104 and #105 should be marked [x] done
+- Previous session's pending PRs for #90 (recording), #104 (selector templates), and many others still need Orc-Mycelium to create PRs
 
 ## Next session should
-- All P0/P1/P2 bugs and features have PRs queued — check which have been merged
-- Check if Orc-Mycelium has created PRs for pending branches
-- If all PRs merged: enter self-driven mode, focus on code health and test coverage gaps
-- Consider updating ROADMAP.md to reflect completed features
+- Check if Orc-Mycelium has created PRs for the 6 new branches + previous pending branches
+- If all P0/P1/P2 bugs are merged: enter self-driven mode
+- Consider working on remaining migration guide gaps (#759 download, #761 drag, #760 stealth-check)
+- Update ROADMAP.md to reflect completed features

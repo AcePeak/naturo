@@ -318,3 +318,51 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-hwnd
+- **Base**: develop
+- **Title**: fix: detect stale PID/HWND after app restart, fall back to process name (fixes #788)
+- **Body**: Two-layer fix: (1) _resolve_app_id validates PID liveness via os.kill(0); when dead, extracts process-name basename for live window enumeration. (2) _resolve_hwnd validates HWND with IsWindow(); raises WindowNotFoundError when the handle is stale. 6 new tests, 3 existing tests updated. 4375 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: fix/issue-789-app-filter-basename
+- **Base**: develop
+- **Title**: fix: extract process basename before --app matching (fixes #789)
+- **Body**: process_name from the C++ bridge includes the full executable path (e.g. C:\Windows\System32\notepad.exe). The --app filter did substring matching against the full path, so --app system would incorrectly match any process in System32. Now uses ntpath.basename() to extract just the filename before matching in _resolve_hwnd and _resolve_hwnds. 7 new tests. 4371 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: fix/issue-781-json-exit-code
+- **Base**: develop
+- **Title**: fix: exit non-zero when JSON mode reports failure (fixes #781)
+- **Body**: selector clear, selector export, and visual report emitted {"success": false} JSON but exited with code 0. Automation scripts relying on exit codes could not detect failure. Changed return to sys.exit(1) in all three locations. 6 new tests. 4432 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: fix/issue-783-json-duplicate-stderr
+- **Base**: develop
+- **Title**: fix: suppress stderr output in JSON mode (fixes #783)
+- **Body**: Python's logging lastResort handler emits WARNING+ to stderr when no handlers are configured. In JSON mode, this caused human-readable error text to mix with JSON stdout, breaking piping workflows. Three-part fix: (1) add NullHandler to root logger when --json is active, (2) downgrade routing.py app-not-found from WARNING to DEBUG, (3) downgrade press focus-failure from WARNING to DEBUG. 4 new tests. 4430 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: reject out-of-bounds click coordinates with clear error (fixes #787)
+- **Body**: click --coords silently accepted coordinates outside the virtual screen, resulting in no-op clicks. Now validates against GetSystemMetrics (Windows) or a 65535 generic bound (non-Windows). Out-of-bounds coordinates produce a COORDS_OUT_OF_BOUNDS error in both JSON and text modes. 6 new tests. 4432 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: detect WinUI 3 apps for UIA click path (fixes #786)
+- **Body**: WinUI 3 apps (Win11 Notepad, Paint) run as standalone processes, not under ApplicationFrameHost. The UIA click path was only triggered for AFH-hosted apps, so menu items in WinUI 3 apps were clicked via SendInput which doesn't reliably reach XAML content. Added _is_winui_window() that detects DesktopWindowXamlSource child windows. When detected, click uses ExpandCollapsePattern/InvokePattern instead of SendInput. 6 new tests, 2 existing tests updated. 4432 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
