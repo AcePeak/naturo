@@ -8,7 +8,7 @@ created: 2026-03-27
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R86: FAIL — Calculator UWP launches (process runs) but window not detected by naturo. WINDOW_NOT_FOUND on see/capture. Cannot interact with UI."
+notes: "2026-04-02 R96: FAIL — Calculator not detectable after launch."
 
 preconditions:
   - "naturo is installed and in PATH"

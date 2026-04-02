@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 10
-notes: "2026-04-02 R95: PASS — see -j (EXIT=1, success:false), capture -j (EXIT=1, success:false), non-JSON see (EXIT=1). All error paths return non-zero exit code."
+consecutive_passes: 11
+notes: "2026-04-02 R96: PASS — all 4 commands (see/click/type/capture) return exit 1 on JSON failure."
 
 preconditions:
   - "naturo is installed and in PATH"

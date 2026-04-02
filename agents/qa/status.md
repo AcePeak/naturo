@@ -1,20 +1,20 @@
 # QA Status
-Last updated: 2026-04-02 13:20
-Current round: 95
+Last updated: 2026-04-02 14:22
+Current round: 96
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 1 failed (#785), 1 passed, 8 skipped (commit b032097); E2E: 9 passed, 3 xfailed, 1 xpassed
+- CI Desktop Tests: 139 passed, 4 failed, 1 skipped (commit 16b0024)
 - Issues verified: none (no status:done issues)
-- E2E tests: Notepad (pass — type/click/JSON verified, menu click fail #786), Calculator (fail — invisible #785)
-- Regression: 28 active test cases, background agents running
-- New test cases created: TC-0047 (press --app focus mismatch #807)
+- E2E tests: Notepad (pass), Calculator (fail — #785)
+- Regression: 6/16 passed, 10/16 failed, 0 retired
+- New test cases created: none
 - Test cases cleaned up: none
-- New issues created: #807 (press --app sends hotkey to wrong process)
-- Total active test cases: 28
-- Tests run: CI suite + manual E2E + exploratory + accessibility simulation
+- New issues created: none (all findings map to existing open issues)
+- Total active test cases: 26
+- Tests run: 16
 
 ## Top 3 Risks
-1. **UWP Notepad menu interaction broken** (#786) — blocks all menu access paths (click eN, --on, keyboard shortcuts)
-2. **UWP Calculator invisible** (#785) — P0, Calculator launches but invisible to naturo. CI tests also fail.
-3. **press --app doesn't focus target** (#807) — keyboard shortcuts unreliable for background windows, critical for accessibility
+1. UWP app detection unreliable — Calculator invisible after launch (#785)
+2. --app filter matches by title substring — silent wrong-window targeting (#789)
+3. JSON mode stderr leak in click/type/press — breaks script piping (#783)

@@ -8,7 +8,7 @@ created: 2026-04-02
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R95: FAIL — app launch calculator (PID 104776/108820) reports success, 3x CalculatorApp.exe processes running, but invisible to list apps and see --app calculator returns 'No window found'. Confirms #785."
+notes: "2026-04-02 R96: FAIL — app launch calculator reports PID but Calculator not in list apps or see."
 
 preconditions:
   - "naturo is installed and in PATH"

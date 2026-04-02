@@ -6,9 +6,9 @@ priority: P1
 source_issue: null
 created: 2026-03-28
 last_run: 2026-04-02
-last_result: pass
-consecutive_passes: 11
-notes: "2026-04-02 R95: PASS — app quit notepad with unsaved changes ('unsaved test text') closed Notepad exit 0. Verified not in list apps."
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-02 R96: FAIL — quit reported \"Quit notepad\" but 13 Notepad tabs with unsaved content survived."
 
 preconditions:
   - "naturo is installed and in PATH"
