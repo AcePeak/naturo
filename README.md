@@ -27,6 +27,8 @@
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
 - 🍎 **macOS Support** — Coming soon (native implementation in development)
+- 🎬 **Recording & Playback** — Record user actions, replay them, export to Python/Bash scripts
+- 🏷️ **Selector Management** — Save, share, and reuse UI element selectors across sessions
 - 🔬 **Cascade Recognition** — UIA + CDP + AI Vision multi-source fusion for Electron/CEF apps where single-source fails
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
@@ -295,6 +297,19 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `mcp start` | Start MCP server | 0.1.0 |
 | `mcp install` | Install MCP server configuration | 0.3.0 |
 | `mcp tools` | List available MCP tools | 0.3.0 |
+| `record start` | Start recording user actions | 0.3.2 |
+| `record stop` | Stop recording and save | 0.3.2 |
+| `record play` | Replay a saved recording | 0.3.2 |
+| `record list` | List saved recordings | 0.3.2 |
+| `record show` | Show recording steps | 0.3.2 |
+| `record delete` | Delete a recording | 0.3.2 |
+| `record export` | Export recording to Python/Bash/JSON | 0.3.2 |
+| `selector save` | Save a UI selector with a friendly name | 0.3.2 |
+| `selector list` | List saved/built-in selectors | 0.3.2 |
+| `selector delete` | Delete a saved selector | 0.3.2 |
+| `selector export` | Export selectors to JSON | 0.3.2 |
+| `selector import` | Import selectors from JSON | 0.3.2 |
+| `selector test` | Validate a selector against the parser | 0.3.2 |
 | `config` | View/set naturo configuration | 0.3.0 |
 | `excel open` | Open Excel workbook (Windows only) | 0.1.1 |
 | `excel read` | Read cells from worksheet | 0.1.1 |
@@ -324,6 +339,88 @@ naturo snapshot clean --all --yes
 
 Snapshots expire after **10 minutes** when queried via `get_most_recent_snapshot`,
 mirroring Peekaboo's validity window.
+
+## Recording & Playback
+
+Record user actions and replay them — the fastest way to create automation scripts.
+
+```bash
+# Start recording — all subsequent naturo commands are captured
+naturo record start "Login flow"
+
+# ... perform actions ...
+naturo click 500 300
+naturo type "username"
+naturo press tab
+naturo type "password"
+naturo press enter
+
+# Stop and save
+naturo record stop
+
+# List saved recordings
+naturo record list
+# ID                        Name                           Steps  Created
+# rec_20260401_120000       Login flow                         5  2026-04-01T12:00
+
+# Replay at 2x speed
+naturo record play rec_20260401_120000 --speed 2.0
+
+# Preview without executing
+naturo record play rec_20260401_120000 --dry-run
+
+# Export to a standalone Python script
+naturo record export rec_20260401_120000 --format python -o login.py
+
+# Export to Bash
+naturo record export rec_20260401_120000 --format bash -o login.sh
+
+# Show step details
+naturo record show rec_20260401_120000
+```
+
+Recordings are stored in `~/.naturo/recordings/` as JSON files.
+Export to Python or Bash generates standalone scripts with proper timing between steps.
+
+## Selector Management
+
+Save, reuse, and share UI element selectors — no more re-discovering selectors for common apps.
+
+```bash
+# Save a selector with a friendly name
+naturo selector save notepad save-btn 'app://notepad.exe/Button[@name="Save"]'
+naturo selector save chrome address-bar '//Edit[@name="Address and search bar"]' \
+  -d "Chrome address bar"
+
+# List all saved selectors
+naturo selector list
+#   notepad (1 selectors)
+#   ──────────────────────────────────────────────────
+#     @notepad/save-btn
+#       app://notepad.exe/Button[@name="Save"]
+
+# List built-in templates (shipped with naturo)
+naturo selector list --builtin
+
+# Use a saved selector (@ prefix in click/type/find commands)
+naturo click --selector @notepad/save-btn
+
+# Test that a selector parses correctly
+naturo selector test notepad save-btn
+
+# Export for sharing with your team
+naturo selector export notepad -o notepad-selectors.json
+
+# Import selectors from a teammate
+naturo selector import team-selectors.json
+
+# Clean up
+naturo selector delete notepad save-btn
+naturo selector clear notepad  # delete all selectors for an app
+```
+
+Selectors are stored in `~/.naturo/selectors/<app>.json`.
+Built-in templates live in `naturo/selectors_builtin/` and are read-only.
 
 ## Architecture
 
