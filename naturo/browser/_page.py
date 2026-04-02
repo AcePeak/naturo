@@ -7,6 +7,7 @@ browser automation: navigate, find elements, click, type, wait, etc.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
@@ -239,6 +240,179 @@ class BrowserPage:
         """
         self._cdp.send("Page.enable")
         self._wait_for_event("Page.loadEventFired", timeout=timeout)
+
+    def wait_for_navigation(self, timeout: Optional[float] = None) -> str:
+        """Wait for a navigation to complete (URL change + page load).
+
+        Captures the current URL, then polls until the URL changes and
+        ``document.readyState`` reaches ``"complete"``.
+
+        Args:
+            timeout: Max wait time in seconds (default: page timeout).
+
+        Returns:
+            The new URL after navigation.
+
+        Raises:
+            TimeoutError: If no navigation occurs within the timeout.
+        """
+        if timeout is None:
+            timeout = self._timeout
+        deadline = time.monotonic() + timeout
+        poll_interval = 0.1
+
+        original_url = self.url
+
+        while time.monotonic() < deadline:
+            current_url = self.url
+            if current_url != original_url:
+                # URL changed — wait for load to complete
+                try:
+                    state = self._cdp.evaluate("document.readyState")
+                    if state == "complete":
+                        return current_url
+                except CDPError:
+                    pass
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 1.5, 1.0)
+
+        raise TimeoutError(
+            f"Timeout waiting for navigation from {original_url!r} "
+            f"(waited {timeout}s)"
+        )
+
+    def wait_for_url(
+        self,
+        pattern: str,
+        *,
+        regex: bool = False,
+        timeout: Optional[float] = None,
+    ) -> str:
+        """Wait until the page URL matches a pattern.
+
+        Args:
+            pattern: Substring to match (or regex if *regex* is True).
+            regex: If True, treat *pattern* as a regular expression.
+            timeout: Max wait time in seconds (default: page timeout).
+
+        Returns:
+            The matching URL.
+
+        Raises:
+            TimeoutError: If the URL does not match within the timeout.
+        """
+        if timeout is None:
+            timeout = self._timeout
+        deadline = time.monotonic() + timeout
+        poll_interval = 0.1
+        compiled = re.compile(pattern) if regex else None
+
+        while time.monotonic() < deadline:
+            current_url = self.url
+            if compiled is not None:
+                if compiled.search(current_url):
+                    return current_url
+            elif pattern in current_url:
+                return current_url
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 1.5, 1.0)
+
+        raise TimeoutError(
+            f"Timeout waiting for URL to match {pattern!r} "
+            f"(waited {timeout}s)"
+        )
+
+    def wait_for_function(
+        self,
+        expression: str,
+        *,
+        timeout: Optional[float] = None,
+    ) -> Any:
+        """Wait until a JavaScript expression returns a truthy value.
+
+        Polls the expression repeatedly until it evaluates to a truthy
+        result or the timeout expires.
+
+        Args:
+            expression: JavaScript expression to evaluate.
+            timeout: Max wait time in seconds (default: page timeout).
+
+        Returns:
+            The truthy result of the expression.
+
+        Raises:
+            TimeoutError: If the expression does not become truthy
+                within the timeout.
+        """
+        if timeout is None:
+            timeout = self._timeout
+        deadline = time.monotonic() + timeout
+        poll_interval = 0.1
+
+        while time.monotonic() < deadline:
+            try:
+                result = self._cdp.evaluate(expression)
+                if result:
+                    return result
+            except CDPError:
+                pass
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 1.5, 1.0)
+
+        raise TimeoutError(
+            f"Timeout waiting for expression to be truthy: {expression!r} "
+            f"(waited {timeout}s)"
+        )
+
+    def wait_for_network_idle(
+        self,
+        idle_time: float = 0.5,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Wait until network activity has settled.
+
+        Uses ``performance.getEntriesByType('resource')`` to detect when
+        no new resources have been fetched for *idle_time* seconds.
+
+        Args:
+            idle_time: Seconds of network silence to consider "idle".
+            timeout: Max wait time in seconds (default: page timeout).
+
+        Raises:
+            TimeoutError: If the network does not become idle within
+                the timeout.
+        """
+        if timeout is None:
+            timeout = self._timeout
+        deadline = time.monotonic() + timeout
+
+        last_count: Optional[int] = None
+        stable_since: Optional[float] = None
+
+        while time.monotonic() < deadline:
+            try:
+                count = self._cdp.evaluate(
+                    "performance.getEntriesByType('resource').length"
+                )
+                count = int(count) if count is not None else 0
+            except (CDPError, TypeError, ValueError):
+                count = 0
+
+            now = time.monotonic()
+            if last_count is not None and count == last_count:
+                if stable_since is None:
+                    stable_since = now
+                elif now - stable_since >= idle_time:
+                    return
+            else:
+                stable_since = None
+                last_count = count
+
+            time.sleep(0.1)
+
+        raise TimeoutError(
+            f"Timeout waiting for network idle (waited {timeout}s)"
+        )
 
     # ── Page operations ───────────────────────────────────────────────────
 
