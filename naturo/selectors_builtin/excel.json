@@ -1,0 +1,30 @@
+{
+  "cell-grid": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Pane[@cls=\"EXCEL7\"]/Table",
+    "description": "Main cell grid / spreadsheet area"
+  },
+  "formula-bar": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Edit[@automationid=\"FormulaBar\"]",
+    "description": "Formula bar for cell editing"
+  },
+  "name-box": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Edit[@automationid=\"NameBox\"]",
+    "description": "Cell reference name box (e.g. A1)"
+  },
+  "ribbon": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Pane[@automationid=\"Ribbon\"]",
+    "description": "Ribbon toolbar"
+  },
+  "ribbon-home": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Pane[@automationid=\"Ribbon\"]/Tab[@name=\"Home\"]",
+    "description": "Home ribbon tab"
+  },
+  "sheet-tabs": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/Tab[@automationid=\"SheetTab\"]",
+    "description": "Sheet tab bar at bottom"
+  },
+  "status-bar": {
+    "selector": "app://excel.exe/Window[@name=\"*Excel*\"]/StatusBar",
+    "description": "Status bar showing calculation results"
+  }
+}

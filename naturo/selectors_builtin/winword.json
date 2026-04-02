@@ -1,0 +1,26 @@
+{
+  "document-area": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/Pane[@cls=\"_WwG\"]/Document",
+    "description": "Main document editing area"
+  },
+  "ribbon": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/Pane[@automationid=\"Ribbon\"]",
+    "description": "Ribbon toolbar"
+  },
+  "ribbon-home": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/Pane[@automationid=\"Ribbon\"]/Tab[@name=\"Home\"]",
+    "description": "Home ribbon tab"
+  },
+  "ribbon-insert": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/Pane[@automationid=\"Ribbon\"]/Tab[@name=\"Insert\"]",
+    "description": "Insert ribbon tab"
+  },
+  "status-bar": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/StatusBar",
+    "description": "Status bar showing page/word count"
+  },
+  "file-tab": {
+    "selector": "app://winword.exe/Window[@name=\"*Word*\"]/Pane[@automationid=\"Ribbon\"]/Button[@name=\"File Tab\"]",
+    "description": "File tab (Backstage view)"
+  }
+}

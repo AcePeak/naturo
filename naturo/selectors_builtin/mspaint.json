@@ -1,0 +1,26 @@
+{
+  "canvas": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@cls=\"MSPaintView\"]/Pane[@name=\"Canvas*\"]",
+    "description": "Drawing canvas area"
+  },
+  "tool-palette": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@automationid=\"Ribbon\"]/ToolBar[@name=\"Tools\"]",
+    "description": "Tool selection palette (pencil, brush, shapes, etc.)"
+  },
+  "color-picker": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@automationid=\"Ribbon\"]/Pane[@name=\"Colors*\"]",
+    "description": "Color picker palette"
+  },
+  "ribbon": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@automationid=\"Ribbon\"]",
+    "description": "Ribbon toolbar"
+  },
+  "file-tab": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@automationid=\"Ribbon\"]/Button[@name=\"File*\"]",
+    "description": "File menu tab"
+  },
+  "size-slider": {
+    "selector": "app://mspaint.exe/Window[@name=\"*Paint*\"]/Pane[@automationid=\"Ribbon\"]/Slider[@name=\"Size*\"]",
+    "description": "Brush/tool size slider"
+  }
+}

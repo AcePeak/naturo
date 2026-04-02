@@ -1,0 +1,26 @@
+{
+  "slide-panel": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/Pane[@cls=\"mdiClass\"]/Pane[@name=\"Slide*\"]",
+    "description": "Main slide editing area"
+  },
+  "slide-thumbnails": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/Pane[@cls=\"mdiClass\"]/List[@name=\"Slides*\"]",
+    "description": "Slide thumbnail panel on the left"
+  },
+  "notes-area": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/Pane[@cls=\"mdiClass\"]/Edit[@name=\"Notes*\"]",
+    "description": "Speaker notes area below slide"
+  },
+  "ribbon": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/Pane[@automationid=\"Ribbon\"]",
+    "description": "Ribbon toolbar"
+  },
+  "ribbon-home": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/Pane[@automationid=\"Ribbon\"]/Tab[@name=\"Home\"]",
+    "description": "Home ribbon tab"
+  },
+  "status-bar": {
+    "selector": "app://powerpnt.exe/Window[@name=\"*PowerPoint*\"]/StatusBar",
+    "description": "Status bar with slide number and view controls"
+  }
+}

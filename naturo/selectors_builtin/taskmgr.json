@@ -1,0 +1,26 @@
+{
+  "process-list": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/Table[@automationid=\"ProcessList\"]",
+    "description": "Process list table in Processes tab"
+  },
+  "tab-processes": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/List[@automationid=\"NavigationMenuList\"]/ListItem[@name=\"Processes\"]",
+    "description": "Processes tab"
+  },
+  "tab-performance": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/List[@automationid=\"NavigationMenuList\"]/ListItem[@name=\"Performance\"]",
+    "description": "Performance tab"
+  },
+  "tab-details": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/List[@automationid=\"NavigationMenuList\"]/ListItem[@name=\"Details\"]",
+    "description": "Details tab"
+  },
+  "search-box": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/Edit[@automationid=\"SearchBox\"]",
+    "description": "Search/filter box"
+  },
+  "end-task-button": {
+    "selector": "app://taskmgr.exe/Window[@name=\"Task Manager\"]/Button[@name=\"End task\"]",
+    "description": "End task button for selected process"
+  }
+}

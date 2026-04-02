@@ -1,0 +1,22 @@
+{
+  "tree-view": {
+    "selector": "app://regedit.exe/Window[@name=\"Registry Editor\"]/Tree[@cls=\"SysTreeView32\"]",
+    "description": "Registry key tree navigation"
+  },
+  "value-list": {
+    "selector": "app://regedit.exe/Window[@name=\"Registry Editor\"]/List[@cls=\"SysListView32\"]",
+    "description": "Registry value list for selected key"
+  },
+  "address-bar": {
+    "selector": "app://regedit.exe/Window[@name=\"Registry Editor\"]/Edit[@cls=\"Edit\"]",
+    "description": "Registry path address bar"
+  },
+  "status-bar": {
+    "selector": "app://regedit.exe/Window[@name=\"Registry Editor\"]/StatusBar",
+    "description": "Status bar showing selected key path"
+  },
+  "menu-edit": {
+    "selector": "app://regedit.exe/Window[@name=\"Registry Editor\"]/MenuBar/MenuItem[@name=\"Edit\"]",
+    "description": "Edit menu for find, modify, permissions"
+  }
+}

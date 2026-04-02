@@ -1,0 +1,26 @@
+{
+  "explorer-view": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/Pane/Tree[@name=\"*Explorer*\"]",
+    "description": "File explorer side panel"
+  },
+  "editor-tabs": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/Pane/Tab[@name=\"*\"]",
+    "description": "Editor tab bar"
+  },
+  "terminal-panel": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/Pane[@name=\"*Terminal*\"]",
+    "description": "Integrated terminal panel"
+  },
+  "activity-bar": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/ToolBar[@name=\"Activity Bar\"]",
+    "description": "Left activity bar (Explorer, Search, Git, etc.)"
+  },
+  "status-bar": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/Pane[@name=\"Status Bar\"]",
+    "description": "Bottom status bar"
+  },
+  "search-input": {
+    "selector": "app://code.exe/Window[@name=\"*Visual Studio Code*\"]/Pane/Edit[@name=\"Search\"]",
+    "description": "Search input in search panel"
+  }
+}

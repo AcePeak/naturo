@@ -1,0 +1,30 @@
+{
+  "edit-area": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/Edit",
+    "description": "Main text editing area"
+  },
+  "menu-file": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/MenuBar/MenuItem[@name=\"File\"]",
+    "description": "File menu"
+  },
+  "menu-edit": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/MenuBar/MenuItem[@name=\"Edit\"]",
+    "description": "Edit menu"
+  },
+  "menu-format": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/MenuBar/MenuItem[@name=\"Format\"]",
+    "description": "Format menu"
+  },
+  "menu-view": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/MenuBar/MenuItem[@name=\"View\"]",
+    "description": "View menu"
+  },
+  "status-bar": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/StatusBar",
+    "description": "Status bar showing cursor position"
+  },
+  "tab-bar": {
+    "selector": "app://notepad.exe/Window[@name=\"*Notepad*\"]/Tab",
+    "description": "Tab bar for multi-tab Notepad (Windows 11)"
+  }
+}
