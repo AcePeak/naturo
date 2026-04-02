@@ -196,14 +196,14 @@ def record_list(json_output: bool):
     active = get_active_recording()
 
     if json_output:
-        result = {"recordings": recordings}
+        output: dict = {"recordings": recordings}
         if active:
-            result["active"] = {
+            output["active"] = {
                 "recording_id": active.recording_id,
                 "name": active.name,
                 "step_count": len(active.steps),
             }
-        click.echo(json.dumps(result))
+        click.echo(json.dumps(output))
     else:
         if active:
             click.echo(f"[RECORDING] {active.recording_id} — {active.name} "
