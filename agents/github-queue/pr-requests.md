@@ -330,10 +330,10 @@ Format:
 ## PR Request: fix/issue-789-app-filter-basename
 - **Base**: develop
 - **Title**: fix: extract process basename before --app matching (fixes #789)
-- **Body**: process_name from the C++ bridge includes the full executable path (e.g. C:\Windows\System32\notepad.exe). The --app filter did substring matching against the full path, so --app system would incorrectly match any process in System32. Now uses ntpath.basename() to extract just the filename before matching in _resolve_hwnd and _resolve_hwnds. 7 new tests. 4371 tests pass, ruff clean, mypy clean.
+- **Body**: process_name from the backend may contain a full path (e.g. C:\Windows\System32\notepad.exe). Substring matching against the full path caused --app system to incorrectly match any process in System32. Now uses ntpath.basename() in _resolve_hwnd, _resolve_hwnds, and _is_afh_window. 3 new tests. 4368 passed, ruff clean. Branch force-pushed with clean implementation.
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
-- **Status**: pending
+- **Status**: pending (branch force-pushed)
 
 ## PR Request: fix/issue-781-json-exit-code
 - **Base**: develop
