@@ -115,10 +115,10 @@ Format:
 ## PR Request: feat/issue-761-captcha-handling
 - **Base**: develop
 - **Title**: feat: add captcha handling architecture — detect, solve, inject (fixes #761)
-- **Body**: Pluggable captcha solver pattern with `CaptchaManager`, `CaptchaSolver` ABC, and two built-in solvers: `ManualSolver` (polls for user solution) and `TokenInjectionSolver` (injects pre-obtained tokens from external services). Detection via JS covers reCAPTCHA v2/v3, hCaptcha, Cloudflare Turnstile, and generic iframe captchas. Two CLI commands: `browser captcha-detect` and `browser captcha-solve` (--solver manual|token:TOKEN). 33 unit tests, ruff clean, mypy clean.
+- **Body**: Pluggable captcha solver pattern with `CaptchaManager`, `CaptchaSolver` ABC, and two built-in solvers: `ManualSolver` (polls for user solution) and `TokenInjectionSolver` (injects pre-obtained tokens from external services). Detection via JS covers reCAPTCHA v2/v3, hCaptcha, Cloudflare Turnstile, and generic iframe captchas. Two CLI commands: `browser captcha-detect` and `browser captcha-solve` (--solver manual|token:TOKEN). 37 unit tests, ruff clean, mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-01
-- **Status**: pending
+- **Date**: 2026-04-02
+- **Status**: pending (branch re-created and force-pushed 2026-04-02)
 
 ## PR Request: fix/issue-785-uwp-launch-pid
 - **Base**: develop
