@@ -295,8 +295,9 @@ def _post_action_see(
 
 
 def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
-    """No-op stub — recording command removed."""
-    pass
+    """Append action to active recording (if any)."""
+    from naturo.recording import append_step_to_active
+    append_step_to_active(command, args, duration_ms)
 
 
 # ── Method override ──────────────────────────────────────────────────────────
