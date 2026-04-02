@@ -279,3 +279,27 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: feat/issue-760-stealth-check
+- **Base**: develop
+- **Title**: feat: add browser stealth-check verification command (fixes #760)
+- **Body**: New `check_stealth()` function runs 6 JS checks (webdriver, plugins, languages, chrome.runtime, WebGL vendor, permissions) against the browser and reports pass/fail for each. CLI command `naturo browser stealth-check` supports text and JSON output, exits non-zero when any check fails. 11 new tests. Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: feat/issue-759-browser-download
+- **Base**: develop
+- **Title**: feat: add browser download --dir/--wait for file downloads (fixes #759)
+- **Body**: New `_download.py` module with `set_download_dir()` (CDP Browser.setDownloadBehavior) and `wait_for_download()` (polls directory for new files, detects .crdownload partials). CLI command: `naturo browser download --dir <path> [--wait] [--timeout N]`. Creates download directory if missing. Supports text and JSON output. 23 new tests. Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
+## PR Request: feat/issue-761-drag-from-element
+- **Base**: develop
+- **Title**: feat: add drag --from-element/--to-element for UI tree name search (fixes #761)
+- **Body**: New `--from-element` and `--to-element` options on the drag command that find elements by name/text in the UI tree using `_find_element_by_text_fallback()`. Returns center coordinates as drag source/destination. Simpler alternative to `--from-selector` for common cases like slider captcha handles. 8 new tests. Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending

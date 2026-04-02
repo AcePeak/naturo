@@ -2,12 +2,14 @@
 > Date: 2026-04-02
 
 ## Completed
-- fix/issue-786-uwp-menu-click: Detect WinUI 3 apps for UIA click path — adds _is_winui_window() to detect DesktopWindowXamlSource child windows (fixes #786)
-- fix/issue-783-json-duplicate-stderr: Suppress stderr output in JSON mode — NullHandler on root logger + downgrade logging.warning to debug in expected error paths (fixes #783)
+- feat/issue-760-stealth-check: Add `naturo browser stealth-check` verification command — 6 JS checks for bot-detection vectors (fixes #760)
+- feat/issue-759-browser-download: Add `naturo browser download --dir/--wait` for file download management via CDP (fixes #759)
+- feat/issue-761-drag-from-element: Add `--from-element`/`--to-element` options to drag command for UI tree name search (fixes #761)
 
 ## Pushed branches (awaiting PR)
-- fix/issue-786-uwp-menu-click: _is_winui_window() in _element.py, WinUI 3 detection in _click.py, 4 new tests + 3 updated
-- fix/issue-783-json-duplicate-stderr: NullHandler in cli/__init__.py, logger.debug in routing.py + _press.py, 4 new tests
+- feat/issue-760-stealth-check: check_stealth() in _stealth.py, stealth-check CLI command, 11 tests
+- feat/issue-759-browser-download: _download.py module, download CLI command, 23 tests
+- feat/issue-761-drag-from-element: --from-element/--to-element in _mouse.py, 8 tests
 
 ## Rebased branches
 - (none — no stale branches this session)
@@ -16,6 +18,7 @@
 - (none)
 
 ## Next session should
-- Pick up P1 features: #90 (recording/playback engine) or #104 (selector templates) — each is a full-session task
-- #91, #105 are already merged; #788, #789, #781 have PRs queued
-- All P0 and P1 bugs are now addressed
+- All three migration guide gaps (#759, #760, #761) are now addressed with PRs queued
+- All P0/P1/P2 bugs have PRs queued from previous sessions
+- Next priority: P1 features #90 (recording/playback engine) or #104 (selector templates) — each is a full-session task
+- #91 and #105 are already merged
