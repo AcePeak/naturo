@@ -46,6 +46,7 @@ from naturo.cli.ai import mcp
 from naturo.cli.extensions import excel
 from naturo.cli.browser_cmd import browser
 
+from naturo.cli.selector_cmd import selector
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 
 
@@ -168,6 +169,7 @@ def help_cmd(ctx) -> None:
 
 
 # ── Config / Credentials ────────────────────────
+main.add_command(selector)
 main.add_command(_config_cmd_group, "config")
 
 # Replace stub app subcommands with working implementations
