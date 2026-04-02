@@ -626,3 +626,64 @@ def close_cmd(ctx: click.Context) -> None:
     page = _get_page(ctx)
     page.close()
     click.echo("Browser connection closed.")
+
+
+# ── Stealth / anti-detection (#760) ──────────────────────────────────────────
+
+
+@browser.command("stealth")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def stealth_cmd(ctx: click.Context, json_output: bool) -> None:
+    """Apply anti-detection patches to the running browser.
+
+    Injects JavaScript patches that mask common bot fingerprints
+    (navigator.webdriver, plugins, languages, WebGL vendor, etc.).
+    Patches persist across page navigations.
+
+    \\b
+    Examples:
+        naturo browser stealth
+        naturo browser stealth --json
+    """
+    from naturo.browser._stealth import apply_stealth_patches
+
+    page = _get_page(ctx)
+    try:
+        count = apply_stealth_patches(page)
+        if json_output:
+            click.echo(json_module.dumps({
+                "success": True,
+                "patches_applied": count,
+            }))
+        else:
+            click.echo(f"Applied {count} stealth patches.")
+    except Exception as exc:
+        if json_output:
+            click.echo(json_module.dumps({"error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    finally:
+        page.close()
+
+
+@browser.command("stealth-flags")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def stealth_flags_cmd(json_output: bool) -> None:
+    """Print Chrome flags for anti-detection.
+
+    These flags should be passed when launching Chrome to reduce
+    automation fingerprinting. No running browser required.
+
+    \\b
+    Examples:
+        naturo browser stealth-flags
+        chrome $(naturo browser stealth-flags)
+    """
+    from naturo.browser._stealth import STEALTH_FLAGS
+
+    if json_output:
+        click.echo(json_module.dumps({"flags": STEALTH_FLAGS}))
+    else:
+        click.echo(" ".join(STEALTH_FLAGS))
