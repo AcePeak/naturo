@@ -267,6 +267,123 @@ class TestDragCLIValidation:
         result = runner.invoke(main, ["drag"])
         assert result.exit_code != 0
 
+    def test_drag_from_element_option(self, runner):
+        """--from-element is documented in drag help (#761)."""
+        result = runner.invoke(main, ["drag", "--help"])
+        assert "--from-element" in result.output
+
+    def test_drag_to_element_option(self, runner):
+        """--to-element is documented in drag help (#761)."""
+        result = runner.invoke(main, ["drag", "--help"])
+        assert "--to-element" in result.output
+
+
+class TestDragFromElement:
+    """Test --from-element and --to-element drag options (#761)."""
+
+    def test_from_element_resolves_to_coords(self, runner):
+        """--from-element finds element by name and uses its center."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   return_value=(150, 200)) as mock_find:
+            result = runner.invoke(main, [
+                "drag", "--from-element", "Slider", "--to-coords", "500", "300",
+            ])
+        assert result.exit_code == 0
+        mock_find.assert_called_once()
+        mock_backend.drag.assert_called_once()
+        call_kwargs = mock_backend.drag.call_args
+        assert call_kwargs[1]["from_x"] == 150
+        assert call_kwargs[1]["from_y"] == 200
+
+    def test_to_element_resolves_to_coords(self, runner):
+        """--to-element finds element by name and uses its center."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   return_value=(400, 350)) as mock_find:
+            result = runner.invoke(main, [
+                "drag", "--from-coords", "100", "100", "--to-element", "Target",
+            ])
+        assert result.exit_code == 0
+        mock_find.assert_called_once()
+        mock_backend.drag.assert_called_once()
+        call_kwargs = mock_backend.drag.call_args
+        assert call_kwargs[1]["to_x"] == 400
+        assert call_kwargs[1]["to_y"] == 350
+
+    def test_from_element_not_found(self, runner):
+        """--from-element shows error when element not found."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   return_value=None):
+            result = runner.invoke(main, [
+                "drag", "--from-element", "Missing", "--to-coords", "500", "300",
+            ])
+        assert result.exit_code != 0
+        assert "Missing" in result.output or "not found" in result.output
+
+    def test_to_element_not_found(self, runner):
+        """--to-element shows error when element not found."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   return_value=None):
+            result = runner.invoke(main, [
+                "drag", "--from-coords", "100", "100", "--to-element", "Missing",
+            ])
+        assert result.exit_code != 0
+        assert "Missing" in result.output or "not found" in result.output
+
+    def test_from_element_json_output(self, runner):
+        """--from-element with --json includes from_ref in output."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   return_value=(150, 200)):
+            result = runner.invoke(main, [
+                "drag", "--from-element", "Handle", "--to-coords", "500", "300",
+                "--json",
+            ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["data"]["from_ref"] == "Handle"
+
+    def test_both_from_and_to_element(self, runner):
+        """--from-element and --to-element both resolve correctly."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        call_count = 0
+
+        def find_element(backend, text, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (100, 100)
+            return (500, 300)
+
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._find_element_by_text_fallback",
+                   side_effect=find_element):
+            result = runner.invoke(main, [
+                "drag", "--from-element", "Source", "--to-element", "Dest",
+            ])
+        assert result.exit_code == 0
+        mock_backend.drag.assert_called_once()
+
 
 class TestMoveCLIValidation:
     """move CLI option validation (T106-T107)."""

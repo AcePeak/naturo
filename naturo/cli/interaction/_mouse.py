@@ -174,6 +174,15 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         'XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>.'
     ),
 )
+@click.option(
+    "--from-element",
+    default=None,
+    help=(
+        "Find source element by name in the UI tree. "
+        "Matches by element name/text (e.g. slider handle label). "
+        "Simpler alternative to --from-selector for common cases."
+    ),
+)
 @click.option("--to", "to_text", help="Destination element text")
 @click.option("--to-coords", nargs=2, type=int, metavar="X Y", help="Destination X Y coordinates")
 @click.option(
@@ -183,6 +192,15 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         "Unified selector for destination element. "
         'URI format: app://notepad.exe/ListItem[@name="Folder"]. '
         'XML format: <selector app="notepad.exe"><node role="ListItem" name="Folder"/></selector>.'
+    ),
+)
+@click.option(
+    "--to-element",
+    default=None,
+    help=(
+        "Find destination element by name in the UI tree. "
+        "Matches by element name/text. "
+        "Simpler alternative to --to-selector for common cases."
     ),
 )
 @click.option("--duration", type=float, default=0.5, help="Drag duration (seconds)", show_default=True)
@@ -212,7 +230,8 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @_common._method_option
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
+def drag(from_text, from_coords, from_selector, from_element,
+         to_text, to_coords, to_selector, to_element,
          duration, steps, modifiers, trajectory, jitter, overshoot, release_delay,
          profile, app, pid, window_title, hwnd, method,
          app_id, json_output) -> None:
@@ -223,6 +242,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
       naturo drag --from e5 --to e12
       naturo drag --from-coords 100 100 --to-coords 500 300
       naturo drag --from e5 --to-coords 500 300
+      naturo drag --from-element "Slider" --to-coords 500 300
       naturo drag --from-selector 'app://*/ListItem[@name="File1"]' --to-selector 'app://*/TreeItem[@name="Folder"]'
     """
     # (#593) Resolve --app-id to app/hwnd/pid before any other logic
@@ -241,7 +261,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
     from_label = None
     to_label = None
 
-    # Resolve source: --from-selector > --from-coords > --from (eN ref)
+    # Resolve source: --from-selector > --from-element > --from-coords > --from (eN ref)
     if from_selector:
         resolved = _common._resolve_selector_target(
             from_selector, backend, app, window_title, hwnd, pid, json_output,
@@ -250,6 +270,21 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
         fx, fy = resolved
         from_label = from_selector
+    elif from_element:
+        resolved = _common._find_element_by_text_fallback(
+            backend, from_element, app=app, hwnd=hwnd,
+            window_title=window_title, pid=pid,
+        )
+        if resolved is None:
+            _common._json_err(
+                f"Source element '{from_element}' not found in UI tree. "
+                f"Run 'naturo see' to inspect available elements.",
+                json_output,
+                code="ELEMENT_NOT_FOUND",
+            )
+            return
+        fx, fy = resolved
+        from_label = from_element
     elif from_coords:
         fx, fy = from_coords
     elif from_text and _re.fullmatch(r"e\d+", from_text):
@@ -268,14 +303,14 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
     else:
         _common._json_err(
-            "Specify source: --from-selector, --from-coords X Y, or --from eN "
-            "(element ref from 'naturo see')",
+            "Specify source: --from-element, --from-selector, --from-coords X Y, "
+            "or --from eN (element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
         return
 
-    # Resolve destination: --to-selector > --to-coords > --to (eN ref)
+    # Resolve destination: --to-selector > --to-element > --to-coords > --to (eN ref)
     if to_selector:
         resolved = _common._resolve_selector_target(
             to_selector, backend, app, window_title, hwnd, pid, json_output,
@@ -284,6 +319,21 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
         tx, ty = resolved
         to_label = to_selector
+    elif to_element:
+        resolved = _common._find_element_by_text_fallback(
+            backend, to_element, app=app, hwnd=hwnd,
+            window_title=window_title, pid=pid,
+        )
+        if resolved is None:
+            _common._json_err(
+                f"Destination element '{to_element}' not found in UI tree. "
+                f"Run 'naturo see' to inspect available elements.",
+                json_output,
+                code="ELEMENT_NOT_FOUND",
+            )
+            return
+        tx, ty = resolved
+        to_label = to_element
     elif to_coords:
         tx, ty = to_coords
     elif to_text and _re.fullmatch(r"e\d+", to_text):
@@ -302,8 +352,8 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
     else:
         _common._json_err(
-            "Specify destination: --to-selector, --to-coords X Y, or --to eN "
-            "(element ref from 'naturo see')",
+            "Specify destination: --to-element, --to-selector, --to-coords X Y, "
+            "or --to eN (element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
