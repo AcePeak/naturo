@@ -83,10 +83,10 @@ Format:
 ## PR Request: feat/issue-758-chrome-profiles
 - **Base**: develop
 - **Title**: feat: add Chrome profile management — launch, list, delete (fixes #758)
-- **Body**: New `_launcher.py` module with Chrome/Chromium auto-discovery across Windows/Mac/Linux, profile-based user-data directories (`~/.config/naturo/browser-profiles/<name>/`), and CDP startup health check. ChromeProcess wrapper for graceful termination. Three new CLI commands: `browser launch` (--profile, --headless, --chrome-path, --extra-args), `browser profiles` (list with size/date), `browser profile-delete` (with --force). 53 new tests, all mocked (no desktop needed). Ruff clean.
+- **Body**: New `_launcher.py` module with Chrome/Chromium auto-discovery across Windows/Mac/Linux, profile-based user-data directories (`~/.config/naturo/browser-profiles/<name>/`), and CDP startup health check. ChromeProcess wrapper for graceful termination. Three new CLI commands: `browser launch` (--profile, --headless, --chrome-path, --extra-args), `browser profiles` (list with size/date), `browser profile-delete` (with --force). 37 new tests, all mocked (no desktop needed). Ruff clean, mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-01
-- **Status**: pending (branch recreated and force-pushed 2026-04-01)
+- **Date**: 2026-04-02
+- **Status**: pending (branch re-created and force-pushed 2026-04-02)
 
 ## PR Request: feat/issue-760-anti-detection
 - **Base**: develop
