@@ -390,3 +390,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: test/cascade-coverage-gaps
+- **Base**: develop
+- **Title**: test: add 39 tests for cascade coverage and shallow-tree helpers
+- **Body**: Fills test coverage gaps in naturo.cascade._coverage and _types modules. Tests _is_actionable_leaf (9 tests including all container roles), _covered_area (4 tests), _has_invalid_bounds (6 tests), _is_shallow_tree (7 tests with threshold edge cases), CascadeStats.to_dict (2 tests), CascadeResult/ProviderStat dataclass fields (4 tests), and _rect_area/_estimate_coverage edge cases (7 tests). All 4404 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
