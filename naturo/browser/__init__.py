@@ -31,6 +31,13 @@ from naturo.browser._selectors import (
     ParsedSelector,
     parse_selector,
 )
+from naturo.browser._captcha import (
+    CaptchaManager,
+    CaptchaSolver,
+    CaptchaError,
+    ManualSolver,
+    TokenInjectionSolver,
+)
 
 __all__ = [
     "BrowserPage",
@@ -38,4 +45,9 @@ __all__ = [
     "SelectorType",
     "ParsedSelector",
     "parse_selector",
+    "CaptchaManager",
+    "CaptchaSolver",
+    "CaptchaError",
+    "ManualSolver",
+    "TokenInjectionSolver",
 ]
