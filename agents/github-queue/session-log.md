@@ -2,32 +2,45 @@
 > Date: 2026-04-02
 
 ## Completed
-- fix/issue-788-stale-pid-routing: validate HWND liveness before routing keystrokes (fixes #788)
-  - Two-layer fix using IsWindow(): _resolve_app_id emits APP_ID_STALE error, _resolve_hwnd raises WindowNotFoundError
-  - 4 new tests, 4089 tests pass, ruff clean, mypy clean
-- fix/issue-785-winui3-uia-probe: detect UIA for standalone WinUI 3 apps (fixes #785)
-  - Added _find_winui_content_children() for DesktopWindowXamlSource child enumeration
-  - Fixes Calculator/Paint UIA detection on Win11 where apps are not AFH-hosted
-  - 4 new tests, 4088 tests pass, ruff clean, mypy clean
-- fix/issue-789-app-filter-basename: extract process basename before --app matching (fixes #789)
-  - Used ntpath.basename() in _resolve_hwnd, _resolve_hwnds, _is_afh_window
-  - Prevents --app system from matching C:\Windows\System32\notepad.exe
-  - 3 new tests, 4088 tests pass, ruff clean
+- Rebased 23 stale branches onto latest develop (all succeeded, 0 conflicts)
+- test/browser-selectors-coverage: 40 tests for browser._selectors parse/CDP generation
+- Confirmed #105 (selector management) is already fully implemented in selector_cmd.py
 
 ## Pushed branches (awaiting PR)
-- fix/issue-788-stale-pid-routing: HWND liveness validation (fixes #788)
-- fix/issue-785-winui3-uia-probe: WinUI 3 UIA detection (fixes #785)
-- fix/issue-789-app-filter-basename: process path basename extraction (fixes #789)
+- test/browser-selectors-coverage: 40 tests for naturo.browser._selectors
 
 ## Rebased branches
-- (none — no stale branches found this session)
+- fix/issue-785-winui3-uia-probe
+- fix/issue-788-stale-pid-routing
+- fix/issue-789-app-filter-basename
+- fix/issue-781-json-exit-code
+- fix/issue-783-json-duplicate-stderr
+- fix/issue-786-uwp-menu-click
+- fix/issue-787-coords-bounds
+- feat/issue-758-chrome-profiles
+- feat/issue-759-browser-download
+- feat/issue-760-stealth-check
+- feat/issue-761-drag-from-element
+- feat/issue-762-browser-wait
+- feat/issue-764-iframe-support
+- feat/issue-723-cost-guardrails
+- feat/issue-90-recording-playback-cli
+- feat/issue-91-visual-regression-enterprise
+- feat/issue-104-builtin-selector-templates
+- test/browser-cmd-coverage
+- test/visual-cmd-coverage
+- test/cascade-coverage-gaps
+- docs/readme-browser-section
+- refactor/config-cmd-deduplicate-credentials
+- refactor/issue-719-cli-by-domain
 
 ## Issues found but not fixed
-- #786 [P1]: click eN on UWP Notepad menu — next priority after these merges
-- Multiple pending branches from previous sessions still awaiting Orc-Mycelium PR creation/merge
+- #105 is already implemented — Orc-Mycelium should mark as status:done or verify
+- 3 superseded branches still on remote: fix/issue-788-stale-pid-hwnd, fix/issue-788-stale-pid-app-id, feat/issue-90-recording-cli (Orc-Mycelium can delete)
+- docs/issue-722-mcp-reference branch on remote but content not in develop (PR #791 was merged from different branch name?)
 
 ## Next session should
-- Check if Orc-Mycelium has merged the 3 new branches + previous pending branches
-- Work on #786 (UWP menu click regression) — next P1 bug
-- Work on #781 (JSON exit code) if branch still pending
-- Consider #90/#91 (enterprise features) if P1 bugs are clear
+- Check if Orc-Mycelium has merged any of the 23 pending branches
+- If PRs are merged, work on remaining P2 items (#727 good-first-issue tasks)
+- If PRs still pending, investigate any CI failures blocking merges
+- Consider writing integration tests for recording/playback (feat #90) once merged

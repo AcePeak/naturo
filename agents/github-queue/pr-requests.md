@@ -415,6 +415,14 @@ Format:
 - **Date**: 2026-04-02
 - **Status**: pending
 
+## PR Request: test/browser-selectors-coverage
+- **Base**: develop
+- **Title**: test: add 40 tests for browser selector parsing and CDP expression generation
+- **Body**: Fills test coverage gap for naturo.browser._selectors module. Tests parse_selector with explicit css:/xpath:/text: prefixes (7 tests), auto-detection heuristics (16 tests), edge cases (4 tests), to_cdp_expression single-element output (7 tests), and to_cdp_expression_all array output (6 tests). All 4125 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
 ## PR Request: fix/issue-785-winui3-uia-probe
 - **Base**: develop
 - **Title**: fix: detect UIA for standalone WinUI 3 apps like Calculator (fixes #785)
