@@ -7,8 +7,8 @@ source_issue: 785
 created: 2026-04-02
 last_run: 2026-04-02
 last_result: pass
-consecutive_passes: 1
-notes: "2026-04-02 R97: PASS — Calculator visible in list apps and see after launch."
+consecutive_passes: 3
+notes: "2026-04-02 R99: PASS — Calculator visible in list apps and see after launch. Consecutive 3."
 
 preconditions:
   - "naturo is installed and in PATH"
