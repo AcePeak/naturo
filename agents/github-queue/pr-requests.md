@@ -382,3 +382,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: test/visual-cmd-coverage
+- **Base**: develop
+- **Title**: test: add 22 tests for visual CLI — report command, JSON modes, error paths
+- **Body**: Fills the test coverage gap for visual_cmd.py CLI layer. Adds 11 tests for the `report` command (pass/fail/skip/auto-detect/JSON/HTML output/threshold/no-baselines/named report), plus JSON mode tests for baseline, list, delete, compare, and diff commands, and error path tests for missing baselines. All 4445 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
