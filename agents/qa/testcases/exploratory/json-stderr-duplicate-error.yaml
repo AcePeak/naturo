@@ -6,9 +6,9 @@ priority: P2
 source_issue: null
 created: 2026-04-01
 last_run: 2026-04-02
-last_result: pass
-consecutive_passes: 1
-notes: "2026-04-02 R91: PASS — JSON mode stderr empty, only stdout has JSON."
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-02 R92: FAIL — click --app nonexistent -j emits 'App not found' to stderr AND JSON to stdout. Stderr not empty. Confirms #783."
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -8,7 +8,7 @@ created: 2026-04-02
 last_run: 2026-04-02
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-02 R91: FAIL — click at (-50,-50) and (99999,99999) both succeed exit 0. No coordinate validation. Confirms #787."
+notes: "2026-04-02 R92: FAIL — click at (99999,99999) exits 0 with 'action: clicked'. No coordinate validation. Confirms #787."
 
 preconditions:
   - "naturo is installed and in PATH"
