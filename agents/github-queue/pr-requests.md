@@ -160,6 +160,14 @@ Format:
 - **Date**: 2026-04-01
 - **Status**: pending
 
+## PR Request: fix/issue-776-app-subcommands
+- **Base**: develop
+- **Title**: fix: resolve app IDs (a1, a2, …) in all app subcommands (fixes #776)
+- **Body**: Round 1 (30c9d53) fixed window/dialog/desktop commands but missed the 14 app subcommands: launch, quit, relaunch, find, inspect, hide, unhide, switch, focus, close, minimize, maximize, restore, move, windows. Added `_resolve_app_id_name()` helper that detects the `a<N>` pattern and resolves via the session app ID map. Process-based commands (quit, find, inspect) get PID; window-based commands (focus, close, minimize, etc.) get HWND. Expired/unknown IDs produce clear error messages in both text and JSON modes. 10 new tests covering resolution, expiry, JSON error, and normal-name passthrough. All 109 app_cmd tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
 ## PR Request: test/browser-page-element-coverage
 - **Base**: develop
 - **Title**: test: add 76 tests for BrowserPage and BrowserElement (CDP mocked)
