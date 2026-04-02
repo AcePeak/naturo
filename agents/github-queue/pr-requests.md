@@ -160,6 +160,14 @@ Format:
 - **Date**: 2026-04-01
 - **Status**: pending
 
+## PR Request: feat/issue-762-browser-wait
+- **Base**: develop
+- **Title**: feat: add browser wait mechanisms — navigation, URL, function, network idle (fixes #762)
+- **Body**: Four new BrowserPage methods: wait_for_navigation (URL change + load), wait_for_url (substring/regex match), wait_for_function (JS expression polling), wait_for_network_idle (resource count stabilisation using performance.getEntriesByType). Four corresponding CLI commands: wait-navigation, wait-url, wait-function, wait-network-idle. 13 unit tests covering success and timeout paths. Ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-02
+- **Status**: pending
+
 ## PR Request: fix/issue-776-app-subcommands
 - **Base**: develop
 - **Title**: fix: resolve app IDs (a1, a2, …) in all app subcommands (fixes #776)
