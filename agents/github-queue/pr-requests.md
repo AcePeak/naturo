@@ -107,10 +107,10 @@ Format:
 ## PR Request: feat/issue-765-network-interception
 - **Base**: develop
 - **Title**: feat: add network request interception — monitor, intercept, mock (fixes #765)
-- **Body**: New `_network.py` module with `NetworkMonitor` class wrapping CDP Network/Fetch domains. Features: `capture_snapshot` (performance API), `find_requests` (glob filtering), `intercept` (continue/abort/fulfill with header/body overrides), `abort_pattern`/`mock_response` shorthands, JS-based fallback injection. `BrowserPage.network` property for lazy access. Two CLI commands: `browser requests` (list with filters) and `browser intercept` (add rules). 25 unit tests, ruff clean, mypy clean.
+- **Body**: New `_network.py` module with `NetworkMonitor` class wrapping CDP Network domain. Features: `capture_snapshot` (performance API), `find_requests` (glob filtering), `intercept` (abort/fulfill), `abort_pattern`/`mock_response` shorthands, JS-based injection. `BrowserPage.network` property for lazy access. Two CLI commands: `browser requests` (list with filters) and `browser intercept` (add rules). 20 unit tests, ruff clean, mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-01
-- **Status**: pending
+- **Date**: 2026-04-02
+- **Status**: pending (branch re-created and force-pushed 2026-04-02)
 
 ## PR Request: feat/issue-761-captcha-handling
 - **Base**: develop
