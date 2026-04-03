@@ -2,22 +2,24 @@
 > Date: 2026-04-03
 
 ## Completed
-- test/config-module-coverage: Added 16 unit tests for naturo.config module — load_credentials, save_credentials (atomic writes, error handling, unicode), and path/env-var constants. All 4138 tests pass, ruff and mypy clean.
+- feat/issue-758-chrome-profiles: Chrome launcher with profile support — find_chrome(), launch_chrome(), list_profiles(), ChromeProcess handle, CLI `launch` and `profiles` commands. 53 tests. (fixes #758)
+- feat/issue-764-iframe-support: Iframe interaction via CDP execution contexts — BrowserFrame with find/evaluate/find_all, nested frame support, CLI `frames`, `frame-eval`, `frame-find` commands. 37 tests. (fixes #764)
 
 ## Pushed branches (awaiting PR)
-- test/config-module-coverage: 16 tests for config module coverage gap
+- feat/issue-758-chrome-profiles: Chrome profile support (fixes #758)
+- feat/issue-764-iframe-support: Iframe support (fixes #764)
 
 ## Rebased branches
-- None (no stale branches found)
+- feat/issue-758-chrome-profiles: rebased onto develop, force-pushed (old branch existed)
+- feat/issue-764-iframe-support: rebased onto develop, force-pushed (old branch existed)
 
 ## Issues found but not fixed
-- #105 (selector management) already merged into develop — pending-issues.md still lists it as NOT STARTED, needs update
-- Many "branch ready" items in pending-issues.md (#758, #764, #104, #719, #723) have no remote branches — may have been lost or deleted without merge
-- app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues as noted in pending-issues.md
-- #763 and #766 remain blocked on unmerged browser features (#758, #764)
+- #763 (client script validation) and #766 (migration guide acceptance tests) remain as next priorities
+- app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues
+- #720 (split _element.py) still in-progress per pending-issues.md
 
 ## Next session should
-- Check status of PR for test/config-module-coverage
-- Investigate missing remote branches for #758, #764, #104, #719, #723 — may need re-implementation
-- If browser features are merged, start #763 (client script validation)
+- Check PR status for #758 and #764
+- Start #763 (client script validation) if browser features are merged
+- Start #766 (migration guide acceptance tests) if #763 is done
 - Consider writing tests for CLI modules with low coverage

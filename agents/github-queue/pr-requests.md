@@ -790,3 +790,19 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: feat/issue-758-chrome-profiles
+- **Base**: develop
+- **Title**: feat: add Chrome profile support — launch, profiles CLI commands (fixes #758)
+- **Body**: Adds `naturo/browser/_launcher.py` with Chrome binary discovery (Windows/macOS/Linux), profile listing from Chrome's Local State file, profile name resolution, and Chrome launch with `--remote-debugging-port`. CLI gains `naturo browser launch` (with --profile, --user-data-dir, --headless, --stealth, --chrome-path options) and `naturo browser profiles` (list available profiles). ChromeProcess handle provides is_running/terminate/kill/wait. 53 unit tests pass, ruff and mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: feat/issue-764-iframe-support
+- **Base**: develop
+- **Title**: feat: add iframe support — frames, frame-eval, frame-find CLI commands (fixes #764)
+- **Body**: Adds `naturo/browser/_frame.py` with BrowserFrame class using CDP Page.createIsolatedWorld for frame-scoped JavaScript execution. BrowserPage gains `frames()` (list all frames) and `frame(selector/name/url)` (get scoped BrowserFrame). CLI gains `naturo browser frames`, `naturo browser frame-eval`, `naturo browser frame-find` commands. Supports nested iframes. 37 unit tests pass, ruff and mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
