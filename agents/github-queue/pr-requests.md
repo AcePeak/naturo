@@ -854,3 +854,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/recording-export-shell-escape
+- **Base**: develop
+- **Title**: fix: prevent shell injection in recording bash/python export
+- **Body**: _step_to_naturo_cmd() was building shell commands via string interpolation, allowing recorded text containing backticks, $(), quotes, or semicolons to execute arbitrary commands when the exported bash script was run. Now uses shlex.quote() for all user-provided values. 8 new tests covering injection vectors. All 4130 tests pass, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
