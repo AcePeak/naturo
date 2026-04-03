@@ -614,3 +614,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-781-json-exit-code
+- **Base**: develop
+- **Title**: fix: exit non-zero when JSON mode reports failure (fixes #781)
+- **Body**: Three locations output {"success": false} JSON but exited with code 0: selector clear (no selectors), selector export (no selectors), and visual report (no baselines). Changed return to sys.exit(1) in all three locations. 6 new tests across test_selector_cmd.py and test_visual.py. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
