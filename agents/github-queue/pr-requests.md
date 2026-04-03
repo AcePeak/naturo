@@ -582,3 +582,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: validate HWND liveness before routing keystrokes (fixes #788)
+- **Body**: After app restart, stale HWNDs from app_ids silently dropped keystrokes because focus_window sent to a dead window. Added _is_hwnd_alive() helper that calls IsWindow() on Windows. _resolve_app_id now checks HWND liveness and emits APP_ID_STALE error with clear recovery message. 2 new tests. 41 interaction_common tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
