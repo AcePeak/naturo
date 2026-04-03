@@ -2,23 +2,23 @@
 > Date: 2026-04-03
 
 ## Completed
-- feat/issue-105-selector-load: `naturo selector load` command + @app/name reference resolution in --selector (fixes #105). 13 new tests.
-- test/detect-probes-coverage: 61 tests for detect/probes.py framework detection and probe logic
+- fix/issue-783-json-stderr-suppress: suppress stderr logging in JSON mode (fixes #783). NullHandler on root logger when --json active, downgraded 2 non-critical WARNINGs to DEBUG. 3 new tests.
+- feat/issue-760-stealth-check: browser stealth-check verification command (fixes #760). 6 JS checks for bot-detection vectors, CLI command with text/JSON output. 12 new tests.
 
 ## Pushed branches (awaiting PR)
-- feat/issue-105-selector-load: selector load command, @app/name refs in --selector, 13 tests
-- test/detect-probes-coverage: 61 tests covering framework detection heuristics, DLL-based detection, probe functions
+- fix/issue-783-json-stderr-suppress: JSON mode stderr suppression, 3 tests
+- feat/issue-760-stealth-check: stealth verification command, 12 tests
 
 ## Rebased branches
-- (none — all previous branches no longer exist on remote)
+- feat/issue-760-stealth-check: force-pushed clean version over stale remote branch
 
 ## Issues found but not fixed
-- All previous feature/fix branches (fix/issue-788, fix/issue-789, fix/issue-786, fix/issue-781, fix/issue-787, fix/issue-783, fix/issue-785, feat/issue-91, feat/issue-104, feat/issue-758, feat/issue-759, feat/issue-760-stealth-check, feat/issue-761, feat/issue-762, feat/issue-764, refactor/issue-719, feat/issue-723, test/* branches, docs/*) no longer exist on remote — code was never merged and branches are lost
-- #763 (client script validation) and #766 (migration guide acceptance tests) remain blocked on browser feature branches being merged
-- naturo/browser/_captcha.py has no test coverage
+- Browser feature branches still missing from remote: #758 (Chrome profiles), #759 (download), #762 (wait mechanisms), #764 (iframe support). These need re-implementation to unblock #763 and #766.
+- 6 of 7 bug fixes (#788, #789, #786, #781, #787, #785) appear to be present in develop codebase but were never formally merged via PR — Orc-Mycelium should verify and close these issues
+- #783 was the only bug fix genuinely missing from develop; now fixed
+- naturo/browser/_captcha.py still has no test coverage
 
 ## Next session should
-- Investigate why previous branches disappeared from remote
-- Re-implement lost bug fixes (#788, #789, #786, #781, #787, #783, #785) if Orc-Mycelium confirms they were never merged
-- Write tests for browser/_captcha.py if time allows
-- Pick up #763/#766 once browser features are merged into develop
+- Re-implement missing browser features: #759 (download), #762 (wait mechanisms), #764 (iframe), #758 (Chrome profiles) — these are medium tasks, ~1-2 per session
+- Once browser features are merged, start #763 (client script validation) and #766 (migration guide acceptance tests)
+- Check if Orc-Mycelium created PRs for fix/issue-783 and feat/issue-760 branches
