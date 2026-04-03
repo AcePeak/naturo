@@ -622,3 +622,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: detect WinUI 3 apps for UIA click path (fixes #786)
+- **Body**: Win11 Notepad is a standalone WinUI 3 app, not hosted by ApplicationFrameHost.exe. Click command only checked _is_afh_window for UWP detection, missing WinUI 3 apps. Added _is_winui_window() that checks for DesktopWindowXamlSource child windows, enabling UIA click path (InvokePattern/ExpandCollapsePattern) for menu items. 2 new tests. 7 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
