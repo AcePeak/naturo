@@ -806,3 +806,51 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: evict stale PIDs from app ID map on resolve (fixes #788)
+- **Body**: AppIdMap.resolve() now checks PID liveness via os.kill(pid, 0) before returning cached entries. Dead PIDs are evicted and the map is persisted to disk, preventing silent routing to nonexistent processes. Added _is_pid_alive() helper, autouse fixture for test isolation, 8 new tests (4 liveness + 4 eviction). All 26 app_ids tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-789-app-filter-basename
+- **Base**: develop
+- **Title**: fix: reject window title substring matches in app routing (fixes #789)
+- **Body**: _find_pid_by_window_title() used substring matching, causing --app notepad to match Chrome windows titled "help with notepad". Changed to exact title match only. 2 new tests. 30 routing tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-781-json-exit-code
+- **Base**: develop
+- **Title**: fix: exit 1 in JSON mode when verification fails for click/press (fixes #781)
+- **Body**: click and press commands output verified:false but returned exit code 0 in JSON mode. Added verification failure check matching the existing type command pattern — exit 1 with VERIFICATION_FAILED error code. 3 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: validate coordinate bounds in click command (fixes #787)
+- **Body**: naturo click --coords accepted negative values and values > 65535 silently. Added bounds validation (0-65535) matching Win32 API limits. Invalid coordinates emit INVALID_INPUT error with exit code 1. 6 new tests (4 rejection + 2 boundary acceptance). Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: use UIA click for menu-role elements in all app types (fixes #786)
+- **Body**: UIA click was only attempted for UWP/ApplicationFrameHost windows. Menu items (MenuItem, Menu, MenuBar) in regular Win32/WinUI3 apps also need UIA ExpandCollapsePattern/InvokePattern. Now checks element role from snapshot metadata and triggers UIA click for menu-role elements regardless of app type. 3 new parametrized tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-783-json-stderr-suppress
+- **Base**: develop
+- **Title**: fix: suppress stderr logging in JSON mode (fixes #783)
+- **Body**: Python's default "last resort" handler writes WARNING+ log messages to stderr, corrupting JSON output when callers redirect stderr (2>&1). When --json is active, installs NullHandler on the naturo logger with propagate=False. 2 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending

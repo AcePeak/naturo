@@ -2,24 +2,30 @@
 > Date: 2026-04-03
 
 ## Completed
-- feat/issue-758-chrome-profiles: Chrome launcher with profile support — find_chrome(), launch_chrome(), list_profiles(), ChromeProcess handle, CLI `launch` and `profiles` commands. 53 tests. (fixes #758)
-- feat/issue-764-iframe-support: Iframe interaction via CDP execution contexts — BrowserFrame with find/evaluate/find_all, nested frame support, CLI `frames`, `frame-eval`, `frame-find` commands. 37 tests. (fixes #764)
+- fix/issue-788-stale-pid-routing: evict stale PIDs from AppIdMap.resolve() (fixes #788)
+- fix/issue-789-app-filter-basename: reject window title substring matches (fixes #789)
+- fix/issue-781-json-exit-code: exit 1 when verification fails in JSON mode for click/press (fixes #781)
+- fix/issue-787-coords-bounds: validate coordinate bounds 0-65535 in click (fixes #787)
+- fix/issue-786-uwp-menu-click: UIA click for menu-role elements in all app types (fixes #786)
+- fix/issue-783-json-stderr-suppress: suppress stderr logging in JSON mode (fixes #783)
 
 ## Pushed branches (awaiting PR)
-- feat/issue-758-chrome-profiles: Chrome profile support (fixes #758)
-- feat/issue-764-iframe-support: Iframe support (fixes #764)
+- fix/issue-788-stale-pid-routing: PID liveness check + eviction + 8 tests
+- fix/issue-789-app-filter-basename: exact match + 2 tests
+- fix/issue-781-json-exit-code: verification failure exit code + 3 tests
+- fix/issue-787-coords-bounds: bounds validation + 6 tests
+- fix/issue-786-uwp-menu-click: menu role detection + 3 tests
+- fix/issue-783-json-stderr-suppress: NullHandler on naturo logger + 2 tests
 
 ## Rebased branches
-- feat/issue-758-chrome-profiles: rebased onto develop, force-pushed (old branch existed)
-- feat/issue-764-iframe-support: rebased onto develop, force-pushed (old branch existed)
+- (none needed — all previous branches had been deleted from remote)
 
 ## Issues found but not fixed
-- #763 (client script validation) and #766 (migration guide acceptance tests) remain as next priorities
-- app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues
-- #720 (split _element.py) still in-progress per pending-issues.md
+- #105 already merged (PR #805) — pending-issues.md is outdated on this
+- Previous session's bug fix branches were deleted from remote without being merged — all 6 bugs re-implemented from scratch this session
 
 ## Next session should
-- Check PR status for #758 and #764
+- Check if Orc-Mycelium created PRs for the 6 bug fix branches
 - Start #763 (client script validation) if browser features are merged
-- Start #766 (migration guide acceptance tests) if #763 is done
-- Consider writing tests for CLI modules with low coverage
+- Start #766 (migration guide acceptance tests) if browser features are merged
+- Consider #720 (split _element.py 1,473 lines) if time permits
