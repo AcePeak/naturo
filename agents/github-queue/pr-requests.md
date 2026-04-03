@@ -534,3 +534,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-02
 - **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: detect stale HWND after app restart, reject with clear error (fixes #788)
+- **Body**: After app restart, stale HWNDs from app_ids silently dropped keystrokes because focus_window sent to a dead window. Two-layer fix: (1) _resolve_app_id validates stored HWND via _is_hwnd_alive() helper (calls IsWindow() on Windows); emits APP_ID_STALE error with clear message. (2) _resolve_hwnd validates any direct HWND param, raises WindowNotFoundError for dead handles. 2 new tests. 3995 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
