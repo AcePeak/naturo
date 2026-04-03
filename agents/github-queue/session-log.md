@@ -2,19 +2,22 @@
 > Date: 2026-04-03
 
 ## Completed
-- feat/issue-105-selector-management: Cleaned up duplicate code after rebase — removed redundant resolve_selector_ref, keeping canonical resolve_named_selector. Added resolve_named_selector, is_named_selector, selector load command, @app/name resolution in --selector flag. All 4134 tests pass, ruff and mypy clean. (fixes #105)
+- test/config-module-coverage: Added 16 unit tests for naturo.config module — load_credentials, save_credentials (atomic writes, error handling, unicode), and path/env-var constants. All 4138 tests pass, ruff and mypy clean.
 
 ## Pushed branches (awaiting PR)
-- feat/issue-105-selector-management: `selector load` command + `@app/name` reference resolution in interaction commands (fixes #105)
+- test/config-module-coverage: 16 tests for config module coverage gap
 
 ## Rebased branches
-- feat/issue-105-selector-management: rebased onto remote branch (previous session's work existed on remote)
+- None (no stale branches found)
 
 ## Issues found but not fixed
-- None
+- #105 (selector management) already merged into develop — pending-issues.md still lists it as NOT STARTED, needs update
+- Many "branch ready" items in pending-issues.md (#758, #764, #104, #719, #723) have no remote branches — may have been lost or deleted without merge
+- app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues as noted in pending-issues.md
+- #763 and #766 remain blocked on unmerged browser features (#758, #764)
 
 ## Next session should
-- Check if PR for feat/issue-105-selector-management has been created and merged
-- Pick up #763 (client script validation) or #766 (migration guide acceptance tests) if #105 is merged
-- Check status of all other pending PRs (bug fixes #781-#789, browser features, etc.)
-- Continue with P2 items if P1 features are done
+- Check status of PR for test/config-module-coverage
+- Investigate missing remote branches for #758, #764, #104, #719, #723 — may need re-implementation
+- If browser features are merged, start #763 (client script validation)
+- Consider writing tests for CLI modules with low coverage

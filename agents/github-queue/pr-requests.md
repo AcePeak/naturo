@@ -782,3 +782,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: test/config-module-coverage
+- **Base**: develop
+- **Title**: test: add 16 unit tests for config module (credentials load/save, constants)
+- **Body**: Covers load_credentials(), save_credentials(), atomic write behavior, error handling (missing file, invalid JSON, OS errors), unicode preservation, round-trip, and path/env-var constants. All 4138 tests pass, ruff and mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
