@@ -862,3 +862,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/visual-report-error-handling
+- **Base**: develop
+- **Title**: fix: surface skips, errors, and HTML failures in visual report JSON mode
+- **Body**: visual report silently swallowed three categories of information in JSON mode: skipped items (missing current screenshot), comparison errors (missing baseline), and HTML generation failures. Now tracks skipped/errored items and includes them in JSON output. Narrowed except Exception to except (OSError, ValueError) for HTML generation. Exit non-zero when comparison errors occur. Text mode now shows skip count. 5 new tests. 4188 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
