@@ -276,9 +276,13 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
             click.echo(msg)
         sys.exit(1)
 
+    skipped: list[str] = []
+    errors: list[str] = []
+
     for name in names:
         current_img = current_path / f"{name}.png"
         if not current_img.exists():
+            skipped.append(name)
             if not json_output:
                 click.echo(f"  [SKIP] {name} — no current screenshot at {current_img}")
             continue
@@ -291,25 +295,36 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
                 status = "PASS" if result.match else "FAIL"
                 click.echo(f"  [{status}] {name} — {result.similarity:.1%}")
         except (FileNotFoundError, ImportError) as e:
+            errors.append(f"{name}: {e}")
             if not json_output:
                 click.echo(f"  [ERROR] {name} — {e}")
 
     # Generate HTML report
+    html_error: str | None = None
     if output:
         try:
             html_path = generate_html_report(report, output)
             if not json_output:
                 click.echo(f"\nReport saved: {html_path}")
-        except Exception as e:
+        except (OSError, ValueError) as e:
+            html_error = str(e)
             if not json_output:
                 click.echo(f"Error generating report: {e}", err=True)
 
     if json_output:
-        click.echo(json.dumps(report.to_dict()))
+        data = report.to_dict()
+        if skipped:
+            data["skipped"] = skipped
+        if errors:
+            data["errors"] = errors
+        if html_error:
+            data["html_error"] = html_error
+        click.echo(json.dumps(data))
     else:
-        click.echo(f"\nResults: {report.passed} passed, {report.failed} failed")
+        click.echo(f"\nResults: {report.passed} passed, {report.failed} failed"
+                    + (f", {len(skipped)} skipped" if skipped else ""))
 
-    if not report.all_passed:
+    if not report.all_passed or errors:
         sys.exit(1)
 
 

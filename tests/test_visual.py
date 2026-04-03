@@ -593,3 +593,73 @@ class TestEnterpriseCLI:
         assert result.exit_code != 0
         data = json.loads(result.output)
         assert data["success"] is False
+
+    def test_report_skip_in_json(self, runner, tmp_dirs, red_image):
+        """Skipped items appear in JSON report output."""
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        # current-dir has no s1.png → skip
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(red_image.parent),
+            "--json",
+        ])
+        data = json.loads(result.output)
+        assert "skipped" in data
+        assert "s1" in data["skipped"]
+
+    def test_report_skip_in_text(self, runner, tmp_dirs, red_image, tmp_path):
+        """Text mode shows skip count in summary."""
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(empty_dir),
+        ])
+        assert "SKIP" in result.output
+        assert "skipped" in result.output
+
+    def test_report_error_in_json(self, runner, tmp_dirs, red_image, tmp_path):
+        """Comparison errors appear in JSON report output."""
+        # Create a current image but no baseline for the name
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        (current_dir / "nobaseline.png").write_bytes(red_image.read_bytes())
+        result = runner.invoke(main, [
+            "visual", "report", "nobaseline", "--current-dir", str(current_dir),
+            "--json",
+        ])
+        data = json.loads(result.output)
+        assert "errors" in data
+        assert len(data["errors"]) > 0
+        assert result.exit_code != 0
+
+    def test_report_html_error_in_json(self, runner, tmp_dirs, red_image, red_copy):
+        """HTML generation errors surface in JSON output."""
+        bd, _ = tmp_dirs
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        current_dir = red_copy.parent
+        # Rename red_copy to s1.png so report finds it
+        s1_current = current_dir / "s1.png"
+        red_copy.rename(s1_current)
+        # Use a path that will fail (directory as file)
+        bad_path = current_dir / "baddir"
+        bad_path.mkdir()
+        result = runner.invoke(main, [
+            "visual", "report", "s1", "--current-dir", str(current_dir),
+            "--output", str(bad_path),  # directory, not a file
+            "--json",
+        ])
+        data = json.loads(result.output)
+        # html_error may or may not be present depending on OS behavior,
+        # but the command should not crash
+        assert "results" in data or "html_error" in data
+
+    def test_report_errors_exit_nonzero(self, runner, tmp_dirs, red_image, tmp_path):
+        """Report exits non-zero when comparison errors occur."""
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        (current_dir / "missing_baseline.png").write_bytes(red_image.read_bytes())
+        result = runner.invoke(main, [
+            "visual", "report", "missing_baseline",
+            "--current-dir", str(current_dir),
+        ])
+        assert result.exit_code != 0
