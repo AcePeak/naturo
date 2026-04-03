@@ -646,3 +646,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: use UIA click for menu items on all apps, not just UWP (fixes #786)
+- **Body**: WinUI 3 apps aren't hosted by ApplicationFrameHost, so _is_uwp was False and UIA click path was skipped. Menu items need UIA ExpandCollapsePattern to open. Now triggers UIA click for MenuItem/Menu/MenuBar roles regardless of UWP status. Updated test and added new test.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
