@@ -662,3 +662,19 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: reject out-of-bounds click coordinates (fixes #787)
+- **Body**: Validates --coords before passing to backend: rejects negative values and values > 65535. Returns INVALID_INPUT error with clear message. 7 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
+
+## PR Request: fix/issue-783-json-duplicate-stderr
+- **Base**: develop
+- **Title**: fix: suppress logging stderr in JSON mode (fixes #783)
+- **Body**: In JSON mode, naturo logger uses NullHandler with CRITICAL+1 level to prevent duplicate human-readable errors on stderr alongside JSON stdout. Also adds verbose mode StreamHandler configuration. 1 new test.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
