@@ -574,3 +574,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: reject out-of-bounds click coordinates with clear error (fixes #787)
+- **Body**: click --coords silently accepted negative or out-of-bounds coordinates, resulting in no-op clicks. Now validates against negative values and GetSystemMetrics virtual screen bounds on Windows (65535 fallback on other platforms). 5 new tests. 3998 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
