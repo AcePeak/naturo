@@ -85,6 +85,113 @@ class TestSelectorSave:
         assert data["name"] == "btn"
 
 
+# ── selector load ────────────────────────────────────────────────────────────
+
+
+class TestSelectorLoad:
+    def test_load_user_selector(self, runner, tmp_selectors):
+        runner.invoke(main, [
+            "selector", "save", "notepad", "save-btn",
+            "app://notepad.exe/Button[@name='Save']",
+            "-d", "Save button",
+        ])
+        result = runner.invoke(main, ["selector", "load", "notepad", "save-btn"])
+        assert result.exit_code == 0
+        assert "app://notepad.exe/Button[@name='Save']" in result.output
+
+    def test_load_not_found(self, runner, tmp_selectors):
+        result = runner.invoke(main, ["selector", "load", "notepad", "nope"])
+        assert result.exit_code != 0
+
+    def test_load_json_output(self, runner, tmp_selectors):
+        runner.invoke(main, [
+            "selector", "save", "notepad", "save-btn",
+            "app://notepad.exe/Button[@name='Save']",
+            "-d", "Save button",
+        ])
+        result = runner.invoke(main, [
+            "selector", "load", "notepad", "save-btn", "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["selector"] == "app://notepad.exe/Button[@name='Save']"
+        assert data["source"] == "user"
+        assert data["description"] == "Save button"
+
+    def test_load_builtin_fallback(self, runner, tmp_selectors, tmp_builtin):
+        result = runner.invoke(main, [
+            "selector", "load", "notepad", "edit-area", "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["source"] == "builtin"
+
+    def test_load_user_takes_priority_over_builtin(self, runner, tmp_selectors, tmp_builtin):
+        # Save user selector with same name as builtin
+        runner.invoke(main, [
+            "selector", "save", "notepad", "edit-area",
+            "app://notepad.exe/Edit[@name='Custom']",
+        ])
+        result = runner.invoke(main, [
+            "selector", "load", "notepad", "edit-area", "--json",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["source"] == "user"
+        assert "Custom" in data["selector"]
+
+
+# ── resolve_named_selector ──────────────────────────────────────────────────
+
+
+class TestResolveNamedSelector:
+    def test_resolve_user_selector(self, tmp_selectors):
+        # Write selector file directly
+        data = {"btn": {"selector": "app://test.exe/Button", "description": ""}}
+        (tmp_selectors / "testapp.json").write_text(json.dumps(data))
+        result = selector_cmd.resolve_named_selector("@testapp/btn")
+        assert result == "app://test.exe/Button"
+
+    def test_resolve_without_at_prefix(self, tmp_selectors):
+        data = {"btn": {"selector": "app://test.exe/Button", "description": ""}}
+        (tmp_selectors / "testapp.json").write_text(json.dumps(data))
+        result = selector_cmd.resolve_named_selector("testapp/btn")
+        assert result == "app://test.exe/Button"
+
+    def test_resolve_not_found_raises_key_error(self, tmp_selectors):
+        with pytest.raises(KeyError, match="Selector not found"):
+            selector_cmd.resolve_named_selector("@noapp/nosel")
+
+    def test_resolve_invalid_format_raises_value_error(self, tmp_selectors):
+        with pytest.raises(ValueError, match="expected @app/name"):
+            selector_cmd.resolve_named_selector("@invalid")
+
+    def test_resolve_empty_parts_raises_value_error(self, tmp_selectors):
+        with pytest.raises(ValueError, match="must be non-empty"):
+            selector_cmd.resolve_named_selector("@/name")
+
+
+# ── @app/name resolution in interaction commands ────────────────────────────
+
+
+class TestSelectorRefResolution:
+    """Test @app/name resolution in _resolve_selector_target."""
+
+    def test_at_ref_resolved_before_parse(self, tmp_selectors):
+        """Verify resolve_named_selector is called for @ references."""
+        data = {"btn": {"selector": "app://notepad.exe/Button[@name='OK']", "description": ""}}
+        (tmp_selectors / "notepad.json").write_text(json.dumps(data))
+        resolved = selector_cmd.resolve_named_selector("@notepad/btn")
+        assert resolved == "app://notepad.exe/Button[@name='OK']"
+
+    def test_at_ref_builtin_resolved(self, tmp_selectors, tmp_builtin):
+        """Verify builtin selectors are resolved via @ references."""
+        resolved = selector_cmd.resolve_named_selector("@notepad/edit-area")
+        assert "notepad.exe" in resolved
+
+
 # ── selector list ────────────────────────────────────────────────────────────
 
 
@@ -276,10 +383,15 @@ class TestSelectorHelp:
         result = runner.invoke(main, ["selector", "--help"])
         assert result.exit_code == 0
         assert "save" in result.output
+        assert "load" in result.output
         assert "list" in result.output
         assert "export" in result.output
         assert "import" in result.output
         assert "test" in result.output
+
+    def test_selector_load_help(self, runner):
+        result = runner.invoke(main, ["selector", "load", "--help"])
+        assert result.exit_code == 0
 
     def test_selector_save_help(self, runner):
         result = runner.invoke(main, ["selector", "save", "--help"])

@@ -80,6 +80,46 @@ def _list_builtin_selectors() -> dict[str, dict]:
     return result
 
 
+def resolve_named_selector(reference: str) -> str:
+    """Resolve an ``@app/name`` reference to its selector string.
+
+    Searches user selectors first, then built-in templates.
+
+    Args:
+        reference: An ``@app/name`` reference (the leading ``@`` is optional).
+
+    Returns:
+        The selector string stored under that name.
+
+    Raises:
+        KeyError: If the reference cannot be found in user or built-in selectors.
+        ValueError: If the reference format is invalid.
+    """
+    ref = reference.lstrip("@")
+    if "/" not in ref:
+        raise ValueError(
+            f"Invalid selector reference '{reference}': expected @app/name format"
+        )
+    app_name, name = ref.split("/", 1)
+    if not app_name or not name:
+        raise ValueError(
+            f"Invalid selector reference '{reference}': app and name must be non-empty"
+        )
+
+    # User selectors take priority over built-in templates
+    user_sels = _load_selectors(app_name)
+    if name in user_sels:
+        info = user_sels[name]
+        return info.get("selector", info) if isinstance(info, dict) else info
+
+    builtin_sels = _list_builtin_selectors().get(app_name, {})
+    if name in builtin_sels:
+        info = builtin_sels[name]
+        return info.get("selector", info) if isinstance(info, dict) else info
+
+    raise KeyError(f"Selector not found: @{app_name}/{name}")
+
+
 @click.group("selector", cls=FuzzyGroup)
 def selector():
     """Manage saved selectors for UI elements.
@@ -87,6 +127,7 @@ def selector():
     \b
     Examples:
         naturo selector save notepad save-btn 'app://notepad.exe/Button[@name="Save"]'
+        naturo selector load notepad save-btn
         naturo selector list
         naturo selector list --app notepad
         naturo selector show notepad
@@ -133,6 +174,52 @@ def selector_save(app_name: str, name: str, selector_value: str,
         action = "Updated" if is_update else "Saved"
         click.echo(f"{action}: @{app_name}/{name}")
         click.echo(f"Selector: {selector_value}")
+
+
+@click.command("load")
+@click.argument("app_name")
+@click.argument("name")
+@click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
+def selector_load(app_name: str, name: str, json_output: bool):
+    """Load a saved selector by name.
+
+    Searches user selectors first, then built-in templates.
+    Use with interaction commands: naturo click --selector @app/name
+
+    \b
+    Examples:
+        naturo selector load notepad save-btn
+        naturo selector load chrome address-bar --json
+    """
+    try:
+        sel_str = resolve_named_selector(f"{app_name}/{name}")
+    except KeyError:
+        msg = f"Selector not found: @{app_name}/{name}"
+        if json_output:
+            click.echo(json.dumps({"success": False, "error": msg}))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    # Get full info for description
+    user_sels = _load_selectors(app_name)
+    builtin_sels = _list_builtin_selectors().get(app_name, {})
+    merged = {**builtin_sels, **user_sels}
+    info = merged.get(name, {})
+    desc = info.get("description", "") if isinstance(info, dict) else ""
+    source = "user" if name in user_sels else "builtin"
+
+    if json_output:
+        click.echo(json.dumps({
+            "success": True,
+            "app": app_name,
+            "name": name,
+            "selector": sel_str,
+            "description": desc,
+            "source": source,
+        }))
+    else:
+        click.echo(sel_str)
 
 
 @click.command("list")
@@ -431,6 +518,7 @@ def selector_test(app_name: str, name: str, json_output: bool):
 
 # Register subcommands
 selector.add_command(selector_save, "save")
+selector.add_command(selector_load, "load")
 selector.add_command(selector_list, "list")
 selector.add_command(selector_show, "show")
 selector.add_command(selector_delete, "delete")

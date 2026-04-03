@@ -486,6 +486,15 @@ def _resolve_selector_target(
         parse, SelectorParseError, SelectorResolver, normalize_app_name,
     )
 
+    # Resolve @app/name references to stored selector strings (#105)
+    if selector_str.startswith("@"):
+        from naturo.cli.selector_cmd import resolve_named_selector
+        try:
+            selector_str = resolve_named_selector(selector_str)
+        except (KeyError, ValueError) as exc:
+            _json_err(str(exc), json_output, code="SELECTOR_REF_ERROR")
+            return None
+
     # Parse the selector
     try:
         ast = parse(selector_str)
