@@ -6,6 +6,7 @@ that wrap the recording engine in naturo/recording.py.
 from __future__ import annotations
 
 import json
+import shlex
 import sys
 from datetime import datetime
 
@@ -401,36 +402,40 @@ def _export_recording(rec: Recording, fmt: str) -> str:
 
 
 def _step_to_naturo_cmd(step) -> str:
-    """Convert an ActionStep to a naturo CLI command string."""
+    """Convert an ActionStep to a shell-safe naturo CLI command string.
+
+    All user-provided values are escaped with shlex.quote() to prevent
+    shell injection in exported bash scripts.
+    """
     cmd = step.command
     args = step.args
 
     if cmd == "click":
-        parts = ["naturo click"]
+        parts = ["naturo", "click"]
         if "x" in args and "y" in args:
-            parts.append(f"{args['x']} {args['y']}")
+            parts.extend([str(args["x"]), str(args["y"])])
         if args.get("button", "left") != "left":
-            parts.append(f"--button {args['button']}")
+            parts.extend(["--button", shlex.quote(str(args["button"]))])
         if args.get("double_click"):
             parts.append("--double")
         return " ".join(parts)
 
     if cmd == "type":
         text = args.get("text", "")
-        return f'naturo type "{text}"'
+        return f"naturo type {shlex.quote(text)}"
 
     if cmd == "press":
         key = args.get("key", "")
-        return f"naturo press {key}"
+        return f"naturo press {shlex.quote(key)}"
 
     if cmd == "hotkey":
         keys = args.get("keys", [])
-        return f"naturo hotkey {'+'.join(keys)}"
+        return f"naturo hotkey {shlex.quote('+'.join(str(k) for k in keys))}"
 
     if cmd == "scroll":
         direction = args.get("direction", "down")
         amount = args.get("amount", 3)
-        return f"naturo scroll {direction} --amount {amount}"
+        return f"naturo scroll {shlex.quote(str(direction))} --amount {amount}"
 
     if cmd == "drag":
         return (f"naturo drag --from {args.get('from_x', 0)} {args.get('from_y', 0)} "

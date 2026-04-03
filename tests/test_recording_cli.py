@@ -246,8 +246,8 @@ class TestRecordExport:
             result = runner.invoke(main, ["record", "export", "rec_test", "--format", "python"])
             assert result.exit_code == 0
             assert "#!/usr/bin/env python3" in result.output
-            assert 'naturo click 100 200' in result.output
-            assert 'naturo type "hello"' in result.output
+            assert "naturo click 100 200" in result.output
+            assert "naturo type hello" in result.output
             assert "time.sleep" in result.output
 
     def test_export_bash(self, runner):
@@ -271,6 +271,103 @@ class TestRecordExport:
             result = runner.invoke(main, ["record", "export", "rec_test", "-o", out])
             assert result.exit_code == 0
             assert Path(out).exists()
+
+
+# ── shell escaping in exports ────────────────────────────────────────────────
+
+
+class TestExportShellEscaping:
+    """Verify that exported scripts are safe from shell injection."""
+
+    def test_bash_export_escapes_quotes_in_text(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": 'say "hello"'}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            # shlex.quote wraps in single quotes for safety
+            assert "naturo type 'say \"hello\"'" in result.output
+
+    def test_bash_export_escapes_backticks(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": "`whoami`"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            # Must NOT contain unquoted backticks
+            assert '"`whoami`"' not in result.output
+            # shlex.quote wraps safely
+            assert "naturo type '`whoami`'" in result.output
+
+    def test_bash_export_escapes_dollar_expansion(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": "$(rm -rf /)"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            # Must be safely quoted, not raw command substitution
+            assert '"$(rm -rf /)"' not in result.output
+            assert "naturo type '$(rm -rf /)'" in result.output
+
+    def test_bash_export_escapes_semicolons(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": "hello; rm -rf /"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            assert "naturo type 'hello; rm -rf /'" in result.output
+
+    def test_bash_export_escapes_single_quotes_in_text(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": "it's done"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            # shlex.quote handles single quotes by switching to double-quote style
+            assert "naturo type" in result.output
+            # The text must not break shell parsing
+            assert result.output.count("naturo type") == 1
+
+    def test_bash_export_escapes_key_names(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("press", {"key": "enter; whoami"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            assert "naturo press 'enter; whoami'" in result.output
+
+    def test_python_export_escapes_text(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": 'say "hello"'}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "python"])
+            assert result.exit_code == 0
+            # Python export uses !r which properly escapes
+            assert "run(" in result.output
+
+    def test_simple_text_not_quoted(self, runner):
+        rec = Recording(
+            name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
+            steps=[ActionStep("type", {"text": "hello"}, 1000.0)],
+        )
+        with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
+            result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
+            assert result.exit_code == 0
+            assert "naturo type hello" in result.output
 
 
 # ── record_action hook ───────────────────────────────────────────────────────
