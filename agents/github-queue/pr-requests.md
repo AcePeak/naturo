@@ -617,16 +617,16 @@ Format:
 
 ## PR Request: fix/issue-781-json-exit-code
 - **Base**: develop
-- **Title**: fix: exit non-zero when JSON mode reports failure (fixes #781)
-- **Body**: Three locations output {"success": false} JSON but exited with code 0: selector clear (no selectors), selector export (no selectors), and visual report (no baselines). Changed return to sys.exit(1) in all three locations. 6 new tests across test_selector_cmd.py and test_visual.py. Ruff clean.
+- **Title**: fix: exit code 1 when JSON mode emits success: false (fixes #781)
+- **Body**: Systemic fix: json_error() now sets _json_error_emitted flag. CLI entry point (__main__.py) checks this flag after command returns — if JSON error was emitted but exit code would be 0, corrects to 1. This covers ALL code paths that do click.echo(json_error()); return instead of sys.exit(1), not just the 3 specific locations. 2 new tests for flag behavior. Ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
-- **Status**: pending
+- **Status**: pending (force-pushed systemic version)
 
 ## PR Request: fix/issue-786-uwp-menu-click
 - **Base**: develop
-- **Title**: fix: detect WinUI 3 apps for UIA click path (fixes #786)
-- **Body**: Win11 Notepad is a standalone WinUI 3 app, not hosted by ApplicationFrameHost.exe. Click command only checked _is_afh_window for UWP detection, missing WinUI 3 apps. Added _is_winui_window() that checks for DesktopWindowXamlSource child windows, enabling UIA click path (InvokePattern/ExpandCollapsePattern) for menu items. 4 new tests + 2 mock fixes. 4152 tests pass, ruff+mypy clean.
+- **Title**: fix: use UIA click for menu items on all apps, not just UWP (fixes #786)
+- **Body**: WinUI 3 apps (Win11 Notepad) aren't hosted by ApplicationFrameHost, so _is_uwp was False and UIA click path was skipped. Menu items need UIA ExpandCollapsePattern to open dropdowns — SendInput coordinate clicks don't trigger menu expansion. Now tries UIA click whenever the element role is MenuItem/Menu/MenuBar regardless of UWP status. Broader fix than WinUI-only detection. 6 tests pass, ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
-- **Status**: pending (rebased)
+- **Status**: pending (force-pushed improved version)
