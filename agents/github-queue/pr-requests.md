@@ -638,3 +638,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: fix/issue-789-app-filter-basename
+- **Base**: develop
+- **Title**: fix: extract process basename before --app matching (fixes #789)
+- **Body**: process_name can be a full path. Without extracting basename, substring matching matches directory components, picking the wrong process. Uses ntpath.basename in both _resolve_hwnd and _resolve_hwnds. Added 3 tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
