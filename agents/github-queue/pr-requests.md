@@ -686,3 +686,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: test/recording-cmd-coverage
+- **Base**: develop
+- **Title**: test: add 75 tests for recording CLI and engine
+- **Body**: Comprehensive test coverage for recording_cmd.py and recording.py — covers all 7 subcommands (start/stop/play/list/show/delete/export), recording persistence, active state management, ActionStep/Recording dataclasses, export formats (json/python/bash), _step_to_naturo_cmd conversion, and help output. All 75 tests pass. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
