@@ -878,3 +878,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-03
 - **Status**: pending
+
+## PR Request: test/cascade-build-run-coverage
+- **Base**: develop
+- **Title**: test: add 35 tests for cascade/_build.py and _run.py orchestration logic
+- **Body**: Fills test coverage gap for cascade build and run modules. Tests _detect_backend_for_class (14 tests — all Win32 class→backend mappings), _find_node_by_bounds (7 tests — exact/deep match, zero dims, partial overlap), _get_hwnd_children_with_class non-Windows path, build_hybrid_tree (3 tests — UIA error, UIA-only, CDP enrichment), run_cascade (7 tests — auto/hybrid/cdp modes, null tree, exceptions, empty tree fallback), _run_cdp_only (3 tests — no port, with elements, synthetic root). All tests mock backend and platform calls. 4218 tests pass, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-03
+- **Status**: pending
