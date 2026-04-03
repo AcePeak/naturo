@@ -779,6 +779,59 @@ def stealth_flags_cmd(json_output: bool) -> None:
         click.echo(" ".join(STEALTH_FLAGS))
 
 
+@browser.command("stealth-check")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def stealth_check_cmd(ctx: click.Context, json_output: bool) -> None:
+    """Verify stealth patches are working in the running browser.
+
+    Runs 6 JavaScript checks against common bot-detection vectors:
+    webdriver, plugins, languages, chrome.runtime, WebGL vendor,
+    and permissions. Exits non-zero if any check fails.
+
+    \\b
+    Examples:
+        naturo browser stealth-check
+        naturo browser stealth-check --json
+    """
+    from naturo.browser._stealth import check_stealth
+
+    page = None
+    try:
+        page = _get_page(ctx)
+        results = check_stealth(page)
+        all_passed = all(results.values())
+
+        if json_output:
+            click.echo(json_module.dumps({
+                "success": all_passed,
+                "checks": results,
+            }))
+        else:
+            for name, passed in results.items():
+                status = "PASS" if passed else "FAIL"
+                click.echo(f"  {name}: {status}")
+            if all_passed:
+                click.echo(f"\nAll {len(results)} checks passed.")
+            else:
+                failed = [k for k, v in results.items() if not v]
+                click.echo(f"\n{len(failed)} check(s) failed: {', '.join(failed)}")
+
+        if not all_passed:
+            raise SystemExit(1)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        if json_output:
+            click.echo(json_module.dumps({"error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    finally:
+        if page is not None:
+            page.close()
+
+
 # ── Captcha ───────────────────────────────────────────────────────────────────
 
 

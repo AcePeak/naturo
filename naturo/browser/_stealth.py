@@ -21,12 +21,13 @@ Usage (CLI)::
 
     naturo browser stealth              # Apply to running browser
     naturo browser stealth-flags        # Print flags for manual launch
+    naturo browser stealth-check        # Verify patches are working
 """
 
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -148,3 +149,74 @@ def apply_stealth_patches(page) -> int:
             logger.warning("Failed to apply stealth patch: %s", exc)
     logger.info("Applied %d/%d stealth patches", count, len(ALL_PATCHES))
     return count
+
+
+# ── Stealth verification ────────────────────────────────────────────────────
+
+_CHECK_JS = """
+(function() {
+    var results = {};
+
+    // 1. navigator.webdriver should be undefined (not true)
+    results.webdriver = (navigator.webdriver === undefined || navigator.webdriver === false);
+
+    // 2. navigator.plugins should have entries
+    results.plugins = (navigator.plugins && navigator.plugins.length > 0);
+
+    // 3. navigator.languages should be populated
+    results.languages = (navigator.languages && navigator.languages.length > 0);
+
+    // 4. chrome.runtime should exist
+    results.chrome_runtime = !!(window.chrome && window.chrome.runtime);
+
+    // 5. WebGL vendor should not be empty/default
+    try {
+        var canvas = document.createElement('canvas');
+        var gl = canvas.getContext('webgl');
+        if (gl) {
+            var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                var vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                results.webgl_vendor = (vendor && vendor.length > 0);
+            } else {
+                results.webgl_vendor = true;  // No debug info = not detectable
+            }
+        } else {
+            results.webgl_vendor = true;  // No WebGL = not detectable
+        }
+    } catch(e) {
+        results.webgl_vendor = true;  // Error = not detectable
+    }
+
+    // 6. Notification.permission should not expose automation
+    try {
+        results.permissions = (typeof Notification === 'undefined'
+                               || Notification.permission !== 'denied');
+    } catch(e) {
+        results.permissions = true;
+    }
+
+    return results;
+})()
+"""
+
+
+def check_stealth(page) -> Dict[str, bool]:
+    """Run stealth verification checks against a BrowserPage.
+
+    Evaluates JavaScript checks for the 6 detection vectors that
+    :func:`apply_stealth_patches` addresses. Each check returns True
+    if the browser appears non-automated for that vector.
+
+    Args:
+        page: A :class:`~naturo.browser.BrowserPage` instance.
+
+    Returns:
+        Dict mapping check name to pass/fail boolean.  Keys:
+        ``webdriver``, ``plugins``, ``languages``, ``chrome_runtime``,
+        ``webgl_vendor``, ``permissions``.
+    """
+    result = page._cdp.evaluate(_CHECK_JS)
+    if not isinstance(result, dict):
+        raise RuntimeError(f"Stealth check returned unexpected type: {type(result)}")
+    return result
