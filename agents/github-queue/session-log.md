@@ -2,32 +2,24 @@
 > Date: 2026-04-04
 
 ## Completed
-- fix/issue-781-json-exit-code: exit non-zero when JSON reports failure (fixes #781) — 6 new tests
-- fix/issue-789-app-filter-basename: extract process basename before --app matching (fixes #789) — 5 new tests
-- fix/issue-787-coords-bounds: reject out-of-bounds click coordinates (fixes #787) — 8 new tests
-- fix/issue-783-json-stderr-suppress: suppress stderr in JSON mode (fixes #783) — 2 new tests
-- fix/issue-788-stale-pid-routing: detect stale PID, fall back to process name (fixes #788) — 3 new tests
-- fix/issue-786-uwp-menu-click: detect WinUI 3 for UIA click path (fixes #786) — 4 new tests
+- docs/readme-browser-visual-sections: add browser automation (27 commands) and visual regression testing (6 commands) sections to README, plus missing selector show/clear commands in command table
 
 ## Pushed branches (awaiting PR)
-- fix/issue-781-json-exit-code
-- fix/issue-789-app-filter-basename
-- fix/issue-787-coords-bounds
-- fix/issue-783-json-stderr-suppress
-- fix/issue-788-stale-pid-routing
-- fix/issue-786-uwp-menu-click
+- docs/readme-browser-visual-sections: README documentation for browser + visual features
 
 ## Rebased branches
-- None needed — all previous branches existed on remote, fetched and force-pushed with new implementations
+- None needed — no stale branches on remote
 
 ## Issues found but not fixed
-- Previous bug-fix branches keep getting deleted from remote without merging — this is a recurring process issue across multiple sessions. Orc-Mycelium may be cleaning branches before creating PRs.
-- #763 (client script validation) still blocked — no rpa-client scripts in repo
+- #105 (user selector management) is already fully implemented on develop — save/list/show/delete/clear/export/import/test all working, 48 tests passing. Issue can be closed.
+- Previous bug-fix branches (#781, #783, #785, #786, #787, #788, #789) are gone from remote again without being merged into develop. Only PR request queue entries exist. This is the 4th+ session in a row this has happened. Orc-Mycelium may be cleaning branches before creating PRs.
+- #763 (client script validation) still blocked — depends on browser PRs being merged
 - #766 (migration guide acceptance tests) still blocked — depends on browser PRs being merged
 - app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues
 
 ## Next session should
-- Verify Orc-Mycelium created PRs for the 6 bug-fix branches
-- If branches are deleted again without merging, escalate to Ace — this has happened 3+ sessions in a row
-- Work on #763/#766 if dependencies resolve
-- Consider self-driven mode: test coverage gaps, code health scan
+- Escalate the branch deletion issue to Ace — bug-fix code is being lost across sessions
+- Verify if Orc-Mycelium created PRs for the 6 bug-fix branches
+- If not, recreate the bug-fix branches (this would be the 4th+ time)
+- Work on #763/#766 if browser dependencies resolve
+- Consider test coverage for browser_cmd.py (no dedicated test file)

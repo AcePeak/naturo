@@ -1046,3 +1046,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: docs/readme-browser-visual-sections
+- **Base**: develop
+- **Title**: docs: add browser automation and visual regression sections to README
+- **Body**: README was missing documentation for two major v0.3.2 features: browser automation (27 CDP commands) and visual regression testing (6 commands). Added feature list entries, command tables, usage examples, and comparison table row. Also added missing selector show and selector clear to the command table. No code changes.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
