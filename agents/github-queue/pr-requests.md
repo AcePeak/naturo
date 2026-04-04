@@ -1158,3 +1158,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: refactor/issue-833-split-shell
+- **Base**: develop
+- **Title**: refactor: split _shell.py (1,216 lines) into focused modules (fixes #833)
+- **Body**: Split the monolithic ShellMixin (1,216 lines) into a _shell/ package with 6 sub-mixins: _app.py (list/launch/quit apps), _menu.py (Win32 + UIA menu enumeration), _dialog.py (open_uri, dialog detection and interaction), _taskbar.py (taskbar listing/clicking), _tray.py (system tray icons), _desktop.py (virtual desktops via pyvda). ShellMixin in __init__.py composes all sub-mixins via MRO. No public API changes — all 30 methods remain accessible. 4560 tests pass, ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
