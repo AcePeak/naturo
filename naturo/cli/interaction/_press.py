@@ -207,9 +207,6 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                         logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
                 time.sleep(0.15)
         except Exception as exc:
-            # (#783) Downgraded from WARNING to DEBUG — focus failure is
-            # non-fatal (press proceeds anyway) and WARNING messages leak
-            # to stderr via Python's lastResort handler in JSON mode.
             logger.debug("Failed to focus target window for press: %s", exc)
 
     # (#231) Capture before-state for post-action verification
