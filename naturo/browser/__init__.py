@@ -38,6 +38,12 @@ from naturo.browser._captcha import (
     ManualSolver,
     TokenInjectionSolver,
 )
+from naturo.browser._launcher import (
+    ChromeProcess,
+    find_chrome,
+    launch_chrome,
+    list_profiles,
+)
 
 __all__ = [
     "BrowserPage",
@@ -50,4 +56,8 @@ __all__ = [
     "CaptchaError",
     "ManualSolver",
     "TokenInjectionSolver",
+    "ChromeProcess",
+    "find_chrome",
+    "launch_chrome",
+    "list_profiles",
 ]

@@ -718,6 +718,115 @@ def close_cmd(ctx: click.Context) -> None:
     click.echo("Browser connection closed.")
 
 
+# ── Launch / Profiles (#758) ────────────────────────────────────────────────
+
+
+@browser.command("launch")
+@click.option("--profile", default=None,
+              help="Chrome profile name or directory (e.g. 'Work', 'Profile 1')")
+@click.option("--user-data-dir", default=None,
+              help="Custom Chrome user data directory path")
+@click.option("--headless", is_flag=True, help="Run in headless mode")
+@click.option("--stealth", is_flag=True,
+              help="Apply stealth flags to reduce bot fingerprinting")
+@click.option("--url", default=None, help="Initial URL to open (default: about:blank)")
+@click.option("--chrome-path", default=None,
+              help="Explicit path to Chrome/Chromium/Edge binary")
+@click.option("--timeout", type=float, default=15.0,
+              help="Seconds to wait for CDP readiness (default: 15)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def launch_cmd(ctx: click.Context, profile: Optional[str],
+               user_data_dir: Optional[str], headless: bool,
+               stealth: bool, url: Optional[str],
+               chrome_path: Optional[str], timeout: float,
+               json_output: bool) -> None:
+    """Launch Chrome with remote debugging enabled.
+
+    Starts a new Chrome instance with --remote-debugging-port so naturo
+    can connect to it. Optionally selects a Chrome profile.
+
+    \b
+    Examples:
+        naturo browser launch
+        naturo browser launch --profile Work
+        naturo browser launch --profile "Profile 1" --headless
+        naturo browser launch --user-data-dir /tmp/test-profile
+        naturo browser launch --stealth --url https://example.com
+    """
+    from naturo.browser._launcher import launch_chrome as _launch_chrome
+    from naturo.browser._stealth import STEALTH_FLAGS
+
+    port = ctx.obj["cdp_port"]
+    extra_args = list(STEALTH_FLAGS) if stealth else None
+
+    try:
+        proc = _launch_chrome(
+            port=port,
+            headless=headless,
+            profile=profile,
+            user_data_dir=user_data_dir,
+            extra_args=extra_args,
+            url=url,
+            chrome_path=chrome_path,
+            timeout=timeout,
+        )
+        if json_output:
+            click.echo(json_module.dumps({
+                "status": "ok",
+                "pid": proc.pid,
+                "port": proc.port,
+                "profile": profile,
+            }))
+        else:
+            click.echo(f"Chrome launched (pid={proc.pid}, port={proc.port})")
+            if profile:
+                click.echo(f"Profile: {profile}")
+    except FileNotFoundError as exc:
+        if json_output:
+            click.echo(json_module.dumps({"error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    except RuntimeError as exc:
+        if json_output:
+            click.echo(json_module.dumps({"error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+
+
+@browser.command("profiles")
+@click.option("--user-data-dir", default=None,
+              help="Custom Chrome user data directory path")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def profiles_cmd(user_data_dir: Optional[str], json_output: bool) -> None:
+    """List available Chrome profiles.
+
+    Reads the Chrome 'Local State' file to discover profiles.
+    No running browser required.
+
+    \b
+    Examples:
+        naturo browser profiles
+        naturo browser profiles --json
+        naturo browser profiles --user-data-dir /custom/path
+    """
+    from naturo.browser._launcher import list_profiles as _list_profiles
+
+    profiles = _list_profiles(user_data_dir=user_data_dir)
+
+    if json_output:
+        click.echo(json_module.dumps({"profiles": profiles, "count": len(profiles)}, indent=2))
+    elif not profiles:
+        click.echo("No Chrome profiles found.")
+        click.echo("Hint: profiles are read from Chrome's 'Local State' file.")
+    else:
+        click.echo(f"Found {len(profiles)} profile(s):")
+        for p in profiles:
+            click.echo(f"  {p['name']:<20} [{p['directory']}]  {p['path']}")
+
+
 # ── Stealth / anti-detection (#760) ──────────────────────────────────────────
 
 
