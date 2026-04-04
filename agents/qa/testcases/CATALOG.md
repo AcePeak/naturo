@@ -67,3 +67,4 @@
 - [TC-0048](regression/mcp-stdout-debug-output.yaml) — P1: MCP server emits debug text to stdout, breaking JSON-RPC stdio protocol — **active**
 - [TC-0049](exploratory/browser-json-error-format.yaml) — P1: Browser commands ignore -j flag, output plain text errors instead of JSON — **active**
 - [TC-0050](regression/type-default-multiline-dropped.yaml) — P1: Default type mode drops literal newlines from multi-line text — **active**
+- [TC-0051](exploratory/mcp-pydantic-error-leak.yaml) — P2: MCP tool call with wrong param leaks Pydantic internals in error — **active**

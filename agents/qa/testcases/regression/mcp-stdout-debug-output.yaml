@@ -7,8 +7,8 @@ source_issue: 810
 created: 2026-04-02
 last_run: 2026-04-05
 last_result: pass
-consecutive_passes: 3
-notes: "2026-04-05 R114: PASS — MCP stdout clean, only valid JSON-RPC lines. Consecutive 3."
+consecutive_passes: 4
+notes: "2026-04-05 R115: PASS — MCP stdout clean for initialize. Note: stderr still emits 'Processing request of type CallToolRequest' on tool calls. Consecutive 4."
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-04-02
 last_run: 2026-04-05
 last_result: pass
-consecutive_passes: 18
-notes: "2026-04-05 R114: PASS — see --app nonexistent returns exit 1 in both JSON and non-JSON mode."
+consecutive_passes: 19
+notes: "2026-04-05 R115: PASS — see --app nonexistent returns exit 1 in both JSON and non-JSON mode."
 
 preconditions:
   - "naturo is installed and in PATH"
