@@ -8,7 +8,7 @@ created: 2026-04-02
 last_run: 2026-04-04
 last_result: fail
 consecutive_passes: 0
-notes: "2026-04-04 R109: FAIL — app launch calculator reports success (PID 9628) but CalculatorApp.exe (PID 11568) not in list apps and see --app calculator returns error. UWP PID mismatch still present. #785 open."
+notes: "2026-04-04 R110: FAIL — app launch calculator reports success (PID 18360) but CalculatorApp.exe (PID 18068) not in list apps. No window visible on screen. #785 still open."
 
 preconditions:
   - "naturo is installed and in PATH"
