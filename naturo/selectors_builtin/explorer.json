@@ -1,0 +1,26 @@
+{
+  "navigation-pane": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Tree[@name=\"Navigation pane\"]",
+    "description": "Left navigation tree (Quick access, This PC, etc.)"
+  },
+  "file-list": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/List[@automationid=\"ItemsView\"]",
+    "description": "Main file/folder list view"
+  },
+  "address-bar": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Edit[@name=\"Address*\"]",
+    "description": "Address bar showing current path"
+  },
+  "search-box": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Edit[@name=\"Search*\"]",
+    "description": "Search box for finding files"
+  },
+  "back-button": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Button[@name=\"Back*\"]",
+    "description": "Navigation back button"
+  },
+  "up-button": {
+    "selector": "app://explorer.exe/Window[@name=\"*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Button[@name=\"Up*\"]",
+    "description": "Navigate to parent folder"
+  }
+}

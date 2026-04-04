@@ -1,0 +1,18 @@
+{
+  "category-list": {
+    "selector": "app://explorer.exe/Window[@name=\"*Control Panel*\"]/Pane[@cls=\"ShellTabWindowClass\"]/List",
+    "description": "Category or item list in Control Panel"
+  },
+  "address-bar": {
+    "selector": "app://explorer.exe/Window[@name=\"*Control Panel*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Edit[@name=\"Address*\"]",
+    "description": "Address bar showing Control Panel path"
+  },
+  "search-box": {
+    "selector": "app://explorer.exe/Window[@name=\"*Control Panel*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Edit[@name=\"Search*\"]",
+    "description": "Search Control Panel box"
+  },
+  "back-button": {
+    "selector": "app://explorer.exe/Window[@name=\"*Control Panel*\"]/Pane[@cls=\"ShellTabWindowClass\"]/Button[@name=\"Back*\"]",
+    "description": "Navigation back button"
+  }
+}

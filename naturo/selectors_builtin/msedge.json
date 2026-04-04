@@ -1,0 +1,34 @@
+{
+  "address-bar": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Edit[@name=\"Address and search bar\"]",
+    "description": "URL address bar and search input"
+  },
+  "tab-strip": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Tab",
+    "description": "Tab strip containing all browser tabs"
+  },
+  "new-tab-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"New tab\"]",
+    "description": "New tab button"
+  },
+  "back-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Back\"]",
+    "description": "Navigation back button"
+  },
+  "forward-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Forward\"]",
+    "description": "Navigation forward button"
+  },
+  "reload-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Refresh\"]",
+    "description": "Page reload button"
+  },
+  "menu-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Settings and more\"]",
+    "description": "Three-dot settings menu button"
+  },
+  "sidebar-button": {
+    "selector": "app://msedge.exe/Window[@name=\"*Edge*\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Sidebar\"]",
+    "description": "Sidebar toggle button"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "console-output": {
+    "selector": "app://cmd.exe/Window[@name=\"*cmd*\"]/Pane[@cls=\"ConsoleWindowClass\"]",
+    "description": "Console output and input area"
+  },
+  "title-bar": {
+    "selector": "app://cmd.exe/Window[@name=\"*cmd*\"]/TitleBar",
+    "description": "Window title bar"
+  }
+}

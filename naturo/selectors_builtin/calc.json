@@ -1,0 +1,34 @@
+{
+  "display": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Text[@automationid=\"CalculatorResults\"]",
+    "description": "Calculator display showing current result"
+  },
+  "button-0": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"num0Button\"]",
+    "description": "Number 0 button"
+  },
+  "button-1": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"num1Button\"]",
+    "description": "Number 1 button"
+  },
+  "button-equals": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"equalButton\"]",
+    "description": "Equals button"
+  },
+  "button-plus": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"plusButton\"]",
+    "description": "Addition button"
+  },
+  "button-clear": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"clearButton\"]",
+    "description": "Clear (C) button"
+  },
+  "mode-standard": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"Standard\"]",
+    "description": "Switch to Standard mode"
+  },
+  "mode-scientific": {
+    "selector": "app://calculatorapp.exe/Window[@name=\"Calculator\"]/Button[@automationid=\"Scientific\"]",
+    "description": "Switch to Scientific mode"
+  }
+}

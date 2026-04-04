@@ -79,7 +79,7 @@ naturo = "naturo.cli:main"
 include = ["naturo*"]
 
 [tool.setuptools.package-data]
-naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib"]
+naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib", "selectors_builtin/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

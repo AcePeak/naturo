@@ -1,0 +1,30 @@
+{
+  "address-bar": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Edit[@automationid=\"urlbar-input\"]",
+    "description": "URL address bar"
+  },
+  "tab-strip": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Tab[@automationid=\"tabbrowser-tabs\"]",
+    "description": "Tab strip containing all browser tabs"
+  },
+  "new-tab-button": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Button[@automationid=\"tabs-newtab-button\"]",
+    "description": "New tab button"
+  },
+  "back-button": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Button[@automationid=\"back-button\"]",
+    "description": "Navigation back button"
+  },
+  "forward-button": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Button[@automationid=\"forward-button\"]",
+    "description": "Navigation forward button"
+  },
+  "reload-button": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Button[@automationid=\"reload-button\"]",
+    "description": "Page reload button"
+  },
+  "hamburger-menu": {
+    "selector": "app://firefox.exe/Window[@name=\"*Firefox*\"]/Pane[@cls=\"MozillaWindowClass\"]/Button[@automationid=\"PanelUI-menu-button\"]",
+    "description": "Application menu (hamburger) button"
+  }
+}

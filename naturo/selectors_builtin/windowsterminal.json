@@ -1,0 +1,18 @@
+{
+  "tab-bar": {
+    "selector": "app://windowsterminal.exe/Window[@name=\"*\"]/Tab[@automationid=\"TabView\"]",
+    "description": "Tab bar containing terminal tabs"
+  },
+  "new-tab-button": {
+    "selector": "app://windowsterminal.exe/Window[@name=\"*\"]/Button[@automationid=\"AddTabButton\"]",
+    "description": "New tab button"
+  },
+  "terminal-pane": {
+    "selector": "app://windowsterminal.exe/Window[@name=\"*\"]/Pane[@cls=\"TermControl\"]",
+    "description": "Active terminal input/output pane"
+  },
+  "settings-button": {
+    "selector": "app://windowsterminal.exe/Window[@name=\"*\"]/Button[@name=\"Settings*\"]",
+    "description": "Settings dropdown button"
+  }
+}
