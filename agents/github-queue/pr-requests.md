@@ -1138,10 +1138,10 @@ Format:
 ## PR Request: fix/issue-834-browser-json-flag
 - **Base**: develop
 - **Title**: fix: browser subcommand respects -j flag for all error paths (fixes #834)
-- **Body**: _get_page() now accepts json_output and emits structured JSON errors when connection fails. All error handlers use error_helpers.json_error() for consistent format matching the rest of the CLI. 4 new tests covering JSON connection errors, error format, and scroll/captcha edge cases. Net -34 lines from deduplicating error handling via _emit_browser_error helper.
+- **Body**: _get_page() accepts json_output kwarg and emits structured JSON (SERVER_ERROR) on connection failure. All RuntimeError handlers use _emit_browser_error() with ELEMENT_NOT_FOUND code. TimeoutError uses TIMEOUT, FileNotFoundError uses APP_NOT_FOUND, scroll validation uses INVALID_INPUT. 3 new tests: connection error JSON, click error format, scroll no-option JSON. All 59 browser_cmd tests pass, ruff/mypy clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
-- **Status**: pending
+- **Status**: pending (branch re-pushed 2026-04-04)
 
 ## PR Request: fix/issue-841-calculator-uia-test
 - **Base**: develop
@@ -1149,4 +1149,4 @@ Format:
 - **Body**: Calculator (WinUI 3) has the same UIA detection challenges as UWP Notepad: launcher PID differs from window-owning process, and UIA tree may not be ready immediately. Added exe="CalculatorApp.exe" and _detect_with_retry() matching the Notepad test pattern.
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
-- **Status**: pending
+- **Status**: pending (branch re-pushed 2026-04-04)
