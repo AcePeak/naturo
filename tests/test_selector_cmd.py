@@ -288,6 +288,19 @@ class TestSelectorClear:
         assert "Cleared 2" in result.output
         assert not (tmp_selectors / "notepad.json").exists()
 
+    def test_clear_no_selectors_json_exit_code(self, runner, tmp_selectors):
+        """#781: selector clear --json must exit non-zero when no selectors exist."""
+        result = runner.invoke(main, ["selector", "clear", "nonexistent", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+
+    def test_clear_no_selectors_text_exit_code(self, runner, tmp_selectors):
+        """selector clear (text mode) exits non-zero when no selectors exist."""
+        result = runner.invoke(main, ["selector", "clear", "nonexistent"])
+        assert result.exit_code != 0
+        assert "No selectors" in result.output
+
 
 # ── selector export ──────────────────────────────────────────────────────────
 
@@ -309,6 +322,13 @@ class TestSelectorExport:
         assert Path(out).exists()
         data = json.loads(Path(out).read_text())
         assert data["app"] == "notepad"
+
+    def test_export_no_selectors_json_exit_code(self, runner, tmp_selectors):
+        """#781: selector export --json must exit non-zero when no selectors exist."""
+        result = runner.invoke(main, ["selector", "export", "nonexistent", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
 
 
 # ── selector import ──────────────────────────────────────────────────────────
@@ -400,3 +420,33 @@ class TestSelectorHelp:
     def test_selector_import_help(self, runner):
         result = runner.invoke(main, ["selector", "import", "--help"])
         assert result.exit_code == 0
+
+
+# ── JSON exit code (#781) ───────────────────────────────────────────────────
+
+
+class TestJsonExitCode:
+    """selector clear and selector export must exit non-zero when emitting
+    {"success": false} in JSON mode (#781)."""
+
+    def test_clear_no_selectors_json_exits_nonzero(self, runner, tmp_selectors):
+        result = runner.invoke(main, ["selector", "clear", "nonexistent", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+
+    def test_clear_no_selectors_text_exits_nonzero(self, runner, tmp_selectors):
+        result = runner.invoke(main, ["selector", "clear", "nonexistent"])
+        assert result.exit_code != 0
+
+    def test_export_no_selectors_json_exits_nonzero(self, runner, tmp_selectors):
+        with patch.object(selector_cmd, "BUILTIN_DIR", tmp_selectors / "empty_builtin"):
+            result = runner.invoke(main, ["selector", "export", "nonexistent", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+
+    def test_export_no_selectors_text_exits_nonzero(self, runner, tmp_selectors):
+        with patch.object(selector_cmd, "BUILTIN_DIR", tmp_selectors / "empty_builtin"):
+            result = runner.invoke(main, ["selector", "export", "nonexistent"])
+        assert result.exit_code != 0
