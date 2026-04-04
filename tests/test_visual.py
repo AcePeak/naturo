@@ -571,3 +571,14 @@ class TestEnterpriseCLI:
         assert result.exit_code == 0
         assert "update" in result.output
         assert "suite" in result.output
+
+    def test_report_no_baselines_json_exits_nonzero(self, runner, tmp_dirs, tmp_path):
+        """visual report must exit non-zero when no baselines to compare (#781)."""
+        current_dir = tmp_path / "current"
+        current_dir.mkdir()
+        result = runner.invoke(main, [
+            "visual", "report", "--current-dir", str(current_dir), "--json",
+        ])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
