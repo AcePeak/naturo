@@ -654,3 +654,40 @@ class TestResponseFormat:
                 assert "error" in data, f"{tool_name}({args}) missing error object"
                 assert "code" in data["error"], f"{tool_name}({args}) missing error.code"
                 assert "message" in data["error"], f"{tool_name}({args}) missing error.message"
+
+
+# ── MCP start logging suppression (#810) ────────────────────────────────────
+
+
+class TestMcpStartLoggingSuppression:
+    """#810: MCP stdio transport must suppress all logging."""
+
+    def test_stdio_installs_null_handler(self):
+        """naturo mcp start --transport stdio installs NullHandler on root."""
+        import logging
+        import click.testing
+
+        runner = click.testing.CliRunner()
+        from naturo.cli.ai import mcp
+
+        with patch("naturo.mcp_server.run_server"):
+            runner.invoke(mcp, ["start", "--transport", "stdio"])
+
+        root = logging.getLogger()
+        has_null = any(isinstance(h, logging.NullHandler) for h in root.handlers)
+        assert has_null, "Root logger should have NullHandler for stdio transport"
+
+    def test_json_mode_installs_null_handler(self):
+        """naturo mcp start --json installs NullHandler on root."""
+        import logging
+        import click.testing
+
+        runner = click.testing.CliRunner()
+        from naturo.cli.ai import mcp
+
+        with patch("naturo.mcp_server.run_server"):
+            runner.invoke(mcp, ["start", "--json"])
+
+        root = logging.getLogger()
+        has_null = any(isinstance(h, logging.NullHandler) for h in root.handlers)
+        assert has_null, "Root logger should have NullHandler in JSON mode"
