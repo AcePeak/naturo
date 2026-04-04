@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import ntpath
 from typing import ClassVar, Optional
 
 from naturo.backends.base import (ElementInfo as BaseElementInfo, WindowInfo as BaseWindowInfo)
@@ -257,7 +258,11 @@ class ElementMixin:
 
         for w in windows:
             score = 0
-            proc_stem = w.process_name.lower()
+            # (#789) Extract basename before matching — process_name may
+            # contain a full path (e.g. C:\Windows\System32\notepad.exe)
+            # and matching against the full path causes --app system to
+            # incorrectly match any process in System32.
+            proc_stem = ntpath.basename(w.process_name).lower()
             # Strip .exe suffix for comparison
             if proc_stem.endswith(".exe"):
                 proc_stem = proc_stem[:-4]
@@ -530,7 +535,8 @@ class ElementMixin:
 
         for w in windows:
             score = 0
-            proc_stem = w.process_name.lower()
+            # (#789) Extract basename — see _resolve_hwnd for rationale.
+            proc_stem = ntpath.basename(w.process_name).lower()
             if proc_stem.endswith(".exe"):
                 proc_stem = proc_stem[:-4]
             title_lower = w.title.lower()
