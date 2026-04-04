@@ -438,6 +438,51 @@ def _find_afh_content_children(parent_hwnd: int) -> List[int]:
         return []
 
 
+def _find_winui_content_children(parent_hwnd: int) -> List[int]:
+    """Enumerate DesktopWindowXamlSource children of any window.
+
+    Standalone WinUI 3 apps (Win11 Calculator, Paint) are NOT hosted by
+    ApplicationFrameHost — they run as their own process with a regular
+    top-level window.  When the main HWND returns an empty UIA tree, we
+    check for DesktopWindowXamlSource children which host the actual
+    XAML content (#785).
+
+    Unlike ``_find_afh_content_children``, this does NOT require the
+    parent to be an ApplicationFrameWindow.
+
+    Args:
+        parent_hwnd: Top-level window handle to inspect.
+
+    Returns:
+        List of DesktopWindowXamlSource child HWNDs.
+    """
+    if platform.system() != "Windows":
+        return []
+
+    try:
+        import ctypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        winui_children: List[int] = []
+        child = user32.FindWindowExW(parent_hwnd, None, None, None)
+        while child:
+            child_cls = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(child, child_cls, 256)
+            if child_cls.value.lower() == "desktopwindowxamlsource":
+                winui_children.append(child)
+            child = user32.FindWindowExW(parent_hwnd, child, None, None)
+
+        return winui_children
+
+    except Exception as exc:
+        logger.debug(
+            "Failed to enumerate WinUI children for HWND %s: %s",
+            parent_hwnd, exc,
+        )
+        return []
+
+
 def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[InteractionMethod]:
     """Probe for UI Automation availability.
 
@@ -500,6 +545,29 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                     capabilities=capabilities,
                     confidence=0.95,
                 )
+
+        # (#785) Standalone WinUI 3 apps (Win11 Calculator, Paint) are
+        # NOT hosted by ApplicationFrameHost.  When the AFH child search
+        # returns empty, check for DesktopWindowXamlSource children
+        # directly — these host the actual XAML content.
+        if not child_hwnds:
+            winui_hwnds = _find_winui_content_children(target_hwnd)
+            for child_hwnd in winui_hwnds:
+                tree = core.get_element_tree(hwnd=child_hwnd, depth=1)
+                if tree is not None:
+                    logger.debug(
+                        "UIA probe succeeded via WinUI child HWND %s "
+                        "(parent %s)",
+                        child_hwnd, target_hwnd,
+                    )
+                    capabilities = ["click", "type", "find", "tree", "screenshot"]
+                    return InteractionMethod(
+                        method=InteractionMethodType.UIA,
+                        priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                        status=ProbeStatus.AVAILABLE,
+                        capabilities=capabilities,
+                        confidence=0.95,
+                    )
 
         logger.debug(
             "UIA probe via native DLL returned empty tree for PID %d (hwnd=%s)",
