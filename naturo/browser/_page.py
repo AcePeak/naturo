@@ -39,6 +39,11 @@ class BrowserPage:
         host: CDP host (default ``localhost``).
         tab_index: Which tab to connect to (default 0 = first tab).
         timeout: Default timeout in seconds for operations.
+        profile: Chrome profile name. When provided, automatically
+            launches Chrome with this profile via :func:`launch_chrome`.
+        headless: Run Chrome in headless mode (only when *profile* is set).
+        stealth: Apply anti-detection flags (only when *profile* is set).
+        chrome_path: Explicit Chrome binary path (only when *profile* is set).
 
     Example::
 
@@ -48,6 +53,11 @@ class BrowserPage:
         page.find("button.submit").click()
         print(page.title)
         page.close()
+
+    Auto-launch example::
+
+        page = BrowserPage(profile="xhs-account1")
+        page.navigate("https://www.xiaohongshu.com/explore")
     """
 
     def __init__(
@@ -56,9 +66,31 @@ class BrowserPage:
         host: str = "localhost",
         tab_index: int = 0,
         timeout: float = 30.0,
+        profile: Optional[str] = None,
+        headless: bool = False,
+        stealth: bool = False,
+        chrome_path: Optional[str] = None,
     ) -> None:
-        self._cdp = CDPClient(host=host, port=port, timeout=timeout)
+        self._chrome_process = None
         self._timeout = timeout
+
+        if profile is not None:
+            from naturo.browser._launcher import launch_chrome
+            extra_args = None
+            if stealth:
+                from naturo.browser._stealth import STEALTH_FLAGS
+                extra_args = list(STEALTH_FLAGS)
+            self._chrome_process = launch_chrome(
+                port=port,
+                headless=headless,
+                profile=profile,
+                extra_args=extra_args,
+                chrome_path=chrome_path,
+                timeout=timeout,
+            )
+            port = self._chrome_process.port
+
+        self._cdp = CDPClient(host=host, port=port, timeout=timeout)
         self._connect(tab_index)
 
     def _connect(self, tab_index: int = 0) -> None:
@@ -596,8 +628,11 @@ class BrowserPage:
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
     def close(self) -> None:
-        """Close the CDP connection."""
+        """Close the CDP connection and terminate auto-launched Chrome."""
         self._cdp.close()
+        if self._chrome_process is not None:
+            self._chrome_process.terminate()
+            self._chrome_process = None
 
     # ── Internal ──────────────────────────────────────────────────────────
 

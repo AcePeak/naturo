@@ -166,6 +166,41 @@ class BrowserElement:
             cdp.send("Input.dispatchKeyEvent", {"type": "keyUp", "text": char})
         return self
 
+    def select(self, value: str) -> BrowserElement:
+        """Select an option in a ``<select>`` dropdown.
+
+        Sets the value and dispatches ``change`` + ``input`` events so
+        frameworks (React, Vue, etc.) detect the change.
+
+        Args:
+            value: The ``value`` attribute of the ``<option>`` to select.
+
+        Returns:
+            self (for method chaining).
+
+        Raises:
+            RuntimeError: If no matching option is found.
+        """
+        escaped = value.replace("\\", "\\\\").replace("'", "\\'")
+        result = self._call_function(f"""function() {{
+            var opt = Array.from(this.options).find(o => o.value === '{escaped}');
+            if (!opt) {{
+                opt = Array.from(this.options).find(
+                    o => o.textContent.trim() === '{escaped}'
+                );
+            }}
+            if (!opt) return 'NOT_FOUND';
+            this.value = opt.value;
+            this.dispatchEvent(new Event('change', {{bubbles: true}}));
+            this.dispatchEvent(new Event('input', {{bubbles: true}}));
+            return opt.value;
+        }}""")
+        if result == "NOT_FOUND":
+            raise RuntimeError(
+                f"No <option> with value or text '{value}' found in <select>"
+            )
+        return self
+
     def scroll_into_view(self) -> BrowserElement:
         """Scroll this element into the viewport.
 

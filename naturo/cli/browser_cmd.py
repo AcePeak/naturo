@@ -256,6 +256,50 @@ def type_cmd(ctx: click.Context, selector: str, text: str, by: Optional[str],
         page.close()
 
 
+# ── Select ───────────────────────────────────────────────────────────────────
+
+
+@browser.command("select")
+@click.argument("selector")
+@click.argument("value")
+@click.option("--by", type=click.Choice(["css", "xpath", "text"]),
+              default=None, help="Force selector type")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def select_cmd(ctx: click.Context, selector: str, value: str,
+               by: Optional[str], json_output: bool) -> None:
+    """Select an option from a <select> dropdown.
+
+    VALUE matches against option value attributes first, then text content.
+
+    \b
+    Examples:
+        naturo browser select "#country" "US"
+        naturo browser select "select[name=lang]" "English"
+    """
+    if by:
+        selector = f"{by}:{selector}"
+
+    page = _get_page(ctx)
+    try:
+        el = page.find(selector)
+        el.select(value)
+        if json_output:
+            click.echo(json_module.dumps({
+                "status": "ok", "selector": selector, "value": value,
+            }))
+        else:
+            click.echo(f"Selected '{value}' in: {selector}")
+    except RuntimeError as exc:
+        if json_output:
+            click.echo(json_module.dumps({"error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    finally:
+        page.close()
+
+
 # ── Text / Attr / HTML ────────────────────────────────────────────────────────
 
 
