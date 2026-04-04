@@ -23,7 +23,7 @@ from naturo.cli import main
 
 # Resolve the *module* (not the Click Command object that shadows it in
 # naturo.cli's namespace).  See test_get_cmd.py for detailed explanation.
-_set_cmd_mod = sys.modules["naturo.cli.set_cmd"]
+_set_cmd_mod = sys.modules["naturo.cli.values._set"]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

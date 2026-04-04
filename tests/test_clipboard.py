@@ -167,7 +167,7 @@ class TestClipboardGet:
     """Tests for 'naturo clipboard get'."""
 
     def test_get_text(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "get"])
         assert result.exit_code == 0
         assert "hello world" in result.output
@@ -175,13 +175,13 @@ class TestClipboardGet:
 
     def test_get_empty(self, runner, mock_backend):
         mock_backend.clipboard_get.return_value = ""
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "get"])
         assert result.exit_code == 0
         assert "clipboard is empty" in result.output
 
     def test_get_json(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "get", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -192,7 +192,7 @@ class TestClipboardGet:
 
     def test_get_error(self, runner, mock_backend):
         mock_backend.clipboard_get.side_effect = Exception("clipboard locked")
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "get"])
         # emit_exception_error calls sys.exit(1)
         assert result.exit_code == 1
@@ -205,14 +205,14 @@ class TestClipboardSet:
     """Tests for 'naturo clipboard set'."""
 
     def test_set_text(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "set", "test data"])
         assert result.exit_code == 0
         assert "9 chars" in result.output
         mock_backend.clipboard_set.assert_called_once_with("test data")
 
     def test_set_json(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "set", "abc", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -232,14 +232,14 @@ class TestClipboardClear:
     """Tests for 'naturo clipboard clear'."""
 
     def test_clear(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "clear"])
         assert result.exit_code == 0
         assert "cleared" in result.output.lower()
         mock_backend.clipboard_clear.assert_called_once()
 
     def test_clear_json(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "clear", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -254,14 +254,14 @@ class TestClipboardInfo:
     """Tests for 'naturo clipboard info'."""
 
     def test_info_text(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "info"])
         assert result.exit_code == 0
         assert "text" in result.output.lower()
         assert "22 bytes" in result.output
 
     def test_info_json(self, runner, mock_backend):
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "info", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -278,7 +278,7 @@ class TestClipboardInfo:
             "has_image": False,
             "has_files": False,
         }
-        with patch("naturo.cli.clipboard_cmd._get_backend", return_value=mock_backend):
+        with patch("naturo.cli.system._clipboard._get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["clipboard", "info"])
         assert result.exit_code == 0
         assert "empty" in result.output.lower()

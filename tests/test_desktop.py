@@ -59,7 +59,7 @@ class TestDesktopList:
 
     def test_list_text_output(self, runner, mock_backend):
         """List desktops in human-readable format."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list"])
         assert result.exit_code == 0
@@ -69,7 +69,7 @@ class TestDesktopList:
 
     def test_list_json_output(self, runner, mock_backend):
         """List desktops in JSON format."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list", "--json"])
         assert result.exit_code == 0
@@ -82,7 +82,7 @@ class TestDesktopList:
     def test_list_empty(self, runner, mock_backend):
         """Handle empty desktop list."""
         mock_backend.virtual_desktop_list.return_value = []
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list"])
         assert result.exit_code == 0
@@ -91,7 +91,7 @@ class TestDesktopList:
     def test_list_empty_json(self, runner, mock_backend):
         """Handle empty desktop list in JSON mode."""
         mock_backend.virtual_desktop_list.return_value = []
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list", "--json"])
         assert result.exit_code == 0
@@ -106,7 +106,7 @@ class TestDesktopList:
             message="Virtual desktop support requires pyvda",
             code="DEPENDENCY_MISSING",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list", "--json"])
         assert result.exit_code != 0
@@ -120,7 +120,7 @@ class TestDesktopList:
             message="Failed to enumerate",
             code="VIRTUAL_DESKTOP_ERROR",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "list"])
         assert result.exit_code != 0
@@ -134,7 +134,7 @@ class TestDesktopSwitch:
 
     def test_switch_text(self, runner, mock_backend):
         """Switch desktop with text output."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "switch", "1"])
         assert result.exit_code == 0
@@ -143,7 +143,7 @@ class TestDesktopSwitch:
 
     def test_switch_json(self, runner, mock_backend):
         """Switch desktop with JSON output."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "switch", "1", "--json"])
         assert result.exit_code == 0
@@ -154,7 +154,7 @@ class TestDesktopSwitch:
 
     def test_switch_negative_index(self, runner, mock_backend):
         """Reject negative index."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "switch", "--json", "--", "-1"])
         assert result.exit_code != 0
@@ -168,7 +168,7 @@ class TestDesktopSwitch:
             message="Desktop index 5 out of range (0-1)",
             code="INVALID_INPUT",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "switch", "5", "--json"])
         assert result.exit_code != 0
@@ -182,7 +182,7 @@ class TestDesktopSwitch:
             "index": 0,
             "name": "Desktop 1",
         }
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "switch", "0"])
         assert result.exit_code == 0
@@ -202,7 +202,7 @@ class TestDesktopCreate:
             "name": "Desktop 3",
             "id": "new-id",
         }
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "create"])
         assert result.exit_code == 0
@@ -211,7 +211,7 @@ class TestDesktopCreate:
 
     def test_create_named_json(self, runner, mock_backend):
         """Create named desktop with JSON output."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "create", "--name", "Work", "--json"])
         assert result.exit_code == 0
@@ -226,7 +226,7 @@ class TestDesktopCreate:
             message="Failed to create desktop",
             code="VIRTUAL_DESKTOP_ERROR",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "create", "--json"])
         assert result.exit_code != 0
@@ -242,7 +242,7 @@ class TestDesktopClose:
 
     def test_close_current_text(self, runner, mock_backend):
         """Close current desktop (no index)."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "close"])
         assert result.exit_code == 0
@@ -251,7 +251,7 @@ class TestDesktopClose:
 
     def test_close_by_index_json(self, runner, mock_backend):
         """Close specific desktop by index."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "close", "1", "--json"])
         assert result.exit_code == 0
@@ -266,7 +266,7 @@ class TestDesktopClose:
             message="Cannot close the last virtual desktop",
             code="VIRTUAL_DESKTOP_ERROR",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "close", "--json"])
         assert result.exit_code != 0
@@ -276,7 +276,7 @@ class TestDesktopClose:
 
     def test_close_negative_index(self, runner, mock_backend):
         """Reject negative close index."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "close", "--json", "--", "-1"])
         assert result.exit_code != 0
@@ -293,7 +293,7 @@ class TestDesktopMoveWindow:
 
     def test_move_by_app_text(self, runner, mock_backend):
         """Move window by app name."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "move-window", "1", "--app", "Notepad"])
         assert result.exit_code == 0
@@ -304,7 +304,7 @@ class TestDesktopMoveWindow:
 
     def test_move_by_hwnd_json(self, runner, mock_backend):
         """Move window by handle with JSON output."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(
                 main, ["desktop", "move-window", "1", "--hwnd", "12345", "--json"]
@@ -317,7 +317,7 @@ class TestDesktopMoveWindow:
 
     def test_move_foreground_window(self, runner, mock_backend):
         """Move foreground window when no app/hwnd specified."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(main, ["desktop", "move-window", "0"])
         assert result.exit_code == 0
@@ -327,7 +327,7 @@ class TestDesktopMoveWindow:
 
     def test_move_negative_index(self, runner, mock_backend):
         """Reject negative desktop index."""
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(
                 main, ["desktop", "move-window", "--json", "--", "-1"]
@@ -343,7 +343,7 @@ class TestDesktopMoveWindow:
             message="No window found to move",
             code="WINDOW_NOT_FOUND",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(
                 main, ["desktop", "move-window", "1", "--app", "nonexistent", "--json"]
@@ -359,7 +359,7 @@ class TestDesktopMoveWindow:
             message="Desktop index 5 out of range (0-1)",
             code="INVALID_INPUT",
         )
-        with patch("naturo.cli.desktop_cmd._ensure_pyvda"), \
+        with patch("naturo.cli.system._desktop._ensure_pyvda"), \
              patch("naturo.backends.base.get_backend", return_value=mock_backend):
             result = runner.invoke(
                 main, ["desktop", "move-window", "5", "--json"]
