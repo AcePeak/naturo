@@ -47,12 +47,10 @@ def tmp_creds_path(tmp_path, monkeypatch):
     """Redirect CREDENTIALS_PATH to a temporary file."""
     import naturo.config as _cfg
     import naturo.providers.anthropic_provider as _ap
-    import naturo.cli.config_cmd as _cc
 
     creds_file = tmp_path / "credentials.json"
     monkeypatch.setattr(_cfg, "CREDENTIALS_PATH", creds_file)
     monkeypatch.setattr(_ap, "_CREDENTIALS_PATH", creds_file)
-    monkeypatch.setattr(_cc, "_CREDENTIALS_PATH", creds_file)
     return creds_file
 
 
