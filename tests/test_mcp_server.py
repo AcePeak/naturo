@@ -592,6 +592,28 @@ class TestMCPCli:
             result = runner.invoke(main, ["mcp", "install"])
         assert "Installing MCP dependencies" in result.output
 
+    def test_mcp_start_stdio_suppresses_logging(self, runner):
+        """#810: stdio transport must suppress all logging to avoid corrupting JSON-RPC."""
+        import logging
+
+        with patch("naturo.mcp_server.run_server") as mock_run:
+            from naturo.cli import main
+            result = runner.invoke(main, ["mcp", "start", "--transport", "stdio"])
+
+        mock_run.assert_called_once_with(transport="stdio", host="localhost", port=3100)
+        # Root logger should have been configured to suppress output
+        root = logging.getLogger()
+        assert root.level >= logging.CRITICAL
+        assert any(isinstance(h, logging.NullHandler) for h in root.handlers)
+
+    def test_mcp_start_stdio_no_stdout_pollution(self, runner):
+        """#810: MCP start with stdio must produce no text output on stdout."""
+        with patch("naturo.mcp_server.run_server"):
+            from naturo.cli import main
+            result = runner.invoke(main, ["mcp", "start", "--transport", "stdio"])
+
+        assert result.output == "", f"Unexpected stdout output: {result.output!r}"
+
 
 # ── Response Format Consistency ──────────────────────────────────────────────
 
