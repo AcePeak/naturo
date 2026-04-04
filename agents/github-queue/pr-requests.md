@@ -1142,3 +1142,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: fix/issue-841-calculator-uia-test
+- **Base**: develop
+- **Title**: fix: Calculator UIA test passes exe= and retries for WinUI 3 readiness (fixes #841)
+- **Body**: Calculator (WinUI 3) has the same UIA detection challenges as UWP Notepad: launcher PID differs from window-owning process, and UIA tree may not be ready immediately. Added exe="CalculatorApp.exe" and _detect_with_retry() matching the Notepad test pattern.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
