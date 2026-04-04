@@ -173,7 +173,11 @@ def resolve_method(
                         "Resolved app %r via window title → PID %d", app, title_pid
                     )
                 else:
-                    logger.warning("App %r not found among running processes", app)
+                    # (#783) Downgraded from WARNING to DEBUG — the caller
+                    # handles this condition by returning a vision fallback.
+                    # WARNING messages leak to stderr via Python's lastResort
+                    # handler and corrupt JSON output piping workflows.
+                    logger.debug("App %r not found among running processes", app)
                     return RoutingResult(
                         app_name=app,
                         method="vision",

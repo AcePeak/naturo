@@ -107,6 +107,17 @@ def main(ctx, json_output, verbose, log_level) -> None:
     ctx.obj["verbose"] = verbose
     ctx.obj["log_level"] = log_level
 
+    # (#783) Configure logging: suppress all output in JSON mode to prevent
+    # log messages from polluting the JSON stream on stderr.
+    import logging
+    if json_output:
+        root = logging.getLogger()
+        root.handlers.clear()
+        root.addHandler(logging.NullHandler())
+    elif verbose or log_level != "info":
+        level = logging.DEBUG if verbose else getattr(logging, log_level.upper())
+        logging.basicConfig(level=level, stream=sys.stderr, format="%(levelname)s: %(message)s")
+
 
 # ── Core ────────────────────────────────────────
 main.add_command(capture)
