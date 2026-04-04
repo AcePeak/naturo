@@ -2,24 +2,35 @@
 > Date: 2026-04-04
 
 ## Completed
-- docs/readme-browser-visual-sections: add browser automation (27 commands) and visual regression testing (6 commands) sections to README, plus missing selector show/clear commands in command table
+- fix/issue-781-json-exit-code: selector clear, selector export, and visual report now exit non-zero when emitting {"success": false} (fixes #781)
+- fix/issue-789-app-filter-basename: process basename extraction before --app matching prevents path component matches (fixes #789)
+- fix/issue-787-coords-bounds: click --coords now validates coordinates against screen bounds (fixes #787)
+- fix/issue-788-stale-pid-routing: stale HWND detection via IsWindow() in _resolve_app_id and _resolve_hwnd (fixes #788)
+- fix/issue-783-json-duplicate-stderr: NullHandler on root logger in JSON mode + WARNING→DEBUG downgrades (fixes #783)
+- fix/issue-785-winui3-uia-probe: WinUI 3 DesktopWindowXamlSource fallback in UIA probe (fixes #785)
+- fix/issue-786-uwp-menu-click: _is_winui_window() detection for UIA click path on WinUI 3 apps (fixes #786)
 
 ## Pushed branches (awaiting PR)
-- docs/readme-browser-visual-sections: README documentation for browser + visual features
+- fix/issue-781-json-exit-code: 5 new tests
+- fix/issue-789-app-filter-basename: 5 new tests
+- fix/issue-787-coords-bounds: 4 new tests
+- fix/issue-788-stale-pid-routing: 7 new tests
+- fix/issue-783-json-duplicate-stderr: 3 new tests
+- fix/issue-785-winui3-uia-probe: 4 new tests
+- fix/issue-786-uwp-menu-click: 4 new tests
 
 ## Rebased branches
-- None needed — no stale branches on remote
+- None needed — previous branches were gone from remote
 
 ## Issues found but not fixed
-- #105 (user selector management) is already fully implemented on develop — save/list/show/delete/clear/export/import/test all working, 48 tests passing. Issue can be closed.
-- Previous bug-fix branches (#781, #783, #785, #786, #787, #788, #789) are gone from remote again without being merged into develop. Only PR request queue entries exist. This is the 4th+ session in a row this has happened. Orc-Mycelium may be cleaning branches before creating PRs.
-- #763 (client script validation) still blocked — depends on browser PRs being merged
-- #766 (migration guide acceptance tests) still blocked — depends on browser PRs being merged
+- Previous bug-fix branches keep being deleted from remote without being merged into develop — this is the 5th+ session recreating these fixes. Orc-Mycelium is not creating PRs from them.
+- #105 (user selector management) appears to already be implemented on develop
+- #763 (client script validation) still blocked on browser PRs being merged
+- #766 (migration guide acceptance tests) still blocked on browser PRs being merged
 - app_cmd.py (1,416 lines) and _shell.py (1,216 lines) still need split issues
 
 ## Next session should
-- Escalate the branch deletion issue to Ace — bug-fix code is being lost across sessions
-- Verify if Orc-Mycelium created PRs for the 6 bug-fix branches
-- If not, recreate the bug-fix branches (this would be the 4th+ time)
+- CRITICAL: Verify Orc-Mycelium actually creates PRs from the 7 pushed branches this time
+- If branches are deleted again without PRs, escalate to Ace — the fix-rework cycle is wasting sessions
 - Work on #763/#766 if browser dependencies resolve
-- Consider test coverage for browser_cmd.py (no dedicated test file)
+- Consider test coverage for browser_cmd.py

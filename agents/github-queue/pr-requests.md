@@ -1054,3 +1054,59 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: fix/issue-781-json-exit-code
+- **Base**: develop
+- **Title**: fix: exit non-zero when JSON mode reports failure (fixes #781)
+- **Body**: selector clear, selector export, and visual report emitted {"success": false} JSON but exited with code 0. Changed return to sys.exit(1) in all three locations. 5 new tests (4 selector, 1 visual). Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-789-app-filter-basename
+- **Base**: develop
+- **Title**: fix: extract process basename before --app matching (fixes #789)
+- **Body**: process_name from the backend may contain a full path (e.g. C:\Windows\System32\notepad.exe). Substring matching against the full path caused --app system to incorrectly match any process in System32. Now uses ntpath.basename() in _resolve_hwnd and _resolve_hwnds. 5 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: reject out-of-bounds click coordinates with clear error (fixes #787)
+- **Body**: click --coords silently accepted coordinates outside the virtual screen, resulting in no-op clicks. Now validates against GetSystemMetrics (Windows) or 65535 generic bound (non-Windows). Out-of-bounds coordinates produce a COORDS_OUT_OF_BOUNDS error. 4 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: detect stale HWND after app restart, reject with clear error (fixes #788)
+- **Body**: After app restart, stale HWNDs from app_ids silently dropped keystrokes. Two-layer fix: (1) _resolve_app_id validates stored HWND via _is_hwnd_alive() (IsWindow() on Windows); emits APP_ID_STALE error. (2) _resolve_hwnd validates direct HWND params, raises WindowNotFoundError. 7 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-783-json-duplicate-stderr
+- **Base**: develop
+- **Title**: fix: suppress stderr output in JSON mode (fixes #783)
+- **Body**: Python's logging lastResort handler emits WARNING+ to stderr when no handlers are configured. In JSON mode, this corrupted piping workflows. Three-part fix: (1) add NullHandler to root logger when --json is active, (2) downgrade routing.py app-not-found from WARNING to DEBUG, (3) downgrade press focus-failure from WARNING to DEBUG. 3 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-785-winui3-uia-probe
+- **Base**: develop
+- **Title**: fix: detect UIA for standalone WinUI 3 apps like Calculator (fixes #785)
+- **Body**: Win11 Calculator and Paint are standalone WinUI 3 apps not hosted by ApplicationFrameHost. The UIA probe only checked AFH child windows when the main HWND returned an empty tree. Added _find_winui_content_children() that enumerates DesktopWindowXamlSource children regardless of parent class, used as fallback when AFH child search returns empty. 4 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: detect WinUI 3 apps for UIA click path (fixes #786)
+- **Body**: WinUI 3 apps (Win11 Notepad, Paint) run as standalone processes, not under ApplicationFrameHost. Added _is_winui_window() static method that detects DesktopWindowXamlSource child windows. Click command now checks both _is_afh_window and _is_winui_window for UIA click path. 4 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
