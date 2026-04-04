@@ -107,6 +107,14 @@ def main(ctx, json_output, verbose, log_level) -> None:
     ctx.obj["verbose"] = verbose
     ctx.obj["log_level"] = log_level
 
+    # (#783) Suppress stderr output in JSON mode.  Python's logging
+    # lastResort handler (added in 3.2) emits WARNING+ to stderr when
+    # no handlers are configured.  In JSON mode this causes human-readable
+    # error text to mix with JSON stdout, breaking piping workflows.
+    if json_output:
+        import logging as _logging
+        _logging.getLogger().addHandler(_logging.NullHandler())
+
 
 # ── Core ────────────────────────────────────────
 main.add_command(capture)
