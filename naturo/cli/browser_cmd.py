@@ -974,6 +974,97 @@ def profiles_cmd(user_data_dir: Optional[str], json_output: bool) -> None:
             click.echo(f"  {p['name']:<20} [{p['directory']}]  {p['path']}")
 
 
+# ── Download management (#759) ───────────────────────────────────────────────
+
+
+@browser.command("download")
+@click.option("--dir", "directory", required=True,
+              help="Directory to save downloaded files to")
+@click.option("--wait", "wait", is_flag=True,
+              help="Wait for a download to complete after setting the directory")
+@click.option("--timeout", type=float, default=60.0,
+              help="Seconds to wait for download completion (default: 60)")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def download_cmd(
+    ctx: click.Context,
+    directory: str,
+    wait: bool,
+    timeout: float,
+    json_output: bool,
+) -> None:
+    """Configure file downloads and optionally wait for completion.
+
+    Sets the browser download directory so files are saved without
+    prompts. With ``--wait``, blocks until a new file finishes
+    downloading (partial files like .crdownload are detected).
+
+    \b
+    Examples:
+        naturo browser download --dir /tmp/downloads
+        naturo browser download --dir /tmp/downloads --wait
+        naturo browser download --dir ./out --wait --timeout 120 --json
+    """
+    import os
+
+    from naturo.browser._download import set_download_dir, wait_for_download
+
+    # Ensure directory exists
+    abs_dir = os.path.abspath(directory)
+    os.makedirs(abs_dir, exist_ok=True)
+
+    page = _get_page(ctx)
+    try:
+        set_download_dir(page, abs_dir)
+
+        if not wait:
+            if json_output:
+                click.echo(json_module.dumps({
+                    "success": True,
+                    "download_dir": abs_dir,
+                }))
+            else:
+                click.echo(f"Download directory set to: {abs_dir}")
+            return
+
+        # Wait mode: block until a download completes
+        if not json_output:
+            click.echo(f"Waiting for download in {abs_dir} (timeout: {timeout}s)...")
+
+        try:
+            path = wait_for_download(abs_dir, timeout=timeout)
+        except TimeoutError as exc:
+            if json_output:
+                click.echo(json_module.dumps({
+                    "success": False,
+                    "error": str(exc),
+                    "download_dir": abs_dir,
+                }))
+            else:
+                click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1)
+
+        if json_output:
+            click.echo(json_module.dumps({
+                "success": True,
+                "download_dir": abs_dir,
+                "file": path,
+                "filename": os.path.basename(path),
+            }))
+        else:
+            click.echo(f"Downloaded: {path}")
+    except SystemExit:
+        raise
+    except Exception as exc:
+        if json_output:
+            click.echo(json_module.dumps({"success": False, "error": str(exc)}))
+        else:
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    finally:
+        page.close()
+
+
 # ── Stealth / anti-detection (#760) ──────────────────────────────────────────
 
 
