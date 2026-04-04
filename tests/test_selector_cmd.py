@@ -296,9 +296,9 @@ class TestSelectorClear:
         assert data["success"] is False
 
     def test_clear_no_selectors_text_exit_code(self, runner, tmp_selectors):
-        """selector clear (text mode) exits 0 for no selectors (info, not error)."""
+        """selector clear (text mode) exits non-zero when no selectors exist."""
         result = runner.invoke(main, ["selector", "clear", "nonexistent"])
-        assert result.exit_code == 0
+        assert result.exit_code != 0
         assert "No selectors" in result.output
 
 
