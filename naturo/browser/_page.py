@@ -12,6 +12,7 @@ import time
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from naturo.browser._frame import BrowserFrame
     from naturo.browser._network import NetworkMonitor
 
 from naturo.cdp import CDPClient, CDPError, CDPConnectionError
@@ -458,6 +459,91 @@ class BrowserPage:
             The evaluation result.
         """
         return self._cdp.evaluate(expression)
+
+    # ── Frame (iframe) support ───────────────────────────────────────────
+
+    def frames(self) -> List[Dict[str, Any]]:
+        """List all frames (including the main frame and iframes).
+
+        Returns:
+            List of dicts with keys: ``id``, ``name``, ``url``,
+            ``parentId``, ``depth``.
+        """
+        from naturo.browser._frame import _get_frame_tree, _flatten_frame_tree
+        tree = _get_frame_tree(self)
+        return _flatten_frame_tree(tree)
+
+    def frame(
+        self,
+        selector: Optional[str] = None,
+        name: Optional[str] = None,
+        url: Optional[str] = None,
+    ) -> "BrowserFrame":
+        """Get a frame (iframe) for scoped element interaction.
+
+        Identify the target frame by CSS selector, name attribute, or
+        URL substring. Returns a :class:`BrowserFrame` whose ``find``,
+        ``evaluate``, ``find_all`` methods operate inside that frame.
+
+        Args:
+            selector: CSS selector for the ``<iframe>`` element.
+            name: Frame ``name`` attribute to match.
+            url: URL substring to match against the frame's URL.
+
+        Returns:
+            A :class:`BrowserFrame` scoped to the target iframe.
+
+        Raises:
+            RuntimeError: If no matching frame is found.
+
+        Example::
+
+            frame = page.frame("iframe#payment")
+            frame.find("#card-number").type("4111111111111111")
+        """
+        from naturo.browser._frame import (
+            BrowserFrame,
+            _get_frame_tree,
+            _flatten_frame_tree,
+        )
+
+        tree = _get_frame_tree(self)
+        all_frames = _flatten_frame_tree(tree)
+
+        # Main frame is depth 0; look in child frames (depth >= 1)
+        main_id = all_frames[0]["id"] if all_frames else ""
+        child_frames = [f for f in all_frames if f["id"] != main_id]
+
+        if name is not None:
+            for f in child_frames:
+                if f["name"] == name:
+                    return BrowserFrame(
+                        self, f["id"],
+                        frame_name=f["name"], frame_url=f["url"],
+                    )
+            raise RuntimeError(f"No frame with name '{name}'")
+
+        if url is not None:
+            for f in child_frames:
+                if url in f["url"]:
+                    return BrowserFrame(
+                        self, f["id"],
+                        frame_name=f["name"], frame_url=f["url"],
+                    )
+            raise RuntimeError(f"No frame matching URL '{url}'")
+
+        if selector is not None:
+            # Evaluate JS to find the iframe element and match to a frame
+            main_frame = BrowserFrame(self, main_id)
+            info = main_frame._resolve_frame_by_selector(selector, child_frames)
+            if info is not None:
+                return BrowserFrame(
+                    self, info["id"],
+                    frame_name=info["name"], frame_url=info["url"],
+                )
+            raise RuntimeError(f"No frame matching selector '{selector}'")
+
+        raise RuntimeError("Specify selector, name, or url to identify the frame")
 
     # ── Tab management ────────────────────────────────────────────────────
 

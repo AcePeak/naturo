@@ -44,10 +44,12 @@ from naturo.browser._launcher import (
     launch_chrome,
     list_profiles,
 )
+from naturo.browser._frame import BrowserFrame
 
 __all__ = [
     "BrowserPage",
     "BrowserElement",
+    "BrowserFrame",
     "SelectorType",
     "ParsedSelector",
     "parse_selector",
