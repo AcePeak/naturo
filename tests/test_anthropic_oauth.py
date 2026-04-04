@@ -52,7 +52,7 @@ def tmp_creds_path(tmp_path, monkeypatch):
     creds_file = tmp_path / "credentials.json"
     monkeypatch.setattr(_cfg, "CREDENTIALS_PATH", creds_file)
     monkeypatch.setattr(_ap, "_CREDENTIALS_PATH", creds_file)
-    monkeypatch.setattr(_cc, "_CREDENTIALS_PATH", creds_file)
+    monkeypatch.setattr(_cc, "CREDENTIALS_PATH", creds_file)
     return creds_file
 
 
