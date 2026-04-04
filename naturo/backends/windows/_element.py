@@ -1030,6 +1030,32 @@ class ElementMixin:
         return False
 
     @staticmethod
+    def _is_winui_window(handle: int) -> bool:
+        """Check if a window has DesktopWindowXamlSource children (WinUI 3).
+
+        Standalone WinUI 3 apps (Win11 Notepad, Paint) are NOT hosted by
+        ApplicationFrameHost.exe — they run as regular processes but use
+        XAML rendering via DesktopWindowXamlSource child windows.  Detecting
+        this enables UIA click path for menu items (#786).
+
+        Args:
+            handle: Window handle to check.
+
+        Returns:
+            True if the window has at least one DesktopWindowXamlSource child.
+        """
+        import sys as _sys
+        if _sys.platform != "win32":
+            return False
+        try:
+            import ctypes
+            user32 = ctypes.WinDLL("user32", use_last_error=True)
+            child = user32.FindWindowExW(handle, None, "DesktopWindowXamlSource", None)
+            return child != 0
+        except Exception:
+            return False
+
+    @staticmethod
     def _is_shallow_tree(element) -> bool:
         """Check if an element tree is too shallow (VB6/ActiveX fallback signal).
 

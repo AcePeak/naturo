@@ -221,12 +221,19 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         except Exception as exc:
             logger.debug("HWND resolution for focus failed: %s", exc)
     if _focus_hwnd:
-        # Detect UWP apps for UIA click fallback (#248)
+        # Detect UWP/WinUI apps for UIA click fallback (#248, #786)
         if hasattr(backend, "_is_afh_window"):
             try:
                 _is_uwp = backend._is_afh_window(_focus_hwnd)
             except Exception as exc:
                 logger.debug("UWP detection failed (hwnd=%s): %s", _focus_hwnd, exc)
+        # (#786) Standalone WinUI 3 apps (Win11 Notepad, Paint) also need
+        # UIA click path but are not hosted by ApplicationFrameHost.
+        if not _is_uwp and hasattr(backend, "_is_winui_window"):
+            try:
+                _is_uwp = backend._is_winui_window(_focus_hwnd)
+            except Exception as exc:
+                logger.debug("WinUI detection failed (hwnd=%s): %s", _focus_hwnd, exc)
         try:
             backend.focus_window(hwnd=_focus_hwnd)
         except Exception as exc:
