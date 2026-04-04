@@ -29,7 +29,9 @@
 - 🍎 **macOS Support** — Coming soon (native implementation in development)
 - 🎬 **Recording & Playback** — Record user actions, replay them, export to Python/Bash scripts
 - 🏷️ **Selector Management** — Save, share, and reuse UI element selectors across sessions
+- 🌐 **Browser Automation** — Full Chrome DevTools Protocol support: navigate, click, type, screenshot, wait, intercept network, stealth mode
 - 🔬 **Cascade Recognition** — UIA + CDP + AI Vision multi-source fusion for Electron/CEF apps where single-source fails
+- 👁️ **Visual Regression Testing** — Compare screenshots across runs, generate HTML reports, detect unintended UI changes
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
 ## Platform Support
@@ -287,6 +289,49 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `desktop close` | Close a virtual desktop | 0.1.0 |
 | `desktop move-window` | Move window to another desktop | 0.1.0 |
 
+### Browser Automation
+
+| Command | Description | Since |
+|---------|-------------|-------|
+| `browser navigate` | Navigate to a URL | 0.3.2 |
+| `browser find` | Find elements on the page (CSS/XPath/text) | 0.3.2 |
+| `browser click` | Click an element | 0.3.2 |
+| `browser type` | Type text into an element | 0.3.2 |
+| `browser screenshot` | Take a page screenshot | 0.3.2 |
+| `browser text` | Get element text content | 0.3.2 |
+| `browser html` | Get element HTML content | 0.3.2 |
+| `browser attr` | Get an attribute value from an element | 0.3.2 |
+| `browser eval` | Evaluate JavaScript expression | 0.3.2 |
+| `browser hover` | Hover over an element | 0.3.2 |
+| `browser scroll` | Scroll the page | 0.3.2 |
+| `browser tabs` | List open browser tabs | 0.3.2 |
+| `browser tab` | Switch to a specific tab | 0.3.2 |
+| `browser close` | Close the CDP connection | 0.3.2 |
+| `browser url` | Get the current page URL | 0.3.2 |
+| `browser title` | Get the current page title | 0.3.2 |
+| `browser requests` | List captured network requests | 0.3.2 |
+| `browser intercept` | Add a request interception rule | 0.3.2 |
+| `browser wait` | Wait for element state | 0.3.2 |
+| `browser wait-navigation` | Wait for navigation to complete | 0.3.2 |
+| `browser wait-network-idle` | Wait until network is idle | 0.3.2 |
+| `browser wait-url` | Wait until URL matches a pattern | 0.3.2 |
+| `browser wait-function` | Wait until JS expression is truthy | 0.3.2 |
+| `browser stealth` | Apply anti-detection patches | 0.3.2 |
+| `browser stealth-flags` | Print Chrome flags for anti-detection | 0.3.2 |
+| `browser captcha-detect` | Detect captchas on the page | 0.3.2 |
+| `browser captcha-solve` | Solve a captcha on the page | 0.3.2 |
+
+### Visual Regression Testing
+
+| Command | Description | Since |
+|---------|-------------|-------|
+| `visual baseline` | Save a screenshot as a visual baseline | 0.3.2 |
+| `visual compare` | Compare a screenshot against its baseline | 0.3.2 |
+| `visual diff` | Compare any two images directly | 0.3.2 |
+| `visual list` | List all saved baselines | 0.3.2 |
+| `visual delete` | Delete a saved baseline | 0.3.2 |
+| `visual report` | Run regression tests and generate HTML report | 0.3.2 |
+
 ### Tools
 
 | Command | Description | Since |
@@ -306,7 +351,9 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `record export` | Export recording to Python/Bash/JSON | 0.3.2 |
 | `selector save` | Save a UI selector with a friendly name | 0.3.2 |
 | `selector list` | List saved/built-in selectors | 0.3.2 |
+| `selector show` | Show all selectors for an app (user + built-in) | 0.3.2 |
 | `selector delete` | Delete a saved selector | 0.3.2 |
+| `selector clear` | Delete all selectors for an app | 0.3.2 |
 | `selector export` | Export selectors to JSON | 0.3.2 |
 | `selector import` | Import selectors from JSON | 0.3.2 |
 | `selector test` | Validate a selector against the parser | 0.3.2 |
@@ -422,6 +469,90 @@ naturo selector clear notepad  # delete all selectors for an app
 Selectors are stored in `~/.naturo/selectors/<app>.json`.
 Built-in templates live in `naturo/selectors_builtin/` and are read-only.
 
+## Browser Automation
+
+Automate Chrome, Edge, and Chromium-based browsers via the Chrome DevTools Protocol (CDP).
+
+```bash
+# Launch Chrome with debugging enabled
+chrome --remote-debugging-port=9222
+
+# Navigate to a page
+naturo browser navigate https://example.com
+
+# Find elements using CSS selectors, XPath, or text
+naturo browser find "#search-input"
+naturo browser find "//button[@type='submit']"
+
+# Click and type
+naturo browser click "button.submit"
+naturo browser type "#search" "hello world"
+
+# Take a screenshot
+naturo browser screenshot --path page.png
+
+# Read page content
+naturo browser text "#main-content"
+naturo browser html "#article"
+naturo browser title
+naturo browser url
+
+# Tab management
+naturo browser tabs                           # List all tabs
+naturo browser tab <tab-id>                   # Switch to a tab
+
+# Wait for conditions
+naturo browser wait "#results" --state visible
+naturo browser wait-navigation                # Wait for page load
+naturo browser wait-network-idle              # Wait for network to settle
+naturo browser wait-url "*/dashboard*"        # Wait for URL pattern
+
+# Execute JavaScript
+naturo browser eval "document.title"
+
+# Network interception
+naturo browser intercept "*.png" --action block   # Block image requests
+naturo browser requests                            # List captured requests
+
+# Anti-detection (stealth mode)
+naturo browser stealth-flags                  # Print recommended Chrome flags
+naturo browser stealth                        # Apply runtime patches
+
+# Captcha handling
+naturo browser captcha-detect                 # Detect captchas on page
+naturo browser captcha-solve                  # Attempt to solve
+```
+
+All browser commands support `--port` and `--host` for connecting to remote Chrome instances.
+
+## Visual Regression Testing
+
+Compare screenshots across runs to detect unintended UI changes.
+
+```bash
+# Save a baseline screenshot
+naturo visual baseline login_screen --from screenshot.png
+
+# Compare against baseline
+naturo visual compare login_screen --current screenshot2.png
+# Reports pixel differences with configurable threshold
+
+# Compare any two images directly (without baseline)
+naturo visual diff before.png after.png
+
+# List all baselines
+naturo visual list
+
+# Generate an HTML report
+naturo visual report --name "Sprint 42" --output report.html
+
+# Clean up
+naturo visual delete login_screen
+```
+
+Baselines are stored in `~/.naturo/visual/baselines/`.
+Reports are generated in `~/.naturo/visual/reports/`.
+
 ## Architecture
 
 ```
@@ -448,6 +579,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 |---------|--------|-----------|-----------|--------|--------------|
 | **MCP Server** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ |
 | **AI Agent Ready** | ✅ JSON output, agent CLI | ❌ | ❌ | ❌ | ❌ |
+| **Browser Automation** | ✅ CDP (Chrome/Edge) | ❌ | ❌ | ❌ | ❌ |
 | **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP + AI Vision | None (image only) | UIA, Win32 | Win32 messages | UIA only |
 | **Cascade Recognition** | ✅ Multi-source fusion with auto-dedup | ❌ | ❌ | ❌ | ❌ |
 | **Auto-Detection** | ✅ Picks best framework per app | N/A | Manual backend choice | N/A | N/A |
