@@ -363,7 +363,7 @@ def selector_clear(app_name: str, force: bool, json_output: bool):
             click.echo(json.dumps({"success": False, "error": msg}))
         else:
             click.echo(msg)
-        return
+        sys.exit(1)
 
     if not force and not json_output:
         click.confirm(f"Delete all {len(selectors)} selectors for '{app_name}'?", abort=True)
@@ -400,7 +400,7 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
             click.echo(json.dumps({"success": False, "error": msg}))
         else:
             click.echo(msg)
-        return
+        sys.exit(1)
 
     export_data = {"app": app_name, "selectors": merged}
     content = json.dumps(export_data, indent=2, ensure_ascii=False)

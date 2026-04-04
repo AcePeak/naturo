@@ -273,7 +273,7 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
             click.echo(json.dumps({"success": False, "error": msg}))
         else:
             click.echo(msg)
-        return
+        sys.exit(1)
 
     for name in names:
         current_img = current_path / f"{name}.png"
