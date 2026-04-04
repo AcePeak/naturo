@@ -11,6 +11,30 @@ import click
 logger = logging.getLogger(__name__)
 
 
+def _is_hwnd_alive(hwnd: int) -> bool:
+    """Check if a window handle (HWND) is still valid.
+
+    On Windows, calls ``user32.IsWindow()``.  On non-Windows platforms,
+    returns True (no validation possible).
+
+    Args:
+        hwnd: The window handle to validate.
+
+    Returns:
+        True if the handle points to a live window.
+    """
+    if not hwnd:
+        return False
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            return bool(ctypes.windll.user32.IsWindow(hwnd))
+        except Exception:
+            pass
+    # Non-Windows: no way to validate, assume alive
+    return True
+
+
 def _find_element_by_text_fallback(
     backend,
     text: str,
@@ -413,6 +437,18 @@ def _resolve_app_id(
             f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.',
             json_output,
             code="APP_ID_NOT_FOUND",
+        )
+        return None, None, None
+
+    # (#788) Validate that the stored HWND is still alive.  After an app
+    # restart, the cached HWND becomes stale and focus_window/SendInput
+    # will silently drop keystrokes to a dead window.
+    if entry.handle and not _is_hwnd_alive(entry.handle):
+        _json_err(
+            f'App ID "{app_id}" points to a stale window (app may have '
+            f'restarted). Run "naturo app list" to refresh.',
+            json_output,
+            code="APP_ID_STALE",
         )
         return None, None, None
 

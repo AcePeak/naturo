@@ -396,3 +396,39 @@ class TestResolveHwndPid:
              patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
             result = backend._resolve_hwnd(pid=100)
         assert result == 1002
+
+
+class TestResolveHwndStaleValidation:
+    """#788: _resolve_hwnd rejects stale HWND parameters."""
+
+    def test_stale_hwnd_raises_window_not_found(self):
+        """When _is_hwnd_alive returns False, raise WindowNotFoundError."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+
+        from naturo.errors import WindowNotFoundError
+        with patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=False), \
+             pytest.raises(WindowNotFoundError) as exc_info:
+            backend._resolve_hwnd(hwnd=0xDEAD)
+        assert "no longer valid" in exc_info.value.suggested_action.lower()
+
+    def test_valid_hwnd_returned_directly(self):
+        """When _is_hwnd_alive returns True, return HWND without error."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+
+        with patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True):
+            result = backend._resolve_hwnd(hwnd=0x1234)
+        assert result == 0x1234
+
+    def test_non_windows_skips_validation(self):
+        """On non-Windows, _is_hwnd_alive returns True so HWND passes."""
+        BackendClass = _make_backend()
+        backend = MagicMock(spec=BackendClass)
+        backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
+
+        # On Linux, _is_hwnd_alive returns True (non-Windows)
+        result = backend._resolve_hwnd(hwnd=0x5678)
+        assert result == 0x5678
