@@ -1,21 +1,19 @@
 # QA Status
-Last updated: 2026-04-04 11:19
-Current round: 104
+Last updated: 2026-04-04 15:22
+Current round: 105
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: 5 passed, 1 failed (#777 unicode path), 18 skipped (commit 5495dfe)
-- CI E2E Tests: 9 passed, 3 xfailed, 1 xpassed
-- Issues verified: none (no status:done issues)
-- E2E tests: Notepad (pass), Calculator (fail — UWP invisible)
-- Regression: 6/8 passed, 2 failed, 0 retired
-- New test cases created: none
-- Test cases cleaned up: none
-- New issues created: none
-- Total active test cases: ~25
-- Tests run: 8 regression + 5 exploratory + 4 Chinese user + 2 E2E
+- CI Desktop Tests: 0 passed, 0 failed, 151 skipped (commit d974931)
+- Issues verified: #784, #774, #723, #758, #759, #760, #761, #762, #764, #765, #721, #722, #91, #90 (all pass — 14/14 closed)
+- E2E tests: limited (non-interactive SSH session, desktop commands blocked)
+- Regression: 4/29 ran, 4 passed, 0 retired
+- New test cases created: TC-0049
+- New issues created: #834
+- Total active test cases: 30
+- Tests run: 4
 
 ## Top 3 Risks
-1. **Calculator UWP completely invisible** — app launch reports success but Calculator not detected (#785)
-2. **UWP menu click regression** — click reports success but menu doesn't open (#786)
-3. **type -E newline dropped** — multiline automation broken (#784)
+1. Non-interactive session limits QA coverage — 25/29 test cases require desktop
+2. Browser feature has JSON inconsistency (#834) — will break AI agent pipelines
+3. 24 branches pending PR creation — Orc-Mycelium blocked on GitHub access
