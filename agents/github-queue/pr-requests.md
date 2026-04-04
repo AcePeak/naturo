@@ -998,3 +998,51 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: fix/issue-781-json-exit-code
+- **Base**: develop
+- **Title**: fix: exit non-zero when JSON reports failure (fixes #781)
+- **Body**: Three CLI commands output {"success": false} JSON but exited code 0: selector clear, selector export, and visual report (no baselines). Changed return to sys.exit(1) so exit code and JSON agree. 6 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-789-app-filter-basename
+- **Base**: develop
+- **Title**: fix: extract process basename before --app matching (fixes #789)
+- **Body**: process_name may contain a full path. Without basename extraction, --app could match path components. Fixed in _match_windows (app_cmd.py), _resolve_hwnd/_resolve_hwnds (_element.py), and dialog detection (_shell.py). 5 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-787-coords-bounds
+- **Base**: develop
+- **Title**: fix: reject out-of-bounds click coordinates (fixes #787)
+- **Body**: Added _validate_coords() to reject negative coordinates and check Windows virtual screen bounds. Applied to click, scroll, and move commands. 8 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-783-json-stderr-suppress
+- **Base**: develop
+- **Title**: fix: suppress stderr in JSON mode (fixes #783)
+- **Body**: When --json is active, logging.disable(CRITICAL) and warnings.filterwarnings('ignore') prevent stray log/warning lines from contaminating stdout JSON for AI agents. 2 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-788-stale-pid-routing
+- **Base**: develop
+- **Title**: fix: detect stale PID, fall back to process name (fixes #788)
+- **Body**: When find_process(pid=X, name=Y) receives a stale PID (process exited), it now falls back to name-based search. AI agents caching PIDs across sessions can still reach restarted apps. 3 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-786-uwp-menu-click
+- **Base**: develop
+- **Title**: fix: detect WinUI 3 for UIA click path (fixes #786)
+- **Body**: Standalone WinUI 3 apps were using SendInput instead of UIA patterns. Added _is_winui3_window() that detects DesktopWindowXamlSource children. Extended click command to use UIA for both AFH UWP and standalone WinUI 3. 4 new tests.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
