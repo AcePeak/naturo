@@ -271,6 +271,7 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
         msg = "No baselines to compare."
         if json_output:
             click.echo(json.dumps({"success": False, "error": msg}))
+            sys.exit(1)
         else:
             click.echo(msg)
         sys.exit(1)

@@ -361,6 +361,7 @@ def selector_clear(app_name: str, force: bool, json_output: bool):
         msg = f"No selectors for '{app_name}'."
         if json_output:
             click.echo(json.dumps({"success": False, "error": msg}))
+            sys.exit(1)
         else:
             click.echo(msg)
         sys.exit(1)
@@ -398,6 +399,7 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
         msg = f"No selectors for '{app_name}'."
         if json_output:
             click.echo(json.dumps({"success": False, "error": msg}))
+            sys.exit(1)
         else:
             click.echo(msg)
         sys.exit(1)

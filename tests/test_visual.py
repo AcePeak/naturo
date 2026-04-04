@@ -287,6 +287,17 @@ class TestVisualCLI:
         assert result.exit_code == 0
         assert "Deleted" in result.output
 
+    def test_report_no_baselines_json_exit_code(self, runner, tmp_dirs, tmp_path):
+        """#781: visual report --json must exit non-zero when no baselines exist."""
+        current = tmp_path / "current"
+        current.mkdir()
+        result = runner.invoke(main, [
+            "visual", "report", "--current-dir", str(current), "--json",
+        ])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+
     def test_help(self, runner):
         result = runner.invoke(main, ["visual", "--help"])
         assert result.exit_code == 0
