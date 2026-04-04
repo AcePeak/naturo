@@ -210,25 +210,17 @@ class ElementMixin:
                 message includes up to 5 candidate windows.
         """
         if hwnd:
-            # (#788) Validate that the direct HWND is still alive.
-            import sys as _sys
-            if _sys.platform == "win32":
-                try:
-                    import ctypes
-                    if not ctypes.windll.user32.IsWindow(hwnd):
-                        from naturo.errors import WindowNotFoundError
-                        raise WindowNotFoundError(
-                            f"HWND {hwnd}",
-                            suggested_action=(
-                                f"Window handle {hwnd} is no longer valid "
-                                "(the window may have been closed). "
-                                'Run "naturo app list" to refresh.'
-                            ),
-                        )
-                except WindowNotFoundError:
-                    raise
-                except Exception:
-                    pass  # Can't validate — proceed
+            # (#788) Validate that a directly-passed HWND is still alive.
+            from naturo.cli.interaction._common import _is_hwnd_alive
+            if not _is_hwnd_alive(hwnd):
+                from naturo.errors import WindowNotFoundError
+                raise WindowNotFoundError(
+                    f"HWND {hwnd}",
+                    suggested_action=(
+                        f"Window handle {hwnd} is no longer valid — the window "
+                        f'was closed. Run "naturo app list" to find current windows.'
+                    ),
+                )
             return hwnd
 
         search = app or window_title

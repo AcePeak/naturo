@@ -393,6 +393,23 @@ def _app_id_option(func: Callable) -> Callable:
     )(func)
 
 
+def _is_hwnd_alive(hwnd: int) -> bool:
+    """Check whether a window handle still refers to a live window.
+
+    Uses user32.IsWindow on Windows.  Returns True unconditionally on
+    other platforms (cross-platform safety — the check is only meaningful
+    where HWND semantics exist).
+    """
+    import sys
+    if sys.platform != "win32":
+        return True
+    try:
+        import ctypes
+        return bool(ctypes.windll.user32.IsWindow(hwnd))  # type: ignore[attr-defined]
+    except Exception:
+        return True  # If we can't check, assume alive
+
+
 def _resolve_app_id(
     app_id: Optional[str],
     app: Optional[str],
@@ -443,7 +460,7 @@ def _resolve_app_id(
     # (#788) Validate that the stored HWND is still alive.  After an app
     # restart, the cached HWND becomes stale and focus_window/SendInput
     # will silently drop keystrokes to a dead window.
-    if not _is_hwnd_alive(entry.handle):
+    if entry.handle and not _is_hwnd_alive(entry.handle):
         _json_err(
             f'App ID "{app_id}" points to a stale window (the app may have '
             f'restarted). Run "naturo app list" to refresh.',
