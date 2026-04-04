@@ -1166,3 +1166,19 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
 - **Status**: pending
+
+## PR Request: fix/issue-834-browser-json-flag
+- **Base**: develop
+- **Title**: fix: browser subcommand respects -j flag for all error paths (fixes #834)
+- **Body**: _get_page() now accepts json_output and emits structured JSON (with error code, suggested_action, recoverable) on connection failure. All 32 call sites pass the flag through. Error handlers use json_error() with proper codes (SERVER_ERROR, ELEMENT_NOT_FOUND, TIMEOUT, INVALID_INPUT). Also fixes scroll no-option and captcha-solve missing-token errors. 3 new tests. All 4658 tests pass, ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-841-calculator-uia-test
+- **Base**: develop
+- **Title**: fix: comtypes UIA fallback probes WinUI child windows (fixes #841)
+- **Body**: The comtypes fallback (Strategy 2) in probe_uia() only checked the main window handle, which is empty for standalone WinUI 3 apps like Calculator and Paint. Now probes AFH and WinUI child windows, matching the native DLL strategy. Also adds exe= and retry logic to the integration test fixture. 1 new unit test (Windows-only). All tests pass, ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
