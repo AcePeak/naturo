@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json as json_module
+import ntpath
 import platform
 
 import click
@@ -60,7 +61,7 @@ def windows(app, pid, json_output) -> None:
             app_lower = app.lower()
             win_list = [w for w in win_list
                         if app_lower in w.title.lower()
-                        or app_lower in w.process_name.lower()]
+                        or app_lower in ntpath.basename(w.process_name).lower()]
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
