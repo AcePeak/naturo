@@ -11,6 +11,28 @@ import naturo.cli.interaction._common as _common
 logger = logging.getLogger(__name__)
 
 
+def _get_screen_bound() -> int:
+    """Return the maximum coordinate value for the virtual screen.
+
+    On Windows, uses GetSystemMetrics to get the virtual screen dimensions.
+    On other platforms, falls back to a conservative generic bound (65535,
+    the maximum normalized coordinate used by SendInput).
+    """
+    import sys
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            # SM_CXVIRTUALSCREEN (78) and SM_CYVIRTUALSCREEN (79) give
+            # the full extent of the virtual screen across all monitors.
+            cx = user32.GetSystemMetrics(78)
+            cy = user32.GetSystemMetrics(79)
+            return max(cx, cy)
+        except Exception:
+            pass
+    return 65535
+
+
 @click.command("click")
 @click.argument("query", required=False)
 @click.option("--on", "on_text", help="Target element (eN ref or text label)")
@@ -99,6 +121,17 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         target_id = None
     elif coords:
         x, y = coords
+        # (#787) Validate coordinates are within the virtual screen bounds.
+        # Out-of-bounds coordinates result in no-op clicks from SendInput.
+        _max_coord = _get_screen_bound()
+        if x < 0 or y < 0 or x > _max_coord or y > _max_coord:
+            _common._json_err(
+                f"Coordinates ({x}, {y}) are outside the screen bounds "
+                f"(0–{_max_coord}). Check your coordinates.",
+                json_output,
+                code="COORDS_OUT_OF_BOUNDS",
+            )
+            return
         target_id = None
     elif element_id:
         x, y = None, None
