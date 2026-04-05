@@ -566,6 +566,18 @@ class TestConnectionError:
         assert data["error"]["code"] == "BROWSER_CONNECTION_ERROR"
         assert "refused" in data["error"]["message"]
 
+    def test_get_page_failure_json_url_cmd(self, runner: click.testing.CliRunner) -> None:
+        """#834: url subcommand connection error should also emit JSON."""
+        with patch("naturo.browser.BrowserPage",
+                   side_effect=ConnectionRefusedError("refused")):
+            result = runner.invoke(
+                browser, ["url", "--json"],
+            )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "BROWSER_CONNECTION_ERROR"
+
     def test_click_error_json(self, runner: click.testing.CliRunner,
                               mock_page: MagicMock) -> None:
         """click command error emits structured JSON (#834)."""

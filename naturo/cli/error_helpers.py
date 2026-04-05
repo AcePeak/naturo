@@ -214,6 +214,11 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "Playwright or browser automation tools for Electron/Chrome apps.",
         True,
     ),
+    "BROWSER_CONNECTION_ERROR": (
+        "Start Chrome/Chromium/Edge with --remote-debugging-port=<port> "
+        "and retry. Check that the port number matches.",
+        True,
+    ),
 }
 
 
