@@ -1254,3 +1254,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending
+
+## PR Request: fix/issue-841-calculator-uia-test
+- **Base**: develop
+- **Title**: fix: comtypes UIA probe searches child windows for Calculator (fixes #841)
+- **Body**: Strategy 2 (comtypes fallback) now mirrors Strategy 1 by probing AFH and DesktopWindowXamlSource child windows when top-level ElementFromHandle returns None. Integration tests pass exe="CalculatorApp.exe" to help detection chain find the correct window. 2 new unit tests verify comtypes child window probing. 4685 passed, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
