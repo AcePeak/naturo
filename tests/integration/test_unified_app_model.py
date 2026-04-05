@@ -323,8 +323,8 @@ class TestDetectionCacheIntegrity:
 
     def test_cache_per_pid(self, notepad_app, calculator_app, detect_chain):
         """Different PIDs should have separate cache entries."""
-        result_notepad = detect_chain(pid=notepad_app, app_name="Notepad")
-        result_calc = detect_chain(pid=calculator_app, app_name="Calculator")
+        result_notepad = detect_chain(pid=notepad_app, app_name="Notepad", exe="notepad.exe")
+        result_calc = detect_chain(pid=calculator_app, app_name="Calculator", exe="CalculatorApp.exe")
 
         assert result_notepad.pid != result_calc.pid
         assert result_notepad.app_name != result_calc.app_name

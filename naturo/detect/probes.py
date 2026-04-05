@@ -483,6 +483,32 @@ def _find_winui_content_children(parent_hwnd: int) -> List[int]:
         return []
 
 
+def _comtypes_element_is_useful(element: object, uia: object) -> bool:
+    """Check whether a comtypes UIA element has actionable children.
+
+    For WinUI 3 apps the top-level window element exists but contains no
+    buttons, text fields, or other interactive controls.  We check via
+    FindAll with TreeScope_Children and a TrueCondition.
+
+    Args:
+        element: IUIAutomationElement from comtypes.
+        uia: IUIAutomation instance.
+
+    Returns:
+        True if the element has at least one child (useful for interaction).
+    """
+    try:
+        # TreeScope_Children = 2, CreateTrueCondition returns match-all
+        condition = uia.CreateTrueCondition()  # type: ignore[union-attr]
+        children = element.FindAll(2, condition)  # type: ignore[union-attr]
+        count = getattr(children, "Length", 0)
+        return count > 0
+    except Exception:
+        # If we can't enumerate children, assume it's useful
+        # (conservative — avoid false negatives)
+        return True
+
+
 def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[InteractionMethod]:
     """Probe for UI Automation availability.
 
@@ -592,18 +618,29 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
             interface=_IUIAutomation,
         )
 
-        element = uia.ElementFromHandle(target_hwnd)
-        if element:
-            # Verify the element has meaningful children (not an empty shell).
-            # WinUI 3 apps may return an element for the main window that has
-            # no useful UIA subtree.
-            try:
-                child_count = element.CurrentChildren and element.CurrentChildren.Length
-            except Exception:
-                child_count = None
+        capabilities = ["click", "type", "find", "tree", "screenshot"]
 
-            if child_count:
-                capabilities = ["click", "type", "find", "tree", "screenshot"]
+        element = uia.ElementFromHandle(target_hwnd)
+        if element and _comtypes_element_is_useful(element, uia):
+            return InteractionMethod(
+                method=InteractionMethodType.UIA,
+                priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                status=ProbeStatus.AVAILABLE,
+                capabilities=capabilities,
+                confidence=0.9,
+            )
+
+        # (#841) Mirror Strategy 1: probe AFH and WinUI child windows.
+        # Standalone WinUI 3 apps (Calculator, Paint) have a valid top-level
+        # element but no actionable children — the real UI is inside
+        # DesktopWindowXamlSource or CoreWindow child HWNDs.
+        for child_hwnd in _find_afh_content_children(target_hwnd):
+            child_elem = uia.ElementFromHandle(child_hwnd)
+            if child_elem and _comtypes_element_is_useful(child_elem, uia):
+                logger.debug(
+                    "UIA comtypes probe succeeded via AFH child HWND %s",
+                    child_hwnd,
+                )
                 return InteractionMethod(
                     method=InteractionMethodType.UIA,
                     priority=METHOD_PRIORITY[InteractionMethodType.UIA],
@@ -612,38 +649,20 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                     confidence=0.9,
                 )
 
-            # (#841) Mirror Strategy 1: probe AFH and WinUI child windows.
-            for child_hwnd in _find_afh_content_children(target_hwnd):
-                child_el = uia.ElementFromHandle(child_hwnd)
-                if child_el:
-                    logger.debug(
-                        "comtypes UIA probe succeeded via AFH child HWND %s",
-                        child_hwnd,
-                    )
-                    capabilities = ["click", "type", "find", "tree", "screenshot"]
-                    return InteractionMethod(
-                        method=InteractionMethodType.UIA,
-                        priority=METHOD_PRIORITY[InteractionMethodType.UIA],
-                        status=ProbeStatus.AVAILABLE,
-                        capabilities=capabilities,
-                        confidence=0.9,
-                    )
-
-            for child_hwnd in _find_winui_content_children(target_hwnd):
-                child_el = uia.ElementFromHandle(child_hwnd)
-                if child_el:
-                    logger.debug(
-                        "comtypes UIA probe succeeded via WinUI child HWND %s",
-                        child_hwnd,
-                    )
-                    capabilities = ["click", "type", "find", "tree", "screenshot"]
-                    return InteractionMethod(
-                        method=InteractionMethodType.UIA,
-                        priority=METHOD_PRIORITY[InteractionMethodType.UIA],
-                        status=ProbeStatus.AVAILABLE,
-                        capabilities=capabilities,
-                        confidence=0.9,
-                    )
+        for child_hwnd in _find_winui_content_children(target_hwnd):
+            child_elem = uia.ElementFromHandle(child_hwnd)
+            if child_elem and _comtypes_element_is_useful(child_elem, uia):
+                logger.debug(
+                    "UIA comtypes probe succeeded via WinUI child HWND %s",
+                    child_hwnd,
+                )
+                return InteractionMethod(
+                    method=InteractionMethodType.UIA,
+                    priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                    status=ProbeStatus.AVAILABLE,
+                    capabilities=capabilities,
+                    confidence=0.9,
+                )
 
     except ImportError:
         logger.debug("comtypes not available for UIA probe — install with: pip install comtypes")

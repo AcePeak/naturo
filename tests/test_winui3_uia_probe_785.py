@@ -117,3 +117,23 @@ class TestComtypesFallbackWinUI:
         assert result is not None
         assert result.method.value == "uia"
         assert mock_core.get_element_tree.call_count == 3
+
+    @patch("naturo.detect.probes.platform")
+    @patch("naturo.detect.probes._find_main_window", return_value=1001)
+    @patch("naturo.detect.probes._find_afh_content_children", return_value=[])
+    @patch("naturo.detect.probes._find_winui_content_children", return_value=[])
+    def test_all_fallbacks_fail_returns_none(
+        self, mock_winui, mock_afh, mock_main, mock_platform,
+    ):
+        """When main, AFH, and WinUI all fail, probe returns None
+        (comtypes not available on Linux)."""
+        mock_platform.system.return_value = "Windows"
+
+        mock_core = MagicMock()
+        mock_core.get_element_tree.return_value = None
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core):
+            result = probe_uia(pid=100, exe="CalculatorApp.exe", hwnd=None)
+
+        # On Linux, comtypes import fails, so result is None
+        assert result is None
