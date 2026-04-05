@@ -1249,16 +1249,16 @@ Format:
 
 ## PR Request: fix/issue-834-browser-json-flag
 - **Base**: develop
-- **Title**: fix: browser subcommand outputs structured JSON errors with -j flag (fixes #834)
-- **Body**: _get_page() now accepts json_output and uses emit_error() with BROWSER_CONNECTION_ERROR code. All 32 browser commands pass json_output through. All manual error handlers replaced with emit_exception_error() for consistent {success, error: {code, message}} format. 2 new tests. 4685 passed, ruff clean, mypy clean.
+- **Title**: fix: browser subcommand emits structured JSON errors with -j flag (fixes #834)
+- **Body**: _get_page() now accepts json_output and uses emit_error() with BROWSER_CONNECTION_ERROR code. All 32 browser commands pass json_output through. All manual error handlers replaced with emit_exception_error() for consistent {success, error: {code, message}} format. 3 new tests. 4686 passed, ruff clean, mypy clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
-- **Status**: pending (branch force-pushed clean rebuild)
+- **Status**: pending (branch force-pushed clean rebuild 2026-04-05)
 
 ## PR Request: fix/issue-841-calculator-uia-test
 - **Base**: develop
-- **Title**: fix: Calculator UIA test passes exe= and retries for WinUI 3 readiness (fixes #841)
-- **Body**: Calculator (WinUI 3) has same UIA detection challenges as Notepad: launcher PID differs from window-owning process, UIA tree may not be ready immediately. Updated test_detect_calculator_has_uia and test_detect_calculator_best_method to use _detect_with_retry() with exe="CalculatorApp.exe", matching the Notepad test pattern. 22 integration tests pass (skipped on non-Windows), ruff clean.
+- **Title**: fix: Calculator UIA detection via comtypes probes child windows (fixes #841)
+- **Body**: The comtypes fallback (Strategy 2) in probe_uia() only checked the main window handle, which returns an empty UIA tree for standalone WinUI 3 apps. Now mirrors Strategy 1 by probing AFH and DesktopWindowXamlSource child windows. Integration tests updated with exe="CalculatorApp.exe" and _detect_with_retry matching Notepad pattern. 1 new unit test. 4684 passed, ruff clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
-- **Status**: pending (branch force-pushed clean rebuild)
+- **Status**: pending (branch force-pushed clean rebuild 2026-04-05)
