@@ -1246,3 +1246,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending
+
+## PR Request: fix/issue-834-browser-json-flag
+- **Base**: develop
+- **Title**: fix: browser subcommand emits structured JSON errors when -j flag is set (fixes #834)
+- **Body**: _get_page() now accepts json_output param and uses emit_error with BROWSER_CONNECTION_ERROR code for connection failures. All 30+ browser commands pass json_output to _get_page. All exception handlers replaced with _browser_error helper that delegates to emit_exception_error for consistent structured JSON format {success, error: {code, message, suggested_action, recoverable}}. 2 new tests. 4685 passed, ruff clean, mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
