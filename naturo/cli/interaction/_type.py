@@ -357,8 +357,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 backend.type_text(text, delay_ms=int(delay), profile=profile,
                                   wpm=wpm, input_mode=input_mode)
         else:
-            backend.type_text(text, delay_ms=int(delay), profile=profile, wpm=wpm,
-                              input_mode=input_mode)
+            backend.type_text(text, delay_ms=int(delay), profile=profile,
+                              wpm=wpm, input_mode=input_mode)
 
         if press_return:
             backend.press_key("enter")

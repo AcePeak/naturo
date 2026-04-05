@@ -672,6 +672,8 @@ class InputMixin:
         Raises:
             NaturoCoreError: On system error.
         """
+        import re
+
         core = self._ensure_core()
         strategy = get_input_strategy(core, input_mode)
 
@@ -681,7 +683,15 @@ class InputMixin:
             ms_per_char = int(60_000 / (wpm * 5))
             actual_delay = max(1, ms_per_char)
 
-        strategy.type_text(text, actual_delay)
+        # (#840) SendInput's UNICODE path silently drops \n and \r
+        # control characters.  Split on line breaks and press Enter
+        # between segments so multiline text is typed correctly.
+        segments = re.split(r"\r\n|\r|\n", text)
+        for i, segment in enumerate(segments):
+            if segment:
+                strategy.type_text(segment, actual_delay)
+            if i < len(segments) - 1:
+                strategy.press_key("enter")
 
     def press_key(self, key: str = "", input_mode: str = "normal") -> None:
         """Press and release a named key.
