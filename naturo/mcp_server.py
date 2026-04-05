@@ -68,9 +68,36 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
                     error_info["recoverable"] = True
                 return {"success": False, "error": error_info}
             except Exception as e:
-                logger.exception("Unhandled error in tool %s", fn.__name__)
-                return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"{type(e).__name__}: {e}"}}
+                # (#844) Catch Pydantic ValidationError separately to avoid
+                # leaking internal field paths, validator names, and raw repr.
+                msg = _format_validation_error(e) if _is_validation_error(e) else f"{type(e).__name__}: {e}"
+                code = "INVALID_INPUT" if _is_validation_error(e) else "INTERNAL_ERROR"
+                if code == "INTERNAL_ERROR":
+                    logger.exception("Unhandled error in tool %s", fn.__name__)
+                else:
+                    logger.warning("Validation error in tool %s: %s", fn.__name__, msg)
+                return {"success": False, "error": {"code": code, "message": msg}}
         return wrapper
+
+    def _is_validation_error(exc: Exception) -> bool:
+        """Check if *exc* is a Pydantic ValidationError without importing Pydantic."""
+        return type(exc).__name__ == "ValidationError" and hasattr(exc, "errors")
+
+    def _format_validation_error(exc: Exception) -> str:
+        """Format a Pydantic ValidationError into a user-friendly message."""
+        try:
+            parts: list[str] = []
+            for err in exc.errors():  # type: ignore[union-attr]
+                loc = " → ".join(str(l) for l in err.get("loc", ()))
+                msg = err.get("msg", "invalid value")
+                if loc:
+                    parts.append(f"{loc}: {msg}")
+                else:
+                    parts.append(msg)
+            return "Invalid input: " + "; ".join(parts) if parts else f"Invalid input: {exc}"
+        except Exception:
+            # Defensive fallback — never leak raw Pydantic repr
+            return "Invalid input: one or more parameters failed validation"
 
     # Register all tool groups
     register_capture_tools(server, _get_backend, _safe_tool)
