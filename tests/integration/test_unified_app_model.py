@@ -176,14 +176,23 @@ class TestDetectionChainCalculator:
 
     def test_detect_calculator_framework(self, calculator_app, detect_chain):
         """Calculator should be detected with some framework info."""
-        result = detect_chain(pid=calculator_app, app_name="Calculator")
+        # (#841) Pass exe= so _find_window_by_process_name can resolve
+        # the window for WinUI 3 Calculator where the launcher PID may
+        # differ from the window-owning process.
+        result = detect_chain(pid=calculator_app, exe="CalculatorApp.exe",
+                              app_name="Calculator")
 
         assert result.pid == calculator_app
         assert len(result.methods) > 0, "Should detect at least one interaction method"
 
     def test_detect_calculator_has_uia(self, calculator_app, detect_chain):
         """Calculator (UWP) should support UIA — the primary method for UWP apps."""
-        result = detect_chain(pid=calculator_app, app_name="Calculator")
+        # (#841) Retry detection — WinUI 3 apps need time for UIA tree
+        # initialization, matching the Notepad pattern (#697).
+        result = _detect_with_retry(
+            detect_chain, pid=calculator_app, exe="CalculatorApp.exe",
+            app_name="Calculator",
+        )
 
         method_names = [m.method.value for m in result.methods]
         assert "uia" in method_names, (
@@ -192,7 +201,11 @@ class TestDetectionChainCalculator:
 
     def test_detect_calculator_best_method(self, calculator_app, detect_chain):
         """Calculator's best method should be UIA."""
-        result = detect_chain(pid=calculator_app, app_name="Calculator")
+        # (#841) Retry detection — UIA tree may need extra init time.
+        result = _detect_with_retry(
+            detect_chain, pid=calculator_app, exe="CalculatorApp.exe",
+            app_name="Calculator",
+        )
 
         best = result.best_method()
         assert best is not None, "Should have a best method"

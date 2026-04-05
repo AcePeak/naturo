@@ -85,3 +85,35 @@ class TestProbeUiaWinuiFallback:
 
         assert result is not None
         mock_core.get_element_tree.assert_called_once()
+
+
+class TestComtypesFallbackWinUI:
+    """#841: comtypes fallback must also probe WinUI child windows.
+
+    Actual comtypes testing requires Windows with the COM DLL loaded.
+    These tests verify the Strategy 1 (native DLL) path covers the same
+    child-window probing logic that was added to Strategy 2 (comtypes).
+    The integration test test_detect_calculator_has_uia exercises the
+    full path on a real Windows desktop.
+    """
+
+    @patch("naturo.detect.probes.platform")
+    @patch("naturo.detect.probes._find_main_window", return_value=1001)
+    @patch("naturo.detect.probes._find_afh_content_children", return_value=[])
+    @patch("naturo.detect.probes._find_winui_content_children", return_value=[2001, 2002])
+    def test_winui_fallback_tries_multiple_children(
+        self, mock_winui, mock_afh, mock_main, mock_platform,
+    ):
+        """When multiple WinUI children exist, probe tries each in order."""
+        mock_platform.system.return_value = "Windows"
+
+        mock_core = MagicMock()
+        # Main HWND empty, first WinUI child empty, second succeeds
+        mock_core.get_element_tree.side_effect = [None, None, {"role": "Window"}]
+
+        with patch("naturo.detect.probes._get_native_core", return_value=mock_core):
+            result = probe_uia(pid=100, exe="CalculatorApp.exe", hwnd=None)
+
+        assert result is not None
+        assert result.method.value == "uia"
+        assert mock_core.get_element_tree.call_count == 3
