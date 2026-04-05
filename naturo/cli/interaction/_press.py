@@ -171,7 +171,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
             _common._json_err(f"Failed to click target element: {exc}", json_output)
             return
 
-    # (#230/#612) Focus target window before sending key input.
+    # (#230/#612/#807) Focus target window before sending key input.
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
     # Uses backend.focus_window() which employs AttachThreadInput on
@@ -184,30 +184,44 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                 _target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
-            if _target_hwnd:
-                backend.focus_window(hwnd=_target_hwnd)
-                # Record actual focused PID for routing accuracy
+            if not _target_hwnd:
+                _target_desc = app or window_title or f"PID {pid}" or f"HWND {hwnd}"
+                _common._json_err(
+                    f"Could not find window for '{_target_desc}'. "
+                    "Is the application running and visible?",
+                    json_output,
+                    code="WINDOW_NOT_FOUND",
+                )
+                return
+            backend.focus_window(hwnd=_target_hwnd)
+            # Record actual focused PID for routing accuracy
+            try:
+                import ctypes
+                import ctypes.wintypes
+                _focused_pid = ctypes.wintypes.DWORD()
+                ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
+                    _target_hwnd, ctypes.byref(_focused_pid)
+                )
+                if route_info and _focused_pid.value:
+                    route_info["focused_pid"] = _focused_pid.value
+                    route_info["focused_hwnd"] = _target_hwnd
+            except Exception as exc:
+                logger.debug("PID recording failed (Windows-only): %s", exc)
+            # Also try UIA SetFocus for schtasks/remote contexts (#226)
+            if hasattr(backend, "focus_element_uia"):
                 try:
-                    import ctypes
-                    import ctypes.wintypes
-                    _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
-                        _target_hwnd, ctypes.byref(_focused_pid)
-                    )
-                    if route_info and _focused_pid.value:
-                        route_info["focused_pid"] = _focused_pid.value
-                        route_info["focused_hwnd"] = _target_hwnd
+                    backend.focus_element_uia(hwnd=_target_hwnd)
                 except Exception as exc:
-                    logger.debug("PID recording failed (Windows-only): %s", exc)
-                # Also try UIA SetFocus for schtasks/remote contexts (#226)
-                if hasattr(backend, "focus_element_uia"):
-                    try:
-                        backend.focus_element_uia(hwnd=_target_hwnd)
-                    except Exception as exc:
-                        logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
-                time.sleep(0.15)
+                    logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
+            time.sleep(0.15)
         except Exception as exc:
-            logger.debug("Failed to focus target window for press: %s", exc)
+            _common._json_err(
+                f"Failed to focus target window: {exc}. "
+                f"Cannot guarantee keypresses reach '{app or window_title}'.",
+                json_output,
+                code="WINDOW_FOCUS_ERROR",
+            )
+            return
 
     # (#231) Capture before-state for post-action verification
     _before_state = None
