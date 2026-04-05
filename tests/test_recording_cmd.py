@@ -508,7 +508,7 @@ class TestStepToNaturoCmd:
     def test_type_cmd(self):
         step = ActionStep("type", {"text": "hello world"}, 0.0)
         cmd = recording_cmd._step_to_naturo_cmd(step)
-        assert cmd == 'naturo type "hello world"'
+        assert cmd == "naturo type 'hello world'"
 
     def test_press_cmd(self):
         step = ActionStep("press", {"key": "enter"}, 0.0)
