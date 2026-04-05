@@ -87,6 +87,40 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
 
 
 def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
-    """Run the MCP server with the specified transport."""
+    """Run the MCP server with the specified transport.
+
+    When *transport* is ``"stdio"``, all Python logging handlers that
+    write to ``sys.stdout`` are removed (or redirected to ``sys.stderr``)
+    so that debug/info messages do not corrupt the JSON-RPC stream (#810).
+    """
+    if transport == "stdio":
+        _suppress_stdout_logging()
     server = create_server(host=host, port=port)
     server.run(transport=transport)
+
+
+def _suppress_stdout_logging() -> None:
+    """Redirect or remove any logging handler that writes to stdout.
+
+    JSON-RPC over stdio uses stdout as the transport channel.  Any log
+    message that lands on stdout breaks the protocol.  This function
+    walks every registered handler on the root logger (and known
+    library loggers) and either redirects ``StreamHandler(sys.stdout)``
+    to ``sys.stderr`` or removes it entirely.
+    """
+    import sys
+
+    root = logging.getLogger()
+
+    for handler in list(root.handlers):
+        if isinstance(handler, logging.StreamHandler) and handler.stream is sys.stdout:
+            handler.setStream(sys.stderr)
+
+    # Silence chatty library loggers that may add their own handlers.
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "mcp",
+                 "httpx", "httpcore"):
+        lib_logger = logging.getLogger(name)
+        lib_logger.setLevel(logging.WARNING)
+        for handler in list(lib_logger.handlers):
+            if isinstance(handler, logging.StreamHandler) and handler.stream is sys.stdout:
+                handler.setStream(sys.stderr)
