@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import sys
 
 import click
@@ -11,24 +10,6 @@ import click
 import naturo.cli.interaction._common as _common
 
 logger = logging.getLogger(__name__)
-
-
-def _type_with_newlines(backend, text: str, *, delay_ms: int, profile: str,
-                        wpm: int, input_mode: str) -> None:
-    """Type *text*, converting literal newlines to Enter keypresses.
-
-    SendInput cannot produce a newline character directly — the target
-    application expects VK_RETURN.  This helper splits *text* on
-    ``\\r\\n``, ``\\r``, or ``\\n`` boundaries, types each segment, and
-    presses Enter between them (#840).
-    """
-    segments = re.split(r"\r\n|\r|\n", text)
-    for i, segment in enumerate(segments):
-        if segment:
-            backend.type_text(segment, delay_ms=delay_ms, profile=profile,
-                              wpm=wpm, input_mode=input_mode)
-        if i < len(segments) - 1:
-            backend.press_key("enter")
 
 
 @click.command("type")
@@ -373,13 +354,11 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             if not _used_uia:
                 # UIA SetValue failed — fall back to SendInput
                 logger.debug("UIA SetValue failed, falling back to SendInput")
-                _type_with_newlines(backend, text, delay_ms=int(delay),
-                                    profile=profile, wpm=wpm,
-                                    input_mode=input_mode)
+                backend.type_text(text, delay_ms=int(delay), profile=profile,
+                                  wpm=wpm, input_mode=input_mode)
         else:
-            _type_with_newlines(backend, text, delay_ms=int(delay),
-                                profile=profile, wpm=wpm,
-                                input_mode=input_mode)
+            backend.type_text(text, delay_ms=int(delay), profile=profile,
+                              wpm=wpm, input_mode=input_mode)
 
         if press_return:
             backend.press_key("enter")
