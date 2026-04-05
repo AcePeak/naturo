@@ -392,6 +392,61 @@ class TestPressOnElement:
         backend.press_key.assert_called_once()
 
 
+# ── --app window focus (#807) ───────────────────
+
+
+def _patch_backend(mock_backend):
+    return patch("naturo.cli.interaction._common._get_backend",
+                 return_value=mock_backend)
+
+
+def _patch_resolve_app_id(app=None, hwnd=None, pid=None):
+    return patch("naturo.cli.interaction._common._resolve_app_id",
+                 return_value=(app, hwnd, pid))
+
+
+def _patch_auto_route(route=None):
+    return patch("naturo.cli.interaction._common._auto_route",
+                 return_value=route or {})
+
+
+class TestAppFocus:
+    """#807: press --app must exit with error when window focus fails."""
+
+    @pytest.fixture
+    def mock_backend(self):
+        backend = MagicMock()
+        backend.press_key.return_value = None
+        backend.hotkey.return_value = None
+        backend.focus_window.return_value = None
+        backend._resolve_hwnd.return_value = 12345
+        return backend
+
+    def test_focus_failure_exits_with_error(self, runner, mock_backend):
+        mock_backend._resolve_hwnd.side_effect = Exception("window not found")
+
+        with _patch_resolve_app_id(app="gone"), \
+             _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                press, ["enter", "--app", "gone", "--json"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code != 0
+        assert "WINDOW_FOCUS_ERROR" in result.output
+
+    def test_focus_failure_plain_text(self, runner, mock_backend):
+        mock_backend._resolve_hwnd.side_effect = Exception("window not found")
+
+        with _patch_resolve_app_id(app="gone"), \
+             _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                press, ["enter", "--app", "gone"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code != 0
+        assert "focus" in result.output.lower() or "Error" in result.output
+
+
 # ── hotkey command (deprecated alias) ────────────
 
 

@@ -207,7 +207,14 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                         logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
                 time.sleep(0.15)
         except Exception as exc:
-            logger.debug("Failed to focus target window for press: %s", exc)
+            _common._json_err(
+                f"Failed to focus target window: {exc}. "
+                f"Cannot guarantee keystrokes reach "
+                f"'{app or window_title or hwnd}'.",
+                json_output,
+                code="WINDOW_FOCUS_ERROR",
+            )
+            return
 
     # (#231) Capture before-state for post-action verification
     _before_state = None
