@@ -1302,3 +1302,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending
+
+## PR Request: fix/issue-840-type-newline-drop
+- **Base**: develop
+- **Title**: fix: handle newlines in type_text by splitting into Enter keypresses (fixes #840)
+- **Body**: The native DLL's SendInput UNICODE path silently drops \n and \r control characters. Now type_text() splits text on line breaks (re.split on \r\n|\r|\n) and presses Enter between segments. Handles all newline styles: \n, \r\n, \r. 8 new tests, all passed, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
