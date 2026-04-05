@@ -318,6 +318,14 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `browser wait-function` | Wait until JS expression is truthy | 0.3.2 |
 | `browser stealth` | Apply anti-detection patches | 0.3.2 |
 | `browser stealth-flags` | Print Chrome flags for anti-detection | 0.3.2 |
+| `browser launch` | Launch Chrome with remote debugging enabled | 0.3.2 |
+| `browser profiles` | List available Chrome profiles | 0.3.2 |
+| `browser select` | Select an option from a `<select>` dropdown | 0.3.2 |
+| `browser download` | Configure file downloads and wait for completion | 0.3.2 |
+| `browser frames` | List all frames (main frame and iframes) on the page | 0.3.2 |
+| `browser frame-find` | Find elements inside a specific iframe | 0.3.2 |
+| `browser frame-eval` | Evaluate JavaScript inside a specific iframe | 0.3.2 |
+| `browser stealth-check` | Verify stealth patches are working | 0.3.2 |
 | `browser captcha-detect` | Detect captchas on the page | 0.3.2 |
 | `browser captcha-solve` | Solve a captcha on the page | 0.3.2 |
 
@@ -331,6 +339,9 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `visual list` | List all saved baselines | 0.3.2 |
 | `visual delete` | Delete a saved baseline | 0.3.2 |
 | `visual report` | Run regression tests and generate HTML report | 0.3.2 |
+| `visual suite` | Run a visual regression test suite from a JSON definition | 0.3.2 |
+| `visual update` | Update an existing baseline with a new screenshot | 0.3.2 |
+| `visual update-all` | Update all baselines from a directory of screenshots | 0.3.2 |
 
 ### Tools
 
@@ -350,6 +361,7 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `record delete` | Delete a recording | 0.3.2 |
 | `record export` | Export recording to Python/Bash/JSON | 0.3.2 |
 | `selector save` | Save a UI selector with a friendly name | 0.3.2 |
+| `selector load` | Load a saved selector by name and resolve it | 0.3.2 |
 | `selector list` | List saved/built-in selectors | 0.3.2 |
 | `selector show` | Show all selectors for an app (user + built-in) | 0.3.2 |
 | `selector delete` | Delete a saved selector | 0.3.2 |
@@ -474,8 +486,9 @@ Built-in templates live in `naturo/selectors_builtin/` and are read-only.
 Automate Chrome, Edge, and Chromium-based browsers via the Chrome DevTools Protocol (CDP).
 
 ```bash
-# Launch Chrome with debugging enabled
-chrome --remote-debugging-port=9222
+# Launch Chrome with debugging enabled (using naturo)
+naturo browser launch
+# Or manually: chrome --remote-debugging-port=9222
 
 # Navigate to a page
 naturo browser navigate https://example.com
@@ -521,6 +534,22 @@ naturo browser stealth                        # Apply runtime patches
 # Captcha handling
 naturo browser captcha-detect                 # Detect captchas on page
 naturo browser captcha-solve                  # Attempt to solve
+
+# Chrome profiles
+naturo browser profiles                       # List available profiles
+naturo browser launch --profile "Work"        # Launch with a specific profile
+
+# Iframe support
+naturo browser frames                         # List all frames on page
+naturo browser frame-find 0 "#login-form"     # Find element inside iframe
+naturo browser frame-eval 0 "document.title"  # Run JS inside iframe
+
+# File downloads
+naturo browser download --dir ./downloads     # Set download directory
+naturo browser download --wait 30             # Wait up to 30s for download
+
+# Select dropdowns
+naturo browser select "#country" "United States"  # Select by visible text
 ```
 
 All browser commands support `--port` and `--host` for connecting to remote Chrome instances.
@@ -545,6 +574,12 @@ naturo visual list
 
 # Generate an HTML report
 naturo visual report --name "Sprint 42" --output report.html
+
+# Update a baseline with new screenshot
+naturo visual update login_screen --from new_screenshot.png
+
+# Run a test suite from a JSON definition
+naturo visual suite test_suite.json --output report.html
 
 # Clean up
 naturo visual delete login_screen
