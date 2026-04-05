@@ -16,6 +16,12 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
+try:
+    from PIL import Image as _PIL_Image  # noqa: F401
+    _HAS_PIL = True
+except ImportError:
+    _HAS_PIL = False
+
 from naturo.backends.base import CaptureResult, WindowInfo
 
 # Build a minimal ctypes.wintypes stub for Linux.  The real module is only
@@ -185,6 +191,7 @@ class TestCaptureAppWindows:
         mock_cw.assert_called_once_with(hwnd=main_hwnd, output_path="out.png")
         assert result.width == 800
 
+    @pytest.mark.skipif(not _HAS_PIL, reason="Pillow not installed")
     def test_popup_menu_composited_into_capture(self):
         """When a popup menu window exists, both are captured and composited."""
         main_hwnd = 2001
@@ -221,6 +228,7 @@ class TestCaptureAppWindows:
             assert os.path.exists(out_path)
             assert mock_core.capture_window.call_count == 2
 
+    @pytest.mark.skipif(not _HAS_PIL, reason="Pillow not installed")
     def test_popup_extends_beyond_main_window(self):
         """A popup that extends beyond the main window expands the canvas."""
         main_hwnd = 3001
