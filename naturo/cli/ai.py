@@ -41,11 +41,16 @@ def start(transport, host, port, json_output) -> None:
         sys.exit(1)
 
     try:
-        # Suppress uvicorn/server logs in JSON mode to keep stdout clean
-        if json_output:
+        # (#810) stdio transport uses stdout for JSON-RPC — any logging
+        # output to stdout/stderr corrupts the protocol.  Suppress ALL
+        # loggers (not just uvicorn) by attaching a NullHandler to the
+        # root logger and disabling the lastResort handler.
+        if transport == "stdio" or json_output:
             import logging as _logging
-            for _logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "mcp"):
-                _logging.getLogger(_logger_name).setLevel(_logging.CRITICAL)
+            root = _logging.getLogger()
+            root.addHandler(_logging.NullHandler())
+            root.setLevel(_logging.CRITICAL)
+            _logging.lastResort = None  # type: ignore[assignment]
         run_server(transport=transport, host=host, port=port)
     except OSError as e:
         # Port already in use or bind failure
