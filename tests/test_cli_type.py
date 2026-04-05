@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch, call
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.interaction._type import type_cmd
+from naturo.cli.interaction._type import type_cmd, _type_with_newlines
 
 
 @pytest.fixture
@@ -223,9 +223,11 @@ class TestInterpretEscapes:
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["hello\\tworld\\n", "-E"], catch_exceptions=False)
         assert result.exit_code == 0
+        # (#840) newlines are split: "hello\tworld" typed, then Enter pressed
         mock_backend.type_text.assert_called_once_with(
-            "hello\tworld\n", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+            "hello\tworld", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
         )
+        mock_backend.press_key.assert_any_call("enter")
 
     def test_literal_backslash_preserved_without_flag(self, runner, mock_backend):
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
@@ -387,3 +389,60 @@ class TestRefAlias:
             result = runner.invoke(type_cmd, ["hello", "--ref", "Input"], catch_exceptions=False)
         assert result.exit_code == 0
         mock_backend.find_element.assert_called_once_with("Input")
+
+
+# ── Newline handling (#840) ─────────────────────────────────────────
+
+
+class TestTypeWithNewlines:
+    """#840: literal newlines must produce Enter keypresses, not be dropped."""
+
+    def test_no_newlines(self):
+        backend = MagicMock()
+        _type_with_newlines(backend, "hello", delay_ms=5, profile="linear",
+                            wpm=120, input_mode="normal")
+        backend.type_text.assert_called_once_with(
+            "hello", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+        backend.press_key.assert_not_called()
+
+    def test_single_newline(self):
+        backend = MagicMock()
+        _type_with_newlines(backend, "line1\nline2", delay_ms=5,
+                            profile="linear", wpm=120, input_mode="normal")
+        assert backend.type_text.call_count == 2
+        backend.type_text.assert_any_call(
+            "line1", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+        backend.type_text.assert_any_call(
+            "line2", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+        backend.press_key.assert_called_once_with("enter")
+
+    def test_crlf(self):
+        backend = MagicMock()
+        _type_with_newlines(backend, "a\r\nb", delay_ms=5, profile="linear",
+                            wpm=120, input_mode="normal")
+        assert backend.type_text.call_count == 2
+        backend.press_key.assert_called_once_with("enter")
+
+    def test_trailing_newline(self):
+        """Trailing newline produces Enter after last segment."""
+        backend = MagicMock()
+        _type_with_newlines(backend, "hello\n", delay_ms=5, profile="linear",
+                            wpm=120, input_mode="normal")
+        backend.type_text.assert_called_once_with(
+            "hello", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+        backend.press_key.assert_called_once_with("enter")
+
+    def test_cli_type_with_newline(self, runner, mock_backend):
+        """End-to-end: naturo type with -E flag and \\n in text."""
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                type_cmd, ["line1\\nline2", "-E"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code == 0
+        assert mock_backend.type_text.call_count == 2
+        mock_backend.press_key.assert_any_call("enter")
