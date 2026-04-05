@@ -217,7 +217,8 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                 time.sleep(0.15)
         except Exception as exc:
             _common._json_err(
-                f"Cannot focus target window for press: {exc}",
+                f"Failed to focus target window: {exc}. "
+                f"Cannot guarantee keystrokes reach '{app or window_title}'.",
                 json_output,
                 code="WINDOW_FOCUS_ERROR",
             )

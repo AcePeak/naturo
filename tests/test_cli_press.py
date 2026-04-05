@@ -519,3 +519,41 @@ class TestPressFocusFailure:
             data = json.loads(result.output)
             assert data["success"] is False
             assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+
+    def test_press_app_focus_success_sends_keys(self, runner):
+        """When focus succeeds, press should send keys normally."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = 12345
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("notepad", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "notepad", "--json", "--no-verify"],
+                catch_exceptions=False,
+            )
+            assert result.exit_code == 0
+            mock_backend.focus_window.assert_called_once_with(hwnd=12345)
+            mock_backend.press_key.assert_called_once()
+
+    def test_press_app_no_keys_sent_on_failure(self, runner):
+        """When focus fails, no keys must be sent to avoid hitting wrong process."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.side_effect = Exception("Window not found")
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("notepad", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["ctrl+c", "--app", "notepad", "--json"],
+                catch_exceptions=False,
+            )
+            assert result.exit_code != 0
+            mock_backend.press_key.assert_not_called()
+            mock_backend.hotkey.assert_not_called()
