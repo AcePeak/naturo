@@ -13,7 +13,13 @@ from __future__ import annotations
 
 import pytest
 
-from naturo.mcp_server import _format_tool_validation_error
+mcp_available = True
+try:
+    from naturo.mcp_server import _format_tool_validation_error
+except ImportError:
+    mcp_available = False
+
+pytestmark = pytest.mark.skipif(not mcp_available, reason="mcp package not installed")
 
 
 class _FakeValidationError(Exception):
