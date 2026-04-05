@@ -674,3 +674,78 @@ class TestStdioLogging:
             assert stdout_handler.stream is sys.stderr
         finally:
             root.removeHandler(stdout_handler)
+
+
+# ── Pydantic ValidationError leak (#844) ─────────────────────────────────────
+
+
+class TestValidationErrorSanitization:
+    """#844: MCP tool validation errors must not leak Pydantic internals."""
+
+    def _call_tool(self, srv, name, args):
+        import asyncio
+
+        async def _run():
+            return await srv.call_tool(name, args)
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_run())
+        finally:
+            loop.close()
+
+    def test_validation_error_returns_invalid_input(self):
+        """Pydantic-style ValidationError returns INVALID_INPUT, not INTERNAL_ERROR."""
+        # The _is_validation_error check uses type(exc).__name__ == "ValidationError"
+        # so we must name our class accordingly.
+        class ValidationError(Exception):
+            def errors(self):
+                return [
+                    {"loc": ("body", "x"), "msg": "value is not a valid integer", "type": "type_error.integer"},
+                    {"loc": ("body", "y"), "msg": "field required", "type": "value_error.missing"},
+                ]
+
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = ValidationError("2 validation errors")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+            assert "body" in data["error"]["message"]
+            assert "x" in data["error"]["message"]
+            # Must NOT contain internal type info
+            assert "type_error.integer" not in data["error"]["message"]
+            assert "value_error.missing" not in data["error"]["message"]
+
+    def test_validation_error_fallback_on_broken_errors_method(self):
+        """If .errors() itself fails, still returns INVALID_INPUT safely."""
+        class ValidationError(Exception):
+            def errors(self):
+                raise RuntimeError("errors() broke")
+
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = ValidationError("bad")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+            assert "invalid input" in data["error"]["message"].lower() or "validation" in data["error"]["message"].lower()
+
+    def test_regular_exception_still_returns_internal_error(self):
+        """Non-validation exceptions still return INTERNAL_ERROR."""
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = RuntimeError("disk full")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INTERNAL_ERROR"
+            assert "disk full" in data["error"]["message"]
