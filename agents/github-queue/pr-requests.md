@@ -1262,3 +1262,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending (branch force-pushed clean rebuild 2026-04-05)
+
+## PR Request: docs/readme-missing-commands
+- **Base**: develop
+- **Title**: docs: add 12 missing CLI commands to README tables and examples
+- **Body**: README was missing 12 CLI commands added in v0.3.2: browser launch, profiles, select, download, frames, frame-find, frame-eval, stealth-check; visual suite, update, update-all; selector load. Added entries to command reference tables and usage examples section. No code changes.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
