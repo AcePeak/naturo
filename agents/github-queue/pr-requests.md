@@ -1294,3 +1294,11 @@ Format:
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending
+
+## PR Request: fix/issue-810-mcp-stdout-debug
+- **Base**: develop
+- **Title**: fix: suppress all logging in MCP stdio transport (fixes #810)
+- **Body**: When MCP server uses stdio transport, stdout IS the JSON-RPC channel. Any logging output corrupts the protocol. Added _suppress_stdout_logging() that redirects stdout StreamHandlers to stderr and silences chatty library loggers. CLI entry point also sets root logger to CRITICAL and disables lastResort handler for stdio/json modes. 4 new tests, all passed, ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
