@@ -1181,4 +1181,28 @@ Format:
 - **Body**: The comtypes fallback (Strategy 2) in probe_uia() only checked the main window handle, which is empty for standalone WinUI 3 apps like Calculator and Paint. Now probes AFH and WinUI child windows, matching the native DLL strategy. Also adds exe= and retry logic to the integration test fixture. 1 new unit test (Windows-only). All tests pass, ruff/mypy clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-04
+- **Status**: pending (branch rebased 2026-04-04)
+
+## PR Request: fix/issue-810-mcp-stdout-debug
+- **Base**: develop
+- **Title**: fix: suppress all logging in MCP stdio transport (fixes #810)
+- **Body**: Python's logging lastResort handler emits WARNING+ to stderr when no handlers are configured. In MCP stdio mode, this corrupts the JSON-RPC protocol. Now installs NullHandler on root logger, sets level to CRITICAL, and disables lastResort when transport=stdio or --json is active. 2 new tests. Ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-807-press-wrong-process
+- **Base**: develop
+- **Title**: fix: press --app exits with error when window focus fails (fixes #807)
+- **Body**: Previously press --app only logged a debug message when focus_window() failed, then silently sent keystrokes to whatever window was in the foreground. Now exits non-zero with WINDOW_FOCUS_ERROR, consistent with the type command. 3 new tests. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
+- **Status**: pending
+
+## PR Request: fix/issue-840-type-newline-drop
+- **Base**: develop
+- **Title**: fix: handle newlines in type_text by splitting into Enter keypresses (fixes #840)
+- **Body**: SendInput's UNICODE path silently drops \n and \r characters. Now split text on line breaks (\n, \r\n, \r) and insert press_key("enter") between segments. 3 new tests covering multi-line, CRLF, and trailing newline. Ruff clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-04
 - **Status**: pending
