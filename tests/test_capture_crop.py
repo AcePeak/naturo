@@ -108,7 +108,8 @@ class TestCapturePid:
              patch("naturo.cli.core._common._platform_supports_gui", return_value=True):
             be = MagicMock()
             be._resolve_hwnd.return_value = 12345
-            be.capture_window.return_value = mock_result
+            # (#843) --pid now routes through capture_app_windows
+            be.capture_app_windows.return_value = mock_result
             mock_be.return_value = be
             result = runner.invoke(main, [
                 "capture", "--pid", "9999", "--no-snapshot", "--json",
@@ -117,7 +118,7 @@ class TestCapturePid:
         data = json.loads(result.output)
         assert data["success"] is True
         be._resolve_hwnd.assert_called_once_with(app=None, window_title=None, pid=9999)
-        be.capture_window.assert_called_once()
+        be.capture_app_windows.assert_called_once()
 
 
 # ── Region validation ─────────────────────────────────────────────────────────

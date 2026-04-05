@@ -263,3 +263,128 @@ class CaptureMixin:
             scale_factor=scale_factor, dpi=dpi,
         )
 
+    def capture_app_windows(self, main_hwnd: int, output_path: str = "capture.png") -> CaptureResult:
+        """Capture a window and any sibling popup/menu windows from the same process.
+
+        When an application opens a popup menu, dropdown, or tooltip, Windows
+        creates separate top-level windows owned by the same process.  This
+        method captures the main window plus any visible sibling windows and
+        composites them into a single image, preserving screen positions.
+
+        If no sibling windows are found, falls back to ``capture_window``.
+
+        Args:
+            main_hwnd: Handle of the primary application window (from
+                ``_resolve_hwnd``).
+            output_path: File path for the output image.
+
+        Returns:
+            CaptureResult with the composited image path and dimensions.
+        """
+        import ctypes
+        import ctypes.wintypes as wt
+        import os
+        import tempfile
+
+        # Get PID of the main window
+        target_pid = ctypes.c_ulong(0)
+        ctypes.windll.user32.GetWindowThreadProcessId(
+            main_hwnd, ctypes.byref(target_pid),
+        )
+        pid = target_pid.value
+        if pid == 0:
+            # Could not determine PID — fall back to single-window capture
+            return self.capture_window(hwnd=main_hwnd, output_path=output_path)
+
+        # Find all visible windows belonging to this PID (excluding the main one)
+        sibling_hwnds: list[int] = []
+        all_windows = self.list_windows()
+        for w in all_windows:
+            if w.pid == pid and w.handle != main_hwnd and w.is_visible and not w.is_minimized:
+                sibling_hwnds.append(w.handle)
+
+        if not sibling_hwnds:
+            # No popup/menu windows — single capture is sufficient
+            return self.capture_window(hwnd=main_hwnd, output_path=output_path)
+
+        # Capture each window individually and composite them
+        from PIL import Image
+
+        core = self._ensure_core()
+        all_hwnds = [main_hwnd] + sibling_hwnds
+
+        # Gather window rects and captures
+        captures: list[tuple[int, int, Image.Image]] = []  # (screen_x, screen_y, img)
+        tmp_files: list[str] = []
+
+        try:
+            for h in all_hwnds:
+                rect = wt.RECT()
+                if not ctypes.windll.user32.GetWindowRect(h, ctypes.byref(rect)):
+                    continue
+                # Skip zero-size windows
+                w = rect.right - rect.left
+                hh = rect.bottom - rect.top
+                if w <= 0 or hh <= 0:
+                    continue
+
+                fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+                os.close(fd)
+                tmp_files.append(tmp_bmp)
+
+                try:
+                    core.capture_window(h, tmp_bmp)
+                    img = Image.open(tmp_bmp)
+                    captures.append((rect.left, rect.top, img.copy()))
+                    img.close()
+                except Exception as exc:
+                    logger.debug("Failed to capture window %s: %s", h, exc)
+                    continue
+
+            if not captures:
+                # All captures failed — fall back to single-window capture
+                return self.capture_window(hwnd=main_hwnd, output_path=output_path)
+
+            # Compute bounding box of all captured windows
+            min_x = min(c[0] for c in captures)
+            min_y = min(c[1] for c in captures)
+            max_x = max(c[0] + c[2].width for c in captures)
+            max_y = max(c[1] + c[2].height for c in captures)
+
+            canvas_w = max_x - min_x
+            canvas_h = max_y - min_y
+
+            # Composite: paint main window first, then overlays (popups on top)
+            canvas = Image.new("RGB", (canvas_w, canvas_h), (0, 0, 0))
+            for screen_x, screen_y, img in captures:
+                canvas.paste(img, (screen_x - min_x, screen_y - min_y))
+
+            ext = output_path.rsplit(".", 1)[-1].lower() if "." in output_path else "png"
+            fmt = {"jpg": "JPEG", "jpeg": "JPEG", "bmp": "BMP"}.get(ext, "PNG")
+            canvas.save(output_path, fmt)
+            width, height = canvas.size
+        finally:
+            for tmp in tmp_files:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+
+        # DPI from the main window's monitor
+        scale_factor = 1.0
+        dpi = 96
+        try:
+            rect = wt.RECT()
+            if ctypes.windll.user32.GetWindowRect(main_hwnd, ctypes.byref(rect)):
+                monitor = self.find_monitor_for_point(rect.left, rect.top)
+                if monitor:
+                    scale_factor = monitor.scale_factor
+                    dpi = monitor.dpi
+        except Exception as exc:
+            logger.debug("Window monitor info lookup failed: %s", exc)
+
+        return CaptureResult(
+            path=output_path, width=width, height=height, format=ext,
+            scale_factor=scale_factor, dpi=dpi,
+        )
+

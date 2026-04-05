@@ -95,7 +95,13 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             target_hwnd = hwnd
             if not target_hwnd and hasattr(backend, '_resolve_hwnd'):
                 target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
-            result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
+            # (#843) When targeting an app/pid, capture the main window plus
+            # any popup/menu windows owned by the same process.  When a direct
+            # --hwnd is given, capture only that single window.
+            if target_hwnd and not hwnd and hasattr(backend, 'capture_app_windows'):
+                result = backend.capture_app_windows(main_hwnd=target_hwnd, output_path=path)
+            else:
+                result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
         else:
             # Validate screen index against available monitors
             if screen < 0:
