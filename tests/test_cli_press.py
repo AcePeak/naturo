@@ -325,6 +325,64 @@ class TestPressErrors:
         assert result.exit_code != 0
         assert "key not recognized" in result.output
 
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_focus_failure_exits_with_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app must exit with WINDOW_FOCUS_ERROR when focus_window fails (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = 12345
+        backend.focus_window.side_effect = RuntimeError("cannot attach to thread")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_FOCUS_ERROR"
+        # Keys must NOT be sent when focus fails
+        backend.press_key.assert_not_called()
+        backend.hotkey.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_window_not_found_exits_with_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app must exit with WINDOW_NOT_FOUND when target window cannot be resolved (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = None
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        backend.press_key.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_focus_success_sends_keys(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app sends keys normally when focus_window succeeds (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = 12345
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code == 0
+        backend.focus_window.assert_called_once_with(hwnd=12345)
+        backend.press_key.assert_called_once()
+
 
 # ── press command — --on element ────────────────
 
