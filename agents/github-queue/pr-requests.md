@@ -1295,6 +1295,14 @@ Format:
 - **Date**: 2026-04-05
 - **Status**: pending
 
+## PR Request: fix/issue-807-press-wrong-process
+- **Base**: develop
+- **Title**: fix: press --app exits with error when window focus fails (fixes #807)
+- **Body**: Before this fix, focus_window() failures were silently swallowed via logger.debug, causing keypresses to be sent to whichever window happened to be in the foreground — the wrong process. Now matches the type command's behavior: exits with WINDOW_FOCUS_ERROR when focus fails, and WINDOW_NOT_FOUND when the target window cannot be resolved. 4 new tests (63 total), all passed, ruff and mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
+
 ## PR Request: fix/issue-810-mcp-stdout-debug
 - **Base**: develop
 - **Title**: fix: suppress all logging in MCP stdio transport (fixes #810)
