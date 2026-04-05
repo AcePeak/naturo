@@ -425,6 +425,8 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
             click.echo(json_module.dumps({"path": saved_path, "status": "ok"}))
         else:
             click.echo(f"Screenshot saved: {saved_path}")
+    except RuntimeError as exc:
+        emit_exception_error(exc, json_output, fallback_code="SCREENSHOT_FAILED")
     finally:
         page.close()
 

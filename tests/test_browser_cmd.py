@@ -328,6 +328,15 @@ class TestScreenshot:
         assert data["status"] == "ok"
         assert data["path"] == "out.png"
 
+    def test_screenshot_error_json(self, runner: click.testing.CliRunner,
+                                   mock_page: MagicMock) -> None:
+        mock_page.screenshot.side_effect = RuntimeError("write failed")
+        result = _invoke(runner, ["screenshot", "--json"], mock_page)
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "SCREENSHOT_FAILED"
+        assert "write failed" in data["error"]["message"]
+
 
 # ── eval ─────────────────────────────────────────────────────────────────────
 
