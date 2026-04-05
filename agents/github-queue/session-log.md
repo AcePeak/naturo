@@ -2,27 +2,43 @@
 > Date: 2026-04-05
 
 ## Completed
-- fix/issue-807-press-wrong-process: press --app exits with error (WINDOW_FOCUS_ERROR / WINDOW_NOT_FOUND) when window focus fails, instead of silently sending keys to wrong process. Rebased onto remote, resolved conflicts. 4 new tests (66 total), ruff clean. (fixes #807)
-- fix/issue-840-type-newline-drop: type_text splits on \r\n|\r|\n and presses Enter between segments. Rebased onto remote, resolved conflicts. 8 new tests (32 total in file), ruff clean. (fixes #840)
-- fix/issue-834-browser-json-flag: _get_page() now accepts json_output param; emits structured JSON with BROWSER_CONNECTION_ERROR when connection fails with -j. Rebased onto remote (which already had emit_error helper), resolved conflicts, kept remote's superior approach. 5 new tests (60 total), ruff clean. (fixes #834)
-- fix/issue-844-mcp-pydantic-leak: _safe_tool catches Pydantic ValidationError (by class name + .errors() duck-typing) and formats into INVALID_INPUT instead of leaking internals. Rebased onto remote (which had _is_validation_error/_format_validation_error helpers), resolved conflicts. 3 new tests, ruff clean. (fixes #844)
+- fix/issue-843-capture-popup-menus: rebased onto develop, pushed (fixes #843)
+- fix/issue-844-mcp-pydantic-leak: added second protection layer — call_tool override catches FastMCP parameter validation errors (before function runs), sanitizes Pydantic internals. Combined with existing _safe_tool in-function catch. 9 additional tests. Rebased onto develop, pushed. (fixes #844)
 
 ## Pushed branches (awaiting PR)
-- fix/issue-807-press-wrong-process: rebased onto remote, force-pushed
-- fix/issue-840-type-newline-drop: rebased onto remote, force-pushed
-- fix/issue-834-browser-json-flag: rebased onto remote, force-pushed
-- fix/issue-844-mcp-pydantic-leak: rebased onto remote, force-pushed
+- fix/issue-843-capture-popup-menus: composites popup menu windows into app capture
+- fix/issue-844-mcp-pydantic-leak: two-layer Pydantic error sanitization
+- fix/issue-807-press-wrong-process: exits with error when window focus fails
+- fix/issue-810-mcp-stdout-debug: suppresses logging in MCP stdio transport
+- fix/issue-834-browser-json-flag: browser subcommand emits JSON errors with -j
+- fix/issue-840-type-newline-drop: handles newlines by splitting into Enter keypresses
+- fix/issue-841-calculator-uia-test: Calculator UIA detection via comtypes
+- docs/readme-missing-commands: adds 12 missing CLI commands to README
+- refactor/issue-832-split-app-cmd: splits app_cmd.py into focused modules
+- refactor/issue-833-split-shell: splits _shell.py into focused modules
+- test/recording-cmd-coverage: recording command test coverage
+- test/shell-mixin-coverage: 42 tests for ShellMixin
 
 ## Rebased branches
-- All four branches above were rebased onto their remote counterparts (which contained work from earlier sessions today), conflicts resolved
+- fix/issue-807-press-wrong-process: rebased onto develop, pushed
+- fix/issue-810-mcp-stdout-debug: rebased onto develop, pushed
+- fix/issue-834-browser-json-flag: rebased onto develop, pushed
+- fix/issue-840-type-newline-drop: rebased onto develop, pushed
+- fix/issue-841-calculator-uia-test: rebased onto develop, pushed
+- fix/issue-843-capture-popup-menus: rebased onto develop, pushed
+- fix/issue-844-mcp-pydantic-leak: rebased onto develop, pushed
+- docs/readme-missing-commands: rebased onto develop, pushed
+- refactor/issue-832-split-app-cmd: rebased onto develop, pushed
+- refactor/issue-833-split-shell: rebased onto develop, pushed
+- test/recording-cmd-coverage: rebased onto develop, pushed
+- test/shell-mixin-coverage: rebased onto develop, pushed
 
 ## Issues found but not fixed
-- #843 (capture --app popup menus): NOT in codebase despite earlier session claims. Needs implementation — capture_app_windows() compositing popup/sibling windows. Medium-large task, deferred to next session.
 - #842 (self-hosted runner offline): infra issue, cannot fix from Linux
 - #777 (capture_screen Unicode path): DLL binary needs Windows rebuild
 
 ## Next session should
-- Fix #843 (capture --app excludes popup menu windows) — P1, highest remaining priority
-- Check if Orc-Mycelium created PRs for the 4 rebased branches
-- Investigate PR #838 CI failure (test/recording-cmd-coverage)
-- Work on #809 (unified find engine) if P1 bugs are clear
+- Check if Orc-Mycelium created PRs for the 12 branches above
+- If PRs merged, verify CI status and close issues
+- Work on #777 (capture_screen Unicode file path — backlog P1)
+- Work on #809 (unified find engine — P1 feature) if all bugs clear

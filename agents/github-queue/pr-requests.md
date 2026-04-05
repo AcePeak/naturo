@@ -1290,7 +1290,7 @@ Format:
 ## PR Request: fix/issue-844-mcp-pydantic-leak
 - **Base**: develop
 - **Title**: fix: MCP tool validation errors return INVALID_INPUT instead of leaking Pydantic internals (fixes #844)
-- **Body**: Pydantic ValidationError was caught by the generic Exception handler in _safe_tool, exposing raw field paths, validator names, and internal type info to MCP clients. Now detected via duck-typing and formatted into clean "Invalid input: field: message" strings with code INVALID_INPUT. Defensive fallback ensures no leak even if errors() fails. 6 new tests, all passed, ruff+mypy clean.
+- **Body**: Two layers of protection: (1) _safe_tool catches Pydantic ValidationError inside tool functions via duck-typing, returns INVALID_INPUT with clean message. (2) call_tool override catches ToolError from FastMCP parameter validation (before function runs), sanitizes the wrapped Pydantic cause. Both use .errors() duck-typing, no direct Pydantic import. Defensive fallback ensures no leak. 15 new tests total, all passed, ruff+mypy clean.
 - **Auto-merge**: yes
 - **Date**: 2026-04-05
 - **Status**: pending
