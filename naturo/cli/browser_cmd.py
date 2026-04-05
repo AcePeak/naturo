@@ -11,6 +11,8 @@ from typing import Optional
 
 import click
 
+from naturo.cli.error_helpers import emit_error, emit_exception_error
+
 
 @click.group()
 @click.option("--port", type=int, default=9222, envvar="NATURO_CDP_PORT",
@@ -36,8 +38,12 @@ def browser(ctx: click.Context, port: int, host: str) -> None:
     ctx.obj["cdp_host"] = host
 
 
-def _get_page(ctx: click.Context):
+def _get_page(ctx: click.Context, *, json_output: bool = False):
     """Create a BrowserPage from context options.
+
+    Args:
+        ctx: Click context with cdp_port and cdp_host.
+        json_output: When True, emit structured JSON error on failure.
 
     Returns:
         BrowserPage instance.
@@ -52,13 +58,21 @@ def _get_page(ctx: click.Context):
             host=ctx.obj["cdp_host"],
         )
     except Exception as exc:
-        click.echo(f"Error: Cannot connect to browser: {exc}", err=True)
-        click.echo(
-            "Make sure Chrome is running with "
-            f"--remote-debugging-port={ctx.obj['cdp_port']}",
-            err=True,
+        port = ctx.obj['cdp_port']
+        msg = (
+            f"Cannot connect to browser: {exc}. "
+            f"Make sure Chrome is running with "
+            f"--remote-debugging-port={port}"
         )
-        raise SystemExit(1)
+        emit_error(
+            "BROWSER_CONNECTION_ERROR", msg, json_output,
+            suggested_action=(
+                "Launch Chrome with --remote-debugging-port: "
+                "'naturo browser launch' or "
+                f"'chrome --remote-debugging-port={port}'"
+            ),
+            recoverable=True,
+        )
 
 
 # ── Navigate ──────────────────────────────────────────────────────────────────
@@ -78,7 +92,7 @@ def navigate(ctx: click.Context, url: str, wait_until: str, json_output: bool) -
         naturo browser navigate https://example.com
         naturo browser navigate https://example.com --wait-until networkidle
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         page.navigate(url, wait_until=wait_until)
         if json_output:
@@ -125,7 +139,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         if timeout is not None:
             page.wait_for(selector, timeout=timeout)
@@ -162,11 +176,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
                 text = el.text[:80].replace("\n", "\\n")
                 click.echo(f"  e1  [{el.tag_name}] {text}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -197,7 +207,7 @@ def click_cmd(ctx: click.Context, selector: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         el.click(offset_x=offset_x, offset_y=offset_y)
@@ -206,11 +216,7 @@ def click_cmd(ctx: click.Context, selector: str, by: Optional[str],
         else:
             click.echo(f"Clicked: {selector}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -238,7 +244,7 @@ def type_cmd(ctx: click.Context, selector: str, text: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         el.type(text, clear_first=clear_first)
@@ -247,11 +253,7 @@ def type_cmd(ctx: click.Context, selector: str, text: str, by: Optional[str],
         else:
             click.echo(f"Typed into: {selector}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -280,7 +282,7 @@ def select_cmd(ctx: click.Context, selector: str, value: str,
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         el.select(value)
@@ -291,11 +293,7 @@ def select_cmd(ctx: click.Context, selector: str, value: str,
         else:
             click.echo(f"Selected '{value}' in: {selector}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -320,7 +318,7 @@ def text_cmd(ctx: click.Context, selector: str, by: Optional[str], json_output: 
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         content = el.text
@@ -329,11 +327,7 @@ def text_cmd(ctx: click.Context, selector: str, by: Optional[str], json_output: 
         else:
             click.echo(content)
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -357,7 +351,7 @@ def attr_cmd(ctx: click.Context, selector: str, attribute: str,
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         value = el.attr(attribute)
@@ -368,11 +362,7 @@ def attr_cmd(ctx: click.Context, selector: str, attribute: str,
         else:
             click.echo(value if value is not None else "(null)")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -396,7 +386,7 @@ def html_cmd(ctx: click.Context, selector: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         content = el.outer_html if outer else el.inner_html
@@ -405,11 +395,7 @@ def html_cmd(ctx: click.Context, selector: str, by: Optional[str],
         else:
             click.echo(content)
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -432,7 +418,7 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
         naturo browser screenshot --path page.png
         naturo browser screenshot --full-page --path full.png
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         saved_path = page.screenshot(path, full_page=full_page)
         if json_output:
@@ -455,7 +441,7 @@ def eval_cmd(ctx: click.Context, expression: str, json_output: bool) -> None:
         naturo browser eval "document.title"
         naturo browser eval "1 + 1" --json
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         result = page.evaluate(expression)
         if json_output:
@@ -471,7 +457,7 @@ def eval_cmd(ctx: click.Context, expression: str, json_output: bool) -> None:
 @click.pass_context
 def url_cmd(ctx: click.Context, json_output: bool) -> None:
     """Get the current page URL."""
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         current_url = page.url
         if json_output:
@@ -487,7 +473,7 @@ def url_cmd(ctx: click.Context, json_output: bool) -> None:
 @click.pass_context
 def title_cmd(ctx: click.Context, json_output: bool) -> None:
     """Get the current page title."""
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         current_title = page.title
         if json_output:
@@ -522,7 +508,7 @@ def wait_cmd(ctx: click.Context, selector: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         page.wait_for(selector, timeout=timeout, state=state)
         if json_output:
@@ -530,11 +516,7 @@ def wait_cmd(ctx: click.Context, selector: str, by: Optional[str],
         else:
             click.echo(f"Element '{selector}' is {state}.")
     except TimeoutError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
     finally:
         page.close()
 
@@ -553,7 +535,7 @@ def frames_cmd(ctx: click.Context, json_output: bool) -> None:
         naturo browser frames
         naturo browser frames --json
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         frame_list = page.frames()
         if json_output:
@@ -596,7 +578,7 @@ def frame_eval_cmd(ctx: click.Context, frame_ref: str, expression: str,
         naturo browser frame-eval "checkout" "document.title" --by-name
         naturo browser frame-eval "payment.example.com" "document.title" --by-url
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         if by_name:
             frame = page.frame(name=frame_ref)
@@ -611,11 +593,7 @@ def frame_eval_cmd(ctx: click.Context, frame_ref: str, expression: str,
         else:
             click.echo(result)
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -643,7 +621,7 @@ def frame_find_cmd(ctx: click.Context, frame_ref: str, selector: str,
         naturo browser frame-find "iframe#payment" "#card-number"
         naturo browser frame-find "checkout" "input" --by-name --all
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         if by_name:
             frame = page.frame(name=frame_ref)
@@ -677,11 +655,7 @@ def frame_find_cmd(ctx: click.Context, frame_ref: str, selector: str,
                 text = el.text[:80].replace("\n", "\\n")
                 click.echo(f"  e1  [{el.tag_name}] {text}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -694,7 +668,7 @@ def frame_find_cmd(ctx: click.Context, frame_ref: str, selector: str,
 @click.pass_context
 def tabs_cmd(ctx: click.Context, json_output: bool) -> None:
     """List open browser tabs."""
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         tab_list = page.tabs()
         if json_output:
@@ -742,7 +716,7 @@ def scroll_cmd(ctx: click.Context, to_bottom: bool, to_top: bool,
         naturo browser scroll --to-element "#footer"
         naturo browser scroll --by 500
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         if to_bottom:
             page.scroll_to_bottom()
@@ -757,8 +731,11 @@ def scroll_cmd(ctx: click.Context, to_bottom: bool, to_top: bool,
             page.scroll_by(by_pixels)
             msg = f"Scrolled by {by_pixels}px"
         else:
-            click.echo("Error: specify --to-bottom, --to-top, --to-element, or --by", err=True)
-            raise SystemExit(1)
+            emit_error(
+                "INVALID_INPUT",
+                "specify --to-bottom, --to-top, --to-element, or --by",
+                json_output,
+            )
 
         if json_output:
             click.echo(json_module.dumps({"status": "ok", "action": msg}))
@@ -789,7 +766,7 @@ def hover_cmd(ctx: click.Context, selector: str, by: Optional[str],
     if by:
         selector = f"{by}:{selector}"
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         el = page.find(selector)
         el.hover()
@@ -798,11 +775,7 @@ def hover_cmd(ctx: click.Context, selector: str, by: Optional[str],
         else:
             click.echo(f"Hovered: {selector}")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     finally:
         page.close()
 
@@ -823,7 +796,7 @@ def requests_cmd(ctx: click.Context, pattern: Optional[str], json_output: bool) 
         naturo browser requests --pattern '*/api/*'
         naturo browser requests --json
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         snapshot = page.network.capture_snapshot()
         if pattern:
@@ -844,11 +817,7 @@ def requests_cmd(ctx: click.Context, pattern: Optional[str], json_output: bool) 
                     click.echo(f"  {r.get('type', '?'):<10} {size_kb:>8.1f} KB  {r.get('name', '')[:80]}")
                 click.echo(f"\n{len(snapshot)} request(s)")
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
     finally:
         page.close()
 
@@ -870,7 +839,7 @@ def intercept_cmd(ctx: click.Context, pattern: str, action: str,
         naturo browser intercept '*/tracking/*' --action abort
         naturo browser intercept '*/config.json' --action fulfill --body '{"debug":true}'
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         if action == "abort":
             page.network.abort_pattern(pattern)
@@ -888,11 +857,7 @@ def intercept_cmd(ctx: click.Context, pattern: str, action: str,
         else:
             click.echo(f"Interception rule added: {action} {pattern}")
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
     finally:
         page.close()
 
@@ -974,17 +939,9 @@ def launch_cmd(ctx: click.Context, profile: Optional[str],
             if profile:
                 click.echo(f"Profile: {profile}")
     except FileNotFoundError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="APP_NOT_FOUND")
     except RuntimeError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
 
 
 @browser.command("profiles")
@@ -1057,7 +1014,7 @@ def download_cmd(
     abs_dir = os.path.abspath(directory)
     os.makedirs(abs_dir, exist_ok=True)
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         set_download_dir(page, abs_dir)
 
@@ -1078,15 +1035,7 @@ def download_cmd(
         try:
             path = wait_for_download(abs_dir, timeout=timeout)
         except TimeoutError as exc:
-            if json_output:
-                click.echo(json_module.dumps({
-                    "success": False,
-                    "error": str(exc),
-                    "download_dir": abs_dir,
-                }))
-            else:
-                click.echo(f"Error: {exc}", err=True)
-            raise SystemExit(1)
+            emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
 
         if json_output:
             click.echo(json_module.dumps({
@@ -1100,11 +1049,7 @@ def download_cmd(
     except SystemExit:
         raise
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"success": False, "error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
     finally:
         page.close()
 
@@ -1129,7 +1074,7 @@ def stealth_cmd(ctx: click.Context, json_output: bool) -> None:
     """
     from naturo.browser._stealth import apply_stealth_patches
 
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         count = apply_stealth_patches(page)
         if json_output:
@@ -1140,11 +1085,7 @@ def stealth_cmd(ctx: click.Context, json_output: bool) -> None:
         else:
             click.echo(f"Applied {count} stealth patches.")
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
     finally:
         page.close()
 
@@ -1189,7 +1130,7 @@ def stealth_check_cmd(ctx: click.Context, json_output: bool) -> None:
 
     page = None
     try:
-        page = _get_page(ctx)
+        page = _get_page(ctx, json_output=json_output)
         results = check_stealth(page)
         all_passed = all(results.values())
 
@@ -1213,11 +1154,7 @@ def stealth_check_cmd(ctx: click.Context, json_output: bool) -> None:
     except SystemExit:
         raise
     except Exception as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
     finally:
         if page is not None:
             page.close()
@@ -1240,7 +1177,7 @@ def captcha_detect(ctx: click.Context, json_output: bool) -> None:
         naturo browser captcha-detect
         naturo browser captcha-detect --json
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     from naturo.browser._captcha import CaptchaManager
 
     manager = CaptchaManager(page)
@@ -1282,7 +1219,7 @@ def captcha_solve(ctx: click.Context, solver: str, token: Optional[str],
         naturo browser captcha-solve --solver manual --timeout 60
         naturo browser captcha-solve --solver token --token "03AGdBq24..."
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     from naturo.browser._captcha import (
         CaptchaManager,
         CaptchaError,
@@ -1296,8 +1233,11 @@ def captcha_solve(ctx: click.Context, solver: str, token: Optional[str],
     solver_instance: CaptchaSolver
     if solver == "token":
         if not token:
-            click.echo("Error: --token is required when using 'token' solver", err=True)
-            raise SystemExit(1)
+            emit_error(
+                "INVALID_INPUT",
+                "--token is required when using 'token' solver",
+                json_output,
+            )
         solver_instance = TokenInjectionSolver(token=token)
     else:
         solver_instance = ManualSolver(timeout=timeout)
@@ -1313,14 +1253,7 @@ def captcha_solve(ctx: click.Context, solver: str, token: Optional[str],
         else:
             click.echo(f"Captcha solved ({len(result_token)} chars)")
     except CaptchaError as exc:
-        if json_output:
-            click.echo(json_module.dumps({
-                "success": False,
-                "error": str(exc),
-            }))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output)
 
 
 # ── Wait mechanisms (#762) ───────────────────────────────────────────────────
@@ -1340,7 +1273,7 @@ def wait_navigation_cmd(ctx: click.Context, timeout: float,
         naturo browser wait-navigation
         naturo browser wait-navigation --timeout 10
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         new_url = page.wait_for_navigation(timeout=timeout)
         if json_output:
@@ -1348,11 +1281,7 @@ def wait_navigation_cmd(ctx: click.Context, timeout: float,
         else:
             click.echo(f"Navigation complete: {new_url}")
     except TimeoutError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
     finally:
         page.close()
 
@@ -1375,7 +1304,7 @@ def wait_url_cmd(ctx: click.Context, pattern: str, regex: bool,
         naturo browser wait-url "/dashboard"
         naturo browser wait-url "order_id=\\d+" --regex
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         matched_url = page.wait_for_url(pattern, regex=regex, timeout=timeout)
         if json_output:
@@ -1383,11 +1312,7 @@ def wait_url_cmd(ctx: click.Context, pattern: str, regex: bool,
         else:
             click.echo(f"URL matched: {matched_url}")
     except TimeoutError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
     finally:
         page.close()
 
@@ -1409,7 +1334,7 @@ def wait_function_cmd(ctx: click.Context, expression: str,
         naturo browser wait-function "document.querySelector('.loaded')"
         naturo browser wait-function "window.appReady === true" --timeout 15
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         result = page.wait_for_function(expression, timeout=timeout)
         if json_output:
@@ -1417,11 +1342,7 @@ def wait_function_cmd(ctx: click.Context, expression: str,
         else:
             click.echo(f"Expression truthy: {result}")
     except TimeoutError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
     finally:
         page.close()
 
@@ -1442,7 +1363,7 @@ def wait_network_idle_cmd(ctx: click.Context, idle_time: float,
         naturo browser wait-network-idle
         naturo browser wait-network-idle --idle-time 1.0 --timeout 60
     """
-    page = _get_page(ctx)
+    page = _get_page(ctx, json_output=json_output)
     try:
         page.wait_for_network_idle(idle_time=idle_time, timeout=timeout)
         if json_output:
@@ -1450,10 +1371,6 @@ def wait_network_idle_cmd(ctx: click.Context, idle_time: float,
         else:
             click.echo("Network is idle.")
     except TimeoutError as exc:
-        if json_output:
-            click.echo(json_module.dumps({"error": str(exc)}))
-        else:
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
     finally:
         page.close()
