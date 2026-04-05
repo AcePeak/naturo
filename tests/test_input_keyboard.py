@@ -468,3 +468,62 @@ class TestKeyboardFunctionalWindows:
         assert data.get("success") is True
         assert "text" in data.get("data", {})
         assert "length" in data.get("data", {})
+
+
+# ── #840: type_text newline splitting ────────────────────────────────────────
+
+
+class TestTypeTextNewlineSplitting:
+    """#840: type_text must split on newlines and press Enter between segments."""
+
+    def _make_mixin(self):
+        from unittest.mock import MagicMock
+        from naturo.backends.windows._input import InputMixin
+
+        obj = object.__new__(InputMixin)
+        obj._ensure_core = MagicMock()
+        return obj
+
+    def test_newline_splits_into_enter(self):
+        """Text with \\n is split into segments with Enter keypresses."""
+        from unittest.mock import MagicMock, patch
+
+        obj = self._make_mixin()
+        mock_strategy = MagicMock()
+
+        with patch("naturo.backends.windows._input.get_input_strategy",
+                   return_value=mock_strategy):
+            obj.type_text("hello\nworld")
+
+        assert mock_strategy.type_text.call_count == 2
+        mock_strategy.type_text.assert_any_call("hello", 5)
+        mock_strategy.type_text.assert_any_call("world", 5)
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_crlf_splits_correctly(self):
+        """Text with \\r\\n produces one Enter, not two."""
+        from unittest.mock import MagicMock, patch
+
+        obj = self._make_mixin()
+        mock_strategy = MagicMock()
+
+        with patch("naturo.backends.windows._input.get_input_strategy",
+                   return_value=mock_strategy):
+            obj.type_text("line1\r\nline2\r\nline3")
+
+        assert mock_strategy.type_text.call_count == 3
+        assert mock_strategy.press_key.call_count == 2
+
+    def test_no_newline_no_split(self):
+        """Text without newlines is typed as a single call."""
+        from unittest.mock import MagicMock, patch
+
+        obj = self._make_mixin()
+        mock_strategy = MagicMock()
+
+        with patch("naturo.backends.windows._input.get_input_strategy",
+                   return_value=mock_strategy):
+            obj.type_text("no newlines here")
+
+        mock_strategy.type_text.assert_called_once_with("no newlines here", 5)
+        mock_strategy.press_key.assert_not_called()
