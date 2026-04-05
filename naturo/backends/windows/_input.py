@@ -672,6 +672,8 @@ class InputMixin:
         Raises:
             NaturoCoreError: On system error.
         """
+        import re
+
         core = self._ensure_core()
         strategy = get_input_strategy(core, input_mode)
 
@@ -684,7 +686,6 @@ class InputMixin:
         # (#840) SendInput's UNICODE path silently drops \n and \r
         # control characters.  Split on line breaks and press Enter
         # between segments so multiline text is typed correctly.
-        import re
         segments = re.split(r"\r\n|\r|\n", text)
         for i, segment in enumerate(segments):
             if segment:
