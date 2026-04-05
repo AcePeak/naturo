@@ -9,9 +9,11 @@ import functools
 import io
 import logging
 import sys
+from collections.abc import Sequence
 from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 
 from naturo.backends.base import get_backend, Backend
 from naturo.errors import NaturoError
@@ -112,7 +114,57 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     register_system_tools(server, _get_backend, _safe_tool)
     register_excel_tools(server, _get_backend, _safe_tool)
 
+    # (#844) Intercept ToolError from Pydantic validation and sanitize the
+    # error message.  FastMCP validates tool parameters via Pydantic BEFORE
+    # calling the wrapped function, so _safe_tool cannot catch these.  When
+    # validation fails, Tool.run() wraps the Pydantic ValidationError in a
+    # ToolError whose __cause__ has an .errors() method.  We override
+    # call_tool to detect this and return a clean, user-facing message.
+    _original_call_tool = server.call_tool
+
+    async def _sanitized_call_tool(
+        name: str, arguments: dict[str, Any],
+    ) -> Sequence[Any] | dict[str, Any]:
+        try:
+            return await _original_call_tool(name, arguments)
+        except ToolError as exc:
+            cause = exc.__cause__
+            if cause is not None and hasattr(cause, "errors"):
+                raise ToolError(
+                    _format_tool_validation_error(name, cause),
+                ) from None
+            raise
+
+    server.call_tool = _sanitized_call_tool  # type: ignore[assignment]
+
     return server
+
+
+def _format_tool_validation_error(tool_name: str, cause: BaseException) -> str:
+    """Build a clean error message from a Pydantic ValidationError at the tool level.
+
+    This handles errors raised by FastMCP's parameter validation (before the
+    tool function runs).  Uses duck-typing (``cause.errors()``) so we never
+    import Pydantic directly — the dependency is optional.
+
+    Args:
+        tool_name: Name of the MCP tool that was called.
+        cause: The Pydantic ``ValidationError`` instance.
+
+    Returns:
+        Human-readable error string without Pydantic internals.
+    """
+    try:
+        errors = cause.errors()  # type: ignore[union-attr]
+        parts: list[str] = []
+        for err in errors:
+            locs = err.get("loc", ())
+            field = ".".join(str(loc) for loc in locs if loc != "__root__")
+            msg = err.get("msg", "invalid value")
+            parts.append(f"{field}: {msg}" if field else msg)
+        return f"Invalid parameters for {tool_name}: {'; '.join(parts)}"
+    except Exception:
+        return f"Invalid parameters for {tool_name}"
 
 
 def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
