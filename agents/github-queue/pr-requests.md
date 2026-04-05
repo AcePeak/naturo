@@ -1194,15 +1194,31 @@ Format:
 ## PR Request: fix/issue-807-press-wrong-process
 - **Base**: develop
 - **Title**: fix: press --app exits with error when window focus fails (fixes #807)
-- **Body**: Previously press --app only logged a debug message when focus_window() failed, then silently sent keystrokes to whatever window was in the foreground. Now exits non-zero with WINDOW_FOCUS_ERROR, consistent with the type command. 3 new tests. Ruff clean.
+- **Body**: Previously press --app only logged a debug message when focus_window() failed, then silently sent keystrokes to whatever window was in the foreground. Now exits non-zero with WINDOW_FOCUS_ERROR, consistent with the type command. 2 new tests. Ruff/mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-04
-- **Status**: pending
+- **Date**: 2026-04-05
+- **Status**: pending (branch rebased 2026-04-05)
 
 ## PR Request: fix/issue-840-type-newline-drop
 - **Base**: develop
 - **Title**: fix: handle newlines in type_text by splitting into Enter keypresses (fixes #840)
-- **Body**: SendInput's UNICODE path silently drops \n and \r characters. Now split text on line breaks (\n, \r\n, \r) and insert press_key("enter") between segments. 3 new tests covering multi-line, CRLF, and trailing newline. Ruff clean.
+- **Body**: The DLL's key_type sends raw Unicode but cannot produce Enter keypresses from literal \n/\r\n. Now split on newline boundaries via re.split and press_key("enter") between segments. 3 new tests. Ruff/mypy clean.
 - **Auto-merge**: yes
-- **Date**: 2026-04-04
+- **Date**: 2026-04-05
+- **Status**: pending (branch rebased 2026-04-05)
+
+## PR Request: fix/issue-834-browser-json-flag
+- **Base**: develop
+- **Title**: fix: browser subcommand respects -j flag for connection errors (fixes #834)
+- **Body**: _get_page() now accepts json_output and emits structured JSON with BROWSER_CONNECTION_ERROR code when browser connection fails in JSON mode. All 32 browser subcommand callers pass their json_output flag. 2 new tests. Ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
+- **Status**: pending
+
+## PR Request: fix/issue-841-calculator-uia-test
+- **Base**: develop
+- **Title**: fix: comtypes UIA fallback probes WinUI child windows (fixes #841)
+- **Body**: The comtypes fallback (Strategy 2) now mirrors Strategy 1 by probing AFH and DesktopWindowXamlSource child HWNDs. Fixes Calculator detection on Win11 where top-level window doesn't expose useful UIA tree. Integration tests updated with exe="CalculatorApp.exe" and use_cache=False. 1 new unit test. Ruff/mypy clean.
+- **Auto-merge**: yes
+- **Date**: 2026-04-05
 - **Status**: pending
