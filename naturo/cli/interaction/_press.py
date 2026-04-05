@@ -184,7 +184,16 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                 _target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
-            if _target_hwnd:
+            if not _target_hwnd:
+                _target_desc = app or window_title or f"PID {pid}" or f"HWND {hwnd}"
+                _common._json_err(
+                    f"Could not find window for '{_target_desc}'. "
+                    "Is the application running and visible?",
+                    json_output,
+                    code="WINDOW_NOT_FOUND",
+                )
+                return
+            else:
                 backend.focus_window(hwnd=_target_hwnd)
                 # Record actual focused PID for routing accuracy
                 try:
@@ -208,9 +217,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                 time.sleep(0.15)
         except Exception as exc:
             _common._json_err(
-                f"Failed to focus target window: {exc}. "
-                f"Cannot guarantee keystrokes reach "
-                f"'{app or window_title or hwnd}'.",
+                f"Cannot focus target window for press: {exc}",
                 json_output,
                 code="WINDOW_FOCUS_ERROR",
             )

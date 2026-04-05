@@ -476,3 +476,46 @@ class TestHotkeyAlias:
             result = runner.invoke(hotkey, ["--json"], catch_exceptions=False)
             assert result.exit_code != 0
             assert "INVALID_INPUT" in result.output or "keys" in result.output.lower()
+
+
+class TestPressFocusFailure:
+    """#807: press --app must error when the target window cannot be focused."""
+
+    def test_press_app_focus_error_json(self, runner):
+        """When focus_window raises, press should emit WINDOW_FOCUS_ERROR JSON."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = 12345
+        mock_backend.focus_window.side_effect = RuntimeError("cannot focus")
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("FakeApp", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "FakeApp", "--json"],
+                catch_exceptions=False,
+            )
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "WINDOW_FOCUS_ERROR"
+
+    def test_press_app_window_not_found_json(self, runner):
+        """When _resolve_hwnd returns None, press should emit WINDOW_NOT_FOUND."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = None
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("FakeApp", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "FakeApp", "--json"],
+                catch_exceptions=False,
+            )
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "WINDOW_NOT_FOUND"
