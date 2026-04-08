@@ -12,16 +12,16 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-04-06 daily review)
-- **v0.3.2**: 23 open / 82 closed (~78%). 13 issues now `status:done` awaiting QA verification. All Dev-Sirius branches from Apr 5 session merged (PRs #845-#855). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2 — NEW). **BLOCKER**: self-hosted runner offline (#842) — 13+ fixes cannot be QA-verified.
+## Milestone Summary (2026-04-08 daily review)
+- **v0.3.2**: 23 open / 82 closed (~78%). **No progress since Apr 6** — project stalled on offline runner. 13 issues `status:done` awaiting QA verification, accumulating bitrot risk. Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline 6+ days (#842) — escalated.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
 
 ## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Rebased all branches onto latest develop. Next: #809 (unified find engine), #720 (split _element.py), #856 (split browser_cmd.py), #777 (Unicode capture).
-- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline — QA automation stuck in queued state. 13+ issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-06): processed all Dev-Sirius work, updated 13 issue labels to status:done, commented on all with PR references, updated #773 QA scope, cleaned up stale #720 label, created #856 (browser_cmd.py split), refreshed pending-issues.md.
+- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle since Apr 5. Next: #809 (unified find engine), #720 (split _element.py), #856 (split browser_cmd.py), #777 (Unicode capture).
+- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 6+ days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
+- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-08): escalated #842 (runner offline), updated #773 QA scope to 13 issues, cancelled 10 stale queued CI runs, confirmed no pending Dev-Sirius work.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
