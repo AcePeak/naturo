@@ -12,8 +12,8 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-04-09 daily review)
-- **v0.3.2**: 23 open / 82 closed (~78%). **No progress since Apr 5** — project stalled 4 days on offline runner. 13 issues `status:done` awaiting QA verification. Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline 7+ days (#842) — escalated twice.
+## Milestone Summary (2026-04-09 evening review)
+- **v0.3.2**: 23 open / 82 closed (~78%). **No progress since Apr 5** — project stalled 4 days on offline runner. 13 issues `status:done` awaiting QA verification. Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline 8 days (#842) — escalated twice. Created #857 to disable scheduled workflows creating noise.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
@@ -21,7 +21,7 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
 ## Agent Roster
 - **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle since Apr 5. Next: #809 (unified find engine), #720 (split _element.py), #856 (split browser_cmd.py), #777 (Unicode capture).
 - **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 6+ days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-09): escalated #842 again (day 7), cancelled 15 more stale queued CI runs, updated #773 to 13 issues, confirmed no pending Dev-Sirius work.
+- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-09 evening): cancelled 11 more stale queued runs (26+ today), created #857 (disable scheduled workflows while runner offline), confirmed no pending Dev-Sirius work.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
