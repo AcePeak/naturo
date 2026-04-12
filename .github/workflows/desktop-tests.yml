@@ -3,8 +3,8 @@ name: Desktop Tests (Self-Hosted)
 on:
   # Desktop tests run on self-hosted runner (may be offline).
   # Triggered by QA agent or manually — NOT on push/PR to avoid blocking Dev workflow.
-  schedule:
-    - cron: '30 */2 * * *'   # Every 2 hours at :30 (runs only if runner is online)
+  # schedule:
+  #   - cron: '30 */2 * * *'   # Every 2 hours at :30 — DISABLED while runner offline (#857, #842)
   workflow_dispatch:
     inputs:
       test_filter:
