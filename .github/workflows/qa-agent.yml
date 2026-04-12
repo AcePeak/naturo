@@ -1,8 +1,8 @@
 name: QA Agent (Self-Hosted Desktop)
 
 on:
-  schedule:
-    - cron: '30 * * * *'   # Every hour at :30
+  # schedule:
+  #   - cron: '30 * * * *'   # Every hour at :30 — DISABLED while runner offline (#857, #842)
   workflow_dispatch:
     inputs:
       focus:
