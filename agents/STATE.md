@@ -12,25 +12,25 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-04-12 daily review)
-- **v0.3.2**: 24 open / 82 closed (77%). **No progress since Apr 5** — project stalled 7 days on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline **11 days** (#842). **FIX**: Disabled scheduled workflow cron triggers (#857) — no more stale run accumulation.
+## Milestone Summary (2026-04-12 evening review)
+- **v0.3.2**: 24 open / 82 closed (77%). **No progress since Apr 5** — project stalled 7 days on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline **12 days** (#842). **FIX**: PR #858 disables crons on `main` (root cause: GitHub evaluates schedule triggers from default branch, not develop).
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
 
 ## Agent Roster
 - **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle since Apr 5 (7 days). Next: #809 (unified find), #720 (split _element.py), #856 (split browser_cmd.py).
-- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 11 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-12): cancelled 30 stale queued runs, disabled workflow crons (#857), escalated #842 day 11, refreshed pending-issues.md.
+- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 12 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
+- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-12 evening): found root cause of persistent cron triggers (main branch, not develop), created PR #858 to main, cancelled 15 more stale runs, escalated #842 day 12.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
 - State flow: status:in-progress -> status:done -> verified -> close
 - CI must be green before any merge
-- **BLOCKER**: Self-hosted runner ROBOT-COMPILE offline 11 days (#842)
+- **BLOCKER**: Self-hosted runner ROBOT-COMPILE offline 12 days (#842)
 - All remote branches clean (only develop and main)
 - CI on develop: GREEN (Build & Test + CodeQL pass)
-- Scheduled workflow crons DISABLED (#857) — re-enable when runner restored
+- Scheduled workflow crons DISABLED on main (PR #858) — re-enable when runner restored
 
 ## Code Health
 - 150 source files, 222 test files
