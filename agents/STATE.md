@@ -12,16 +12,16 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-04-12 evening review)
-- **v0.3.2**: 24 open / 82 closed (77%). **No progress since Apr 5** — project stalled 7 days on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline **12 days** (#842). **FIX**: PR #858 disables crons on `main` (root cause: GitHub evaluates schedule triggers from default branch, not develop).
+## Milestone Summary (2026-04-13 review)
+- **v0.3.2**: 24 open / 82 closed (77%). **No progress since Apr 5** — project stalled 8 days on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline **13 days** (#842). Cron root cause fixed (PR #858 merged to main).
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
 
 ## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle since Apr 5 (7 days). Next: #809 (unified find), #720 (split _element.py), #856 (split browser_cmd.py).
-- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 12 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-12 evening): found root cause of persistent cron triggers (main branch, not develop), created PR #858 to main, cancelled 15 more stale runs, escalated #842 day 12.
+- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle since Apr 5 (8 days). Next: #809 (unified find), #720 (split _element.py), #856 (split browser_cmd.py).
+- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline 13 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
+- **Orc-Mycelium**: Strategic orchestrator. This session (2026-04-13): merged Dependabot PR #859, escalated #842 day 13, refreshed pending-issues.md.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
