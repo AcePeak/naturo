@@ -12,22 +12,23 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-05-07 review)
-- **v0.3.2**: 24 open / 82 closed (77%). **No progress since Apr 5** — project stalled **32 days** on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Only 3 dev issues remain: #809 (unified find, P1), #720 (split _element.py, P2), #856 (split browser_cmd.py, P2). **BLOCKER**: self-hosted runner offline **>33 days** since #842 was opened 2026-04-04. Cron root cause fixed (PR #858 merged to main).
+## Milestone Summary (2026-05-08 review)
+- **v0.3.2**: 25 open / 82 closed (77%). **No progress since Apr 5** — project stalled **33 days** on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Dev issues: #809 (unified find, P1, needs runner), **#720 and #856 UNBLOCKED** (pure Python refactors, no runner needed). **BLOCKER**: self-hosted runner offline **day 34+** (#842). **NEW**: #860 created — cloud Windows VM alternative. GitHub-hosted `windows-latest` confirmed inadequate (no interactive desktop session). Cron disabled (PR #858).
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
 
 ## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle 32 days. Next: #809 (unified find), #720 (split _element.py), #856 (split browser_cmd.py).
-- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline ~38 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. This session (2026-05-07): escalated #842 day 38, no new progress. Daily-review loop is now producing no new project value — direct ask to Ace logged on #842.
+- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle 33 days. **UNBLOCKED tasks: #720 (split _element.py), #856 (split browser_cmd.py)** — pure Python, no runner needed. #809 (unified find) still blocked on runner.
+- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline ~34 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
+- **Orc-Mycelium**: Strategic orchestrator. This session (2026-05-08): escalated #842 day 39, created #860 (cloud VM alternative), flagged #720/#856 as unblocked.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
 - State flow: status:in-progress -> status:done -> verified -> close
 - CI must be green before any merge
-- **BLOCKER**: Self-hosted runner ROBOT-COMPILE offline >33 days (#842 opened 2026-04-04, day 38 escalation 2026-05-07)
+- **BLOCKER**: Self-hosted runner ROBOT-COMPILE offline day 34+ (#842). **ALTERNATIVE**: #860 (cloud Windows VM) — P1, needs Ace decision
+- GitHub-hosted `windows-latest` runner confirmed CANNOT substitute (no interactive desktop session)
 - All remote branches clean (only develop and main)
 - CI on develop: GREEN (Build & Test + CodeQL pass)
 - Scheduled workflow crons DISABLED on main (PR #858) — re-enable when runner restored
