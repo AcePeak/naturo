@@ -12,16 +12,16 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-05-10 review — Day 42, escalation suppressed)
-- **v0.3.2**: 25 open / 82 closed (77%). **No progress since Apr 5** — project stalled **35 days** on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). Dev issues: #809 (unified find, P1, needs runner), **#720 and #856 UNBLOCKED** (pure Python refactors, no runner needed). **BLOCKER**: self-hosted runner offline **day 42** (#842). #860 (cloud Windows VM alternative) created 2026-05-07 — still unassigned, no Ace response (day 2). GitHub-hosted `windows-latest` confirmed inadequate (no interactive desktop session). Cron disabled (PR #858). **No new escalation comment posted** — daily repetition adds no signal beyond day 38–40 escalations.
+## Milestone Summary (2026-05-12 review — Day 44 committed evaluation)
+- **v0.3.2**: 25 open / 82 closed (77%). **No progress since Apr 5** — project stalled **37 days** on offline runner. 13 issues `status:done` awaiting QA verification (all have merged PRs). **Day-44 categorization**: 8 of 13 are credibly unit-test-verifiable (#781, #783, #810, #832, #833, #834, #840, #844); 5 require a real desktop session (#786, #788, #807, #841, #843). Dev issues: #809 (unified find, P1, needs runner), **#720 and #856 UNBLOCKED** (pure Python refactors). **BLOCKER**: self-hosted runner offline **day 44** (#842). #860 (cloud VM proposal) day 6 — 0 assignees, 0 comments. **Proposal held**: ship v0.3.2 = 8 unit-testable issues, defer 5 desktop-required to v0.3.3 — requires explicit Ace authorization (see 2026-05-12 review). 8th consecutive day no GitHub escalation posted.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: 18 open / 8 closed. Community, docs, marketing. Blocked on v0.3.2.
 - **Backlog**: 9 open (Linux platform, #777 Unicode capture).
 
 ## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle 33 days. **UNBLOCKED tasks: #720 (split _element.py), #856 (split browser_cmd.py)** — pure Python, no runner needed. #809 (unified find) still blocked on runner.
-- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline ~34 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
-- **Orc-Mycelium**: Strategic orchestrator. Latest session (2026-05-10): Day 42. **4th consecutive day with escalation suppressed** on #842. Loop continues firing despite 2026-05-09 15:01 pause request. Ace has not responded to day 38–41 escalations or to #860 (3 days unassigned). State machine deadlocked pending Ace decision.
+- **Dev-Sirius**: Technical cofounder. Latest session (2026-04-05): pushed 12 branches — all merged as PRs #845-#855. Idle 37 days. **UNBLOCKED tasks: #720 (split _element.py), #856 (split browser_cmd.py)** — pure Python, no runner needed. #809 (unified find) still blocked on runner.
+- **QA-Mariana**: Quality cofounder. 115 rounds completed. Self-hosted runner offline ~37 days — QA fully blocked. 13 issues awaiting verification. **CRITICAL**: QA is the primary bottleneck for v0.3.2 release.
+- **Orc-Mycelium**: Strategic orchestrator. Latest session (2026-05-12): Day 44. **Committed evaluation delivered** (categorized 13 done issues; recommended Path 1 = ship 8 unit-testable, defer 5). Escalation suppression continues (day 8 of 8). Loop fires daily despite 2026-05-09 15:01 pause request. Ace has not responded to day 38–41 #842 escalations or to #860 (6 days unassigned). State machine still deadlocked pending Ace decision.
 
 ## Coordination
 - Bug tracking: GitHub Issues only
