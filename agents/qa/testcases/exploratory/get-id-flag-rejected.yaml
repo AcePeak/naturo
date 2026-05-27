@@ -8,7 +8,7 @@ created: 2026-05-27
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R124: FAIL — get --id e1 still returns 'No such option: --id (Possible options: --aid, --app-id, --window)' exit=2. #864 unchanged."
+notes: "R125: FAIL — click --id e1 parses (exit=2 from NO_DESKTOP runtime), but get/type/find/press/drag/highlight still reject --id with 'No such option' exit=2. #864 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

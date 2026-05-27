@@ -77,3 +77,4 @@
 - [TC-0058](exploratory/window-targeting-flag-matrix.yaml) — P2: Window-targeting flag matrix (--app/--window/--hwnd/--pid) inconsistent across subcommands (#871) — **active**
 - [TC-0059](exploratory/click-usage-bypasses-json-envelope.yaml) — P2: Click UsageError (unknown option/invalid type) bypasses -j JSON envelope (#872) — **active**
 - [TC-0060](exploratory/mcp-serverinfo-version-mismatch.yaml) — P2: MCP serverInfo.version reports MCP SDK version instead of naturo version (#873) — **active**
+- [TC-0061](exploratory/eager-option-bypasses-json-envelope.yaml) — P2: `-j --version` / `-j --help` / `-j <unknown-cmd>` bypass JSON envelope (#874) — **active**

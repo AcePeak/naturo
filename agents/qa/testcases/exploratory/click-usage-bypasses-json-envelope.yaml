@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R124: FAIL — unknown-option path emits plain Click usage text + exit 2 across see/click/capture/type/press/list even with -j/--json. Missing-arg path (#123) works correctly. Discovered during Power User persona."
+notes: "R125: FAIL — see --depth abc -j and type --invalid-flag x -j both emit plain Click 'Usage:' text + exit 2 (not JSON envelope). Missing-arg path (#123) still correct. #872 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"
