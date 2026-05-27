@@ -71,3 +71,4 @@
 - [TC-0052](exploratory/get-id-flag-rejected.yaml) — P2: Only `click` accepts `--id eN`; 8 other element-targeting commands reject it (#864) — **active**
 - [TC-0053](exploratory/see-json-envelope-inconsistency.yaml) — P2: `see -j` returns bare tree on success but envelope on error (#865) — **active**
 - [TC-0054](exploratory/input-cmd-exit-code-on-no-desktop.yaml) — P2: input commands exit 2 + 'Usage:' on runtime errors instead of exit 1 (#866) — **active**
+- [TC-0055](exploratory/hidden-snapshot-typo-leak.yaml) — P2: Hidden `snapshot` command leaks into Click's 'Did you mean' suggestions (#867) — **active**
