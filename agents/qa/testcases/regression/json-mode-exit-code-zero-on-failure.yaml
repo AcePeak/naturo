@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-05-28
 last_result: pass
-consecutive_passes: 30
-notes: "2026-05-28 R120: PASS — exit 1 across all three probes (see -j, capture -j, non-JSON). Still executed against NO_DESKTOP_SESSION error path (desktop unavailable, #863). Consecutive 30."
+consecutive_passes: 31
+notes: "2026-05-28 R121: PASS — exit 1 across all three probes (see -j, capture -j, non-JSON). Still executed against NO_DESKTOP_SESSION error path (desktop unavailable, #863). Consecutive 31."
 
 preconditions:
   - "naturo is installed and in PATH"
