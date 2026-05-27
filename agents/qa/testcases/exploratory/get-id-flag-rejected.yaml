@@ -5,8 +5,10 @@ category: exploratory
 priority: P2
 source_issue: 864
 created: 2026-05-27
-last_run: 2026-05-27
+last_run: 2026-05-28
+last_result: fail
 consecutive_passes: 0
+notes: "R123: FAIL — click accepts --id (parses then exits 2 via #866 path); get/type/press/find/drag/highlight all reject --id with Click 'No such option'. #864 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

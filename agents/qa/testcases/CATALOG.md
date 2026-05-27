@@ -74,3 +74,4 @@
 - [TC-0055](exploratory/hidden-snapshot-typo-leak.yaml) — P2: Hidden `snapshot` command leaks into Click's 'Did you mean' suggestions (#867) — **active**
 - [TC-0056](regression/mcp-capture-screen-silent-black.yaml) — P0: MCP `capture_screen` returns all-black PNG with success:true when desktop not bindable (#868) — **active**
 - [TC-0057](exploratory/deps-prompt-leaks-into-json.yaml) — P2: Optional-dep install prompt leaks into -j JSON output (#869) — **active**
+- [TC-0058](exploratory/window-targeting-flag-matrix.yaml) — P2: Window-targeting flag matrix (--app/--window/--hwnd/--pid) inconsistent across subcommands (#871) — **active**

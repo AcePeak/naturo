@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R122: FAIL — `naturo snapshto` still resolves to 'Did you mean snapshot?'. naturo --help still omits the command. #867 unchanged."
+notes: "R123: FAIL — `naturo screenshot`/`snap`/`snapshots` all suggest hidden `snapshot` (count 1/1/1). naturo --help still hides it (count 0). #867 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

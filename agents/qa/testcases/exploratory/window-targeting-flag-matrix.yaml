@@ -1,0 +1,43 @@
+id: TC-0058
+title: "Window-targeting flag matrix inconsistent across subcommands (#871)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 871
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R123: FAIL — 7 commands missing at least one of --app/--window/--hwnd/--pid that the gold-standard see/click family accepts. Filed #871. Discovered during Chinese User persona (naturo list windows --window 记事本)."
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "find should accept --pid"
+    command: "naturo find foo --pid 1 2>&1"
+    expect: "Either NO_DESKTOP_SESSION error or 'element not found' — NOT 'No such option: --pid'"
+  - description: "find should accept --window"
+    command: "naturo find foo --window dummy 2>&1"
+    expect: "Same as above — flag should parse, then naturo runtime handles it"
+  - description: "menu-inspect should accept --hwnd"
+    command: "naturo menu-inspect --hwnd 1 2>&1"
+    expect: "Should parse the flag, not error with 'No such option'"
+  - description: "list windows should accept --window"
+    command: "naturo list windows --window dummy 2>&1"
+    expect: "Filtered (possibly empty) list, exit code 0 or 1 — not Click usage error"
+  - description: "highlight should accept --app"
+    command: "naturo highlight --app notepad e1 2>&1"
+    expect: "NO_DESKTOP_SESSION or runtime error — not 'No such option: --app'"
+  - description: "get should accept --pid"
+    command: "naturo get e1 --pid 1 2>&1"
+    expect: "Runtime error path, not 'No such option: --pid'"
+  - description: "set should accept --pid"
+    command: "naturo set e1 value --pid 1 2>&1"
+    expect: "Runtime error path, not 'No such option: --pid'"
+  - description: "app focus should accept --pid"
+    command: "naturo app focus --pid 1 2>&1"
+    expect: "Runtime error path, not 'No such option: --pid'"
+
+pass_criteria: "Every command that targets a window/element accepts the gold-standard set {--app, --window, --hwnd, --pid, --app-id}. None of the listed probes returns Click 'No such option' for these flags."
+fail_action: "Update #871 with the per-command/flag matrix showing which gaps remain."

@@ -7,8 +7,8 @@ source_issue: 781
 created: 2026-04-01
 last_run: 2026-05-28
 last_result: pass
-consecutive_passes: 32
-notes: "2026-05-28 R122: PASS — see -j exit=1, capture -j exit=1. Re-confirmed against NO_DESKTOP_SESSION path (#863). Consecutive 32."
+consecutive_passes: 33
+notes: "2026-05-28 R123: PASS — see -j exit=1, see --app notepad -j exit=1, capture --app notepad -j exit=1. NO_DESKTOP_SESSION (#863) path. Consecutive 33."
 
 preconditions:
   - "naturo is installed and in PATH"
