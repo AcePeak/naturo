@@ -1,38 +1,41 @@
 # QA Status
-Last updated: 2026-05-28 03:21
-Current round: 123
+Last updated: 2026-05-28 04:11
+Current round: 124
 Current milestone: v0.3.2 (23 open / 88 closed, 79%)
 
 ## This Round
-- Persona: Chinese User (hour 03 % 8 = 3)
-- CI Desktop Tests: 0 passed, 0 failed, **151 skipped** (no interactive desktop, #863). `.last-ci-sha` advanced `cf3e1fd` → `099c2bb`.
-- Targeted unit tests for the 3 untouched `status:done` issues:
-  - #807 (PR #845, `test_cli_press.py`): **66/66 PASS**
-  - #788 (PR #820, 5 test files): **88 passed, 3 FAILED on Windows** (broken tests — filed #870)
-  - #786 (PR #815, 3 test files): **16/16 PASS**
-- Issues verified + closed: **none** — partial-verification comments posted on #807, #786, #788 (with #870 cross-reference). All 5 status:done still blocked on #863.
-- E2E tests: skipped (no desktop). MCP `tools list` smoke-tested: 64 tools enumerated, exit 0.
-- Regression (Phase 5): TC-0041 consec 33, TC-0046 consec 24, TC-0053 partial (success branch blocked by #863), TC-0052/#864/TC-0054/#866/TC-0055/#867/TC-0057/#869 fail (unchanged — no fixes landed).
+- Persona: Power User (hour 04 % 8 = 4)
+- CI Desktop Tests: **skipped** (no new commits since 099c2bb; HEAD 2d2c01a is `[skip ci]` QA report)
+- Session degraded further than #863 baseline: no desktop access at all (not just SendInput) — `see/capture/list/type/press/click` all return `NO_DESKTOP_SESSION`. Diagnostic comment posted to #863.
+- Targeted unit tests for 5 status:done issues:
+  - #807 press routing: **66/66 PASS**
+  - #840 + #788 type: **64/64 PASS**
+  - #786 UWP menu click: **9/9 PASS**
+  - #843 capture popup: **27/27 PASS**
+  - #870 Windows-only broken tests: **3 FAIL / 73 PASS** (unchanged — no PR)
+- Issues verified + closed: **none** — partial-verify only. All 5 status:done still blocked on #863.
+- E2E tests: skipped (no desktop). MCP handshake works (initialize → tools/list returns tool catalog) but found a version bug in serverInfo.
+- Regression (Phase 5): TC-0041 PASS (consec 34) **→ RETIRED** (#781 closed); TC-0046 PASS (consec 25); TC-0052/TC-0054/TC-0055/TC-0057/TC-0058 FAIL unchanged.
 - New issues created:
-  - **#870** (bug, P2, from:qa, v0.3.2) — 3 unit tests added by PR #820 fail on Windows; missing `skipif`/platform guard
-  - **#871** (bug, P2, from:qa, v0.3.4) — Window-targeting flag matrix (--window/--hwnd/--pid) inconsistent across subcommands. Discovered during Chinese User simulation (`naturo list windows --window 记事本`).
-- Existing issues updated: comments on #807/#786/#788 (partial-verify), #788 cross-referenced to #870.
-- New test cases created: **TC-0058** (`exploratory/window-targeting-flag-matrix.yaml`, sources #871).
-- Test cases retired: none.
-- Total active test cases: 36 active / 23 retired.
-- Tests run: 170 unit (66+88+16) + 5 regression/exploratory TCs + ~20 exploratory probes including window-flag matrix sweep.
+  - **#872** (bug, P2, from:qa, v0.3.4) — Click UsageError (unknown option / invalid type) bypasses `-j` JSON envelope across see/click/capture/type/press/list. Cousin of #123 (which fixed only the missing-argument path). Discovered during Power User exploratory.
+  - **#873** (bug, P2, from:qa, v0.3.4) — MCP serverInfo.version returns mcp SDK version (1.26.0) instead of naturo version (0.3.1). Discovered during Power User MCP probe.
+- Existing issues updated: #863 (today's worsened session diagnostic).
+- New test cases created: **TC-0059** (`click-usage-bypasses-json-envelope.yaml`, sources #872), **TC-0060** (`mcp-serverinfo-version-mismatch.yaml`, sources #873).
+- Test cases retired: **TC-0041** (consec 34, #781 closed).
+- Total active test cases: 38 active / 22 retired / 2 blocked = 60 total (was 59 → +2 added, -1 retired… wait correction: was 36/23 last round per status.md, now 38/22 — accounting is messy due to prior round bookkeeping; trust the catalog counts).
+- Tests run: 169 unit (66+64+9+27+3) + 8 regression/exploratory TCs + ~25 exploratory probes including JSON envelope sweep, exit-code sweep, MCP handshake.
 
 ## Status:done queue
 - Started: 5
 - Verified + closed: 0
 - Rejected: 0
-- Partial-verify, retained: 5 (no movement from rounds 117–122)
+- Partial-verify, retained: 5 (no movement since rounds 117–123)
 - **End of round**: 5 (#786, #788, #807, #840, #843) — all still blocked on #863
 
 ## Top 3 Risks
-1. **#863 (P0 ship gate)** — UIPI/RDP session-binding blocker, day 2 since escalation. Without console-session QA access, v0.3.2 cannot ship. Workaround = launch QA from console session.
-2. **#870 (new this round)** — 3 Windows unit tests have been silently failing since PR #820 merged 53 days ago. Self-hosted runner (#842, day 59 offline) and cloud VM (#860, day 21 unassigned) mean Windows-only failures go unnoticed.
-3. **CLI contract debt** — 6 v0.3.4 CLI consistency bugs filed in the last 7 days (#864, #865, #866, #867, #869, #871). Needs a coherent flag spec before #92 (semver API stability) can land.
+1. **#863 (P0 ship gate)** — day 3 since escalation, *worsened* this round (session can't even read the desktop now). Console-session QA access is the unblock.
+2. **CLI contract debt cluster** — 7 open `-j`/CLI consistency bugs from rounds 118–124 (#864 #865 #866 #867 #869 #871 #872). Worth a single cleanup sprint before v0.3.4; otherwise #92 (semver guarantee) cannot land.
+3. **MCP correctness** — 2 MCP bugs found in 3 rounds (#868 silent black PNG, #873 wrong version). Indicates the MCP layer needs a dedicated correctness pass before AI Agent Builder adoption is comfortable.
 
 ## Persona Coverage (rolling)
 | Persona | Last round | Findings |
@@ -40,8 +43,8 @@ Current milestone: v0.3.2 (23 open / 88 closed, 79%)
 | First-time User (0) | R120 | #867 (snapshot typo leak) |
 | AI Agent Builder (1) | R121 | #868 (MCP capture_screen black PNG) |
 | Enterprise RPA Dev (2) | R122 | #869 (deps prompt leaks into -j JSON) |
-| Chinese User (3) | **R123** | **#871 (window-targeting flag matrix)** |
-| Power User (4) | — | next |
+| Chinese User (3) | R123 | #871 (window-targeting flag matrix) |
+| Power User (4) | **R124** | **#872 (Click UsageError bypasses -j) + #873 (MCP serverInfo version)** |
 | Accessibility User (5) | — | next |
 | Scripter (6) | R118 | #864/#865/#866 (CLI contract trio) |
 | Skeptical Evaluator (7) | — | next |

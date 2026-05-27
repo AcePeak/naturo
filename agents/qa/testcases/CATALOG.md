@@ -13,7 +13,7 @@
 
 - [TC-0038](regression/uwp-notepad-enumeration.yaml) — P0: UWP Notepad intermittently invisible to list apps after launch — **active**
 - [TC-0040](regression/capture-unicode-path-dll.yaml) — P1: naturo_core.dll capture_screen fails with Unicode file path — **active**
-- [TC-0041](regression/json-mode-exit-code-zero-on-failure.yaml) — P1: JSON mode (-j) returns exit code 0 on failure, breaking scripts — **active**
+- [TC-0041](regression/json-mode-exit-code-zero-on-failure.yaml) — P1: JSON mode (-j) returns exit code 0 on failure, breaking scripts — **retired** (34 passes, #781 closed)
 - [TC-0042](regression/type-escape-newline-dropped.yaml) — P1: type -E silently drops newline chars during keystroke simulation — **active**
 - [TC-0043](regression/calculator-uwp-invisible.yaml) — P0: app launch calculator reports success but Calculator invisible to list/see (#785) — **active**
 - [TC-0045](regression/type-stale-pid-silent-failure.yaml) — P0: type --app routes to stale PID after app restart, silently drops keystrokes — **active**
@@ -75,3 +75,5 @@
 - [TC-0056](regression/mcp-capture-screen-silent-black.yaml) — P0: MCP `capture_screen` returns all-black PNG with success:true when desktop not bindable (#868) — **active**
 - [TC-0057](exploratory/deps-prompt-leaks-into-json.yaml) — P2: Optional-dep install prompt leaks into -j JSON output (#869) — **active**
 - [TC-0058](exploratory/window-targeting-flag-matrix.yaml) — P2: Window-targeting flag matrix (--app/--window/--hwnd/--pid) inconsistent across subcommands (#871) — **active**
+- [TC-0059](exploratory/click-usage-bypasses-json-envelope.yaml) — P2: Click UsageError (unknown option/invalid type) bypasses -j JSON envelope (#872) — **active**
+- [TC-0060](exploratory/mcp-serverinfo-version-mismatch.yaml) — P2: MCP serverInfo.version reports MCP SDK version instead of naturo version (#873) — **active**

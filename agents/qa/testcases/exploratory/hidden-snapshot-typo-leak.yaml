@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R123: FAIL — `naturo screenshot`/`snap`/`snapshots` all suggest hidden `snapshot` (count 1/1/1). naturo --help still hides it (count 0). #867 unchanged."
+notes: "R124: FAIL — `naturo screenshot`/`snap`/`snapshots` all leak 'Did you mean snapshot' (count 1/1/1); --help still hides it (count 0). #867 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-04-02
 last_run: 2026-05-28
 last_result: pass
-consecutive_passes: 24
-notes: "2026-05-28 R123: PASS — see --app nonexistent exit=1, see --app 记事本 exit=1, see --app nonexistent -j exit=1. Path still NO_DESKTOP_SESSION (#863). Consecutive 24."
+consecutive_passes: 25
+notes: "2026-05-28 R124: PASS (25th) — see --app nonexistent exit=1, see --app 记事本 exit=1, see -j exit=1. Path remains NO_DESKTOP_SESSION (session even more locked than #863). source_issue still null — no eligible auto-retire."
 
 preconditions:
   - "naturo is installed and in PATH"

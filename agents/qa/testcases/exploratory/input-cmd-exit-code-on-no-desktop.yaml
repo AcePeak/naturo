@@ -8,7 +8,7 @@ created: 2026-05-27
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R123: FAIL — type/press/click exit 2 + Usage banner persists; see/capture/list-apps exit 1 correctly; -j path correct (type -j exit=1). #866 still open."
+notes: "R124: FAIL — type=2, press=2, click=2, see=1 (correct), type -j=1 (correct), Usage banner count=1 in stderr. #866 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

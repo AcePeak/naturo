@@ -1,0 +1,40 @@
+id: TC-0059
+title: "Click UsageError (unknown option / invalid type) bypasses -j JSON envelope (#872)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 872
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R124: FAIL — unknown-option path emits plain Click usage text + exit 2 across see/click/capture/type/press/list even with -j/--json. Missing-arg path (#123) works correctly. Discovered during Power User persona."
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "see --depth abc -j should emit JSON envelope"
+    command: "naturo see --depth abc -j 2>&1; echo EXIT=$?"
+    expect: "{success: false, error: {...}} on stdout, EXIT=1. Currently: plain 'Usage:' text on stderr, EXIT=2 (FAIL)"
+  - description: "type --invalid-flag x -j should emit JSON envelope"
+    command: "naturo type --invalid-flag x -j 2>&1; echo EXIT=$?"
+    expect: "JSON envelope, EXIT=1. Currently: plain 'No such option' text, EXIT=2 (FAIL)"
+  - description: "capture --invalid-flag x -j should emit JSON envelope"
+    command: "naturo capture --invalid-flag x -j 2>&1; echo EXIT=$?"
+    expect: "JSON envelope, EXIT=1. Currently: plain Click text, EXIT=2 (FAIL)"
+  - description: "press --bad x -j should emit JSON envelope (unknown option)"
+    command: "naturo press --bad x -j 2>&1; echo EXIT=$?"
+    expect: "JSON envelope, EXIT=1. Currently: plain Click text, EXIT=2 (FAIL)"
+  - description: "click --depth abc -j should emit JSON envelope"
+    command: "naturo click --depth abc -j 2>&1; echo EXIT=$?"
+    expect: "JSON envelope, EXIT=1. Currently: plain Click text, EXIT=2 (FAIL)"
+  - description: "Confirm baseline: press --json with missing-arg still returns envelope (regression on #123 fix)"
+    command: "naturo press --json 2>&1; echo EXIT=$?"
+    expect: "{success: false, error: {code: INVALID_INPUT, ...}}, EXIT=1 — already correct via #123"
+  - description: "Confirm -j position-independent: naturo -j see --depth abc"
+    command: "naturo -j see --depth abc 2>&1; echo EXIT=$?"
+    expect: "Same behavior as suffix form — JSON envelope required, currently plain text"
+
+pass_criteria: "Whenever -j/--json is on the command line, any Click failure (UsageError, NoSuchOption, BadOptionUsage, BadParameter) emits the standard JSON error envelope on stdout and exits 1"
+fail_action: "Update #872 with the per-command status"
