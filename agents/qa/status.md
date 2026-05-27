@@ -1,31 +1,28 @@
 # QA Status
-Last updated: 2026-05-27 21:29
-Current round: 117
+Last updated: 2026-05-27 22:17
+Current round: 118
 Current milestone: v0.3.2
 
 ## This Round
-- CI Desktop Tests: skipped (no code changes since cf3e1fd Apr 5; only docs/reviews/workflow files touched)
-- Persona: Accessibility User (hour 21 % 8 = 5)
-- Issues verified + closed: #832 (refactor app_cmd), #833 (refactor _shell), #810 (MCP stdout JSON-RPC), #834 (browser -j flag), #841 (Calculator UIA detection)
-- Issues REJECTED back to Dev: #844 — PR #853 fix is dead code due to FastMCP setup ordering (`server.call_tool` reassigned AFTER `_setup_handlers` already bound the original method); reproduced verbatim Pydantic-laden error. Detailed root cause posted; status:done removed.
-- Issues partially verified (code + unit tests pass, runtime blocked by #863): #840 (type newlines), #843 (capture popup menu) — status:done retained, partial-verify comments posted.
-- Issues NOT attempted (need input): #786, #788, #807
-- New issues created: **#863** (P1, bug, from:qa) — SendInput blocked in QA session, runtime verification of input commands impossible. Root: ERROR_ACCESS_DENIED (5) from SendInput, likely UIPI / RDP-reconnect desktop binding.
-- Phase 5 regression: skipped (input-dependent, blocked on #863)
-- Phase 6 test cases: none created (no product-level new behavior to capture)
-- E2E read-only checks: app launch/quit/find/inspect/list/see all OK; Notepad UWP 1 PID owns 14 tabs.
-- Tests run: 13 verification scenarios + 28 unit test cases across the 5 verified fixes
-- Cleanup: force-quit 14 stale Notepad windows left from rounds 100-116.
+- CI Desktop Tests: skipped (pytest run hangs in browser/launch_chrome trying CDP port; same blocker class as #842)
+- Persona: Scripter/Automator (hour 22 % 8 = 6)
+- Issues verified + closed: **none** — session-1 (Naturobot) disconnected mid-round; all desktop ops returned NO_DESKTOP_SESSION
+- Issues NOT attempted: #786, #788, #807, #840, #843 (all 5 still blocked on #863)
+- New issues created: **#864** (P2, bug, from:qa) `--id eN` rejected by 8 of 9 element-targeting commands; **#865** (P2, bug, from:qa) `see -j` bare tree on success vs envelope on error
+- Updated #863 with broader-scope evidence (entire desktop binding can drop after RDP reconnect, not just SendInput)
+- Phase 5 regression: skipped (input/desktop-dependent; would falsely claim coverage)
+- Phase 6 test cases: **TC-0052** (get/type/press/find/etc reject --id), **TC-0053** (see -j envelope inconsistency)
+- Cleanup: re-killed 14 stale Notepad processes via `taskkill /F /IM Notepad.exe`; UWP Notepad still resurrected the same tabs on next launch (suspended-state restore)
+- Tests run: 49 distinct exploratory checks (scripter-focused: help parse 12, --id matrix 9, JSON envelope matrix 12, source inspection 2, smoke 3, subprocess exit-code matrix 11)
 
 ## Status:done queue
-- Started: 11
-- Verified + closed: 5
-- Rejected: 1 (#844)
-- Partial-verify, retained: 2 (#840, #843)
-- Not attempted: 3 (#786, #788, #807)
+- Started: 5
+- Verified + closed: 0
+- Rejected: 0
+- Partial-verify, retained: 5 (no movement from round 117)
 - **End of round**: 5 (#786, #788, #807, #840, #843) — all blocked on #863
 
 ## Top 3 Risks
-1. **#863 SendInput block** gates 5 of 5 remaining status:done verifications. v0.3.2 release blocked on either resolving the session UIPI issue OR explicit Ace authorization to accept code+unit-test as sufficient verification (would violate SOUL.md Iron Rule about screenshot evidence).
-2. **#844 fix was dead code, undetected for 7 weeks** (PR #853 merged Apr 5). Unit tests passed; runtime path never exercised end-to-end. Suggests other FastMCP overrides done post-init may also be silently broken — audit recommended.
-3. **UWP Notepad window leak across rounds** — rounds 100, 115, 116 each left unsaved test content as orphan tabs. Force-quit cleared them this round. App-lifecycle hygiene is in the QA prompt; need to actually follow it every round.
+1. **#863 broader than originally framed.** Round 118 confirmed the SendInput block is the leading edge of a full interactive-desktop-binding loss. After RDP disconnect/reconnect, the QA process is pinned to session 1 (now disconnected), while console session 2 holds the active desktop. ALL naturo desktop commands fail, not just input. Workaround: launch QA from console session, not RDP.
+2. **UWP Notepad tab leak persists across rounds.** `taskkill` clears the process but UWP Application Frame Host restores the multi-tab session on next launch from suspended state. 14 stale tabs from rounds 100-116 keep reappearing. Need a UWP-aware close (`naturo app quit notepad --force --no-restore`) or shell-level UWP package suspension.
+3. **JSON contract drift across CLI surface.** Three patterns coexist: (a) `list <x> -j` envelopes both ways, (b) `see -j` bare-tree on success + envelope on error (#865), (c) Click-level validation errors emit Usage text + exit=2 regardless of `-j`. AI agents and scripters cannot rely on a uniform discriminator. Sweep PR recommended before v0.3.4 marketing push.

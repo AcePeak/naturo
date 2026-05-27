@@ -68,3 +68,5 @@
 - [TC-0049](exploratory/browser-json-error-format.yaml) — P1: Browser commands ignore -j flag, output plain text errors instead of JSON — **active**
 - [TC-0050](regression/type-default-multiline-dropped.yaml) — P1: Default type mode drops literal newlines from multi-line text — **active**
 - [TC-0051](exploratory/mcp-pydantic-error-leak.yaml) — P2: MCP tool call with wrong param leaks Pydantic internals in error — **active**
+- [TC-0052](exploratory/get-id-flag-rejected.yaml) — P2: Only `click` accepts `--id eN`; 8 other element-targeting commands reject it (#864) — **active**
+- [TC-0053](exploratory/see-json-envelope-inconsistency.yaml) — P2: `see -j` returns bare tree on success but envelope on error (#865) — **active**

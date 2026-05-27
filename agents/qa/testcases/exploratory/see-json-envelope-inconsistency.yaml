@@ -1,0 +1,37 @@
+id: TC-0053
+title: "naturo see -j uses bare tree on success but envelope on error"
+status: active
+category: exploratory
+priority: P2
+source_issue: 865
+created: 2026-05-27
+last_run: 2026-05-27
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "A target app (e.g. notepad) is available — used to trigger the success path"
+
+steps:
+  - description: "see -j on success — should return enveloped JSON"
+    command: "naturo app launch notepad && naturo see --app notepad -j"
+    expect: |
+      JSON output starts with {"success": true, ...} and contains the element tree
+      under a stable key (e.g. "tree"). Currently emits a bare {"id":"e1","role":"Window",...}
+      with no "success" field.
+  - description: "see -j on error — already enveloped"
+    command: "naturo see --depth -1 -j"
+    expect: |
+      JSON output is {"success": false, "error": {"code": "INVALID_INPUT", ...}}.
+      This branch is correct; included for symmetry verification.
+  - description: "list windows -j success — reference shape"
+    command: "naturo list windows -j"
+    expect: |
+      JSON output is {"success": true, "windows": [...]}. Used as the canonical
+      envelope that 'see' should also follow.
+  - description: "Scripter pattern works uniformly"
+    command: "naturo see -j --app notepad | python -c \"import sys, json; d=json.load(sys.stdin); assert 'success' in d, 'see -j missing success key'\""
+    expect: "Assertion passes (exit 0) on both success and error branches"
+
+pass_criteria: "naturo see -j output always contains a top-level 'success' key (issue #865 fixed)"
+fail_action: "Comment on #865 with the failing branch and the missing key"
