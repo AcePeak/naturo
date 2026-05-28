@@ -52,6 +52,47 @@ def _get_backend(json_output: bool = False):
     return get_backend()
 
 
+def require_desktop_session(json_output: bool = False):
+    """Decorator that guards any CLI/MCP command with the NO_DESKTOP_SESSION check.
+
+    Applies the same pre-flight desktop-session check used by ``_get_backend``
+    to **every** desktop-interactive command so that commands which do not call
+    ``_get_backend`` directly (e.g. ``app windows``, ``dialog detect``,
+    ``taskbar list``, ``tray list``, MCP ``capture_screen``, MCP
+    ``list_windows``) cannot silently return wrong data when no desktop session
+    is available.
+
+    Usage::
+
+        @require_desktop_session(json_output=True)
+        def my_command(...):
+            ...
+
+    Args:
+        json_output: When True, emit a JSON-formatted error and exit with
+            status 1 instead of raising :class:`click.UsageError`.
+
+    Returns:
+        A decorator that wraps the target function with the session guard.
+    """
+    import functools
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            from naturo.cli.interaction import _check_desktop_session
+            try:
+                _check_desktop_session()
+            except Exception as exc:
+                if json_output:
+                    click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
+                    raise SystemExit(1)
+                raise click.UsageError(str(exc))
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def _platform_supports_gui() -> bool:
     """Check if the current platform has a GUI automation backend.
 
