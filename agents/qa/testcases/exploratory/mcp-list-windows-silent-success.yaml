@@ -5,12 +5,13 @@ category: exploratory
 priority: P1
 source_issue: 883
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
   R130: FAIL — MCP list_windows returned {success:true, windows:[12 entries with real Chrome/explorer handles]} with isError:false from a non-interactive session. CLI `naturo list windows -j` correctly refuses on the same session. MCP analogue of #878.
   R137: FAIL — still reproduces (14 real windows leaked) on HEAD `70e6591`. Sibling read-tools that bypass NO_DESKTOP_SESSION via the same MCP wrapper class: `list_apps` (9 apps leaked), `list_monitors` (1 monitor leaked), `app_inspect` (interaction_methods leaked for any running process). Scope-expansion documented on #885.
+  R145: FAIL — confirmed on HEAD `17aefe6`. CLI `naturo list windows` and `naturo list apps` refuse with NO_DESKTOP_SESSION exit 1; MCP `list_windows`/`list_apps` return the real window handle (incl. this terminal hwnd=22808596) and app list, isError:false, no guard. Same session, same process tree.
 
 preconditions:
   - "naturo is installed and in PATH"

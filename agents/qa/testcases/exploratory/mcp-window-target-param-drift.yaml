@@ -1,0 +1,60 @@
+id: TC-0085
+title: "MCP window-targeting param name drifts across surfaces — CLI `--window`, MCP focus_window uses `title`, MCP see_ui_tree/capture_window/wait_for_*/snapshot/menu_inspect use `window_title`"
+status: active
+category: exploratory
+priority: P2
+source_issue: null
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R145 (AI Agent Builder persona): Three different names for the same logical "window title" parameter across naturo surfaces.
+
+  CLI: `naturo app focus --window "Chat"`, `naturo see --window "Chat"`, `naturo capture --window "Chat"` (consistent `--window` everywhere — see #871's matrix).
+
+  MCP schemas (extracted from `tools/list` initialize response):
+    - `_window.py::focus_window`, `window_close`, `window_minimize`, `window_maximize`, `window_restore`, `window_move`, `window_resize`, `window_set_bounds`: parameter named **`title`**.
+    - `_capture.py::capture_window`: **`window_title`**.
+    - `_inspect.py::see_ui_tree`, `find_element`, `get_element_value`, `set_element_value`, `toggle_element`, `select_element`, `expand_collapse_element`: **`window_title`**.
+    - `_snapshot.py::create_snapshot`: **`window_title`**.
+    - `_wait.py::wait_for_element`, `wait_until_gone`: **`window_title`**.
+    - `_dialog.py` family: no title arg at all (only `app`/`hwnd`).
+
+  This is materially worse than #871 (CLI matrix gaps) because it interacts with #891 (unknown args silently dropped): an agent that uses the CLI-style key `window:` against `focus_window` (which expects `title`) gets a silent fallback to default `title=None → "foreground"` and a `WINDOW_NOT_FOUND: Window not found: foreground` error that points nowhere useful.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "MCP server can start: naturo mcp start --transport stdio"
+  - "At least one real window with a known title (e.g. the test terminal itself)"
+
+steps:
+  - description: "Confirm CLI uses --window"
+    command: "naturo app focus --help"
+    expect: "Options include `--window TEXT  Window title pattern (substring match)`."
+
+  - description: "Confirm MCP focus_window expects `title` (not `window` or `window_title`)"
+    command: |
+      Send: {"jsonrpc":"2.0","id":1,"method":"initialize",...}
+      Then: {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+      Inspect: tools[name=focus_window].inputSchema.properties
+    expect: |
+      properties = {title, app, hwnd}. No `window` and no `window_title`.
+
+  - description: "Confirm MCP see_ui_tree / capture_window / wait_for_window use `window_title`"
+    command: |
+      In the same tools/list response, inspect see_ui_tree, capture_window, wait_for_window schemas.
+    expect: |
+      Their inputSchema.properties include `window_title` (not `title`). Three different names for the same concept across surfaces.
+
+  - description: "Demonstrate the silent-failure interaction with #891"
+    command: |
+      Send: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"focus_window","arguments":{"window":"<some real window>"}}}
+    expect: |
+      Expected (post-fix): isError:true OR success:false INVALID_INPUT pointing at the `window` key.
+      Actual (FAIL): {"success": false, "error": {"code": "WINDOW_NOT_FOUND", "message": "Window not found: foreground"}} — `window` silently dropped, default `title=None` resolves to "foreground", and the error message blames the foreground rather than the dropped key.
+
+pass_criteria: |
+  All MCP tools that accept a window-by-title parameter use the same key name (or both `title` and `window_title` are accepted via aliasing) AND the chosen name matches the CLI surface. Once unified, agents can translate `naturo <cmd> --<flag> X` patterns to MCP arguments without consulting a per-tool name map.
+
+fail_action: "File P2 issue (or fold into #871 + #891 cluster). Track until a single canonical name is chosen and the others alias to it. Recommend `window` to match CLI, with `title` and `window_title` as deprecated aliases for two releases."

@@ -5,11 +5,12 @@ category: regression
 priority: P1
 source_issue: 890
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
   R137: FAIL — confirmed on HEAD `70e6591`. Both `tools/call list_snapshots {}` and `tools/call list_snapshots {limit:5}` return identical INTERNAL_ERROR with message `TypeError: SnapshotManager.list_snapshots() got an unexpected keyword argument 'limit'`. CLI `naturo snapshot list -j` works fine — MCP wrapper only. Root cause is at naturo/mcp/_snapshot.py:165 (`manager.list_snapshots(limit=limit)`) vs naturo/snapshot.py:632 (`def list_snapshots(self) -> List[SnapshotInfo]`). #890 filed.
+  R145: FAIL — reproduces on HEAD `17aefe6` via AI Agent Builder persona probe. Same TypeError, both `{}` and `{"limit":5}` invocations. #890 still open.
 
 preconditions:
   - "naturo is installed and in PATH"

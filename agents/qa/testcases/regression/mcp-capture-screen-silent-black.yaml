@@ -5,12 +5,13 @@ category: regression
 priority: P0
 source_issue: 868
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
   R130: FAIL — MCP `capture_screen` in NO_DESKTOP_SESSION returns {success:true, width:3840, height:2160, scale_factor:1.5, dpi:144, data_base64:'iVBORw0KGgo...AAAA...'} with `isError:false`. The very long `AAAA...` runs indicate uniform/black pixels. CLI `naturo capture` correctly refuses with NO_DESKTOP_SESSION. #868 unchanged.
   R137: FAIL — confirmed again on HEAD `70e6591` with pixel-by-pixel verification. `.work/qa-r137/mcp_capture.png` is 3840×2160, 24KB, **8,294,400/8,294,400 pixels (100%) are RGB (0,0,0)**. Sampled distinct colors across the image: 1 (black). `success:true, isError:false` unchanged.
+  R145: FAIL — confirmed on HEAD `17aefe6`. New evidence: out-of-range `screen_index` (1, 99) ALSO returns success:true with all-black 3840×2160 PNG (`list_monitors` reports only 1 monitor at index 0). PIL extrema=((0,0),(0,0),(0,0)) for indices 0, 1, 99 — identical 24,219-byte files. Metadata differs (index 0 → scale 1.5/dpi 144; index 1 and 99 → scale 1.0/dpi 96) which would mislead an agent into believing different monitors were captured. screen_index=-1 (only) errors with INTERNAL_ERROR `NaturoCoreError: capture_screen: Invalid argument`. Scope-extension comment posted to #868.
 
 preconditions:
   - "naturo is installed and in PATH"
