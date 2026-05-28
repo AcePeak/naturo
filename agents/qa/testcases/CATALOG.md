@@ -97,3 +97,4 @@
 - [TC-0078](exploratory/mcp-unknown-arg-silent-drop.yaml) — P2: MCP tools silently drop unknown args — typos fall back to defaults (#891) — **active**
 - [TC-0079](regression/wait-gone-silent-success.yaml) — P1: `naturo wait --gone` bypasses NO_DESKTOP_SESSION, returns success:true exit 0 with wait_time:0; --timeout ignored (#893) — **active**
 - [TC-0080](exploratory/json-ensure-ascii-escapes-chinese.yaml) — P2: JSON output uses `ensure_ascii=True`; Chinese/emoji round-tripped through `-j` is escaped as `\uXXXX`, mangling readability for CJK users (#894) — **active**
+- [TC-0081](exploratory/wait-success-envelope-drift.yaml) — P2: `naturo wait` success envelope drifts across sub-modes — duration emits `{success, mode, wait_time}`, predicate modes (`--gone`/`--window`/`--element`) emit `{success, found, wait_time, warnings}` with no `mode` discriminator (#895) — **active**
