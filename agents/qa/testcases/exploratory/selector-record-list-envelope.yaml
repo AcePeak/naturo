@@ -6,7 +6,9 @@ priority: P2
 source_issue: 876
 created: 2026-05-28
 last_run: 2026-05-28
+last_result: fail
 consecutive_passes: 0
+notes: "R134: FAIL — selector list -j={}, record list -j has 'recordings' but no 'success'. NEW: visual list -j returns {'baselines':[]} same shape — issue #876 broader than originally filed."
 
 preconditions:
   - "naturo is installed and in PATH"

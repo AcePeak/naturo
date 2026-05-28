@@ -8,7 +8,7 @@ created: 2026-05-27
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R131: FAIL — type=2, press=2, click e1=2 (non-j), see=1, type -j=1. Same shape as R130. #866 unchanged on HEAD 2d15274."
+notes: "R134: FAIL — type=2, press=2, click --ref e1=2 (non-j), see=1, type -j=1. Banner 'Usage: naturo type [OPTIONS]' precedes error. #866 unchanged on HEAD 1323777."
 
 preconditions:
   - "naturo is installed and in PATH"

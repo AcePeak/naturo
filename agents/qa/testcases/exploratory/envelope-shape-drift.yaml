@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R131 (filed): FAIL — see -j produces 3-field error, app launch -j produces 6-field, get -j produces 2-field. Same NO_DESKTOP_SESSION code, three shapes."
+notes: "R134: FAIL — confirmed see=3, app launch=6, get=2. NEW shape D found this round: record show/delete/export/play -j return error as plain STRING, not object. Worse than A/B/C since .error.code is undefined. Added as comment on #884."
 
 preconditions:
   - "naturo is installed and in PATH"

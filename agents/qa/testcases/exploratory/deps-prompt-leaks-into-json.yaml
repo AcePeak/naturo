@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R125: FAIL — `naturo desktop list -j` still emits 'Virtual desktop support requires pyvda. Install it now? [Y/n]:' on stdout before the JSON envelope. python -m json.tool exits 1 (parse fails). #869 unchanged."
+notes: "R134: FAIL — `naturo desktop list -j` still emits prose on stdout before JSON. NEW: behavior diverges by stdin kind — `</dev/null` shows prompt then errors, `| naturo` suppresses prompt. #869 unchanged on HEAD 1323777."
 
 preconditions:
   - "naturo is installed and in PATH"

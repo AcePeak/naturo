@@ -6,7 +6,9 @@ priority: P2
 source_issue: 877
 created: 2026-05-28
 last_run: 2026-05-28
+last_result: fail
 consecutive_passes: 0
+notes: "R134: FAIL — get e1 -j and set e1 x -j both return {error:{code:UNKNOWN_ERROR, message:'Element ref e1 not found...'}} — no suggested_action, generic code. #877 unchanged on HEAD 1323777."
 
 preconditions:
   - "naturo is installed and in PATH"

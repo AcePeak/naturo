@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R130: FAIL — `naturo app windows -j` returns {success:true, windows:[...]} with 12+ real Chrome/explorer windows in NO_DESKTOP_SESSION. CLI `list windows -j` correctly refuses. Also discovered MCP `list_windows` exhibits the same silent failure. #878 unchanged; analogue may need a separate MCP issue."
+notes: "R134: FAIL — `naturo app windows -j` returns success:true with real Chrome windows (Chinese title 要恢复页面吗？) in NO_DESKTOP_SESSION. #878 unchanged on HEAD 1323777."
 
 preconditions:
   - "naturo is installed and in PATH"

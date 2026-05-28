@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R130: FAIL — `naturo open` no suggestion, `naturo launch` no suggestion, `naturo screenshot` → 'Did you mean snapshot?' (also leaks hidden snapshot). #880 unchanged."
+notes: "R134: FAIL — `naturo launch` no suggestion, `naturo open` no suggestion, `naturo screenshot` → 'Did you mean snapshot?' (hidden snapshot still leaks, also overlaps #867). #880 unchanged on HEAD 1323777."
 
 preconditions:
   - "naturo is installed and in PATH"

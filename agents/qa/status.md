@@ -1,25 +1,25 @@
 # QA Status
-Last updated: 2026-05-28 13:00
-Current round: 133
+Last updated: 2026-05-28 14:10
+Current round: 134
 Current milestone: v0.3.2 (27 open, ship-gated by epic #885 + 5 SendInput-blocked status:done from console session)
 
 ## This Round
-- CI Desktop Tests: skipped (`.last-ci-sha=2d15274` vs `HEAD=ae3c21f`; only commits since are R131/R132 reports + orc daily review — all `[skip ci]` with no source/test changes)
-- Persona: Accessibility User (hour 13 mod 8 = 5)
-- Session: NO_DESKTOP_SESSION (agent shell cannot bind to interactive desktop — same as R132)
-- Issues verified: none (5 status:done still SendInput-blocked; #863 ship-gate restructured by Orc earlier today — verification routes through console session, not this shell)
+- CI Desktop Tests: skipped (`.last-ci-sha=2d15274` vs `HEAD=1323777`; only commits since are R131–R133 reports + orc daily review — all `[skip ci]`, no source changes)
+- Persona: Scripter/Automator (hour 14 mod 8 = 6)
+- Session: NO_DESKTOP_SESSION (agent shell cannot bind to interactive desktop — same state as R131–R133)
+- Issues verified: none (5 status:done still SendInput-blocked; #863 ship-gate pending Ace decision)
 - E2E tests: skipped (no desktop)
-- Regression: 10 contract-level test cases re-run — 1 pass (TC-0042 bumped to **5**, retention rule N/A since source_issue is null), 9 fail (#864/#869/#871/#874/#875/#876/#877/#878/#880; all stay at 0). Desktop cases skipped.
-- Phase 4 (Accessibility User): audited the accessibility surface of `naturo see` snapshots. Found that the schema exposes `keyboardShortcut` but UIA backend (default) **never populates it** — 87,196 elements across 2,835 historical snapshots, 0 populated. Read-only source dive confirmed: `core/src/element.cpp` has no `AcceleratorKey`/`AccessKey` queries; MSAA/IA2 backends do (line 246/401); Python `_element.py:1124` docstring promises post-processing fill that doesn't actually exist in code.
-- Test cases updated: TC-0042 (consecutive_passes 4 → 5, notes refreshed)
-- New test cases created: TC-0072 `keyboard-shortcut-always-null.yaml`
+- Regression: 12 contract-surface test cases re-run — 12 fail (#866/#869/#874/#875/#876/#877/#878/#879/#880/#884; all stay at 0). Desktop cases skipped.
+- Phase 4 (Scripter/Automator): probed JSON envelope shape, exit codes, stdout/stderr split, install-prompt suppression. Found 3 extensions to existing issues + 1 new test case.
+- Test cases updated: TC-0054, TC-0057, TC-0061, TC-0062, TC-0063, TC-0064, TC-0065, TC-0066, TC-0067, TC-0071 (last_run/notes refreshed to R134, HEAD 1323777)
+- New test cases created: TC-0073 `record-error-as-string.yaml` (covers shape D extension of #884)
 - Test cases cleaned up: none
-- New issues created: **#886** (P1, v0.3.4, bug,P1,from:qa — `keyboardShortcut` field always null for UIA-backed elements)
-- Comments added: none
-- Total active test cases: 51 (+1)
-- Tests run: 10 contract-surface probes + snapshot-corpus audit (2,835 dirs, 87,196 elements) + read-only source audit of `core/src/element.cpp` and `_element.py` accessibility path
+- New issues created: **none** (3 comments extending existing issues instead)
+- Comments added: #884 (shape D), #876 (visual list), #879 (exit-code drift on error path)
+- Total active test cases: 52 (+1)
+- Tests run: ~30 CLI surface probes across 14 subcommands + 12 regression test cases
 
 ## Top 3 Risks
-1. **#886 widens the silent-failure surface adjacent to epic #885.** Same symptom class — output looks success-shaped, value silently absent — but a different mechanism (UIA backend never queries the property vs NO_DESKTOP_SESSION guard inconsistency). Worth orc considering whether to fold #886 into #885's scope or leave as a separate v0.3.4 item. Accessibility metadata gap is real, affects every AI agent using keyboard-only automation.
-2. **#863 ship-gate ownership still unassigned (day 21).** R132's note holds — 5 SendInput-blocked status:done issues need console-session verification, and today's session was the same broader desktop-loss state. Orc escalated to Ace 7h ago; awaiting decision.
-3. **UIA accessibility surface beyond `keyboardShortcut`.** Snapshot schema is also missing `isKeyboardFocusable`, `isFocused`, `tabIndex`, `localizedControlType`, `helpText` — all UIA-queryable. Not file-worthy individually until there's a dedicated accessibility-feature scope; flagged for future planning.
+1. **#879 hides a P1 bug as a comment.** Browser launch error path exits 0 — script-breaking. If reviewers focus on #879's original title (envelope shape) they may miss the exit-code drift. Worth orc/Dev splitting into a separate P1 if scoping requires.
+2. **Silent-failure cluster (#885) is broader than its current scope.** Epic includes #868/#878/#883 but not #875 (dialog/taskbar/tray silently return success:true [] in NO_DESKTOP_SESSION) or the record-string-error finding. Each unfolded surface is one more "agent hallucinates from empty success-shaped data" path. Orc should consider widening the epic before close.
+3. **Ship gate still blocked on console-session verification of 5 SendInput-bound issues** (#786, #788, #807, #840, #843). #863 ownership decision pending Ace since ~06:00 today — now 8 hours. No QA round can move these until a console session runs.
