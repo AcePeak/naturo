@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R130: FAIL — `naturo bogusbogus -j` returns plain Click usage text, not JSON envelope. #872 unchanged."
+notes: "R135: FAIL — re-validated 6 distinct Click parse-error categories all bypass -j envelope: (1) missing required arg (`clipboard set -j` → exit 2 plain text), (2) unknown flag (`type --bogus-flag-xyz -j`), (3) too many positional args (`wait 1 2 -j`), (4) invalid float type (`wait abc -j`), (5) invalid integer type (`see --hwnd abc -j`), (6) invalid Choice option (`--log-level bogus see -j`). #872's title scopes this to 'unknown flag' but the bug is the whole class. Filing as comment on #872."
 
 preconditions:
   - "naturo is installed and in PATH"

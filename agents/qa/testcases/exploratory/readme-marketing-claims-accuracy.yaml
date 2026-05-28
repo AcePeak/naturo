@@ -1,0 +1,35 @@
+id: TC-0075
+title: "README marketing claims contradicted by live bug cluster — 'Post-Action Verify' and 'AI Agent Ready: JSON output' do not survive scrutiny"
+status: active
+category: exploratory
+priority: P1
+source_issue: null
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R135 (Skeptical Evaluator persona): README.md L613-628 competitor table claims '✅ Post-Action Verify — Confirms actions took effect' and '✅ AI Agent Ready — JSON output, agent-friendly CLI'. Both directly contradicted by open bugs. A user reading the table to decide naturo-vs-pywinauto would see the claim, install, run their first -j script, and hit a parse failure on a Click error. They would label naturo unreliable and choose the competitor. This is the highest-impact gap exposed by the Skeptical Evaluator persona."
+
+preconditions:
+  - "README.md present in repo root"
+  - "naturo CLI available"
+
+steps:
+  - description: "Verify README claims Post-Action Verify ✅"
+    command: "grep -n 'Post-Action Verify' README.md"
+    expect: "Line 622 reads '| **Post-Action Verify** | ✅ Confirms actions took effect | ...'"
+  - description: "Counter-evidence: silent-failure cluster (#868/#875/#878/#883) violates claim"
+    command: "gh issue list --label silent-failure --state open --json number,title --jq '.[] | \"#\\(.number) \\(.title)\"'"
+    expect: "At least 4 open silent-failure bugs (capture_screen black PNG with success:true, dialog/taskbar/tray return success:true [], app windows bypasses guard, MCP list_windows bypasses guard). Each directly contradicts 'Confirms actions took effect'."
+  - description: "Verify README claims AI Agent Ready: JSON output ✅"
+    command: "grep -n 'AI Agent Ready' README.md"
+    expect: "Line 616 reads '| **AI Agent Ready** | ✅ JSON output, agent CLI | ...'"
+  - description: "Counter-evidence: -j envelope inconsistency cluster (#864/#865/#872/#874/#876/#877/#879/#882/#884) violates claim"
+    command: "gh issue list --label 'from:qa' --state open --json number,title --jq '.[] | select(.title | test(\"envelope|JSON|isError|-j\";\"i\")) | \"#\\(.number) \\(.title)\"'"
+    expect: "9+ open JSON/envelope bugs. A Scripter or AI Agent Builder hits one within ~5 minutes of first use. Contradicts 'agent-friendly CLI'."
+  - description: "README does not surface 'known limitations' section near the comparison table"
+    command: "grep -n -A2 'Known Limitations\\|Caveats\\|Current Limitations' README.md | head -20"
+    expect: "No section honestly disclosing the current -j envelope drift or silent-failure surface. Skeptical Evaluator who notices the gap loses trust."
+
+pass_criteria: "Either (a) close the contradicting bug clusters before shipping v0.3.2, or (b) update the README comparison table to remove the unsupported claims (replace ✅ with ⚠️ Partial + linked issues) until clusters are closed"
+fail_action: "File P1 issue: README accuracy / Skeptical Evaluator first-touch trust. Tag from:qa,docs,P1."
