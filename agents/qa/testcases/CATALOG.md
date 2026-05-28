@@ -95,3 +95,4 @@
 - [TC-0076](exploratory/typo-suggester-nonsense-match.yaml) — P2: 'Did you mean' suggester returns semantically wrong matches for short queries — `naturo ai → wait`, `naturo tap → app` (#889) — **active**
 - [TC-0077](regression/mcp-list-snapshots-broken.yaml) — P1: MCP `list_snapshots` fails 100% — wrapper passes `limit=` kwarg that `SnapshotManager.list_snapshots()` doesn't accept (#890) — **active**
 - [TC-0078](exploratory/mcp-unknown-arg-silent-drop.yaml) — P2: MCP tools silently drop unknown args — typos fall back to defaults (#891) — **active**
+- [TC-0079](regression/wait-gone-silent-success.yaml) — P1: `naturo wait --gone` bypasses NO_DESKTOP_SESSION, returns success:true exit 0 with wait_time:0; --timeout ignored (#893) — **active**

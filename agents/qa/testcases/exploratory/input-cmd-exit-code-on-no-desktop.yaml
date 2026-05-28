@@ -8,7 +8,9 @@ created: 2026-05-27
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R136: FAIL — type=2, press=2, click=2 (non-j), see=1, type -j=1. R136 extended matrix: highlight/move/drag/scroll also exit 2 with Click 'Usage:' banner (bare) but 1 with envelope (-j). Same `_get_backend` code path in naturo/cli/interaction/_common.py affects 7 commands, not just the 3 in #866 title. #866 unchanged on HEAD 70e6591."
+notes: |
+  R136: FAIL — type=2, press=2, click=2 (non-j), see=1, type -j=1. R136 extended matrix: highlight/move/drag/scroll also exit 2 with Click 'Usage:' banner (bare) but 1 with envelope (-j). Same `_get_backend` code path in naturo/cli/interaction/_common.py affects 7 commands, not just the 3 in #866 title. #866 unchanged on HEAD 70e6591.
+  R138: FAIL — re-confirmed on HEAD `ceecfd5`. `naturo type 'x'` exit 2 with Click "Usage:" banner; `naturo type 'x' -j` exit 1 with clean NO_DESKTOP envelope. Same for press/click. Bug class is still 100% reproducible.
 
 preconditions:
   - "naturo is installed and in PATH"
