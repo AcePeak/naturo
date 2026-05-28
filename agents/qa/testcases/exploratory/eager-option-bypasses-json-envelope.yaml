@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R125: FAIL — naturo -j --version → 'naturo, version 0.3.1' (plain text, exit 0); naturo -j --help → plain Click help; naturo -j nonexistent-cmd → plain Click usage banner exit 2. Discovered during Accessibility User persona."
+notes: "R130: FAIL — `naturo -j --version` outputs plain text 'naturo, version 0.3.1', not enveloped JSON. #874 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

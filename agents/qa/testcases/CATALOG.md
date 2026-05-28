@@ -86,3 +86,4 @@
 - [TC-0067](exploratory/typo-suggester-ignores-subgroups.yaml) — P2: CLI typo suggester ignores subgroup commands; first-time `launch`/`open`/`screenshot` hit dead end (#880) — **active**
 - [TC-0068](exploratory/mcp-error-code-naturocore-leak.yaml) — P1: MCP tools surface `INTERNAL_ERROR` + `NaturoCoreError` C++ exception names instead of typed codes (#881) — **active**
 - [TC-0069](exploratory/mcp-iserror-flag-inconsistent.yaml) — P2: MCP `isError` flag used inconsistently — agents must check both isError and payload.success (#882) — **active**
+- [TC-0070](exploratory/mcp-list-windows-silent-success.yaml) — P1: MCP `list_windows` bypasses NO_DESKTOP_SESSION guard, returns real windows + isError:false (MCP analogue of #878) (#883) — **active**

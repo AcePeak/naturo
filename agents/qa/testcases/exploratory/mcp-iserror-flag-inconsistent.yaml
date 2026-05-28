@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R129: discovered while exercising MCP tools. Some tool failures surface as MCP-level errors (`isError: true`, no payload, or stringified Pydantic error). Other failures bury the error in the JSON payload (`isError: false`, with `success: false` inside). AI agents must check BOTH fields, and the documented MCP contract uses `isError` as the primary failure discriminator."
+notes: "R130: FAIL — `type_text`/`click`/`press_key` with payload {success:false} all returned `isError:false`. Pydantic-validation errors do flip isError:true. Inconsistency persists. #882 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

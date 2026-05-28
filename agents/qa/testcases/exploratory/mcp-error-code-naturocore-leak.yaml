@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R129: discovered while exercising MCP tools as the AI Agent Builder persona. Multiple tools return `INTERNAL_ERROR` + a leaked C++ exception name (e.g. `NaturoCoreError: capture_window: System/COM error`, `NaturoCoreError: key_type: System/COM error`, `NaturoCoreError: mouse_move: System/COM error`) instead of mapping the failure to a typed code such as `NO_DESKTOP_SESSION`, `WINDOW_NOT_FOUND`, or `INVALID_INPUT` that CLI counterparts use. Agents cannot programmatically discriminate the error class."
+notes: "R130: FAIL — MCP type_text/click/press_key error messages all contain `NaturoCoreError: <op>: System/COM error`. Code is `INTERNAL_ERROR` not a typed value. #881 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

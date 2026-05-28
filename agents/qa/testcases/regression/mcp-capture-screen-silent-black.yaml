@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R121 (AI Agent Builder persona): created. When the MCP server runs from a session that cannot bind the interactive desktop, capture_screen synthesizes a 3840x2160 PNG where every RGB pixel is (0,0,0) but the response envelope says success:true with reported dims=actual screen. CLI naturo capture --app X errors cleanly with NO_DESKTOP_SESSION code+message. The MCP path is the silent-failure one — an AI agent will base decisions on a blank screenshot."
+notes: "R130: FAIL — MCP `capture_screen` in NO_DESKTOP_SESSION returns {success:true, width:3840, height:2160, scale_factor:1.5, dpi:144, data_base64:'iVBORw0KGgo...AAAA...'} with `isError:false`. The very long `AAAA...` runs indicate uniform/black pixels. CLI `naturo capture` correctly refuses with NO_DESKTOP_SESSION. #868 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

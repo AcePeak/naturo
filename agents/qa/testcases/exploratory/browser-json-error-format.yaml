@@ -7,8 +7,8 @@ source_issue: 834
 created: 2026-04-04
 last_run: 2026-05-28
 last_result: pass
-consecutive_passes: 1
-notes: "R122: PASS — naturo -j browser navigate now returns proper JSON envelope {success:false, error:{code:BROWSER_CONNECTION_ERROR,...}}. python -m json.tool parses it cleanly. #834 closed and fix landed (PR #852/4079039). Will retire after 5 consecutive passes."
+consecutive_passes: 2
+notes: "R130: PASS — browser navigate -j returns proper {success:false, error:{code:BROWSER_CONNECTION_ERROR, ...}} envelope. #834 fix holds."
 
 preconditions:
   - "naturo is installed and in PATH"

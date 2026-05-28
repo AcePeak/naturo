@@ -8,7 +8,7 @@ created: 2026-05-27
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R125: FAIL — type=2, press=2, click=2, see=1 (correct), type -j=1 (correct), Usage banner count=1 in stderr. #866 unchanged."
+notes: "R130: FAIL — type=2, press=2, click --coords=2 (non-j), -j variants exit=1. Inconsistency persists. #866 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

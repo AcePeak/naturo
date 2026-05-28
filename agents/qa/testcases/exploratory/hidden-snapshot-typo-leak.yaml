@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R125: FAIL — `naturo snapsho` → 'Did you mean snapshot?' still leaks. #867 unchanged."
+notes: "R130: FAIL — `naturo snap` → 'Did you mean snapshot?', `naturo screenshot` → 'Did you mean snapshot?'. Snapshot still leaks. #867 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

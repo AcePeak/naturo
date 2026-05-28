@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-28
 last_result: fail
 consecutive_passes: 0
-notes: "R125: FAIL — find --window=No such option (exit 2), menu-inspect --window=No such option (exit 2), list windows --window=No such option (exit 2, suggests --pid). get/set parse --window but lack target arg (exit 1). #871 unchanged."
+notes: "R130: FAIL — find rejects --hwnd and --pid (No such option). see --hwnd, list windows --pid go through to NO_DESKTOP_SESSION. Matrix still inconsistent. #871 unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"
