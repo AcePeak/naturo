@@ -7,8 +7,8 @@ source_issue: null
 created: 2026-04-01
 last_run: 2026-05-28
 last_result: pass
-consecutive_passes: 2
-notes: "R130: PASS — naturo see --depth -1 -j outputs 211B to stdout, 0B to stderr; no duplication."
+consecutive_passes: 3
+notes: "R131: PASS — naturo click --app fakefake --on button -j: stdout valid JSON, stderr empty (0B), exit=1. No duplication on click path."
 
 preconditions:
   - "naturo is installed and in PATH"

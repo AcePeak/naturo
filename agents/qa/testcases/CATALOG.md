@@ -87,3 +87,4 @@
 - [TC-0068](exploratory/mcp-error-code-naturocore-leak.yaml) — P1: MCP tools surface `INTERNAL_ERROR` + `NaturoCoreError` C++ exception names instead of typed codes (#881) — **active**
 - [TC-0069](exploratory/mcp-iserror-flag-inconsistent.yaml) — P2: MCP `isError` flag used inconsistently — agents must check both isError and payload.success (#882) — **active**
 - [TC-0070](exploratory/mcp-list-windows-silent-success.yaml) — P1: MCP `list_windows` bypasses NO_DESKTOP_SESSION guard, returns real windows + isError:false (MCP analogue of #878) (#883) — **active**
+- [TC-0071](exploratory/envelope-shape-drift.yaml) — P2: JSON error envelope shape drifts across CLI commands — `app *` returns 6 fields, see/capture/list/type/press/click/find return 3, get/set return 2 (#884) — **active**
