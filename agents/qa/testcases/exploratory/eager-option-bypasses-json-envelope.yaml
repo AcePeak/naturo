@@ -5,10 +5,10 @@ category: exploratory
 priority: P2
 source_issue: 874
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R143: FAIL — naturo -j --version emits plain text, naturo -j unknowncmd emits plain Click error. Bug unchanged on HEAD 426477d."
+notes: "R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j --version` still emits plain text 'naturo, version 0.3.1'. Bug unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -5,10 +5,10 @@ category: exploratory
 priority: P2
 source_issue: 869
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R143: FAIL — naturo desktop list -j still prints "Install it now? [Y/n]:" prose to stdout before JSON envelope when stdin redirected from /dev/null; corrupts stream for json.tool. Bug unchanged on HEAD 426477d."
+notes: "R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j desktop list` still emits 'Install it now? [Y/n]:' prose before the JSON envelope. JSON envelope exit code 1 (correct), but the prose corrupts the stream for json.tool. Bug unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

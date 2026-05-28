@@ -5,7 +5,7 @@ category: exploratory
 priority: P2
 source_issue: 866
 created: 2026-05-27
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
@@ -13,6 +13,7 @@ notes: |
   R138: FAIL — re-confirmed on HEAD `ceecfd5`. `naturo type 'x'` exit 2 with Click "Usage:" banner; `naturo type 'x' -j` exit 1 with clean NO_DESKTOP envelope. Same for press/click. Bug class is still 100% reproducible.
   R139: FAIL — re-confirmed on HEAD `16adca7`. Verified via PowerShell `$LASTEXITCODE` (bash `$?` is unreliable with piping). `naturo type 'x'` → EXIT=2 + "Usage:" banner; `naturo see` → EXIT=1 clean. Discovered during: Chinese User simulation while probing if Chinese app args (`type --app 记事本 "你好世界"`) hit the same code path — they do, same exit=2 + Usage banner. Bug surface unchanged on `_common.py`.
   R142: FAIL — re-confirmed on HEAD `ca7a9bc`. `naturo type 'x'` exit 2, `type 'x' -j` exit 1, `press 'a'` exit 2, `see` exit 1. Drift unchanged. Adjacent finding: missing-required-arg path *also* drifts (type/press/find/wait/get/set/app launch all exit 1 with INVALID_INPUT instead of exit 2 for usage errors) — that's a separate Scripter-relevant axis not covered by #866; will file as its own issue.
+  R144: FAIL — re-confirmed on HEAD `893209e`. `naturo type 'x'` → exit 2 + "Usage:" banner + "Try '... --help' for help."; same for press/click/drag/scroll/highlight. `-j` envelope still exit 1 clean. Discovered during First-time User simulation — a user who just installed naturo and tries `naturo type "hello"` is told to consult --help despite the actual error being environmental (NO_DESKTOP_SESSION). High UX confusion cost. Drift unchanged on `naturo/cli/interaction/_common.py`.
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -5,10 +5,12 @@ category: exploratory
 priority: P2
 source_issue: 897
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
+  R144: FAIL — re-confirmed on HEAD 893209e. `naturo type` → exit 1 with custom "Error: TEXT argument is required..."; `naturo press` → exit 1 "Missing argument 'KEY'"; `naturo find` → exit 1 "Missing argument 'QUERY'". Click-level errors still exit 2. Drift unchanged.
+
   R142 (Scripter persona): naturo's custom argument validation path returns exit 1 with INVALID_INPUT for missing required positionals on type/press/find/wait/get/set/app launch, while Click's own missing-flag-value / unknown-command / no-subcommand path returns exit 2.
 
   A Scripter using `case $? in 2) usage_error ;; 1) op_failed_retry ;; esac` misclassifies `naturo type` (missing TEXT) as a transient operation failure and may infinite-retry.

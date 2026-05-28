@@ -5,10 +5,12 @@ category: exploratory
 priority: P2
 source_issue: 867
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R136: FAIL — `naturo snap` → 'Did you mean snapshot?', `naturo screenshot` → 'Did you mean snapshot?'. NEW R136 finding: `naturo key` → 'Did you mean hotkey?' — same bug pattern leaks deprecated `hotkey` command (kept for backward compat per --help body). The hidden-command suggester leak is a class, not just `snapshot`. #867 unchanged on HEAD 70e6591."
+notes: |
+  R136: FAIL — `naturo snap` → 'Did you mean snapshot?', `naturo screenshot` → 'Did you mean snapshot?'. NEW R136 finding: `naturo key` → 'Did you mean hotkey?' — same bug pattern leaks deprecated `hotkey` command (kept for backward compat per --help body). The hidden-command suggester leak is a class, not just `snapshot`. #867 unchanged on HEAD 70e6591.
+  R144: FAIL — re-confirmed on HEAD `893209e`. `naturo snapsho` → "Did you mean 'snapshot'?" exit 2. R144 NEW observation: `naturo helo` → "Did you mean 'help'?" — the same leak pattern exposes a 4th hidden command (`help`). `help` is not in --help listing but is a registered Click subcommand that prints the main help text. So #867's class extends to: {snapshot, hotkey, help}. Filed as comment on #867.
 
 preconditions:
   - "naturo is installed and in PATH"

@@ -5,10 +5,10 @@ category: regression
 priority: P1
 source_issue: 893
 created: 2026-05-28
-last_run: 2026-05-28
+last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R143: FAIL — naturo wait --gone foo -j returns {success:true, found:true} bypassing NO_DESKTOP_SESSION. Bug unchanged on HEAD 426477d."
+notes: "R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j wait --gone foo --timeout 1` returns {success:true, found:true, wait_time:0.0, warnings:[]} exit 0 instantly, bypassing both NO_DESKTOP_SESSION and the --timeout. Bug unchanged."
   R138: FAIL — `naturo wait --gone "X" --timeout 5 -j` returns `{success:true, found:true, wait_time:0.0}` exit 0 in NO_DESKTOP_SESSION; wall-clock elapsed 0.236s (CLI-startup time) confirms `--timeout` is ignored. Filed as #893; cross-listed as scope-extension on #885 epic. HEAD `ceecfd5`.
   R139: FAIL — re-confirmed on HEAD `16adca7` (Chinese User persona). `wait --gone "Dialog:Loading" --timeout 5 -j` → success:true found:true wait_time:0.0, elapsed 0.255s, EXIT=0. Identical reproduction; --timeout still ignored. Also tested with Chinese selector `wait --gone "你好世界很长的中文文字" -j` → same shape — argument is accepted but never actually evaluated, confirming the silent-success path predates any selector resolution.
 
