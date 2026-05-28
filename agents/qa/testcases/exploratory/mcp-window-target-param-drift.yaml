@@ -1,25 +1,27 @@
 id: TC-0085
-title: "MCP window-targeting param name drifts across surfaces — CLI `--window`, MCP focus_window uses `title`, MCP see_ui_tree/capture_window/wait_for_*/snapshot/menu_inspect use `window_title`"
+title: "MCP window-targeting param name drifts across surfaces — CLI `--window`, MCP focus_window/window_*/wait_for_window use `title`, MCP see_ui_tree/capture_window/wait_for_element/wait_until_gone/snapshot use `window_title`, menu_inspect has neither"
 status: active
 category: exploratory
 priority: P2
-source_issue: null
+source_issue: 900
 created: 2026-05-29
 last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
-  R145 (AI Agent Builder persona): Three different names for the same logical "window title" parameter across naturo surfaces.
+  R145 (AI Agent Builder persona): Three different names for the same logical "window title" parameter across naturo surfaces. R146 (Enterprise RPA Dev) corrected the matrix — `wait_for_window` uses `title` (not `window_title` as initially recorded) and `menu_inspect` doesn't accept any title-style key (only `app`).
 
   CLI: `naturo app focus --window "Chat"`, `naturo see --window "Chat"`, `naturo capture --window "Chat"` (consistent `--window` everywhere — see #871's matrix).
 
-  MCP schemas (extracted from `tools/list` initialize response):
+  MCP schemas (extracted from `tools/list` initialize response — R146 verified):
     - `_window.py::focus_window`, `window_close`, `window_minimize`, `window_maximize`, `window_restore`, `window_move`, `window_resize`, `window_set_bounds`: parameter named **`title`**.
+    - `_wait.py::wait_for_window`: **`title`** (required) — same group as `_window.py`, NOT same group as the other wait_* tools.
     - `_capture.py::capture_window`: **`window_title`**.
     - `_inspect.py::see_ui_tree`, `find_element`, `get_element_value`, `set_element_value`, `toggle_element`, `select_element`, `expand_collapse_element`: **`window_title`**.
     - `_snapshot.py::create_snapshot`: **`window_title`**.
     - `_wait.py::wait_for_element`, `wait_until_gone`: **`window_title`**.
     - `_dialog.py` family: no title arg at all (only `app`/`hwnd`).
+    - `menu_inspect`: no title/window_title — only `app`. R146: passing `window_title="Notepad"` is silently dropped (#891) and the call returns `success:true, menu_items:[]`.
 
   This is materially worse than #871 (CLI matrix gaps) because it interacts with #891 (unknown args silently dropped): an agent that uses the CLI-style key `window:` against `focus_window` (which expects `title`) gets a silent fallback to default `title=None → "foreground"` and a `WINDOW_NOT_FOUND: Window not found: foreground` error that points nowhere useful.
 
