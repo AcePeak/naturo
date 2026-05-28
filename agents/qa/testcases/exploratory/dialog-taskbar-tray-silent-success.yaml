@@ -8,7 +8,8 @@ created: 2026-05-28
 last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R150 (Scripter/Automator persona): FAIL — re-confirmed on HEAD c15be18. dialog detect/taskbar list/tray list -j all still return success:true with empty arrays exit 0. Captured as part of the full R150 guard matrix (5 bypassing families vs 8 refusing commands). #875/#885 unchanged.
+notes: "R151 (Skeptical Evaluator persona): FAIL — re-confirmed on HEAD ec07c24. dialog detect -j={success:true,dialogs:[],count:0}, taskbar list -j={success:true,items:[],count:0}, tray list -j={success:true,icons:[],count:0}, all exit 0 in NO_DESKTOP_SESSION. #875/#885 unchanged.
+  R150 (Scripter/Automator persona): FAIL — re-confirmed on HEAD c15be18. dialog detect/taskbar list/tray list -j all still return success:true with empty arrays exit 0. Captured as part of the full R150 guard matrix (5 bypassing families vs 8 refusing commands). #875/#885 unchanged.
   R144: FAIL — re-confirmed on HEAD 893209e. dialog detect/taskbar list/tray list -j all return success:true with empty arrays exit 0. Bug unchanged."
   R134: FAIL — taskbar list -j={success:true,items:[],count:0} exit 0; tray list -j={success:true,icons:[],count:0} exit 0; dialog detect -j={success:true,dialogs:[],count:0} exit 0. All silently succeed in NO_DESKTOP_SESSION. #875 unchanged on HEAD 1323777.
   R137: FAIL — same shape via MCP wrapper too: `dialog_detect`/`taskbar_list`/`tray_list` MCP tools return success:true with empty arrays and isError:false in NO_DESKTOP_SESSION. CLI + MCP both bypass guard. HEAD `70e6591`.

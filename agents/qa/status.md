@@ -1,28 +1,27 @@
 # QA Status
-Last updated: 2026-05-29 06:07
-Current round: 150
-Current milestone: v0.3.2
+Last updated: 2026-05-29 07:06
+Current round: 151
+Current milestone: v0.3.2 (30 open / 89 closed)
 
-## This Round
-- Persona (hour 06 → index 6): Scripter/Automator
-- CI Desktop Tests: skipped (no new source commits since 17aefe6 — all intervening commits are `[skip ci]` QA reports)
-- Issues verified: none — 5 status:done (#786/#788/#807/#840/#843) are SendInput/desktop-dependent, un-runtime-verifiable in this no-desktop session (#863)
-- E2E tests: BLOCKED — no interactive desktop in this session
-- Regression: 5/6 fail (bug-repro TCs still reproduce: TC-0062/0063/0065/0079/0081), 1/6 pass (TC-0088 positive-lock, passes 2→3), 0 retired
-- New test cases created: none (no new bug; cluster already covered)
+## This Round (Skeptical Evaluator persona, no-desktop session, HEAD ec07c24)
+- CI Desktop Tests: skipped (no source changes since 17aefe6 — diff is only qa-reports/testcases/docs)
+- Issues verified: none — 5 status:done (#786/788/807/840/843) all need runtime input/desktop; blocked by #863 (ship-gate, needs console session). Not closed, not rejected.
+- E2E tests: blocked (no interactive desktop this session)
+- Guard cluster on ec07c24: positive-lock (TC-0088) PASS; #878/#875/#893 silent-failure cluster STILL PRESENT (identical to R150); MCP list_apps also leaks real apps (success:true)
+- CLI-contract spot-confirms unchanged: #873 (serverInfo=1.26.0), #874 (-j --version bypass), #876 (selector list {}), #899 (-h rejected)
+- Regression: 1/8 pass (positive-lock 3→4), 7/8 bug-repro cases correctly still failing, desktop cases blocked; 0 retired
+- New test cases created: none (library saturated for no-desktop surface)
 - Test cases cleaned up: none
-- New issues created: none (all findings map to open issues; extended #893 with sharper repro)
-- Total active test cases: ~70 active
-- Tests run: full NO_DESKTOP_SESSION guard matrix (~22 command probes) + 6 regression TCs
+- New issues created: none (all findings map to open issues — no duplicates filed)
+- Total active test cases: ~50
+- Tests run: ~20 commands + MCP initialize/tools-list/list_apps end-to-end
 
-## This Round's Findings (all confirmations / extensions on c15be18)
-- #885 cluster persists unchanged: app windows (#878), dialog/taskbar/tray (#875), wait --gone (#893) bypass guard; see/capture/list/app list/menu-inspect/find/highlight refuse correctly
-- #878 sharpened: intra-`app`-group split (app list refuses, app windows bypasses); both -j and non-json bypass
-- #893 sharpened: `wait --gone explorer` = verifiably false negative (explorer.exe named alive in same-session guard msg); --timeout ignored; silent success propagates in workflow chains
-- #869 refined: pyvda install prompt is TTY-gated — clean MISSING_DEPENDENCY JSON under piped stdin, not a script-hang
+## Skeptical Evaluator verdict
+Would prototype on naturo (CLI+MCP+element-tree beats pyautogui coords / pywinauto library-only),
+but would NOT ship an unattended agent until #885 guard cluster + JSON-envelope drift
+(#874/#876/#882/#884) close. Small, high-leverage gate — not a feature backlog. Aligns with #887.
 
 ## Top 3 Risks
-1. #885 (P0 silent-failure cluster) unstarted and unchanged — source hasn't moved; it's the v0.3.2 ship gate and the worst bug class (agents act on false success:true). Matrix fully specified, waiting on Dev.
-2. QA structurally blind from this SSH/service session (#863): 5 status:done fixes unverifiable + Phase 2 impossible. The "verify 5 from a console session" ship-gate step has no scheduled console runner — process gap.
-3. Broad envelope/exit-code drift (#872/#876/#879/#884/#895/#897 + guard-bypass exit-0 set) makes scripting hostile; undermines README "AI Agent Ready: JSON output" claim (#887) until cluster lands.
-</content>
+1. Dev-Sirius idle 54 days; #885 (P0 adoption-blocker) unfixed across releases — process risk, not discovery risk.
+2. Agent-readiness claims contradicted (#887): MCP success:true on context-invalid calls is the worst failure mode for the "built for AI agents" pitch.
+3. Ship gate environmentally stuck: 5 status:done input fixes unverifiable without console/RDP (#863) — no agent-session round can clear them.
