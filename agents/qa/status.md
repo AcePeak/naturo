@@ -1,30 +1,30 @@
 # QA Status
-Last updated: 2026-05-28 21:08
-Current round: 141
+Last updated: 2026-05-28 22:08
+Current round: 142
 Current milestone: v0.3.2 (27 open, ship-gated by epic #885 + 5 SendInput-blocked status:done from console session)
 
 ## This Round
-- CI Desktop Tests: skipped (no source changes since `2e7761a` — only QA-report `[skip ci]` commit R140 `b7b90ed` in interval). Reconciling `.last-ci-sha` to `b7b90ed` on commit.
-- Persona: Accessibility User (hour 21 mod 8 = 5)
+- CI Desktop Tests: skipped (no source changes since `b7b90ed` — only QA-report `[skip ci]` commit R141 `ca7a9bc` in interval). Reconciling `.last-ci-sha` to `ca7a9bc` on commit.
+- Persona: Scripter/Automator (hour 22 mod 8 = 6)
 - Session: NO_DESKTOP_SESSION (ROBOT-COMPILE / Naturobot user, SSH session — no interactive desktop bind)
-- Issues verified: none (5 status:done all SendInput-blocked from this session — no state change since R140, no fresh comments per Orc-Mycelium "piling on has diminishing value" escalation)
+- Issues verified: none (5 status:done all SendInput-blocked from this session — no state change since R141, no fresh comments per Orc-Mycelium "piling on has diminishing value" escalation)
 - E2E tests: skipped (no desktop)
-- Regression: **9/9 testable-from-NO_DESKTOP TCs re-confirmed FAIL on HEAD `b7b90ed`** (TC-0054, 0055, 0062, 0065, 0067, 0071, 0076, 0079, 0080)
-- Phase 4 (Accessibility User): probed naturo's accessibility surface from source schema + CLI help text since no desktop available. Found **structural schema gap**: `UIElement` exposes only `role + title + label + value + description + identifier + frame + isActionable + keyboardShortcut` — zero references anywhere in `naturo/` or `core/` to `IsKeyboardFocusable`, `HasKeyboardFocus`, `HelpText`, `IsEnabled`, `IsOffscreen`, or `LocalizedControlType`. `find` has no `--focusable`/`--enabled`/`--visible` filters. `press --on` / `type --on` require mouse-click-to-focus even though `focus_element_uia` (`_input.py:601`) calls `IUIAutomationElement::SetFocus()` directly and is reachable from Python — no CLI surface exposes it. Distinct from #886 (existing field never populated) — this is the schema-coverage angle the R128 report flagged but never filed.
-- New issues created: **#896** (P2 v0.3.4 — `see` snapshot schema missing 6 UIA accessibility properties).
-- Comments added: none (per Orc-Mycelium escalation: no fresh pile-on comments on #863 / status:done; new finding goes straight to a fresh issue).
-- New test cases created: **TC-0082** (exploratory/see-schema-missing-accessibility-props, source #896).
-- Test cases updated: none (R140 already set `last_run: 2026-05-28` and `consecutive_passes: 0` for the 8 re-run TCs; TC-0055 also at same state).
+- Regression: **9/9 testable-from-NO_DESKTOP TCs re-confirmed FAIL on HEAD `ca7a9bc`** (TC-0054, 0055, 0062, 0065, 0067, 0071, 0079, 0080, 0081)
+- Phase 4 (Scripter/Automator): wrote a real Scripter-style dispatcher `case $? in 2) usage_error ;; 1) op_failed ;; esac` and ran it across 9 invocation classes. **Found a contract drift**: missing-required-arg path returns exit **1** for `type/press/find/wait/get/set/app launch` (custom INVALID_INPUT validators), while Click's own argument-validation path returns exit **2** for unknown subcommand / missing flag value / no-subcommand-on-group. A Scripter's standard dispatcher misclassifies `naturo type` (missing TEXT) as `OPERATION_FAILED` and may infinite-retry. Distinct from #866 (NO_DESKTOP runtime axis) — this is the missing-arg axis. Cross-checked JSON pipe-friendliness (stdout-only, stderr-quiet, parseable) — those work as advertised in the cases tested. Filed.
+- New issues created: **#897** (P2 v0.3.4 — missing-required-arg exit code drift: `type/press/find/wait/get/set/app launch` exit 1 instead of 2).
+- Comments added: none.
+- New test cases created: **TC-0083** (exploratory/missing-arg-exit-code-drift, source #897).
+- Test cases updated: TC-0054 notes extended with R142 adjacent-finding cross-reference.
 - Test cases cleaned up: none.
-- Total active test cases: **61** (+1).
-- Tests run: 9 regression re-verifications + ~12 read-only accessibility surface probes (schema grep, help-text inspection, focus-path tracing) + 1 new TC drafted + 1 new issue filed.
+- Total active test cases: **62** (+1).
+- Tests run: 9 regression re-verifications + ~15 Scripter exit-code/JSON pipe probes + 1 new TC drafted + 1 new issue filed.
 
 ## Top 3 Risks
-1. **Accessibility surface is structurally thin.** R141 confirms naturo's accessibility story is just `role + title + isActionable + keyboardShortcut(null)`. Six UIA accessibility properties — `IsKeyboardFocusable`, `HasKeyboardFocus`, `HelpText`, `IsEnabled`, `IsOffscreen`, `LocalizedControlType` — are absent from schema, never queried in core, and not filterable in `naturo find`. Combined with #886's null-shortcut bug, naturo cannot today serve the "AI agent driving a keyboard-only workflow on a non-English Windows" use case the README implies. #896 makes this concrete; absent action it remains a competitive-parity gap vs pywinauto (which exposes `UIA_*` properties verbatim via `comtypes`).
-2. **#885 epic still unstaffed for 53+ days.** R141 adds another finding (#896) in the contract/coverage cluster. The cluster now spans 14 filed P2/P1 bugs against the `-j`/snapshot surface (#864–#884 + #886 + #895 + #896); #896 is the first that's a *schema-coverage* gap rather than a behaviour gap. Until a centralized snapshot-schema contract lands, additional persona rounds will keep finding adjacent omissions.
-3. **5 SendInput-blocked `status:done` unverified ~29h** after restructured ship gate. R141 made no progress here — only Ace's console-session run or a #863 wrapper can move this. v0.3.2 ship gate cannot close.
+1. **Exit-code contract is currently un-script-able.** With #897 (this round, missing-arg axis: custom validator → exit 1) and #866 (existing, NO_DESKTOP runtime axis: input commands → exit 2 text mode / exit 1 -j mode), there is no single exit code a Scripter can use to distinguish "you called me wrong" from "I tried but the desktop is missing". A standard POSIX `case $?` dispatcher misclassifies *both* directions. Combined with the README's "AI Agent Ready" framing, this is a credibility risk for Scripter and Enterprise RPA Dev personas. Both fixes are mechanical (bind exit codes to the right `sys.exit` calls). Together they would close TC-0054 and TC-0083.
+2. **#885 epic still unstaffed for 53+ days.** R142 adds another contract-drift finding (#897). The exit-code surface now has 2 filed bugs (#866, #897); the envelope-shape cluster has 15+ (#864–#884, #886, #895, #896). #897 is the first that's purely a *runtime exit code* drift inside naturo's own validators, not a Click/envelope drift. Until a centralized contract test lands as part of #885, persona rounds will continue to peel layers off the same onion.
+3. **5 SendInput-blocked `status:done` unverified ~30h** after restructured ship gate. R142 made no progress; only Ace's console-session run or a #863 workaround can move this. v0.3.2 ship gate still locked on `#885 + 5 status:done from console`.
 
 ## Environment
 - Windows 11 Pro 10.0.26200.8457
-- naturo 0.3.1 (HEAD `b7b90ed`)
+- naturo 0.3.1 (HEAD `ca7a9bc`)
 - Runner: ROBOT-COMPILE (Naturobot user), NO_DESKTOP_SESSION
