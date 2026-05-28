@@ -7,8 +7,13 @@ source_issue: 885
 created: 2026-05-29
 last_run: 2026-05-29
 last_result: pass
-consecutive_passes: 2
+consecutive_passes: 3
 notes: >
+  R150 (Scripter/Automator persona) reconfirm on HEAD c15be18 (source unchanged): all 8
+  refusing commands still exit 1 with code NO_DESKTOP_SESSION (see/capture/list windows/list
+  apps/list screens/app list/menu-inspect/find button). Leaked-PID step verified: PID=73740
+  from the buggy `app windows -j`, `naturo see --pid 73740 -j` → exit 1 NO_DESKTOP_SESSION —
+  enumeration-only leak confirmed. Positive-lock holds. consecutive_passes 2->3.
   R149 (Accessibility User persona) reconfirm on HEAD c4342ff (source identical to e346036,
   +1 doc-only commit): see/capture/list windows all refuse with exit 1; the buggy bypass
   cases (TC-0065 #878, TC-0062 #875, TC-0079 #893) still return success:true exit 0.

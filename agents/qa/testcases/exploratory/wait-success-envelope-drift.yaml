@@ -8,7 +8,7 @@ created: 2026-05-28
 last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
-notes: "R144: FAIL — re-confirmed on HEAD 893209e. `wait 0.1 -j` → {success, mode:duration, wait_time}; `wait --gone foo -j` → {success, found, wait_time, warnings}. Different key sets, no `mode` discriminator on predicate variants. Drift unchanged."
+notes: "R150 (Scripter/Automator): FAIL — re-confirmed on HEAD c15be18. `wait 0.1 -j` → {success:true, mode:duration, wait_time:0.1}; `wait --gone explorer -j` → {success:true, found:true, wait_time:0.0, warnings:[]}. No `mode` discriminator on the predicate variant; a scripter cannot key off a single field to know which shape to parse. Drift unchanged. R144: FAIL — re-confirmed on HEAD 893209e. `wait 0.1 -j` → {success, mode:duration, wait_time}; `wait --gone foo -j` → {success, found, wait_time, warnings}. Different key sets, no `mode` discriminator on predicate variants. Drift unchanged."
 
 preconditions:
   - "naturo is installed and in PATH"

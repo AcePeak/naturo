@@ -9,6 +9,7 @@ last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
+  R150 (Scripter/Automator persona): FAIL — re-confirmed on HEAD c15be18 (source unchanged). Sharper repro: `naturo wait --gone explorer -j` → {success:true,found:true,wait_time:0.0} EXIT=0, while the same-session `naturo see -j` guard message explicitly names "explorer.exe running" — i.e. a verifiably FALSE negative, not merely an empty/ambiguous result. Step-4 workflow chain still propagates silent success: `wait --gone Loading --timeout 0.5 -j && echo PROCEEDING && click Save -j` prints PROCEEDING then NO_DESKTOP on the click. Commented on #893.
   R147 (Chinese User persona): FAIL — re-confirmed on HEAD e2afdcb. `naturo wait --gone '记事本'` → stdout "Element '记事本' disappeared after 0.0s" EXIT=0; `naturo wait --gone '记事本' -j` → `{"success":true,"found":true,"wait_time":0.0,"warnings":[]}` EXIT=0 in NO_DESKTOP_SESSION. Bypasses guard with Chinese selector identical to ASCII case. #893 unchanged.
   R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j wait --gone foo --timeout 1` returns {success:true, found:true, wait_time:0.0, warnings:[]} exit 0 instantly, bypassing both NO_DESKTOP_SESSION and the --timeout. Bug unchanged.
   R138: FAIL — `naturo wait --gone "X" --timeout 5 -j` returns `{success:true, found:true, wait_time:0.0}` exit 0 in NO_DESKTOP_SESSION; wall-clock elapsed 0.236s (CLI-startup time) confirms `--timeout` is ignored. Filed as #893; cross-listed as scope-extension on #885 epic. HEAD `ceecfd5`.
