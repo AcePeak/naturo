@@ -1,0 +1,51 @@
+id: TC-0090
+title: "Enterprise RPA workflow: same root cause (NO_DESKTOP_SESSION) must not yield 3 different exit codes + silent success:true mid-flow"
+status: active
+category: exploratory
+priority: P1
+source_issue: 885
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R153 (Enterprise RPA Dev persona) — created from a 10-step unattended-batch simulation on
+  HEAD cf1cfb7. An RPA error-recovery harness keys on exit code / success flag to decide
+  fail-fast vs continue. In a single NO_DESKTOP_SESSION run, the SAME root cause produced
+  THREE exit codes AND three steps returned exit 0 + success:true on fabricated data:
+    step1 app launch       -> exit 1 (plain "non-interactive session") [correct fail-fast]
+    step2 app windows -j   -> exit 0, success:true, 14 real windows   [#878 BYPASS]
+    step3 see -j           -> exit 1, success:false, NO_DESKTOP_SESSION [correct]
+    step4 wait notepad     -> exit 2, "notepad is not a valid float"   [arg-model UX nit]
+    step5 type             -> exit 2, NO_DESKTOP_SESSION                [#866 exit-code drift]
+    step6 capture          -> exit 1, NO_DESKTOP_SESSION                [correct]
+    step7 dialog detect -j -> exit 0, success:true, dialogs:[] count:0  [#875 BYPASS]
+    step8 list windows -j  -> exit 1, success:false, NO_DESKTOP_SESSION [correct]
+    step9 app quit notepad -> exit 1, "Application not found: notepad"  [misleading reason]
+    step10 wait --gone -j  -> exit 0, success:true, found:true, wait_time 0.0 [#893 false negative]
+  Impact: a batch that `set -e`-guards on exit code OR checks success:true will sail past
+  steps 2/7/10 on FABRICATED results — corrupting downstream logic with empty dialog lists,
+  a fake "app is gone" confirmation, and a real window list for an app this flow never owned.
+  All findings map to OPEN issues (#878/#875/#893/#866); this case locks the end-to-end
+  cross-surface consistency the #885 centralized guard must restore.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Session has no interactive desktop access (SSH / service / RDP-blocked)"
+
+steps:
+  - description: "Enumeration must not silently succeed mid-flow"
+    command: "naturo app windows -j; echo EXIT=$?"
+    expect: "Once #878 fixed: success:false, NO_DESKTOP_SESSION, exit 1. CURRENT FAIL: success:true + real windows, exit 0."
+  - description: "Dialog detect must not return silent empty success"
+    command: "naturo dialog detect -j; echo EXIT=$?"
+    expect: "Once #875 fixed: success:false, NO_DESKTOP_SESSION, exit 1. CURRENT FAIL: success:true, dialogs:[], count:0, exit 0."
+  - description: "wait --gone must not fabricate a 'gone' confirmation"
+    command: "naturo wait --gone notepad -j --timeout 2; echo EXIT=$?"
+    expect: "Once #893 fixed: success:false, NO_DESKTOP_SESSION. CURRENT FAIL: success:true, found:true, wait_time 0.0, exit 0."
+  - description: "Exit code for the same NO_DESKTOP_SESSION condition must be consistent across see/type"
+    command: "naturo see -j >/dev/null; echo SEE=$?; naturo type x >/dev/null 2>&1; echo TYPE=$?"
+    expect: "Once #866 fixed: SEE and TYPE return the same code. CURRENT FAIL: SEE=1, TYPE=2."
+
+pass_criteria: "Every command that cannot fulfil its contract due to NO_DESKTOP_SESSION returns success:false with the NO_DESKTOP_SESSION code and a single consistent exit code; no command returns success:true with fabricated payload."
+fail_action: "Update epic #885 with the cross-surface exit-code/success matrix; do not file duplicates of #878/#875/#893/#866."

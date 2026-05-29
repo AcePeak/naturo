@@ -7,8 +7,14 @@ source_issue: 885
 created: 2026-05-29
 last_run: 2026-05-29
 last_result: pass
-consecutive_passes: 5
+consecutive_passes: 6
 notes: >
+  R153 (Enterprise RPA Dev persona) reconfirm on HEAD cf1cfb7 (source unchanged since
+  17aefe6 — only QA/Orc report commits added; verified via git diff naturo/core/tests).
+  All 8 refusing commands (see/capture/list windows/list apps/list screens/app list/
+  menu-inspect/find) still exit 1 with NO_DESKTOP_SESSION. Leaked-PID step: PID=73740 from
+  buggy `app windows -j` → `naturo see --pid 73740 -j` → exit 1 NO_DESKTOP_SESSION.
+  Positive-lock holds. consecutive_passes 5->6. NOT retired (#885 still open).
   R152 (First-time User persona) reconfirm on HEAD e8cea28 (source unchanged since R150/R151 —
   only QA/Orc report commits added). All 8 refusing commands (see/capture/list windows/list apps/
   list screens/app list/menu-inspect/find) still exit 1 with code NO_DESKTOP_SESSION. Leaked-PID

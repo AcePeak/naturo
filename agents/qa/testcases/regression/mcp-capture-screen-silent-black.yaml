@@ -9,6 +9,12 @@ last_run: 2026-05-29
 last_result: fail
 consecutive_passes: 0
 notes: |
+  R153: FAIL — reconfirmed on HEAD `cf1cfb7` (source unchanged since 17aefe6). MCP
+  `capture_screen` (no args) returns {success:true, isError:false, width:3840, height:2160,
+  scale_factor:1.5, dpi:144}. Decoded `.work/qa-r153/capture_screen.png` (24,219 bytes):
+  PIL extrema=((0,0),(0,0),(0,0)), exactly 1 distinct color RGB(0,0,0) over all 8,294,400
+  pixels (100%). CLI `naturo capture` control refuses cleanly (exit 1, NO_DESKTOP_SESSION).
+  #868 unchanged. isError:false on unbindable desktop also reconfirms #882.
   R152: FAIL — reconfirmed on HEAD `e8cea28` (source unchanged since R145/R150/R151). MCP
   `capture_screen` returns {success:true, isError:false, width:3840, height:2160, scale_factor:1.5,
   dpi:144}. Decoded `.work/qa-r152-mcp/capture_screen.png` (24,219 bytes): PIL reports exactly
