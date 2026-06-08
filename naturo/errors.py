@@ -133,6 +133,32 @@ class AppNotFoundError(NaturoError):
 
     def __init__(self, name: str, **kwargs: Any) -> None:
         kwargs.setdefault(
+
+
+def from_pydantic_validation_error(err: Any) -> NaturoError:
+    """Convert a pydantic.ValidationError to a NaturoError with a clean message."""
+    # err is expected to be a ValidationError from pydantic
+    # We build a user-friendly error without exposing internals
+    missing_params = []
+    wrong_params = []
+    for error in err.errors():
+        field_path = " -> ".join(str(loc) for loc in error["loc"])
+        if error["type"] == "missing":
+            missing_params.append(field_path)
+        else:
+            wrong_params.append(field_path)
+    parts = []
+    if missing_params:
+        parts.append(f"Missing required parameter(s): {', '.join(missing_params)}")
+    if wrong_params:
+        parts.append(f"Invalid parameter(s): {', '.join(wrong_params)}")
+    message = ". ".join(parts) if parts else "Invalid parameters"
+    return NaturoError(
+        message=message,
+        code=ErrorCode.INVALID_INPUT,
+        category=ErrorCategory.VALIDATION,
+        suggested_action="Check the tool's parameters and retry.",
+    )
             "suggested_action",
             f"Check the application name. Try 'naturo app list' to see running apps, "
             f"or 'naturo app launch {name}' to start it first.",
