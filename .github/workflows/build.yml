@@ -476,6 +476,10 @@ jobs:
           CI_COMMIT_MSG: ${{ github.event.head_commit.message }}
           CI_NOTE: ${{ steps.status.outputs.note }}
         run: |
+          if [[ -z "$FEISHU_WEBHOOK_URL" ]]; then
+            echo "::warning::FEISHU_WEBHOOK_URL not set (fork/dependabot PR); skipping notification"
+            exit 0
+          fi
           SHORT_COMMIT="${CI_COMMIT:0:7}"
           RUN_URL="https://github.com/${CI_REPO}/actions/runs/${CI_RUN_ID}"
           # Use first line of commit message only
