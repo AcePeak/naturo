@@ -120,6 +120,12 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
         sys.exit(1)
         return
 
+    # (#885) Condition waits poll the live UI tree.  Without a desktop session
+    # the poll trivially observes "not present" and `wait --gone` returns
+    # success on iteration 1 (a false negative) — refuse loudly instead.
+    from naturo.cli.core._common import _enforce_desktop_session
+    _enforce_desktop_session(json_output)
+
     # Import here to avoid import-time side effects
     from naturo.wait import wait_for_element, wait_until_gone, wait_for_window
 

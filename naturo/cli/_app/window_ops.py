@@ -7,6 +7,7 @@ import sys
 import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.core._common import _enforce_desktop_session
 from naturo.cli._app._common import (
     _handle_generic_error,
     _handle_naturo_error,
@@ -377,6 +378,10 @@ def app_windows(ctx, name, pid, json_output) -> None:
       naturo app windows --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#885) Refuse to enumerate windows without a desktop session — otherwise
+    # this returns a real window list (bypassing the guard) and silently lies.
+    _enforce_desktop_session(json_output)
 
     # (#776) Resolve app ID (a1, a2, …) to process name/PID for filtering
     entry = _resolve_app_id(name, json_output)

@@ -5,6 +5,11 @@ All notable changes to Naturo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **NO_DESKTOP_SESSION silent-failure cluster** — `app windows`, `dialog detect`, `taskbar list`, `tray list`, `wait --gone` (CLI) and `capture_screen`, `list_windows`, `list_apps`, `app_inspect`, `capture_window`, `list_monitors` (MCP) no longer return fabricated success (empty arrays, all-black PNGs, stale window lists) without a desktop session. The session guard is now enforced structurally at the shared entrypoint and these surfaces fail loudly with `NO_DESKTOP_SESSION` (exit 1 / `isError:true`) ([#885](https://github.com/AcePeak/naturo/issues/885), [#868](https://github.com/AcePeak/naturo/issues/868), [#875](https://github.com/AcePeak/naturo/issues/875), [#878](https://github.com/AcePeak/naturo/issues/878), [#883](https://github.com/AcePeak/naturo/issues/883), [#893](https://github.com/AcePeak/naturo/issues/893))
+
 ## [0.3.1] — 2026-03-31
 
 ### Added

@@ -323,7 +323,17 @@ def register_window_tools(server, _get_backend, _safe_tool):
 
         Returns:
             Detection result with frameworks, methods, and recommendation.
+
+        Raises:
+            NoDesktopSessionError: If no interactive desktop session exists
+                (#885) — otherwise this leaks live process/UI-framework info.
         """
+        # (#885) app_inspect probes a live process instead of going through
+        # _get_backend(), so guard it explicitly to keep it from leaking
+        # running-process details in a NO_DESKTOP_SESSION environment.
+        from naturo.cli.interaction import _check_desktop_session
+        _check_desktop_session()
+
         from naturo.detect import detect
 
         target_pid = pid

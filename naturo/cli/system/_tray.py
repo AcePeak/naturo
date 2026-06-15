@@ -19,6 +19,7 @@ import json as _json
 
 import click as _click
 
+from naturo.cli.core._common import _enforce_desktop_session
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
@@ -51,6 +52,9 @@ def tray_list(json_output) -> None:
         naturo tray list                       # Human-readable list
         naturo tray list --json                # JSON output
     """
+    # (#885) Refuse to enumerate tray icons without a desktop session.
+    _enforce_desktop_session(json_output)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 
