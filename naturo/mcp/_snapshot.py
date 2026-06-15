@@ -166,13 +166,15 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
 
         return {
             "success": True,
+            "session": manager.session,
             "snapshots": [
                 {
-                    "snapshot_id": s.snapshot_id,
-                    "created_at": s.created_at,
-                    "window_title": s.window_title,
+                    "id": s.id,
+                    "created_at": s.created_at.isoformat(),
+                    "last_accessed_at": s.last_accessed_at.isoformat(),
+                    "size_bytes": s.size_in_bytes,
+                    "screenshot_count": s.screenshot_count,
                     "application_name": s.application_name,
-                    "is_valid": s.is_valid,
                 }
                 for s in snapshots
             ],

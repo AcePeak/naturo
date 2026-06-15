@@ -629,8 +629,30 @@ class SnapshotManager:
         logger.debug("Most recent valid snapshot: %s", best)
         return best
 
-    def list_snapshots(self) -> List[SnapshotInfo]:
-        """Return summary information for all stored snapshots, newest first."""
+    def list_snapshots(self, limit: Optional[int] = None) -> List[SnapshotInfo]:
+        """Return summary information for stored snapshots, newest first.
+
+        Parameters
+        ----------
+        limit:
+            Maximum number of snapshots to return. When ``None`` (the default)
+            every snapshot is returned. When set, only the newest ``limit``
+            snapshots are returned.
+
+        Returns
+        -------
+        List[SnapshotInfo]
+            Snapshot summaries sorted newest-first, sliced to ``limit`` when
+            provided.
+
+        Raises
+        ------
+        ValueError
+            If ``limit`` is provided and is less than 1.
+        """
+        if limit is not None and limit < 1:
+            raise ValueError(f"limit must be >= 1, got {limit}")
+
         infos: List[SnapshotInfo] = []
 
         with self._lock:
@@ -677,6 +699,8 @@ class SnapshotManager:
                 )
 
         infos.sort(key=lambda s: s.created_at, reverse=True)
+        if limit is not None:
+            return infos[:limit]
         return infos
 
     def clean_snapshot(self, snapshot_id: str) -> None:

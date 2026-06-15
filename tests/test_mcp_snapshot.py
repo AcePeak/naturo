@@ -223,23 +223,32 @@ class TestGetSnapshot:
 class TestListSnapshots:
 
     def test_returns_snapshot_list(self, server):
-        snap = MagicMock()
-        snap.snapshot_id = "snap-001"
-        snap.created_at = "2026-03-31T00:00:00"
-        snap.window_title = "Notepad"
-        snap.application_name = "notepad.exe"
-        snap.is_valid = True
+        from datetime import datetime, timezone
+
+        from naturo.models.snapshot import SnapshotInfo
+
+        snap = SnapshotInfo(
+            id="snap-001",
+            created_at=datetime(2026, 3, 31, tzinfo=timezone.utc),
+            last_accessed_at=datetime(2026, 3, 31, tzinfo=timezone.utc),
+            size_in_bytes=2048,
+            screenshot_count=1,
+            application_name="notepad.exe",
+        )
 
         mock_manager = MagicMock()
+        mock_manager.session = "default"
         mock_manager.list_snapshots.return_value = [snap]
 
         with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
             result = _call_tool(server, "list_snapshots", {})
         data = json.loads(result[0].text)
         assert data["success"] is True
+        assert data["session"] == "default"
         assert len(data["snapshots"]) == 1
-        assert data["snapshots"][0]["snapshot_id"] == "snap-001"
-        assert data["snapshots"][0]["is_valid"] is True
+        assert data["snapshots"][0]["id"] == "snap-001"
+        assert data["snapshots"][0]["application_name"] == "notepad.exe"
+        assert data["snapshots"][0]["created_at"] == "2026-03-31T00:00:00+00:00"
         mock_manager.list_snapshots.assert_called_once_with(limit=10)
 
     def test_custom_limit(self, server):
