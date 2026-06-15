@@ -18,6 +18,7 @@ import json as _json
 
 import click as _click
 
+from naturo.cli.core._common import _enforce_desktop_session
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
@@ -50,6 +51,9 @@ def taskbar_list(json_output) -> None:
         naturo taskbar list                    # Human-readable list
         naturo taskbar list --json             # JSON output
     """
+    # (#885) Refuse to enumerate taskbar items without a desktop session.
+    _enforce_desktop_session(json_output)
+
     from naturo.backends.base import get_backend
     from naturo.errors import NaturoError
 

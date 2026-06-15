@@ -21,6 +21,7 @@ import json as _json
 
 import click
 
+from naturo.cli.core._common import _enforce_desktop_session
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
@@ -67,6 +68,10 @@ def detect(app, hwnd, app_id, json_output) -> None:
         naturo dialog detect --app-id a1       # Filter by app ID
         naturo dialog detect --json            # JSON output
     """
+    # (#885) Refuse to scan for dialogs without a desktop session — otherwise
+    # this returns success:true with an empty list, silently masking the miss.
+    _enforce_desktop_session(json_output)
+
     # (#776) Promote --app aN to --app-id
     app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd

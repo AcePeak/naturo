@@ -16,7 +16,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 
 from naturo.backends.base import get_backend, Backend
-from naturo.errors import NaturoError
+from naturo.errors import ErrorCode, NaturoError
 from naturo.process import launch_app as _launch_app
 
 from naturo.mcp._capture import register_capture_tools
@@ -50,7 +50,23 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     )
 
     def _get_backend() -> Backend:
-        """Get the platform backend, raising clear errors."""
+        """Get the platform backend, raising clear errors.
+
+        Performs the same ``NO_DESKTOP_SESSION`` pre-flight check the CLI uses
+        (#885).  Every read/enumeration tool (``capture_screen``,
+        ``list_windows``, ``list_apps``, ``app_inspect``, ``capture_window``,
+        ``list_monitors``, …) obtains its backend through this single
+        entrypoint, so guarding here makes wrong-data-on-no-session
+        structurally impossible across the MCP surface — these tools previously
+        returned fabricated success (black PNGs, real-looking window lists)
+        with ``isError:false``.
+
+        Raises:
+            NoDesktopSessionError: If no interactive desktop session exists.
+            NaturoError: If no backend is available for this platform.
+        """
+        from naturo.cli.interaction import _check_desktop_session
+        _check_desktop_session()
         try:
             return get_backend()
         except RuntimeError as e:
@@ -63,6 +79,11 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             try:
                 return fn(*args, **kwargs)
             except NaturoError as e:
+                # (#885) A missing desktop session must fail *loudly* — re-raise
+                # so the MCP transport flags isError:true instead of returning a
+                # success:false dict (isError:false) an agent may overlook.
+                if e.code == ErrorCode.NO_DESKTOP_SESSION:
+                    raise
                 error_info: dict = {"code": e.code, "message": str(e)}
                 if e.suggested_action:
                     error_info["suggested_action"] = e.suggested_action
