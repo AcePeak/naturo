@@ -1,63 +1,68 @@
 # Naturo Project Status
-> Auto-maintained by Orc-Mycelium. Agents: read on every startup.
+> Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-15 (local multi-agent loop went live).
 
 ## Current Version
-v0.3.1 (PyPI + GitHub Release)
+v0.3.1 (PyPI + GitHub Release). `develop` CI green.
 
-## Active Work
-Query live data — do not rely on this section for specific issue numbers:
+## Operating Mode — LOCAL multi-agent loop (NEW, 2026-06-15)
+The project now runs as a machine-local 3-role loop on NATUROBOT (real Windows desktop),
+defined in `agents/local/` (PR #908). This supersedes the old cloud-cron design for daily work.
+
+| Role | Who | Worktree | Cadence |
+|------|-----|----------|---------|
+| **Orch** | live interactive session (Orc-Mycelium) | main checkout on `develop` | interactive |
+| **Dev** | hourly background agent (Dev-Sirius) | `../naturo-dev` (dev-work) | cron :07 |
+| **QA**  | hourly background agent (QA-Mariana) | `../naturo-qa` (qa-work) | cron :37 |
+
+- Orch also runs a **PR-triage sweep at :22** (allow/merge team dev→develop PRs, bottom out
+  stuck ones, review external PRs). Machine-local state log lives **outside the repo** at
+  `C:\Users\Naturobot\naturo-loop-state.log`.
+- Crons are **session-only** — they fire only while the Orch Claude session is alive, and
+  auto-expire after 7 days. Persistent (survives-session-close) scheduling is an open Ace decision.
+- Dev/QA here have a real desktop + working DLL + `gh` CLI → they run `@pytest.mark.desktop`
+  tests and manage their own PRs/labels (no `pr-requests.md` handoff).
+
+## Active Work — query live, do not trust hardcoded numbers
 ```bash
 gh issue list --state open --limit 100 --json milestone,number,title,labels \
   --jq 'group_by(.milestone.title // "backlog") | sort_by(.[0].milestone.title // "z") |
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-06-08 — **19th cycle, ACTION**; first real triggers since the 11th — external author revived (#904) + genuine CI-hygiene bug (#906) found & fixed)
-- **19th-cycle delta (action):** Cron fired into **three live triggers** (first non-flat cycle since 15th). (1) **External author @botbikamordehai2-sketch REVIVED** — opened new PR **#904** (closes #844) on 06-07, base=`main`, +26/-0 to `errors.py`. Investigated: #844 is **already comprehensively fixed in develop** (`mcp_server.py` @ HEAD `2264233` — both `_safe_tool` post-call path AND `_sanitized_call_tool` FastMCP pre-call path); #904's helper is an un-wired strict subset. Action: **retargeted #904 main→develop** + posted warm, honest, redirecting comment (`#issuecomment-4646261416`) — recommended closing #904, redirected their MCP-error-quality interest to genuinely-open #901/#900/#899. Did NOT close (RULES §1). (2) **Genuine CI bug found & self-served**: dependabot PR #905 (codecov-action 6→7, base=`main`) showed Build & Test ❌ — root cause = `notify` (Feishu) step runs `curl -X POST ""` with empty `FEISHU_WEBHOOK_URL` (secrets absent on fork/bot PRs) → exit 3 under `bash -e` → false-red on EVERY fork/bot PR (incl. #904 once approved). Filed **#906** (P2, v0.3.2) → fixed myself in **PR #907** (guard: empty webhook → warn + exit 0) → **auto-merged to develop 07:11Z** (lint/version/tests green; C++ informational), branch auto-deleted, #906 `status:done` (auto-closes at release). Same orc-territory class as #903 (runner-independent, public-facing CI hygiene). (3) #905 left as-is (base=`main`, won't merge to main per §2; codecov bump non-urgent, false-red resolved at next release). All else flat: PR #892 still OPEN/base=`main`/silent 11d; Dev-Sirius idle 69d; stars/forks 5/6; VERSION 0.3.1. v0.3.2 now **31 open** (added #906)/89 closed. **Hygiene nit:** startup `gh milestone` sort returns stale `v0.2.0` (open state, 0 open issues) — 7 completed milestones (v0.2.0/v0.3.0/v0.4.0/v0.2.2/v0.2.3/v0.2.4/v0.3.1) should be closed; active milestone for new work is **v0.3.2** (used here). Next: event-driven — watch #904 (author close/pivot), #905, Dev push, new issues.
-- **(prior) 18th-cycle delta (no-op):** Cron fired with **no trigger**. Every signal flat vs 17th cycle: PR #892 OPEN/base=`main`/MERGEABLE, author @botbikamordehai2-sketch silent since 2026-05-28 (10d; 6d past FINAL deadline 06-02); 0 new issues since #902 (10d); Dev-Sirius idle 68d (remotes = `main`+`develop` only, PR queue/session-log unchanged since 05-13 clear); develop CI GREEN (last run = #903 merge 06-05); prior action #903 confirmed still landed (#902 fix live in develop `9564faf`, `status:done`, auto-closes at release); stars/forks 5/6; VERSION 0.3.1 consistent. Counts unchanged: v0.3.2 30/89, v0.3.3 6/1, v0.3.4 47/8, backlog 9. **No GitHub action** (disciplined verify-only). **Did NOT re-escalate** the two human blockers (already escalated 15th/16th, Ace declined in-session — re-spamming = noise). **Did NOT self-serve #899/#900** (role + priority drift unchanged: CLI feature code = Dev's charter, v0.3.4 ahead of blocked v0.3.2 gate). Next: pure event-driven — fire only on Dev push / #892 author revival / new issue / Ace intervention / q48h CI safety-net.
-- **(prior) 17th-cycle delta (verify):** Only delta since 16th = expected completion of own prior action: **PR #903 MERGED 2026-06-05T16:06Z** → develop CI green (Build & Test + CodeQL both success) → branch `docs/issue-902-contributing-develop-first` deleted (remotes = only `main`+`develop`). #902 fix confirmed live in develop (`9564faf`; CONTRIBUTING step 5 now "squash merge to `develop`"); #902 already `status:done` + commented last cycle, correctly OPEN per RULES §7 (auto-close fires only on default-branch=`main` merges → closes at next release). **No loose ends from 16th cycle.** All else flat vs 16th: PR #892 OPEN/base=`main`/MERGEABLE, author silent since 05-28 (5d past FINAL deadline); 0 new issues since #902 (10d); Dev-Sirius idle 67d (#885 last activity = own 06-01 unblock comment); runner #842 (updated 05-08) / #860 unassigned both down; stars/forks 5/6; VERSION 0.3.1 consistent. Counts unchanged: v0.3.2 30/89, v0.3.3 6/1, v0.3.4 47/8, backlog 9. **No GitHub action taken (disciplined verify-only).** **Did NOT self-serve pre-staged #899/#900:** re-evaluated — #899 is CLI *feature code* (Dev's charter, not orc's; unlike 16th-cycle's #903 docs fix which was legitimately orc territory) AND v0.3.4, so working it ahead of the blocked v0.3.2 ship gate = priority drift (Phase 3). Orc cannot advance v0.3.2 solo; manufacturing feature work masks the Dev-idle blocker rather than relieving it. **Did NOT re-escalate the two human blockers** — already escalated interactively last cycle, Ace declined in-session; re-spamming = noise. Next: pure event-driven; fire only on Dev push / #892 author revival / new issue / Ace intervention.
-- **(prior) 16th-cycle delta (action):** First non-no-op since the 11th. All passive signals flat vs 15th: PR #892 still OPEN/base=`main`/MERGEABLE, last activity 2026-06-02T16:03Z (own closure note), author zero activity since 2026-05-28; no new issues since #902; CI green (CodeQL 06-01 + Dependabot 06-01 success); stars/forks 5/6; source HEAD frozen `22642335`. **Action: fixed #902 myself** — CONTRIBUTING.md step 5 "squash merge to main" → develop-first, the exact line that misled external PR #892 into targeting `main`. PR #903 (`docs/issue-902-contributing-develop-first`), auto-merge squash → develop, CI on GitHub-hosted runners (no self-hosted runner needed); commented `#issuecomment-4633346849`. Rationale: 9d-pending, public-facing, one-line, runner- and Dev-independent — leaving it for an idle assignee violated §9/§13. **Both true blockers re-escalated to Ace via interactive prompt this cycle (Dev-Sirius idle 62d; runner #842 offline ~63d / #860 unassigned ~25d) — Ace declined to answer in-session, defaults hold.** Next: verify #903 merges (v0.3.2 → 31 closed), then self-serve next runner-independent item (#899 `-h` flag trivial; #900 param-drift) if Dev stays dark.
-- **(prior) 15th-cycle delta (deadline-pass):** PR #892 48h FINAL window closed 2026-06-02T22:04Z silently — author @botbikamordehai2-sketch zero activity since 2026-05-28 push (commit `51dd440`); no commit/comment/reaction across the 72h soft + 48h FINAL windows. **Action: posted window-closure note on #892 (`#issuecomment-4604275507`) — PR stays OPEN per RULES.md §1 (no close without merged commit), welcoming language, Dev-led path declared.** #892 still base=`main`, MERGEABLE, unretargeted. No new issues since #902 (2026-05-28). CI green: scheduled CodeQL 06-01T11:15Z + Dependabot 06-01T22:18Z both success (q48h safety-net clear); the 2026-05-28 `action_required` runs are the external PR awaiting workflow approval, NOT a develop breakage. Stars/forks 5/6 flat. Source HEAD frozen `22642335` (2026-04-05, ~59d). Counts unchanged: v0.3.2 30/89, v0.3.3 6/1, v0.3.4 47/8, backlog 9. **The two true blockers are now both human-decision items, escalated to Ace this cycle: (1) Dev-Sirius idle ~58d, unresponsive to the 06-01 unblock comment on #885 — needs a direct Ace nudge; (2) self-hosted runner #842 offline day 60+, cloud-VM alt #860 unassigned day 22+ — needs an Ace infra decision. No orc cycle resolves either; 15 cycles of disciplined no-op confirm the project is fully gated on these two.**
-- **(prior) 14th-cycle delta:** zero triggers, identical signal-set to 13th cycle 3h ago. PR #892 still OPEN against `main` (unretargeted), last activity = own 06-01T04:05Z FINAL-window comment, no author response. Only develop/main remote branches (no Dev push to `fix/issue-885-*` / `fix/issue-902-*`). No new issues since 2026-05-28. CI green (CodeQL 06-01T11:15Z + Dependabot 06-01T22:18Z both success — re-confirms scheduled crons healthy). Stars/forks 5/6 unchanged. Source HEAD = own 13th-cycle commit `de2143b` (no code change). **No comments posted (disciplined no-op).** Counts unchanged: v0.3.2 30/89, v0.3.3 6/1, v0.3.4 47/8, backlog 9. **Process note:** cron fired ~3×/day (04:00Z then 07:00Z) despite event-driven mode declared binding — both fires this UTC-day produced zero marginal information. Next meaningful cycle remains **deadline-pass @ 2026-06-02T22:04Z**; any intermediate scheduled fire before then should remain a no-op. Pre-staged post-deadline plan (below, from 11th cycle) unchanged.
-- **(prior) 13th cycle (2026-06-02 04:00Z):** no-change, fired ~18h early with no trigger; confirmed scheduled CodeQL+Dependabot ran GREEN 2026-06-01, clearing the q48h safety-net check.
-- **(prior) 12th cycle (2026-06-01 07:13Z):** no-change cycle; event-driven mode now BINDING until 2026-06-02T22:04Z FINAL deadline; PR #892 silent ~81h post v2-request.
-- **v0.3.2**: **31 open** / 89 closed (added #906 Feishu CI fix, status:done). Source HEAD `22642335` (PR #853 tests-only commit, 2026-04-05) unchanged across all 11 reviews 2026-05-29 → 2026-06-01. QA-Mariana idle since R153 comment at 2026-05-29T02:05Z (~75h, correct on frozen source). **PR #892 status: silent 78.9h post v2-request (deadline passed by ~6.9h).** Author @botbikamordehai2-sketch zero activity post Orc v2 request at 2026-05-28T22:04Z. Last author push `51dd440` at 2026-05-28T09:12Z. PR base = `main` (still unretargeted). **Pre-staged plan FIRED today**: (a) 48h FINAL-window comment posted on #892 (closes 2026-06-02T22:04Z) — `#issuecomment-4589450297`; (b) Dev-Sirius unblock comment posted on #885 directing #902 (warm-up) → #885 surface matrix on base=develop — `#issuecomment-4589450641`; (c) #902 promoted as Dev warm-up — `#issuecomment-4589450799`; (d) #892 remains OPEN per RULES.md §1, no close/force-push/retarget. Ship gate unchanged: close #885 + verify 5 status:done from console session.
+## Milestone Summary (2026-06-15)
+- **v0.3.2**: ~31 open / 89 closed. **Ship gate unchanged**: (1) close epic **#885** (P0 silent-
+  failure cluster — NO_DESKTOP_SESSION guard bypassed on ~9 CLI+MCP surfaces, returns fabricated
+  success); (2) verify 5 `status:done` issues (#786, #788, #807, #840, #843) from a real desktop
+  session (now possible — QA loop runs on NATUROBOT).
+  - **#885 takeover IN PROGRESS (2026-06-15):** community PR #892 added a correct
+    `require_desktop_session` decorator but never applied it. Ace approved the Dev loop completing
+    the fix (wire all surfaces + regression tests, base=develop, co-credit the contributor).
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
-- **v0.3.4**: **47 open** / 8 closed. New from QA R135–R145: #888–#891, #894–#900. All MCP/CLI contract-drift, JSON envelope drift, parameter-name drift, exit-code drift. #890 (MCP list_snapshots fails 100%) is the only P1; rest P2. v0.3.4 is effectively a "contract stability" milestone — worth formalizing as the explicit theme when v0.3.3 ships. Blocked on v0.3.2.
-- **Backlog**: 9 open (Linux platform + #777 Unicode capture). Community/docs tasks already migrated to v0.3.4.
+- **v0.3.4**: ~46 open / 8+ closed. Effectively a "contract stability" milestone (MCP/CLI envelope,
+  param-name, exit-code drift from QA R135–R153). #890 (MCP list_snapshots) closed via PR #909.
+  Blocked on v0.3.2.
+- **Backlog**: ~10 open (Linux platform + #777 Unicode capture + migrated community/docs tasks).
 
-## Agent Roster
-- **Dev-Sirius**: Technical cofounder. Latest session 2026-04-05 (idle **57 days**). **EXPLICITLY UNBLOCKED today (2026-06-01)** via comment on #885 to proceed in parallel with #892. Recommended sequence: **#902 (30-min docs warm-up, fixes CONTRIBUTING.md `main` vs `develop` contradiction that misled #892) → #885 (P0 epic, full silent-failure cluster surface matrix on base=develop)**. Pivot-cleanly clause: if #892 author revives within 48h FINAL window (until 2026-06-02T22:04Z) and lands first, Dev pivots away; if Dev lands first, #885 fully replaces #892 (close #892 with credit). Other unblocked: #870 (P1 test fix), #720, #856, #861, #862 (P2 refactors). #809 + status:done verification still runner-blocked. **4th cycle flagged for strategic escalation** — manual nudge from Ace remains warranted; the unblock comment is the formal signal but Dev historically responds to direct Ace prompts.
-- **QA-Mariana**: Quality cofounder. **153 rounds completed**. Running on NATUROBOT. 5 status:done still unverified (SendInput-blocked by #863). Idle since R153 comment at 2026-05-29T02:05Z (~75h, correct — frozen source). Strong R153 sharpening artifact (TC-0090 end-to-end workflow exit-code consistency) already on #885.
-- **Orc-Mycelium**: Strategic orchestrator. Latest session (2026-06-08 — **19th cycle, ACTION**). Three live triggers (first non-flat since 15th): external author revived w/ PR #904 (retargeted main→develop + redirected — #844 already fixed in develop `2264233`); found+fixed genuine CI bug #906 (Feishu false-red on fork/bot PRs) via PR #907 auto-merged 07:11Z; left dependabot #905 as-is. Watch #904 author response / #905 / Dev push / new issues.
-  - (prior) Latest session (2026-06-07 — **18th cycle, NO-OP/verify**). Cron fired with zero new triggers; all signals identical to 17th cycle (PR #892 silent 10d, 0 new issues 10d, Dev idle 68d, CI green, stars/forks 5/6). No GitHub action; declined re-escalation (already declined by Ace) and #899/#900 self-serve (role+priority drift). Pure event-driven — fires only on Dev push / #892 author revival / new issue / Ace intervention / q48h CI safety-net.
-  - (prior) Latest session (2026-06-06 — **17th cycle, VERIFY/no-material-change**). Verified 16th-cycle action landed cleanly: PR #903 merged, develop CI green, branch deleted, #902 fixed-in-develop + `status:done` (auto-closes at release). All passive signals flat. **No GitHub action** (disciplined verify-only); declined to self-serve pre-staged #899/#900 (role+priority drift — CLI feature code, v0.3.4, ahead of blocked v0.3.2 gate) and declined to re-escalate the two human blockers (already escalated last cycle, Ace declined in-session). Truly event-driven — fires only on (a) Dev-Sirius push, (b) #892 author revival, (c) new issue, (d) Ace intervention, or (e) q48h safety-net health check. No scheduled no-op cycles warranted.
-  - (prior) Latest session (2026-06-03 — **15th cycle, DEADLINE-PASS**). PR #892 FINAL window closed silently 2026-06-02T22:04Z; posted closure note (`#issuecomment-4604275507`), PR stays OPEN, Dev-led #885 declared primary. **Escalated both human-decision blockers to Ace (Dev-Sirius nudge + runner #842/#860 infra decision).**
-  - (prior) Latest session (2026-06-02 07:00Z — **14th cycle, no-change**). 13th + 14th cycles both fired early (04:00Z, 07:00Z) with zero triggers and zero marginal value. 11th cycle's three pre-staged comments remain the last GitHub activity (#892 FINAL, #885 Dev-unblock, #902 root-cause — all @ 06-01 04:05Z) with 0 author/Dev response since. **Event-driven mode BINDING until 2026-06-02T22:04Z FINAL deadline (~15h)**. Triggers that may invoke a cycle before then: (a) PR #892 author push/comment/close, (b) Dev-Sirius push to `fix/issue-885-*` / `fix/issue-902-*`, (c) any new issue filed, (d) Ace direct intervention. Otherwise next meaningful cycle = **2026-06-02T22:04Z deadline-pass cycle** (post-FINAL action plan already in place from 11th cycle). CodeQL/Dependabot schedule confirmed running (06-01) — q48h safety-net cleared.
+## Open community PRs (external contributor @botbikamordehai2-sketch)
+- **#892** (closes #885): correct decorator, never applied, base=`main`. Team carrying forward.
+- **#904** (closes #844): right direction, breaks `errors.py` (mis-spliced helper), no wiring,
+  unrelated workflow churn, base=develop. Team carrying forward.
+- Both: warm "we'll complete + co-credit you" notes posted 2026-06-15; close when the team PR lands.
 
 ## Coordination
-- Bug tracking: GitHub Issues only
-- State flow: status:in-progress -> status:done -> verified -> close
-- CI must be green before any merge
-- **SHIP GATE (unchanged from 2026-05-28 PM restructure)**: (1) Close epic #885 (silent-failure cluster — 9-surface matrix consolidated in epic comments). (2) Verify 5 status:done issues (#786, #788, #807, #840, #843) from a console-session QA invocation. #863 remains a v0.3.3 ops task.
-- **CI BLOCKER (secondary)**: Self-hosted runner ROBOT-COMPILE offline **day 60** (#842, no update in 21d). Cloud VM alternative (#860) still unassigned day 22. Chronic — needs Ace decision.
-- GitHub-hosted `windows-latest` runner confirmed CANNOT substitute (no interactive desktop session)
-- **Branch model contradiction**: CONTRIBUTING.md step 5 reads "squash merge to main" — contradicts develop-first rule. Misled PR #892. Filed as #902 (P1).
-- All remote branches clean (only develop and main), but PR #892 is **open against `main`** — must be retargeted before merge.
-- CI on develop: GREEN (Build & Test + CodeQL pass; last run 2026-05-25)
-- Scheduled workflow crons DISABLED on main (PR #858) — re-enable when runner restored
+- Bug tracking: GitHub Issues only. State flow: `status:in-progress` → `status:done` → `verified` → close.
+- One issue = one commit = one PR. English-only on GitHub. CI red → stop all new dev work.
+- Never push directly to `main`/`develop` (only release tags → `main`); Orch may push
+  operational files (STATE.md, queue) to develop with `[skip ci]`.
+- **Human-decision items (Ace only):** self-hosted runner #842 (offline) / cloud-VM #860;
+  persistent cron scheduling; ship-gate timing; public-API changes; superseding community PRs.
 
 ## Code Health
-- 150 source files, 222+ test files (QA-Mariana adds reports continuously)
-- Large files needing split: `_element.py` (1,517, #720), `browser_cmd.py` (1,378, #856), `macos.py` (1,065, #862), `_input.py` (1,057, #861) — all four still open
-- Version consistent: 0.3.1 across pyproject.toml, version.py, PyPI
-- **5 stars, 6 forks** on GitHub (stable — last fork delta was PR #892 author 2026-05-28)
-- Silent-failure cluster (#885) systemic gap unchanged on source HEAD `22642335` (2026-04-05) per QA R153. Fix should include CI check to prevent recurrence (e.g. lint that flags any entrypoint without a guard or explicit `# desktop-not-required` opt-out).
+- Large files still open for split: `_element.py` (#720), `browser_cmd.py` (#856),
+  `macos.py` (#862), `_input.py` (#861).
+- Version consistent at 0.3.1 across pyproject/version.py/PyPI.
 
 ## Completed Releases
-- v0.1.0 — Core features
-- v0.1.1 — 67 bug fixes (PyPI)
-- v0.2.0 — Unified App Model + DPI
-- v0.2.1 — Auto-routing + get command
-- v0.3.0 — QA-tested release (PyPI)
-- v0.3.1 — Hotfix: CMakeLists.txt + version.cpp sync
+- v0.1.0 core · v0.1.1 (67 fixes) · v0.2.0 (Unified App Model + DPI) · v0.2.1 (auto-routing + get)
+- v0.3.0 (QA-tested) · v0.3.1 (hotfix: CMakeLists + version.cpp sync)
