@@ -35,9 +35,10 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   failure cluster — NO_DESKTOP_SESSION guard bypassed on ~9 CLI+MCP surfaces, returns fabricated
   success); (2) verify 5 `status:done` issues (#786, #788, #807, #840, #843) from a real desktop
   session (now possible — QA loop runs on NATUROBOT).
-  - **#885 takeover IN PROGRESS (2026-06-15):** community PR #892 added a correct
-    `require_desktop_session` decorator but never applied it. Ace approved the Dev loop completing
-    the fix (wire all surfaces + regression tests, base=develop, co-credit the contributor).
+  - **#885 fix MERGED (2026-06-15, PR #911):** the Dev loop completed it — `require_desktop_session`
+    wired onto all 11 CLI+MCP surfaces + a 23-case regression matrix (`tests/test_no_desktop_guard_885.py`),
+    built on community PR #892's decorator (contributor co-credited). Closes #868/#875/#878/#883/#893.
+    Now `status:done`, awaiting QA desktop verification before the epic closes.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: ~46 open / 8+ closed. Effectively a "contract stability" milestone (MCP/CLI envelope,
   param-name, exit-code drift from QA R135–R153). #890 (MCP list_snapshots) closed via PR #909.

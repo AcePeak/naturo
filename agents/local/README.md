@@ -43,5 +43,33 @@ bash agents/local/bootstrap.sh
 ```
 
 This creates `../naturo-dev` and `../naturo-qa` from `origin/develop` and copies the DLL into
-each. Then start an orchestrator session and have it register the hourly cron jobs (see
-`orch-playbook.md`). A runtime state log is kept **outside** the repo (machine-local).
+each. A runtime state log is kept **outside** the repo (machine-local).
+
+## Two ways to drive the loop
+
+### A. Interactive (you are present)
+Start an orchestrator Claude session and have it register session crons (see `orch-playbook.md`).
+These fire only while that session is open — good for supervised, hands-on work.
+
+### B. Persistent / unattended (the machine runs the loop on its own)
+For self-evolving operation when no one is logged in to babysit a session, drive the cycles with
+**Windows Task Scheduler** invoking the headless launcher `runner.ps1`:
+
+```
+powershell -ExecutionPolicy Bypass -File agents\local\runner.ps1 -Role dev    # | qa | orch
+```
+
+`runner.ps1` runs exactly one bounded `claude -p` cycle for the role inside its worktree, with an
+overlap lock and `--dangerously-skip-permissions` (no human is present to approve tool calls; the
+safety envelope is `agents/RULES.md` + GitHub branch protection on `main` + worktree isolation + the
+hard constraints in each cycle prompt). Suggested schedule: **Dev hourly :07, Orch :22, QA :37**.
+
+**Critical requirement — a live desktop session.** QA performs real UI verification (the whole reason
+it runs locally), so the machine must have an **interactive desktop session logged in**. Enable
+auto-login (and disable sleep) so the session persists across reboots, then register the tasks to
+**"run only when the user is logged on"**. A pure Session-0 "run whether logged on or not" task has no
+desktop and would break QA. Keep one session alive; lock the screen if you want privacy.
+
+The headless Orchestrator cycle is `orch-review.md` (autonomous — it acts itself and pushes
+human-only decisions to the `needs:ace` queue + top-level `NEEDS-ACE.md`, which Ace reads on a 1–2 day
+check-in). `dev-cycle.md` and `qa-cycle.md` are shared by both modes.
