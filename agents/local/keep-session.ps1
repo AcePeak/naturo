@@ -46,19 +46,51 @@ if ($Uninstall) {
 }
 
 if ($InstallAuto) {
-  # Redirect THIS session's user back to console whenever an RDP session disconnects.
-  # Trigger: Microsoft-Windows-TerminalServices-LocalSessionManager/Operational, Event ID 24 (disconnect).
-  $cmd = 'for /f "tokens=2" %s in (''query session ^| findstr /i "Disc"'') do tscon %s /dest:console'
-  $action  = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c $cmd"
-  $trigClass = Get-CimClass MSFT_TaskEventTrigger root/Microsoft/Windows/TaskScheduler
-  $trig = New-CimInstance -CimClass $trigClass -ClientOnly
-  $trig.Enabled = $true
-  $trig.Subscription = '<QueryList><Query Id="0" Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational"><Select Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational">*[System[(EventID=24)]]</Select></Query></QueryList>'
-  $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-  $settings  = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trig -Principal $principal -Settings $settings -Force | Out-Null
-  Write-Output "registered $TaskName — will auto-redirect to console on RDP disconnect."
-  Write-Output "Test: connect via mstsc, then just close the window; the loop should keep running."
+  # On every RDP *disconnect*, redirect the disconnected session back to the console so it stays
+  # ACTIVE. The session ID is read directly from the disconnect event (TerminalServices-
+  # LocalSessionManager/Operational, Event 24) via a ValueQuery — language-independent and precise,
+  # so it works on a non-English Windows where the `query session` state column is localized.
+  # `$(SessionID)` below is a Task Scheduler value reference, NOT a PowerShell expression — it must
+  # stay literal, hence the single-quoted here-string.
+  $xml = @'
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Redirect a disconnected RDP session back to the console so the naturo QA loop keeps an active desktop.</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <EventTrigger>
+      <Enabled>true</Enabled>
+      <Subscription>&lt;QueryList&gt;&lt;Query Id="0" Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational"&gt;&lt;Select Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational"&gt;*[System[(EventID=24)]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
+      <ValueQueries>
+        <Value name="SessionID">Event/UserData/EventXML/SessionID</Value>
+      </ValueQueries>
+    </EventTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <ExecutionTimeLimit>PT1M</ExecutionTimeLimit>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>cmd.exe</Command>
+      <Arguments>/c tscon $(SessionID) /dest:console</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+'@
+  Register-ScheduledTask -TaskName $TaskName -Xml $xml -Force | Out-Null
+  Write-Output "registered $TaskName — on RDP disconnect, that session is auto-redirected to console (stays active)."
+  Write-Output "Test: reconnect via mstsc, then just close the window; the QA loop should keep running."
   return
 }
 
