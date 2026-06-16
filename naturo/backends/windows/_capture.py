@@ -13,7 +13,110 @@ logger = logging.getLogger(__name__)
 class CaptureMixin:
     """Screen and window capture via GDI + Pillow conversion."""
 
+    # Window classes that are always transient popups/menus and must be
+    # composited on top of everything else (#843).  Matched case-insensitively.
+    # ``#32768`` is the standard Win32 menu class; ``tooltips_class32`` is the
+    # common tooltip class; the remainder are popup/dropdown classes used by
+    # the shell, list-view dropdowns, and autocomplete panels.
+    _POPUP_WINDOW_CLASSES = frozenset(
+        c.lower() for c in (
+            "#32768",              # standard menus (File menu, context menu)
+            "tooltips_class32",    # tooltips
+            "ComboLBox",           # combo-box dropdown list
+            "DropDown",            # generic dropdown
+            "Auto-Suggest Dropdown",  # edit-control autocomplete
+            "ListBox",             # transient list popups
+        )
+    )
+
     # === Capture (Phase 1) ===
+
+    @staticmethod
+    def _order_hwnds_for_composite(
+        hwnds: list[int],
+        class_of,
+        zorder_rank_of,
+    ) -> list[int]:
+        """Order *hwnds* bottom→top for compositing (#843).
+
+        The composite must paste windows from the bottom of the Z-order to the
+        top, so that the top-most windows — including popup menus and tooltips
+        that overlap full-size sibling windows — are painted last and survive
+        in the final image.
+
+        Ordering rules (stable):
+
+        1. Non-popup windows come before popup/menu windows, so popups always
+           land on top regardless of their reported Z-order (a freshly opened
+           menu is normally top-most, but this guards against stale/odd
+           Z-order reporting).
+        2. Within each group, windows are sorted by Z-order rank where a
+           *higher* rank means closer to the top of the Z-order, so the
+           bottom-most window is pasted first and the top-most window last.
+        3. Ties (equal rank) preserve the input order for determinism.
+
+        Args:
+            hwnds: Window handles to order.
+            class_of: Callable ``hwnd -> str`` returning the window class name.
+            zorder_rank_of: Callable ``hwnd -> int`` returning a Z-order rank
+                where a larger value is closer to the top of the Z-order.
+
+        Returns:
+            The handles ordered so the first element should be pasted first
+            (bottom) and the last element pasted last (top).
+        """
+        popup_classes = CaptureMixin._POPUP_WINDOW_CLASSES
+
+        def _is_popup(h: int) -> bool:
+            try:
+                name = (class_of(h) or "").strip().lower()
+            except Exception:
+                return False
+            return name in popup_classes
+
+        decorated = []
+        for idx, h in enumerate(hwnds):
+            try:
+                rank = zorder_rank_of(h)
+            except Exception:
+                rank = 0
+            decorated.append((1 if _is_popup(h) else 0, rank, idx, h))
+
+        # Sort by (popup-flag asc, z-order rank asc, original index asc) so the
+        # last element is the top-most popup (or top-most non-popup if none).
+        decorated.sort(key=lambda t: (t[0], t[1], t[2]))
+        return [h for _, _, _, h in decorated]
+
+    @staticmethod
+    def _window_class_name(hwnd: int) -> str:
+        """Return the Win32 window class name for *hwnd* (empty on failure)."""
+        import ctypes
+
+        buf = ctypes.create_unicode_buffer(256)
+        n = ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+        return buf.value if n else ""
+
+    @staticmethod
+    def _window_zorder_rank(hwnd: int) -> int:
+        """Return a Z-order rank for *hwnd*; larger means closer to the top.
+
+        Walks the Z-order downward from *hwnd* via ``GetWindow(GW_HWNDNEXT)``
+        and counts the windows below it.  More windows below ⇒ closer to the
+        top, so the returned rank sorts bottom→top when used as a sort key.
+        """
+        import ctypes
+
+        GW_HWNDNEXT = 2  # next window toward the bottom of the Z-order
+        rank = 0
+        cur = hwnd
+        # Bound the walk to avoid pathological loops on a corrupt Z-order list.
+        for _ in range(10000):
+            nxt = ctypes.windll.user32.GetWindow(cur, GW_HWNDNEXT)
+            if not nxt:
+                break
+            rank += 1
+            cur = nxt
+        return rank
 
     @staticmethod
     def _convert_bmp(bmp_path: str, output_path: str) -> tuple[int, int, str]:
@@ -311,7 +414,17 @@ class CaptureMixin:
         from PIL import Image
 
         core = self._ensure_core()
-        all_hwnds = [main_hwnd] + sibling_hwnds
+
+        # (#843) Order windows bottom→top of the actual Z-order so the top-most
+        # windows — including popup menus that overlap full-size siblings — are
+        # pasted last and survive in the composite.  The bare ``list_windows()``
+        # order pasted the main window first then siblings, so a full-size
+        # sibling pasted after a small popup would overpaint it.
+        all_hwnds = self._order_hwnds_for_composite(
+            [main_hwnd] + sibling_hwnds,
+            class_of=self._window_class_name,
+            zorder_rank_of=self._window_zorder_rank,
+        )
 
         # Gather window rects and captures
         captures: list[tuple[int, int, Image.Image]] = []  # (screen_x, screen_y, img)
@@ -354,7 +467,9 @@ class CaptureMixin:
             canvas_w = max_x - min_x
             canvas_h = max_y - min_y
 
-            # Composite: paint main window first, then overlays (popups on top)
+            # Composite: ``captures`` is already ordered bottom→top of the
+            # Z-order (popups last), so pasting in sequence leaves popups/menus
+            # painted on top of any overlapping full-size sibling windows.
             canvas = Image.new("RGB", (canvas_w, canvas_h), (0, 0, 0))
             for screen_x, screen_y, img in captures:
                 canvas.paste(img, (screen_x - min_x, screen_y - min_y))
