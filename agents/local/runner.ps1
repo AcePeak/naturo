@@ -49,6 +49,19 @@ function Write-State([string]$line) {
   Add-Content -Path $StateLog -Value "$stamp  [runner:$Role]  $line"
 }
 
+# --- Proxy: the cycle needs the internet (Claude API + GitHub). The interactive `pon` is a cmd
+# doskey and does not exist in a scheduled-task PowerShell, so route through the local Clash-style
+# proxy directly if one is listening. Auto-detected, so this stays portable on machines without it. ---
+$ProxyPort = 7890
+if (Get-NetTCPConnection -LocalPort $ProxyPort -State Listen -ErrorAction SilentlyContinue) {
+  $env:HTTP_PROXY  = "http://127.0.0.1:$ProxyPort"
+  $env:HTTPS_PROXY = "http://127.0.0.1:$ProxyPort"
+  $env:ALL_PROXY   = "socks5://127.0.0.1:$ProxyPort"
+  Write-State "proxy on 127.0.0.1:$ProxyPort -> routing claude/gh through it (git uses its own global http.proxy)"
+} else {
+  Write-State "WARNING: no proxy listening on 127.0.0.1:$ProxyPort — if this network needs it, the cycle may fail to reach the Claude API / GitHub"
+}
+
 # --- Overlap guard: skip if a previous cycle for this role is still running ---
 $Lock = Join-Path $WorkDir "$Role.lock"
 if (Test-Path $Lock) {
