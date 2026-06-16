@@ -312,6 +312,161 @@ class TestCaptureAppWindows:
         mock_cw.assert_called_once()
 
 
+class TestCompositePasteOrder:
+    """Unit tests for the Z-order-aware paste ordering (#843).
+
+    These exercise ``_order_hwnds_for_composite`` directly with injected
+    class/Z-order lookups, so they run on any platform without a desktop.
+    """
+
+    @staticmethod
+    def _mixin():
+        from naturo.backends.windows._capture import CaptureMixin
+        return CaptureMixin
+
+    def test_zorder_topmost_pasted_last(self):
+        """Bottom-of-Z-order window is pasted first; top-most last."""
+        mixin = self._mixin()
+        # rank: larger = closer to top.  hwnd 30 is top-most.
+        ranks = {10: 0, 20: 1, 30: 2}
+        ordered = mixin._order_hwnds_for_composite(
+            [20, 30, 10],
+            class_of=lambda h: "Notepad",
+            zorder_rank_of=lambda h: ranks[h],
+        )
+        assert ordered == [10, 20, 30]
+
+    def test_popup_class_forced_on_top(self):
+        """A popup-class window is pasted last even if its Z-order rank is low."""
+        mixin = self._mixin()
+        # The popup (hwnd 99) reports a LOWER z-order rank than the editor
+        # windows, but must still be composited last because of its class.
+        classes = {1: "Notepad", 2: "Notepad", 99: "#32768"}
+        ranks = {1: 5, 2: 6, 99: 0}
+        ordered = mixin._order_hwnds_for_composite(
+            [1, 2, 99],
+            class_of=lambda h: classes[h],
+            zorder_rank_of=lambda h: ranks[h],
+        )
+        assert ordered[-1] == 99, "popup menu must be pasted last (on top)"
+
+    def test_popup_overlapping_fullsize_sibling_survives(self):
+        """The exact #843 scenario: a small popup overlapped by a full-size sibling.
+
+        The bug was that ``[main] + siblings`` order pasted a full-size editor
+        sibling AFTER the popup, overpainting it.  With Z-order ordering, the
+        top-most popup is pasted last so it survives.
+        """
+        mixin = self._mixin()
+        main_hwnd = 1000          # full-size main editor (bottom)
+        sibling_hwnd = 1001       # full-size session-restore editor (overlaps popup)
+        popup_hwnd = 1002         # small File menu (#32768), top-most
+        classes = {
+            main_hwnd: "Notepad",
+            sibling_hwnd: "Notepad",
+            popup_hwnd: "#32768",
+        }
+        ranks = {main_hwnd: 0, sibling_hwnd: 1, popup_hwnd: 2}
+        ordered = mixin._order_hwnds_for_composite(
+            [main_hwnd, sibling_hwnd, popup_hwnd],
+            class_of=lambda h: classes[h],
+            zorder_rank_of=lambda h: ranks[h],
+        )
+        # Popup must be the very last paste so no later full-size window
+        # overpaints its region.
+        assert ordered[-1] == popup_hwnd
+        assert ordered.index(popup_hwnd) > ordered.index(sibling_hwnd)
+
+    def test_lookup_failures_are_tolerated(self):
+        """Class/rank lookups that raise should not break ordering."""
+        mixin = self._mixin()
+
+        def boom(_h):
+            raise OSError("invalid window handle")
+
+        ordered = mixin._order_hwnds_for_composite(
+            [7, 8, 9],
+            class_of=boom,
+            zorder_rank_of=boom,
+        )
+        # Falls back to input order (all ranks 0, not popups).
+        assert ordered == [7, 8, 9]
+
+
+@pytest.mark.skipif(not _HAS_PIL, reason="Pillow not installed")
+class TestCompositePopupPixelsSurvive:
+    """End-to-end composite test proving popup pixels survive overlap (#843)."""
+
+    def test_popup_not_overpainted_by_fullsize_sibling(self):
+        """A full-size sibling overlapping a small popup must NOT erase it.
+
+        Renders each window in a distinct solid color, then asserts the popup's
+        color is present in the composite at the popup's location — i.e. the
+        full-size sibling did not overpaint it.
+        """
+        from PIL import Image
+
+        main_hwnd = 6001
+        sibling_hwnd = 6002   # full-size, overlaps the popup region
+        popup_hwnd = 6003     # small menu, must paint on top
+        pid = 123
+
+        # Main + sibling are full-size and overlap the popup; popup is small.
+        rect_map = {
+            main_hwnd: (0, 0, 800, 600),       # full-size
+            sibling_hwnd: (0, 0, 800, 600),    # full-size, same region
+            popup_hwnd: (100, 100, 300, 360),  # 200x260 menu inside both
+        }
+        colors = {
+            main_hwnd: (10, 10, 10),
+            sibling_hwnd: (20, 20, 20),
+            popup_hwnd: (200, 50, 50),  # distinctive red-ish menu color
+        }
+
+        def fake_core_capture(hwnd, bmp_path):
+            r = rect_map[hwnd]
+            _make_bmp(bmp_path, r[2] - r[0], r[3] - r[1], colors[hwnd])
+
+        backend, mock_core, fake_windll = _make_backend(
+            windows=[
+                _make_window(main_hwnd, pid, "Notepad", 0, 0, 800, 600),
+                _make_window(sibling_hwnd, pid, "Notepad", 0, 0, 800, 600),
+                _make_window(popup_hwnd, pid, "", 100, 100, 200, 260),
+            ],
+            pid_map={main_hwnd: pid, sibling_hwnd: pid, popup_hwnd: pid},
+            rect_map=rect_map,
+            core_capture_fn=fake_core_capture,
+        )
+
+        # Z-order: popup top-most; class lookup marks the popup as #32768.
+        zorder = {main_hwnd: 0, sibling_hwnd: 1, popup_hwnd: 2}
+        classes = {main_hwnd: "Notepad", sibling_hwnd: "Notepad", popup_hwnd: "#32768"}
+
+        with patch("ctypes.windll", fake_windll), \
+             patch.object(backend, "_window_class_name",
+                          side_effect=lambda h: classes[h]), \
+             patch.object(backend, "_window_zorder_rank",
+                          side_effect=lambda h: zorder[h]), \
+             tempfile.TemporaryDirectory() as tmpdir:
+            out_path = os.path.join(tmpdir, "composite.png")
+            result = backend.capture_app_windows(main_hwnd, out_path)
+
+            assert result.width == 800
+            assert result.height == 600
+            img = Image.open(out_path).convert("RGB")
+            # Sample the center of the popup region (200,230) in canvas coords
+            # (min_x = min_y = 0, so screen == canvas coords here).
+            px = img.getpixel((200, 230))
+            assert px == colors[popup_hwnd], (
+                f"popup overpainted: expected {colors[popup_hwnd]}, got {px}"
+            )
+            # Outside the popup, the top-most full-size sibling should show.
+            edge = img.getpixel((700, 500))
+            assert edge == colors[sibling_hwnd], (
+                f"expected top sibling color outside popup, got {edge}"
+            )
+
+
 class TestCaptureCLIAppWindowsIntegration:
     """Verify the CLI calls capture_app_windows when --app is used."""
 
