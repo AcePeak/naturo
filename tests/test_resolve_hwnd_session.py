@@ -369,7 +369,11 @@ class TestResolveHwndPid:
     def test_pid_with_hwnd_prefers_hwnd(self):
         """Direct hwnd takes priority over pid."""
         backend = self._setup_backend(self._make_multi_app_windows())
-        with patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
+        # _is_hwnd_alive is mocked True so the #788 liveness guard does not
+        # reject the synthetic handle on Windows, where IsWindow(9999) → 0
+        # (#870).  This test isolates hwnd-over-pid priority, not liveness.
+        with patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True), \
+             patch(f"{_SESSION_PATCH_BASE}._get_console_session_id", return_value=1), \
              patch(f"{_SESSION_PATCH_BASE}._get_process_session_id", return_value=1):
             result = backend._resolve_hwnd(hwnd=9999, pid=200)
         assert result == 9999
@@ -423,12 +427,17 @@ class TestResolveHwndStaleValidation:
             result = backend._resolve_hwnd(hwnd=0x1234)
         assert result == 0x1234
 
+    @patch("sys.platform", "linux")
     def test_non_windows_skips_validation(self):
-        """On non-Windows, _is_hwnd_alive returns True so HWND passes."""
+        """On non-Windows, _is_hwnd_alive returns True so HWND passes.
+
+        ``sys.platform`` is forced to ``"linux"`` so the real ``_is_hwnd_alive``
+        takes its non-Windows branch on any host — on Windows the genuine
+        ``IsWindow(0x5678)`` would return 0 and wrongly raise (#870).
+        """
         BackendClass = _make_backend()
         backend = MagicMock(spec=BackendClass)
         backend._resolve_hwnd = BackendClass._resolve_hwnd.__get__(backend)
 
-        # On Linux, _is_hwnd_alive returns True (non-Windows)
         result = backend._resolve_hwnd(hwnd=0x5678)
         assert result == 0x5678
