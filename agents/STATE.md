@@ -1,6 +1,6 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-16 17:24 (Orc autonomous cycle — QA still 403 at 16:00 round; CI green, no PRs; filed loop-watchdog gap #917).
+> Last refreshed: 2026-06-16 18:24 (Orc autonomous cycle — **QA loop RECOVERED**: verified+closed 9 issues today incl. ship-gate epic #885; CI green, no PRs; remaining verify blocker is #863, not #915; new ops item #935).
 
 ## Current Version
 v0.3.1 (PyPI + GitHub Release). `develop` CI green.
@@ -30,28 +30,32 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
   .[] | "\n### \(.[0].milestone.title // "Backlog")\n\(.[] | "- #\(.number) [\(.labels | map(.name) | join(","))] \(.title)")"'
 ```
 
-## Milestone Summary (2026-06-15)
-- **v0.3.2**: ~31 open / 89 closed. **Ship gate unchanged**: (1) close epic **#885** (P0 silent-
-  failure cluster — NO_DESKTOP_SESSION guard bypassed on ~9 CLI+MCP surfaces, returns fabricated
-  success); (2) verify 5 `status:done` issues (#786, #788, #807, #840, #843) from a real desktop
-  session (now possible — QA loop runs on NATUROBOT).
-  - **#885 fix MERGED (2026-06-15, PR #911):** the Dev loop completed it — `require_desktop_session`
-    wired onto all 11 CLI+MCP surfaces + a 23-case regression matrix (`tests/test_no_desktop_guard_885.py`),
-    built on community PR #892's decorator (contributor co-credited). Closes #868/#875/#878/#883/#893.
-    Now `status:done`, awaiting QA desktop verification before the epic closes.
-  - **QA-verify aging — ROOT CAUSE FOUND (Orc 2026-06-16):** the 5 ship-gate bugs (#786, #788,
-    #807, #840, #843) + #885 sit `status:done` with no QA pickup because **the QA loop itself has
-    been dead ~5 days**. Every hourly round since **2026-06-11 20:00** exits immediately with
-    `Failed to authenticate. API Error: 403 Request not allowed` (139 consecutive QA logs; also a
-    burst 05-29→05-30). The QA `claude -p` session (driven by `runner.ps1`/Task Scheduler) cannot
-    authenticate — it never runs a single test. Filed **`needs:ace` #915 (P1)** — this outranks the
-    desktop-runner decision (#842/#860): desktop CI is moot while the QA agent can't auth at all.
-    Fix is credential/auth (human-only). Until #915 is resolved the ship gate cannot advance.
-    Still failing as of the **2026-06-16 16:00** round (117+ consecutive 403s in June logs alone).
-  - **Detection gap filed — #917 (NEW, Orc 2026-06-16, P1 `silent-failure`):** `runner.ps1` has no
-    watchdog, so the loop hammered the API hourly for ~5 days with zero alert; only an Orc cycle caught
-    it. #917 adds failure-streak detection/escalation so a stuck role surfaces automatically. Code-only
-    (NOT the 403 fix itself, which stays human-only in #915).
+## Milestone Summary (2026-06-16)
+- **v0.3.2**: ~30 open / 98 closed. **Ship-gate requirement (1) now MET:**
+  - (1) Epic **#885** (P0 silent-failure cluster) — **CLOSED + verified 2026-06-16** along with its
+    members #868/#875/#878/#883/#893. Fix landed via PR #911 (`require_desktop_session` on all 11
+    CLI+MCP surfaces + 23-case matrix `tests/test_no_desktop_guard_885.py`, building on community
+    PR #892, contributor co-credited).
+  - (2) Verify the 5 remaining `status:done` bugs from a real desktop: **#786, #788, #807, #840, #843**.
+- **QA LOOP RECOVERED (Orc 2026-06-16 18:24) — supersedes the "QA dead ~5 days" finding:** after the
+  runner gained local-proxy auto-detection (commit `2ccbcf0`), QA `claude -p` rounds authenticate again
+  and did real work today — **9 issues verified+closed 2026-06-16** (#885 cluster above + #902 + #870 +
+  #906), with full verification cycles logged in `naturo-loop-state.log` at 16:43 and 17:42. **Still
+  intermittent** (the 16:00 scheduled round 403'd — `agents/qa/logs/qa-20260616-1600.log:584`), so
+  durability is unproven. **#915 reframed** from "TOP blocker / down 5 days" to *recovering — monitor*
+  (commented; Ace to confirm durability, then close). The 403 no longer outranks everything.
+- **Remaining verification blocker is now #863 (P0, `from:qa`), NOT #915:** QA **deferred #788** at
+  17:42 because input commands (`type`/`click`/`press`) drive Win32 `SendInput`, which is blocked in
+  the unattended agent session (#863) — a live type-after-restart test would be confounded. #788's unit
+  tests pass (76/76); only true end-to-end runtime closure is gated. #807/#840 (input-family) are likely
+  similarly gated; #786 (UWP menu click) and #843 (capture popup) may be non-intrusively verifiable.
+- **Detection gap #917 (Orc 2026-06-16, P1 `silent-failure`):** `runner.ps1` has no failure-streak
+  watchdog — the earlier ~5-day 403 outage went undetected. Still open for Dev (code-only). Now also
+  relevant for the *recovery* side: a watchdog would equally confirm QA is healthy again.
+- **NEW ops item #935 (`needs:ace`, Orc/Dev 2026-06-16):** two Dev cycles ran **concurrently in the
+  shared `naturo-dev` worktree** at ~18:07; the second cycle's Step 0 `reset --hard` wiped the first's
+  in-flight uncommitted branch (#910 work) — a **Rule 4 violation at the orchestration layer**. Needs a
+  per-worktree lock / serialized dev scheduling (runner.ps1/cron policy) — human-only ops decision.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: ~46 open / 8+ closed. Effectively a "contract stability" milestone (MCP/CLI envelope,
   param-name, exit-code drift from QA R135–R153). #890 (MCP list_snapshots) closed via PR #909.
@@ -74,9 +78,14 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
 - One issue = one commit = one PR. English-only on GitHub. CI red → stop all new dev work.
 - Never push directly to `main`/`develop` (only release tags → `main`); Orch may push
   operational files (STATE.md, queue) to develop with `[skip ci]`.
-- **Human-decision items (Ace only):** **QA loop auth #915 (403 — TOP blocker)**; self-hosted
-  runner #842 (offline) / cloud-VM #860; persistent cron scheduling; ship-gate timing (#914);
-  public-API changes; superseding community PRs (#913).
+- **Human-decision items (Ace only):** **#935 serialize dev cycles / per-worktree lock (NEW)**;
+  **#915 confirm QA auth durable then close** (recovering, no longer TOP); self-hosted runner #842
+  (offline) / cloud-VM #860; persistent cron scheduling; ship-gate timing (#914 — req (1) #885 now
+  met); public-API changes; superseding community PRs (#913).
+- **STANDING #1 PRODUCT PRIORITY — recognition supremacy:** epic **#920** (P0 moat) + **#931** (P0
+  coverage benchmark, `status:in-progress`, updated today) + **#932/#933/#934** (Java/Electron/SAP
+  hardening, P1/P1/P2, milestone v0.3.3) are all filed, labeled `competitiveness`, and at queue top.
+  Pull recognition work forward each cycle. #931 publishing the proof feeds the README headline.
 
 ## Code Health
 - Large files still open for split: `_element.py` (#720), `browser_cmd.py` (#856),
