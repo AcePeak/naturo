@@ -4,9 +4,33 @@
 > Tracked by the competitiveness program (epic #919). Orc re-evaluates **weekly** (see the tracker below).
 > Full visual report regenerated each week: `C:\Users\Naturobot\naturo-competitive-report-*.html`.
 
-## Verdict (2026-06-16)
-**Not yet competitive.** By adoption, naturo is a near-unknown newcomer. Its true peer group is
-*AI-facing Windows automation **engines***, and within it naturo is last.
+## Verdict (2026-06-16, revised)
+**Behind on adoption, but ahead on the thing that matters most — recognition depth.**
+By GitHub stars naturo is a near-unknown newcomer (last in its peer group). But on *capability*,
+naturo already has the **broadest desktop-app recognition of any OSS engine** — commercial-RPA-grade,
+multi-framework — while every OSS rival is essentially UIA-only. That capability lead is the leading
+indicator; stars are the lagging one. The job is to **harden + prove + market** the recognition moat.
+
+## ★ Core differentiator — multi-framework deep recognition (the moat)
+naturo recognizes UI across the frameworks commercial RPA (UiPath/AA/Blue Prism) competes on — but
+**open-source and AI-agent-native**. The OSS rivals (UFO²/Windows-MCP/Terminator) are UIA/accessibility-tree
+only and **fail on Java (Swing/SWT), SAP GUI, and deep Electron**. This is where naturo can be genuinely #1.
+
+| Recognition framework | naturo | UFO² | Windows-MCP | Terminator |
+|---|---|---|---|---|
+| UIA (UI Automation) | ✓ | ✓ | ✓ | ✓ |
+| MSAA / IAccessible2 | ✓ | ~ | ~ | ~ |
+| **Java Access Bridge** (Swing/SWT) | ✓ | ✗ | ✗ | ✗ |
+| **Electron / CEF via CDP** | ✓ | ✗ | ✗ | ~ browser-only |
+| **SAP GUI Scripting** | ✓ | ✗ | ✗ | ✗ |
+| Native app APIs (Excel/Office COM) | ✓ excel | ✓ | ✗ | ✗ |
+| AI-vision fusion (cascade) | ✓ | ✓ | ~ | ~ |
+
+> Evidence (naturo source): `backends/windows/_core.py` declares `accessibility=[uia,msaa,ia2,…]` +
+> `extensions=[excel,java,sap,registry,service]`; `cascade/_providers.py` fuses UIA + CDP + vision;
+> Java Access Bridge / IA2 in `backends/windows/_core.py`/`_element.py`; SAP GUI Scripting CLI exists
+> (needs consolidation out of the stray `naturo/naturo/` nested dir). Maturity varies — Java/Electron/SAP
+> need hardening + a published coverage benchmark to *prove* the lead (#920).
 
 ## The landscape
 
@@ -17,10 +41,10 @@
 | **Classic libraries** (pre-AI) | pywinauto (6.1k⭐) · pyautogui (12.5k⭐, stale) | Mature but not AI-native (no MCP/vision/agent layer). |
 | **Cross-platform sibling** | Peekaboo 3 (4.7k⭐, macOS) | Design north-star ("eyes+hands for AI"), different platform. |
 
-## naturo's differentiation (real but niche)
-- **Cascade Recognition = UIA + CDP (Chrome DevTools) + vision** for Electron/CEF apps (Feishu etc.) — **the moat**; rivals don't emphasize CDP-for-Electron. → #920
+## Secondary differentiators (support the moat)
 - Hardware scan-code input (games / anti-cheat). Recording/playback + selector management. Visual regression.
 - **Chinese-market / CJK app** coverage where Western tools are weak. → #921
+- These reinforce the headline (multi-framework recognition) but are not the core wedge on their own.
 
 ## naturo's gaps (why we're last)
 - **Adoption ≈ 0** (5⭐). No user → no feedback → no trust flywheel.
@@ -31,7 +55,7 @@
 
 ## Strategy (epic #919, 5 pillars)
 1. **Reliability first** — existing v0.3.2/3/4 backlog + #912 (already in flight).
-2. **Flagship wedge** — Electron/CDP + CJK. → #920, #921
+2. **Recognition supremacy (the moat)** — harden + benchmark the multi-framework lead (Java / Electron-CDP / SAP / UIA) vs UIA-only rivals, and publish the coverage matrix as the headline; CJK as support. → #920, #921
 3. **Distribution** — MCP registries + Claude Desktop Extension (ship-gate-independent, pull forward). → #922
 4. **Release cadence** — no multi-month gaps. → #925
 5. **Onboarding + SDK** — 5-min quickstart + Python SDK parity. → #923, #924
