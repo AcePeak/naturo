@@ -83,6 +83,7 @@ naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib", "selectors_builtin/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 timeout = 120
 markers = [
     "ui: marks tests that need a desktop session (deselect with '-m \"not ui\"')",
