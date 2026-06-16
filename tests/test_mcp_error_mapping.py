@@ -22,9 +22,21 @@ import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from naturo.bridge import NaturoCoreError
 from naturo.errors import ErrorCode
-from naturo.mcp_server import _core_error_envelope, create_server
+
+# Skip the whole module when the optional ``mcp`` dependency is absent: it is
+# not installed on the non-Windows CI runners, where importing ``mcp_server``
+# raises ImportError at collection time.  Mirrors the other MCP test modules.
+mcp_available = True
+try:
+    from naturo.mcp_server import _core_error_envelope, create_server
+except ImportError:
+    mcp_available = False
+
+pytestmark = pytest.mark.skipif(not mcp_available, reason="mcp package not installed")
 
 
 def _call_tool(srv, name, args):
