@@ -2,14 +2,83 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import List, Optional
 
 from naturo.backends.base import ElementInfo
 
 logger = logging.getLogger(__name__)
 
+#: How many times to (re)connect to the CDP endpoint before giving up.
+#: Real Electron apps frequently expose the DevTools endpoint a beat before the
+#: renderer target is enumerable (or drop the first WebSocket while the agent
+#: settles), so a single attempt is racy; a few bounded retries make the attach
+#: reliable without hanging the cascade.
+_CDP_ATTACH_ATTEMPTS = 4
+#: Base back-off between CDP attach attempts (seconds); grows linearly.
+_CDP_ATTACH_BACKOFF_S = 0.4
 
-# ── CDP element helper ────────────────────────────────────────────────────────
+
+def _fetch_cdp_dom_elements(debug_port: int) -> List[dict]:
+    """Connect to the CDP endpoint and return raw interactive DOM elements.
+
+    Performs a bounded connect/enumerate/reconnect loop: a real Electron app may
+    briefly report no enumerable page target or drop the first WebSocket while
+    its DevTools agent settles, so a single attempt is unreliable.  Each attempt
+    opens a fresh :class:`~naturo.cdp.CDPClient`, fetches elements, and closes
+    it; the first attempt that returns a non-empty result wins.
+
+    Args:
+        debug_port: Chrome DevTools Protocol port to attach to.
+
+    Returns:
+        The raw DOM-element dicts from CDP, or an empty list if the optional
+        CDP module is unavailable, every attempt failed, or the page genuinely
+        has no interactive content.
+    """
+    try:
+        from naturo.cdp import CDPClient
+    except ImportError:
+        logger.debug("CDP module not available; skipping CDP provider")
+        return []
+
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _CDP_ATTACH_ATTEMPTS + 1):
+        client = CDPClient(port=debug_port)
+        try:
+            client.connect()
+            dom_elements = client.get_interactive_elements()
+            if dom_elements:
+                return dom_elements
+            # Connected but nothing yet — the renderer may still be painting.
+            logger.debug(
+                "CDP attach %d/%d: connected but no elements yet (port=%d)",
+                attempt, _CDP_ATTACH_ATTEMPTS, debug_port,
+            )
+        except Exception as exc:
+            # Broad by design: any attach/enumeration failure is transient from
+            # the cascade's view — record it and retry on the next attempt.
+            last_exc = exc
+            logger.debug(
+                "CDP attach %d/%d failed (port=%d): %s",
+                attempt, _CDP_ATTACH_ATTEMPTS, debug_port, exc,
+            )
+        finally:
+            try:
+                client.close()
+            except Exception:
+                # Best-effort cleanup; a failed close must not mask results.
+                pass
+
+        if attempt < _CDP_ATTACH_ATTEMPTS:
+            time.sleep(_CDP_ATTACH_BACKOFF_S * attempt)
+
+    if last_exc is not None:
+        logger.debug(
+            "CDP attach exhausted %d attempts (port=%d): %s",
+            _CDP_ATTACH_ATTEMPTS, debug_port, last_exc,
+        )
+    return []
 
 
 def _fetch_cdp_elements(
@@ -35,18 +104,7 @@ def _fetch_cdp_elements(
         Returns empty list on any error.
     """
     try:
-        from naturo.cdp import CDPClient
-    except ImportError:
-        logger.debug("CDP module not available; skipping CDP provider")
-        return []
-
-    try:
-        client = CDPClient(port=debug_port)
-        client.connect()
-        try:
-            dom_elements = client.get_interactive_elements()
-        finally:
-            client.close()
+        dom_elements = _fetch_cdp_dom_elements(debug_port)
 
         elements: List[ElementInfo] = []
         px, py = parent_bounds[0], parent_bounds[1]
