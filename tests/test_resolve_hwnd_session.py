@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 
 from naturo.backends.base import WindowInfo
 
-_SESSION_PATCH_BASE = "naturo.backends.windows._element"
+_SESSION_PATCH_BASE = "naturo.backends.windows._element._app_discovery"
 
 
 def _make_backend():

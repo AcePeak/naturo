@@ -12,7 +12,7 @@ import pytest
 
 from naturo.backends.base import WindowInfo
 
-_ELEMENT_MOD = "naturo.backends.windows._element"
+_ELEMENT_MOD = "naturo.backends.windows._element._app_discovery"
 
 
 def _make_backend():

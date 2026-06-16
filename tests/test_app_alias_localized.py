@@ -16,8 +16,8 @@ def _make_backend(monkeypatch, windows):
     """Create a WindowsBackend with mocked window list."""
     backend = WindowsBackend()
     monkeypatch.setattr(backend, "list_windows", lambda: windows)
-    monkeypatch.setattr("naturo.backends.windows._element._get_console_session_id", lambda: 1)
-    monkeypatch.setattr("naturo.backends.windows._element._get_process_session_id", lambda pid: 1)
+    monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", lambda: 1)
+    monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", lambda pid: 1)
     return backend
 
 
