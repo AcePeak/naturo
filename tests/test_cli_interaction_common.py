@@ -257,10 +257,15 @@ class TestResolveAppId:
 class TestIsHwndAlive:
     """Tests for _is_hwnd_alive — HWND validity check."""
 
+    @patch("sys.platform", "linux")
     def test_returns_true_on_non_windows(self):
-        """On Linux/macOS (sys.platform != win32), always returns True."""
+        """On Linux/macOS (sys.platform != win32), always returns True.
+
+        ``sys.platform`` is forced to ``"linux"`` so the non-Windows branch is
+        exercised regardless of the host running the suite — on Windows the real
+        ``user32.IsWindow(0x1234)`` would return 0 for this fake handle (#870).
+        """
         from naturo.cli.interaction._common import _is_hwnd_alive
-        # On Linux this should return True since sys.platform != "win32"
         assert _is_hwnd_alive(0x1234) is True
 
     def test_returns_false_for_zero_handle(self):
