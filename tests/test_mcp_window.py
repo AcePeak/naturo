@@ -305,13 +305,22 @@ class TestAppInspect:
         assert data["error"]["code"] == "PROCESS_NOT_FOUND"
 
     def test_inspect_by_pid(self, server, mock_backend):
+        # A directly-supplied PID must belong to a live process (#901); mock it
+        # so the validation passes and detection proceeds.
+        fake_proc = MagicMock()
+        fake_proc.pid = 1234
+        fake_proc.path = "C:\\app.exe"
+        fake_proc.name = "app.exe"
         fake_detect_result = MagicMock()
         fake_detect_result.to_dict.return_value = {
             "frameworks": ["wpf"],
             "methods": ["uia"],
             "recommended": "uia",
         }
-        with patch("naturo.detect.detect", return_value=fake_detect_result):
+        with (
+            patch("naturo.process.find_process", return_value=fake_proc),
+            patch("naturo.detect.detect", return_value=fake_detect_result),
+        ):
             result = _call_tool(server, "app_inspect", {"pid": 1234})
         data = json.loads(result[0].text)
         assert data["success"] is True

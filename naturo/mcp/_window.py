@@ -355,6 +355,32 @@ def register_window_tools(server, _get_backend, _safe_tool):
             target_exe = proc.path or proc.name or ""
             target_name = proc.name or name
 
+        elif pid is not None:
+            # (#901) Validate a directly-supplied PID exactly as the CLI does,
+            # so a bogus or exited PID fails loudly instead of returning
+            # success:true with an empty exe and a phantom vision method. An
+            # agent enumerating PIDs must be able to trust this contract.
+            if pid <= 0:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "INVALID_INPUT",
+                        "message": f"Invalid PID: {pid}. PID must be a positive integer.",
+                    },
+                }
+            from naturo.process import find_process
+            proc = find_process(pid=pid)
+            if proc is None:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "PROCESS_NOT_FOUND",
+                        "message": f"No process found with PID {pid}. The process may have exited.",
+                    },
+                }
+            target_exe = proc.path or proc.name or ""
+            target_name = proc.name or target_name
+
         if target_pid is None:
             return {
                 "success": False,
