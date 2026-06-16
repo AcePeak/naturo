@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from mcp.types import ContentBlock
 
 from naturo.backends.base import get_backend, Backend
 from naturo.errors import ErrorCode, NaturoError
@@ -34,9 +35,58 @@ from naturo.mcp._excel import register_excel_tools
 logger = logging.getLogger(__name__)
 
 
+class _SanitizingFastMCP(FastMCP):
+    """FastMCP subclass that sanitizes Pydantic parameter-validation errors (#844).
+
+    FastMCP validates each tool's arguments with Pydantic *before* the tool
+    function runs, so the ``_safe_tool`` decorator — which wraps the function
+    body — never sees these failures.  When validation fails, ``Tool.run``
+    wraps the Pydantic ``ValidationError`` in a :class:`ToolError` whose
+    ``__cause__`` exposes an ``.errors()`` method, and the low-level MCP server
+    renders that error's ``str()`` straight into the client-facing text —
+    leaking the internal Pydantic model name (``launch_appArguments``), the raw
+    error format, and the ``errors.pydantic.dev`` URL.
+
+    Overriding :meth:`call_tool` is the only interception point that survives
+    real JSON-RPC dispatch.  ``FastMCP.__init__`` registers ``self.call_tool``
+    as the ``CallToolRequest`` handler while constructing the instance, so the
+    bound method captured there must *already* be the sanitizing one — which a
+    subclass override guarantees.  The previous approach (#853) reassigned
+    ``server.call_tool`` after construction; that only rebound a Python
+    attribute and never reached the handler the server actually invokes, so the
+    leak persisted in production while a direct-call unit test passed.
+    """
+
+    async def call_tool(  # type: ignore[override]
+        self, name: str, arguments: dict[str, Any],
+    ) -> Sequence[ContentBlock] | dict[str, Any]:
+        """Dispatch a tool call, replacing Pydantic validation leaks with clean text.
+
+        Args:
+            name: Name of the MCP tool being invoked.
+            arguments: Raw arguments supplied by the client.
+
+        Returns:
+            The tool's content, exactly as :meth:`FastMCP.call_tool` returns it.
+
+        Raises:
+            ToolError: On failure.  When the failure is a Pydantic
+                parameter-validation error, the message is sanitized via
+                :func:`_format_tool_validation_error`; all other errors
+                propagate unchanged so genuine failures stay diagnosable.
+        """
+        try:
+            return await super().call_tool(name, arguments)
+        except ToolError as exc:
+            cause = exc.__cause__
+            if cause is not None and hasattr(cause, "errors"):
+                raise ToolError(_format_tool_validation_error(name, cause)) from None
+            raise
+
+
 def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     """Create and configure the Naturo MCP server."""
-    server = FastMCP(
+    server = _SanitizingFastMCP(
         name="naturo",
         host=host,
         port=port,
@@ -135,29 +185,9 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     register_system_tools(server, _get_backend, _safe_tool)
     register_excel_tools(server, _get_backend, _safe_tool)
 
-    # (#844) Intercept ToolError from Pydantic validation and sanitize the
-    # error message.  FastMCP validates tool parameters via Pydantic BEFORE
-    # calling the wrapped function, so _safe_tool cannot catch these.  When
-    # validation fails, Tool.run() wraps the Pydantic ValidationError in a
-    # ToolError whose __cause__ has an .errors() method.  We override
-    # call_tool to detect this and return a clean, user-facing message.
-    _original_call_tool = server.call_tool
-
-    async def _sanitized_call_tool(
-        name: str, arguments: dict[str, Any],
-    ) -> Sequence[Any] | dict[str, Any]:
-        try:
-            return await _original_call_tool(name, arguments)
-        except ToolError as exc:
-            cause = exc.__cause__
-            if cause is not None and hasattr(cause, "errors"):
-                raise ToolError(
-                    _format_tool_validation_error(name, cause),
-                ) from None
-            raise
-
-    server.call_tool = _sanitized_call_tool  # type: ignore[assignment]
-
+    # Pydantic parameter-validation errors are sanitized by the
+    # _SanitizingFastMCP.call_tool override, which is wired into the low-level
+    # JSON-RPC handler at construction time (see the class docstring, #844).
     return server
 
 
