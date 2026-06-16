@@ -199,7 +199,7 @@ class TestInputMixinUsesStrategy:
     def test_type_text_normal_delegates_to_sendinput(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -216,7 +216,7 @@ class TestInputMixinUsesStrategy:
     def test_type_text_hardware_delegates_to_phys32(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -233,7 +233,7 @@ class TestInputMixinUsesStrategy:
     def test_press_key_delegates_through_strategy(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -250,7 +250,7 @@ class TestInputMixinUsesStrategy:
     def test_hotkey_delegates_through_strategy(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -268,7 +268,7 @@ class TestInputMixinUsesStrategy:
         """Human typing profile converts WPM to ms-per-char before delegating."""
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -298,7 +298,7 @@ class TestTypeTextNewlines:
         def _ctx():
             core = _make_core()
             with patch(
-                "naturo.backends.windows._input.get_input_strategy",
+                "naturo.backends.windows._input._keyboard.get_input_strategy",
                 return_value=mock_strategy,
             ):
                 from naturo.backends.windows._input import InputMixin

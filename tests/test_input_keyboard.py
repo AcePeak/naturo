@@ -491,7 +491,7 @@ class TestTypeTextNewlineSplitting:
         obj = self._make_mixin()
         mock_strategy = MagicMock()
 
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                    return_value=mock_strategy):
             obj.type_text("hello\nworld")
 
@@ -507,7 +507,7 @@ class TestTypeTextNewlineSplitting:
         obj = self._make_mixin()
         mock_strategy = MagicMock()
 
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                    return_value=mock_strategy):
             obj.type_text("line1\r\nline2\r\nline3")
 
@@ -521,7 +521,7 @@ class TestTypeTextNewlineSplitting:
         obj = self._make_mixin()
         mock_strategy = MagicMock()
 
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                    return_value=mock_strategy):
             obj.type_text("no newlines here")
 

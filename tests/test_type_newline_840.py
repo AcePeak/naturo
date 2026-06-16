@@ -37,7 +37,7 @@ class TestTypeTextNewlines:
 
     def test_newline_splits_into_enter(self, backend, mock_strategy):
         """'hello\\nworld' should type 'hello', press Enter, type 'world'."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("hello\nworld")
 
@@ -48,7 +48,7 @@ class TestTypeTextNewlines:
 
     def test_multiple_newlines(self, backend, mock_strategy):
         """'a\\nb\\nc' should produce 3 segments with 2 Enter presses."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("a\nb\nc")
 
@@ -57,7 +57,7 @@ class TestTypeTextNewlines:
 
     def test_trailing_newline(self, backend, mock_strategy):
         """'hello\\n' should type 'hello' then press Enter."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("hello\n")
 
@@ -66,7 +66,7 @@ class TestTypeTextNewlines:
 
     def test_leading_newline(self, backend, mock_strategy):
         """'\\nhello' should press Enter then type 'hello'."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("\nhello")
 
@@ -75,7 +75,7 @@ class TestTypeTextNewlines:
 
     def test_crlf_normalized(self, backend, mock_strategy):
         """Windows-style \\r\\n should be treated as a single newline."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("hello\r\nworld")
 
@@ -84,7 +84,7 @@ class TestTypeTextNewlines:
 
     def test_bare_cr_normalized(self, backend, mock_strategy):
         """Bare \\r should be treated as a newline."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("hello\rworld")
 
@@ -93,7 +93,7 @@ class TestTypeTextNewlines:
 
     def test_no_newline_passes_through(self, backend, mock_strategy):
         """Text without newlines should be passed directly to strategy."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("hello world")
 
@@ -102,7 +102,7 @@ class TestTypeTextNewlines:
 
     def test_only_newlines(self, backend, mock_strategy):
         """'\\n\\n' should press Enter twice with no type_text calls."""
-        with patch("naturo.backends.windows._input.get_input_strategy",
+        with patch("naturo.backends.windows._input._keyboard.get_input_strategy",
                     return_value=mock_strategy):
             backend.type_text("\n\n")
 
