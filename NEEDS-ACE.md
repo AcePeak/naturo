@@ -4,22 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-15 (initial — loop just went autonomous)._
+_Last refreshed: 2026-06-16 16:14 (Orc autonomous cycle)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
-| — | _Self-hosted desktop CI runner (#842) offline / cloud-VM (#860) unassigned_ | infra spend | Decide: revive runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI (desktop tests stay on the local QA loop). |
-| — | _v0.3.2 ship-gate sign-off_ | release / tag to `main` = PyPI publish | #885 fix is now MERGED (PR #911). Once QA verifies it + the 5 `status:done` issues on the real desktop, the gate is clear — your call to cut the release. |
-| — | _Community PRs #892 / #904 disposition_ | external-contributor relationship | Team completed #885 via the merged PR #911 (credited the contributor). Close #892 (and #904 once its fix lands) with thanks — confirm you're OK with that. |
+| [#842](https://github.com/AcePeak/naturo/issues/842) / [#860](https://github.com/AcePeak/naturo/issues/860) | Desktop CI: self-hosted runner ROBOT-COMPILE offline (#842) vs fund a cloud Windows VM (#860) | infra spend | Decide: revive the runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI (desktop tests stay on the local QA loop, which is currently covering verification). |
+| [#914](https://github.com/AcePeak/naturo/issues/914) | v0.3.2 ship-gate sign-off | release / tag to `main` = PyPI publish | **Not actionable yet** — waiting on QA to verify #885 + the 5 `status:done` bugs. When all six flip to `verified`, the gate is clear and cutting v0.3.2 is your call. |
+| [#913](https://github.com/AcePeak/naturo/issues/913) | Dispose of community PRs #892 / #904 | external-contributor relationship | #892 is superseded by the merged PR #911 (contributor co-credited) — close it with thanks. Hold #904 open until the team's replacement fix for #844 lands, then close the same way. |
 
-## Ship-gate status
-- **v0.3.2 gate:** (1) epic **#885** — fix **MERGED** (PR #911, closes #868/#875/#878/#883/#893); now
-  awaiting QA desktop verification before close. (2) QA-verify 5 `status:done` (#786, #788, #807, #840, #843)
-  on a real desktop session.
+## Ship-gate status — v0.3.2
+- (1) Epic **#885** (silent-failure cluster): fix **MERGED** (PR #911, closes #868/#875/#878/#883/#893).
+  Now `status:done`, awaiting QA desktop verification before the epic closes.
+- (2) QA-verify 5 `status:done` bugs on a real desktop: **#786, #788, #807, #840, #843**.
+  These have been `status:done` since **2026-05-27 (~20 days)** — verification has not been picked up
+  yet. The local QA loop (QA-Mariana on NATUROBOT) is the path; if it keeps not landing, the desktop
+  CI runner decision (#842/#860) is the likely root cause.
 
 ## Blocks
-- Desktop CI runner #842 offline (chronic). Local QA loop covers real-desktop verification in the meantime.
+- Desktop CI runner **#842** offline (chronic). Local QA loop covers real-desktop verification in the
+  meantime, but the 5 ship-gate bugs aging ~20 days suggests it needs attention (see #842/#860).
+- `develop` CI: **green** (no block this cycle).
 
 ---
 _How this works: anything irreversible or human-only is queued here instead of acted on. Everything else

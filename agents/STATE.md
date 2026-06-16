@@ -1,6 +1,6 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-15 (local multi-agent loop went live).
+> Last refreshed: 2026-06-16 16:14 (Orc autonomous cycle — needs:ace queue backed by real issues; gap #912 filed).
 
 ## Current Version
 v0.3.1 (PyPI + GitHub Release). `develop` CI green.
@@ -39,9 +39,15 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
     wired onto all 11 CLI+MCP surfaces + a 23-case regression matrix (`tests/test_no_desktop_guard_885.py`),
     built on community PR #892's decorator (contributor co-credited). Closes #868/#875/#878/#883/#893.
     Now `status:done`, awaiting QA desktop verification before the epic closes.
+  - **QA-verify aging (watch):** the 5 ship-gate bugs (#786, #788, #807, #840, #843) have sat
+    `status:done` since **2026-05-27 (~20 days)** with no QA pickup. Local QA loop is the path; if it
+    keeps not landing, the desktop-CI-runner decision (#842/#860, now `needs:ace`) is the likely cause.
 - **v0.3.3**: 6 open / 1 closed. Enterprise features. Blocked on v0.3.2.
 - **v0.3.4**: ~46 open / 8+ closed. Effectively a "contract stability" milestone (MCP/CLI envelope,
   param-name, exit-code drift from QA R135–R153). #890 (MCP list_snapshots) closed via PR #909.
+  - **#912 (NEW, Orc 2026-06-16):** auto-enumerate CLI/MCP surfaces so a future command/tool can't
+    silently bypass the desktop-session guard — converts #885's hand-maintained regression matrix
+    (`tests/test_no_desktop_guard_885.py`) into a self-maintaining coverage contract. Test-only, P2.
   Blocked on v0.3.2.
 - **Backlog**: ~10 open (Linux platform + #777 Unicode capture + migrated community/docs tasks).
 
@@ -50,6 +56,8 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
 - **#904** (closes #844): right direction, breaks `errors.py` (mis-spliced helper), no wiring,
   unrelated workflow churn, base=develop. Team carrying forward.
 - Both: warm "we'll complete + co-credit you" notes posted 2026-06-15; close when the team PR lands.
+- **Disposition is now queued as `needs:ace` #913** (closing/taking over a community PR is human-only).
+  #892 is superseded by merged PR #911; recommend close-with-thanks. Hold #904 until its replacement lands.
 
 ## Coordination
 - Bug tracking: GitHub Issues only. State flow: `status:in-progress` → `status:done` → `verified` → close.
