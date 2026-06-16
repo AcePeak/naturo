@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Unicode capture paths regardless of native build** — `capture_screen` / `capture_window` again write to output paths containing non-ASCII characters (e.g. a Chinese/Japanese Windows username or folder in `%TEMP%`). The native core's Unicode fix ([#693](https://github.com/AcePeak/naturo/pull/693)) lives in source but the shipped DLL can lag a rebuild; the Python bridge now stages such captures through an ASCII-only temp file and moves the result to the requested path, so Unicode paths work independent of the native build ([#777](https://github.com/AcePeak/naturo/issues/777))
 - **NO_DESKTOP_SESSION silent-failure cluster** — `app windows`, `dialog detect`, `taskbar list`, `tray list`, `wait --gone` (CLI) and `capture_screen`, `list_windows`, `list_apps`, `app_inspect`, `capture_window`, `list_monitors` (MCP) no longer return fabricated success (empty arrays, all-black PNGs, stale window lists) without a desktop session. The session guard is now enforced structurally at the shared entrypoint and these surfaces fail loudly with `NO_DESKTOP_SESSION` (exit 1 / `isError:true`) ([#885](https://github.com/AcePeak/naturo/issues/885), [#868](https://github.com/AcePeak/naturo/issues/868), [#875](https://github.com/AcePeak/naturo/issues/875), [#878](https://github.com/AcePeak/naturo/issues/878), [#883](https://github.com/AcePeak/naturo/issues/883), [#893](https://github.com/AcePeak/naturo/issues/893))
 
 ## [0.3.1] — 2026-03-31

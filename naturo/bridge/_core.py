@@ -4,8 +4,10 @@ from __future__ import annotations
 import ctypes
 import os
 import platform
+import shutil
+import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from naturo.bridge._models import (
     ElementInfo,
@@ -15,6 +17,57 @@ from naturo.bridge._models import (
     _safe_json_loads,
 )
 from naturo.bridge._errors import NaturoCoreError
+
+
+def _windows_short_path(path: str) -> Optional[str]:
+    """Return the Windows 8.3 short path for an existing path, or None.
+
+    Short (8.3) paths contain only ASCII characters, which lets the native
+    capture core open a staging file even when ``%TEMP%`` lives under a
+    non-ASCII user profile (e.g. a Chinese Windows username).
+
+    Args:
+        path: An existing directory or file path.
+
+    Returns:
+        The 8.3 short path, or None if it could not be resolved.
+    """
+    get_short_path = ctypes.windll.kernel32.GetShortPathNameW  # type: ignore[attr-defined]
+    get_short_path.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
+    get_short_path.restype = ctypes.c_uint32
+    buffer = ctypes.create_unicode_buffer(260)
+    length = get_short_path(path, buffer, len(buffer))
+    if length == 0:
+        return None
+    if length >= len(buffer):
+        buffer = ctypes.create_unicode_buffer(length + 1)
+        length = get_short_path(path, buffer, len(buffer))
+        if length == 0:
+            return None
+    return buffer.value
+
+
+def _ascii_temp_dir() -> str:
+    """Return a temporary directory whose path contains only ASCII characters.
+
+    The native capture core writes files with narrow-string I/O that cannot
+    open non-ASCII paths, so any staging file must live in an ASCII-only
+    directory. The system temp directory is used directly when it is already
+    ASCII; otherwise its 8.3 short path is used on Windows.
+
+    Returns:
+        A temporary directory path, ASCII-only when one can be resolved
+        (best effort otherwise).
+    """
+    base = tempfile.gettempdir()
+    if base.isascii():
+        return base
+    if platform.system() == "Windows":
+        short = _windows_short_path(base)
+        if short and short.isascii():
+            return short
+    return base
+
 
 class NaturoCore:
     """Wrapper around naturo_core.dll/.so native library.
@@ -263,12 +316,72 @@ class NaturoCore:
         """
         return self._lib.naturo_shutdown()
 
+    def _capture_to_path(
+        self,
+        native_call: Callable[[bytes], int],
+        output_path: str,
+        op_name: str,
+    ) -> str:
+        """Invoke a native capture function, tolerating Unicode output paths.
+
+        The bundled native core writes BMP files with narrow-string file I/O,
+        which fails with a ``File I/O error`` when the output path contains
+        non-ASCII characters (a common case on Chinese/Japanese Windows, where
+        usernames and folders are non-ASCII — see #777). For such paths the
+        capture is written to an ASCII-only temporary file and then moved to
+        the requested destination, which Python handles natively. ASCII paths
+        are passed straight through, so behaviour is unchanged for them.
+
+        Args:
+            native_call: Callable that takes the UTF-8-encoded path bytes and
+                returns the native status code (0 on success).
+            output_path: Requested output file path.
+            op_name: Operation name used in error reporting.
+
+        Returns:
+            The requested output path.
+
+        Raises:
+            NaturoCoreError: If the output path is None or the native capture
+                fails.
+        """
+        if output_path is None:
+            raise NaturoCoreError(-1, op_name)
+
+        if output_path.isascii():
+            rc = native_call(output_path.encode("utf-8"))
+            if rc != 0:
+                raise NaturoCoreError(rc, op_name)
+            return output_path
+
+        # Non-ASCII destination: stage the capture in an ASCII-only temp file,
+        # then move it to the requested path.
+        fd, staging_path = tempfile.mkstemp(
+            suffix=".bmp", prefix="naturo_capture_", dir=_ascii_temp_dir()
+        )
+        os.close(fd)
+        try:
+            rc = native_call(staging_path.encode("utf-8"))
+            if rc != 0:
+                raise NaturoCoreError(rc, op_name)
+            parent = os.path.dirname(output_path)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            # copyfile (not move) so an existing destination is overwritten and
+            # cross-volume staging works; the staging file is removed below.
+            shutil.copyfile(staging_path, output_path)
+        finally:
+            if os.path.exists(staging_path):
+                os.unlink(staging_path)
+        return output_path
+
     def capture_screen(self, screen_index: int = 0, output_path: str = "capture.bmp") -> str:
         """Capture a screenshot of the entire screen or a specific monitor.
 
         Args:
             screen_index: Zero-based monitor index. 0 for primary screen.
             output_path: File path to save the screenshot (BMP format).
+                Unicode (non-ASCII) paths are supported.
 
         Returns:
             The output file path.
@@ -276,14 +389,11 @@ class NaturoCore:
         Raises:
             NaturoCoreError: On capture failure or invalid arguments.
         """
-        if output_path is None:
-            raise NaturoCoreError(-1, "capture_screen")
-        rc = self._lib.naturo_capture_screen(
-            screen_index, output_path.encode("utf-8")
+        return self._capture_to_path(
+            lambda path_bytes: self._lib.naturo_capture_screen(screen_index, path_bytes),
+            output_path,
+            "capture_screen",
         )
-        if rc != 0:
-            raise NaturoCoreError(rc, "capture_screen")
-        return output_path
 
     def capture_window(self, hwnd: int = 0, output_path: str = "capture.bmp") -> str:
         """Capture a screenshot of a specific window.
@@ -291,6 +401,7 @@ class NaturoCore:
         Args:
             hwnd: Window handle. Pass 0 to capture the foreground window.
             output_path: File path to save the screenshot (BMP format).
+                Unicode (non-ASCII) paths are supported.
 
         Returns:
             The output file path.
@@ -298,14 +409,11 @@ class NaturoCore:
         Raises:
             NaturoCoreError: On capture failure or invalid arguments.
         """
-        if output_path is None:
-            raise NaturoCoreError(-1, "capture_window")
-        rc = self._lib.naturo_capture_window(
-            hwnd, output_path.encode("utf-8")
+        return self._capture_to_path(
+            lambda path_bytes: self._lib.naturo_capture_window(hwnd, path_bytes),
+            output_path,
+            "capture_window",
         )
-        if rc != 0:
-            raise NaturoCoreError(rc, "capture_window")
-        return output_path
 
     def list_windows(self) -> list[WindowInfo]:
         """List all visible top-level windows.
