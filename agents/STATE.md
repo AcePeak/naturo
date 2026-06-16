@@ -1,6 +1,20 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 04:24 (Orc autonomous cycle — **quiet/healthy; one team Dev PR merged,
+> Last refreshed: 2026-06-17 06:22 (Orc autonomous cycle — **quiet/healthy; active Dev work in flight,
+> no intervention needed**. Since the 04:24 refresh (= 20:24Z): QA **verified+closed #879** (browser
+> launch `-j` success envelope) at 05:40 local — `status:done` queue now **empty**. The Dev cron cycle
+> that started 06:07 local (22:07Z) **picked up #881** (MCP errors leak `NaturoCoreError` C++ names
+> instead of typed codes) and set it `status:in-progress` at 22:16Z — **active in-flight work, left
+> untouched** (no branch pushed yet; only `develop`+`main`; well inside the >24h-abandoned threshold;
+> Rule 4 — do not touch Dev's tree). **No open PRs.** `develop` CI **GREEN** (Build & Test + CodeQL
+> success on HEAD `d3cfe92`). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the release (#914) remains
+> Ace's call (Rule 2). needs:ace live queue **#935/#915/#914/#860/#842** (unchanged); standing
+> recommended closures **#915** (durability proven) + **#863** (premise disproven, QA-owned). Weekly
+> competitiveness **not due** (baseline 2026-06-16, <7d). No new sharp gap worth filing; backlog already
+> sharp. No new human-decision items.
+>
+> ---
+> _Prior refresh: 2026-06-17 04:24 (Orc autonomous cycle — **quiet/healthy; one team Dev PR merged,
 > self-landed**. Since the 04:23 refresh: team Dev PR **#951**
 > (`fix/issue-879-browser-launch-success-envelope`, fixes #879 — standardize browser launch `-j` output
 > to the success-boolean envelope) **MERGED** to `develop` (`d3cfe92`), both checks green. Post-merge

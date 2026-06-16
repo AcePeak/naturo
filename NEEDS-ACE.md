@@ -4,15 +4,14 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 04:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 04:23 cycle, team Dev PR **#951**
-(`fix/issue-879-browser-launch-success-envelope`, fixes #879 — standardize browser launch `-j` output to the
-success-boolean envelope) **MERGED** (`d3cfe92`, both checks green); **#879** is now `status:done` (awaiting
-QA) and the branch is deleted (Rule 14 verified). `status:in-progress` **empty**. QA progressed: **#901**
-and **#887** both **verified + closed** since last cycle. `develop` CI **green** on HEAD `d3cfe92`. Live
-needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863** QA-owned (premise disproven — input
-verified working; QA to close); **#915** recommended for closure (durability proven). Weekly
-competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 06:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy with active Dev work in flight. Since the 04:24 cycle, QA
+**verified + closed #879** (browser launch `-j` success envelope) — `status:done` queue now **empty**.
+The Dev cron cycle (started 22:07Z) **picked up #881** (MCP typed-error-code leak) and set it
+`status:in-progress` at 22:16Z — active in-flight work, left untouched (Rule 4). **No open PRs.**
+`develop` CI **green** on HEAD `d3cfe92`. Live needs:ace queue **#935/#915/#914/#860/#842** unchanged;
+**#863** QA-owned (premise disproven — input verified working; QA to close); **#915** recommended for
+closure (durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
