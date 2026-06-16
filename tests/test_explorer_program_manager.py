@@ -22,7 +22,7 @@ def _make_backend():
         pytest.skip("WindowsBackend not available on this platform")
 
 
-_SESSION_PATCH_BASE = "naturo.backends.windows._element"
+_SESSION_PATCH_BASE = "naturo.backends.windows._element._app_discovery"
 
 
 class TestExplorerProgramManager:

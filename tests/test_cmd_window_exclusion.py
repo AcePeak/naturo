@@ -42,8 +42,8 @@ class TestCmdWindowExclusion:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr("naturo.backends.windows._element._get_console_session_id", mock_console_session)
-        monkeypatch.setattr("naturo.backends.windows._element._get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         # _resolve_hwnd with --app "MyApp" should match the real MyApp, NOT cmd
         result = backend._resolve_hwnd(app="MyApp")
@@ -82,8 +82,8 @@ class TestCmdWindowExclusion:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr("naturo.backends.windows._element._get_console_session_id", mock_console_session)
-        monkeypatch.setattr("naturo.backends.windows._element._get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         result = backend._resolve_hwnd(app="Calculator")
         assert result == 4000, "Should match Calculator.exe, not powershell.exe"
@@ -121,8 +121,8 @@ class TestCmdWindowExclusion:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr("naturo.backends.windows._element._get_console_session_id", mock_console_session)
-        monkeypatch.setattr("naturo.backends.windows._element._get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         result = backend._resolve_hwnd(app="Notepad")
         assert result == 6000, "Should match notepad.exe, not conhost.exe"
@@ -151,8 +151,8 @@ class TestCmdWindowExclusion:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr("naturo.backends.windows._element._get_console_session_id", mock_console_session)
-        monkeypatch.setattr("naturo.backends.windows._element._get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         # --app "cmd" should still match cmd.exe by process name
         result = backend._resolve_hwnd(app="cmd")
