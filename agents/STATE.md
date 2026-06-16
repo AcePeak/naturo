@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-16 23:22 (Orc autonomous cycle — quiet/healthy. Since the 22:24 cycle: **two code-health refactors merged + cleared CI** — PR #942 (`_input.py` → `_input/` submixins, #861) and PR #943 (`_element.py` → focused submodules, #720). **develop CI GREEN** (Build&Test+CodeQL success on **9ba505f = HEAD**). QA **verified+closed #861** at 22:40 (non-intrusive structural/API-parity check, 470 passed) — the **6th consecutive clean QA runner round** (16:43/17:42/18:50/20:45/21:40/22:40), further strengthening #915 durability. Orc flipped **#720 → status:done** (post-merge handoff for PR #943; was left `status:in-progress`) — now awaiting QA. `status:in-progress` empty. 5 input-class `status:done` bugs remain (#786/#788/#807/#840/#843, gated on #863) + #720 (refactor, QA-pickable non-intrusively). Reconciled the needs:ace queue: **added the `needs:ace` label to #863** (was documented in NEEDS-ACE.md as a human-only session/input-policy decision but missing the label) → live queue now #935/#915/#914/#863/#860/#842. No new human-decision items. Recognition proofs (#931 benchmark + #933 Electron CDP) remain verified+closed; next recognition move still #932 (Java JAB, env-blocked). Competitive tracker baseline set today — weekly step not due.
+> Last refreshed: 2026-06-17 00:30 (Orc autonomous cycle — **stuck-PR triage**. One open PR: **#945**
+> (refactor `browser_cmd.py` → `_browser/` modules, fixes #856, team Dev, auto-merge SQUASH on) was
+> **BLOCKED on red CI** — `Lint & Type Check` failed with **9 `mypy` `Cannot determine type of "browser"
+> [has-type]` errors**: each submodule aliased the shared group via the module-level attribute
+> `browser = browser_cmd.browser`, which participates in the `browser_cmd`↔submodule registration import
+> cycle that mypy can't resolve. Orc reproduced it in an isolated detached worktree and built a fix
+> (direct `from naturo.cli.browser_cmd import browser, _get_page`), **but on push discovered Dev had
+> force-pushed a better structural fix** (`98995419`→`012dff9`, extracting the group into
+> `_browser/_group.py` to break the cycle at the source). Orc **discarded its own commit and backed off**
+> — Dev's fix cleared Lint and **#945 auto-merged to `develop` (`6112800`)** during this cycle. Orc did the
+> **post-merge handoff: flipped #856 → status:done** and confirmed the `refactor/issue-856-split-browser-cmd`
+> branch is **deleted** (Rule 14). No manual merge was performed.
+> This was a **second near-miss of the #935 concurrency hazard** (Orc-vs-Dev push race on one branch) —
+> but because Orc used a *separate* worktree (Rule 4), **no work was lost** (vs the original shared-tree
+> `reset --hard` data loss); supporting evidence appended to #935. `develop` CI green pre-merge (9ba505f);
+> #945's own checks were green at merge. `status:done` now 6 (5 ship-gate bugs #786/#788/#807/#840/#843,
+> all gated on #863, **+ #856** awaiting QA structural check). `status:in-progress` **empty**.
+> needs:ace queue unchanged (#935/#915/#914/#863/#860/#842),
+> no new human-decision items. Weekly competitiveness step not due (baseline 2026-06-16).
+>
+> ---
+> _Prior refresh: 2026-06-16 23:22 (Orc autonomous cycle — quiet/healthy. Since the 22:24 cycle: **two code-health refactors merged + cleared CI** — PR #942 (`_input.py` → `_input/` submixins, #861) and PR #943 (`_element.py` → focused submodules, #720). **develop CI GREEN** (Build&Test+CodeQL success on **9ba505f = HEAD**). QA **verified+closed #861** at 22:40 (non-intrusive structural/API-parity check, 470 passed) — the **6th consecutive clean QA runner round** (16:43/17:42/18:50/20:45/21:40/22:40), further strengthening #915 durability. Orc flipped **#720 → status:done** (post-merge handoff for PR #943; was left `status:in-progress`) — now awaiting QA. `status:in-progress` empty. 5 input-class `status:done` bugs remain (#786/#788/#807/#840/#843, gated on #863) + #720 (refactor, QA-pickable non-intrusively). Reconciled the needs:ace queue: **added the `needs:ace` label to #863** (was documented in NEEDS-ACE.md as a human-only session/input-policy decision but missing the label) → live queue now #935/#915/#914/#863/#860/#842. No new human-decision items. Recognition proofs (#931 benchmark + #933 Electron CDP) remain verified+closed; next recognition move still #932 (Java JAB, env-blocked). Competitive tracker baseline set today — weekly step not due._
 
 ## Current Version
 v0.3.1 (PyPI + GitHub Release). `develop` CI green.

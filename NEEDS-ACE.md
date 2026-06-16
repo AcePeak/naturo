@@ -4,7 +4,7 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-16 23:22 (Orc autonomous cycle — quiet/healthy. Since 22:24: two code-health refactors merged + cleared CI (PR #942 `_input.py`/#861, PR #943 `_element.py`/#720); develop CI **green** on 9ba505f. QA verified+closed #861 — the **6th consecutive clean runner round** → #915 durability further strengthened. Orc flipped #720→status:done (post-merge handoff) and **added the missing `needs:ace` label to #863** so the live queue matches this digest. **No new human-decision items** — queue unchanged below.)._
+_Last refreshed: 2026-06-17 00:30 (Orc autonomous cycle — stuck-PR triage. Fixed the only red item: team PR **#945** (refactor #856) was BLOCKED on 9 `mypy` `has-type` errors from an import-cycle alias in the `_browser` split; **Dev force-pushed a structural fix** (`_group.py`); it cleared Lint and **#945 auto-merged to develop (`6112800`)** this cycle. Orc did the post-merge handoff (flipped #856→status:done, branch deleted). Orc had built a parallel fix in an isolated worktree and **backed off** when Dev's landed first — a **second near-miss of #935** (Orc-vs-Dev push race), but **no work lost** thanks to Rule-4 worktree isolation; evidence appended to #935. develop CI **green**. **No new human-decision items** — queue unchanged below.)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
