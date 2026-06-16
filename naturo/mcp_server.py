@@ -17,6 +17,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ContentBlock
 
 from naturo.backends.base import get_backend, Backend
+from naturo.bridge import NaturoCoreError
 from naturo.errors import ErrorCode, NaturoError
 from naturo.process import launch_app as _launch_app
 
@@ -33,6 +34,44 @@ from naturo.mcp._system import register_system_tools
 from naturo.mcp._excel import register_excel_tools
 
 logger = logging.getLogger(__name__)
+
+# The MCP envelope's generic "something broke" code.  Mirrors the CLI's
+# catch-all; not part of the typed ErrorCode catalog because it carries no
+# actionable meaning beyond "unexpected internal failure".
+_INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
+
+# (#881) ``NaturoCoreError`` carries only an integer native code; translate it
+# to the typed :class:`ErrorCode` catalog so MCP clients receive a documented
+# ``error.code`` instead of an opaque ``INTERNAL_ERROR``.  Native codes ``-2``
+# (System/COM error) and ``-4`` (buffer too small) have no more-specific typed
+# peer and honestly remain the generic internal-error code.
+_CORE_ERROR_CODE_MAP: dict[int, str] = {
+    -1: ErrorCode.INVALID_INPUT,   # Invalid argument
+    -3: ErrorCode.FILE_IO_ERROR,   # File I/O error
+}
+
+
+def _core_error_envelope(exc: NaturoCoreError) -> dict[str, Any]:
+    """Build a leak-free MCP error envelope for a bridge ``NaturoCoreError``.
+
+    The client-facing message uses the native error *description*
+    (:attr:`NaturoCoreError.ERROR_MESSAGES`) rather than ``str(exc)``.  The
+    latter embeds the failing call's context, which for keyboard/mouse
+    operations includes a ``repr()`` of the arguments (e.g. ``key_press('F1')``);
+    using only the description guarantees the message never exposes the
+    ``NaturoCoreError`` class name or argument values (#881).
+
+    Args:
+        exc: The bridge error raised by a native ``naturo_core`` call.
+
+    Returns:
+        A ``{"success": False, "error": {"code", "message"}}`` envelope whose
+        ``code`` is drawn from the typed :class:`ErrorCode` catalog when a
+        specific peer exists, and :data:`_INTERNAL_ERROR_CODE` otherwise.
+    """
+    code = _CORE_ERROR_CODE_MAP.get(exc.code, _INTERNAL_ERROR_CODE)
+    message = NaturoCoreError.ERROR_MESSAGES.get(exc.code, f"Unknown error ({exc.code})")
+    return {"success": False, "error": {"code": code, "message": message}}
 
 
 class _SanitizingFastMCP(FastMCP):
@@ -140,16 +179,24 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
                 if e.is_recoverable:
                     error_info["recoverable"] = True
                 return {"success": False, "error": error_info}
+            except NaturoCoreError as e:
+                # (#881) Map the native bridge error to a typed code and a
+                # message free of the C++/Python class name and argument repr,
+                # rather than leaking "NaturoCoreError: <op>(<args>): ...".
+                logger.exception("Core error in tool %s", fn.__name__)
+                return _core_error_envelope(e)
             except Exception as e:
                 # (#844) Catch Pydantic ValidationError separately to avoid
                 # leaking internal field paths, validator names, and raw repr.
-                msg = _format_validation_error(e) if _is_validation_error(e) else f"{type(e).__name__}: {e}"
-                code = "INVALID_INPUT" if _is_validation_error(e) else "INTERNAL_ERROR"
-                if code == "INTERNAL_ERROR":
-                    logger.exception("Unhandled error in tool %s", fn.__name__)
-                else:
+                if _is_validation_error(e):
+                    msg = _format_validation_error(e)
                     logger.warning("Validation error in tool %s: %s", fn.__name__, msg)
-                return {"success": False, "error": {"code": code, "message": msg}}
+                    return {"success": False, "error": {"code": ErrorCode.INVALID_INPUT, "message": msg}}
+                # (#881) Surface the message via str(e) — without the
+                # type(e).__name__ prefix that leaked exception class names
+                # (NaturoCoreError, TypeError, ValueError, …) to MCP clients.
+                logger.exception("Unhandled error in tool %s", fn.__name__)
+                return {"success": False, "error": {"code": _INTERNAL_ERROR_CODE, "message": str(e)}}
         return wrapper
 
     def _is_validation_error(exc: Exception) -> bool:
