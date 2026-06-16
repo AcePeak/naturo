@@ -67,7 +67,8 @@ def launch_cmd(ctx: click.Context, profile: Optional[str],
         )
         if json_output:
             click.echo(json_module.dumps({
-                "status": "ok",
+                "success": True,
+                "action": "browser_launch",
                 "pid": proc.pid,
                 "port": proc.port,
                 "profile": profile,
