@@ -461,9 +461,41 @@ class TestLaunchCli:
         result = runner.invoke(browser, ["launch", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        # Standard success envelope (#879): success boolean, not status string.
+        assert data["success"] is True
+        assert "status" not in data
+        assert data["action"] == "browser_launch"
         assert data["pid"] == 999
         assert data["port"] == 9222
+        assert data["profile"] is None
+
+    @patch("naturo.browser._launcher.launch_chrome")
+    def test_launch_json_includes_profile(self, mock_launch, runner):
+        mock_proc = MagicMock()
+        mock_proc.pid = 999
+        mock_proc.port = 9222
+        mock_launch.return_value = mock_proc
+
+        result = runner.invoke(browser, ["launch", "--json", "--profile", "Work"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["profile"] == "Work"
+
+    @patch("naturo.browser._launcher.launch_chrome",
+           side_effect=RuntimeError("Chrome exited with code 0 before CDP became available"))
+    def test_launch_json_error_exits_nonzero(self, mock_launch, runner):
+        """A failed launch must emit the error envelope AND exit non-zero (#879).
+
+        Scripted callers rely on ``if naturo browser launch -j; then`` — a
+        zero exit code on failure makes the shell treat a broken launch as
+        success.
+        """
+        result = runner.invoke(browser, ["launch", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert "error" in data
 
     @patch("naturo.browser._launcher.launch_chrome", side_effect=FileNotFoundError("Chrome not found"))
     def test_launch_chrome_not_found_cli(self, mock_launch, runner):
