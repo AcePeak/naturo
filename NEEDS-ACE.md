@@ -7,10 +7,9 @@
 _Last refreshed: 2026-06-17 04:23 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
 call (#914)**; otherwise quiet/healthy. Since the 03:22 cycle, team Dev opened PR **#950**
 (`fix/issue-901-mcp-app-inspect-pid-validation`, fixes #901 — validate direct PID in MCP `app_inspect` so
-bogus PIDs fail loudly), base=`develop`, `MERGEABLE`, **auto-merge SQUASH enabled** — `BLOCKED` only on
-in-progress cross-platform CI (zero failures) → it self-lands when green; no Orc action. **#901** is the
-sole `status:in-progress` (in flight); `status:done` ship-gate queue **empty**; `develop` CI **GREEN**
-(Build & Test + CodeQL on `ce4694f`). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863**
+bogus PIDs fail loudly) **MERGED mid-cycle** (`4e0ca65`); Orc flipped **#901** → `status:done` (awaiting QA)
+and the branch is deleted (Rule 14). `status:in-progress` now **empty**; merge-commit CI running (no
+failures; prior HEAD `ce4694f` green). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863**
 QA-owned (premise disproven — input verified working; QA to close); **#915** recommended for closure
 (durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 

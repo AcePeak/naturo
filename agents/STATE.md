@@ -4,11 +4,12 @@
 > self-landing**. Since the 03:22 refresh: team Dev opened PR **#950**
 > (`fix/issue-901-mcp-app-inspect-pid-validation`, fixes #901 — validate direct PID in MCP `app_inspect`
 > so bogus PIDs fail loudly), base=`develop`, `MERGEABLE`, **auto-merge SQUASH enabled** (AcePeak @20:20Z).
-> It is `BLOCKED` only because cross-platform CI is still **IN_PROGRESS** (Analyze c-cpp + Python tests on
-> Ubuntu/macOS/Windows-DLL); **zero failures** → it self-lands when green. No Orc intervention; post-merge
-> handoff (flip **#901** → `status:done`, delete branch) deferred to the cycle that sees it merge. **#901**
-> is the sole `status:in-progress` (correctly in flight). `status:done` queue **empty**. `develop` CI
-> **GREEN** (Build & Test + CodeQL on HEAD `ce4694f`). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the
+> **#950 MERGED mid-cycle** (`4e0ca65`) once its checks went green. Orc did the **post-merge handoff:
+> flipped #901 `status:in-progress` → `status:done`** (now awaiting QA verification of the MCP PID-validation
+> fix) and confirmed the source branch is **deleted** (GitHub auto-delete; verified gone, Rule 14).
+> `status:in-progress` is now **empty**; **#901** is the sole `status:done` item (awaiting QA). The merge
+> commit's CI (`4e0ca65`) is running (CodeQL/Build&Test in progress, **no failures**); prior HEAD `ce4694f`
+> was green. v0.3.2 ship-gate **FULLY MET** — cutting/tagging the
 > release (#914) remains Ace's call (Rule 2, unchanged). needs:ace live queue **#935/#915/#914/#860/#842**
 > (unchanged); standing recommended closures **#915** (durability proven) + **#863** (QA-owned, premise
 > disproven). Weekly competitiveness **not due** (baseline 2026-06-16, <7d). No new sharp gap worth filing;
