@@ -615,7 +615,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 | Feature | naturo | PyAutoGUI | pywinauto | AutoIt | WinAppDriver |
 |---------|--------|-----------|-----------|--------|--------------|
 | **MCP Server** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ |
-| **AI Agent Ready** | ✅ JSON output, agent CLI | ❌ | ❌ | ❌ | ❌ |
+| **AI Agent Ready** | ⚠️ JSON output, agent CLI (`-j` envelope being standardized) | ❌ | ❌ | ❌ | ❌ |
 | **Browser Automation** | ✅ CDP (Chrome/Edge) | ❌ | ❌ | ❌ | ❌ |
 | **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP + AI Vision | None (image only) | UIA, Win32 | Win32 messages | UIA only |
 | **Cascade Recognition** | ✅ Multi-source fusion with auto-dedup | ❌ | ❌ | ❌ | ❌ |
