@@ -205,6 +205,91 @@ class TestFetchCdpElements:
 
         assert results == []
 
+    def test_reconnects_after_transient_connect_failure(self):
+        """A transient connect failure is retried; a later attempt succeeds.
+
+        Real Electron apps occasionally drop the first CDP WebSocket while the
+        DevTools agent settles. The provider must reconnect rather than abandon
+        the whole CDP contribution after one failure.
+        """
+        good_element = {
+            "tagName": "button",
+            "role": "button",
+            "name": "Deploy",
+            "value": None,
+            "bounds": {"x": 10, "y": 10, "width": 80, "height": 30},
+            "selector": "button#deploy",
+            "nodeIndex": 0,
+        }
+        mock_client = MagicMock()
+        # First attempt raises on connect, second attempt connects cleanly.
+        mock_client.connect.side_effect = [Exception("WebSocket reset"), None]
+        mock_client.get_interactive_elements.return_value = [good_element]
+
+        with (
+            patch("naturo.cdp.CDPClient", return_value=mock_client),
+            patch("naturo.cascade._providers.time.sleep"),
+        ):
+            from naturo.cascade import _fetch_cdp_elements
+
+            results = _fetch_cdp_elements(
+                pid=1234, debug_port=9333, parent_bounds=(0, 0, 800, 600),
+            )
+
+        assert len(results) == 1
+        assert results[0].name == "Deploy"
+        assert mock_client.connect.call_count == 2
+
+    def test_retries_while_renderer_reports_no_elements(self):
+        """An initial empty result (renderer still painting) is retried."""
+        good_element = {
+            "tagName": "a",
+            "role": "link",
+            "name": "View log",
+            "value": None,
+            "bounds": {"x": 10, "y": 50, "width": 60, "height": 20},
+            "selector": "a.viewlog",
+            "nodeIndex": 0,
+        }
+        mock_client = MagicMock()
+        mock_client.connect.return_value = None
+        # First two attempts: renderer not ready (empty); third: populated.
+        mock_client.get_interactive_elements.side_effect = [[], [], [good_element]]
+
+        with (
+            patch("naturo.cdp.CDPClient", return_value=mock_client),
+            patch("naturo.cascade._providers.time.sleep"),
+        ):
+            from naturo.cascade import _fetch_cdp_elements
+
+            results = _fetch_cdp_elements(
+                pid=1234, debug_port=9333, parent_bounds=(0, 0, 800, 600),
+            )
+
+        assert len(results) == 1
+        assert results[0].name == "View log"
+        assert mock_client.get_interactive_elements.call_count == 3
+
+    def test_gives_up_after_bounded_attempts(self):
+        """Persistent failure is bounded — it does not loop forever."""
+        from naturo.cascade._providers import _CDP_ATTACH_ATTEMPTS
+
+        mock_client = MagicMock()
+        mock_client.connect.side_effect = Exception("always refused")
+
+        with (
+            patch("naturo.cdp.CDPClient", return_value=mock_client),
+            patch("naturo.cascade._providers.time.sleep"),
+        ):
+            from naturo.cascade import _fetch_cdp_elements
+
+            results = _fetch_cdp_elements(
+                pid=1234, debug_port=9333, parent_bounds=(0, 0, 800, 600),
+            )
+
+        assert results == []
+        assert mock_client.connect.call_count == _CDP_ATTACH_ATTEMPTS
+
     def test_role_mapping_fallback(self):
         """When role is empty, falls back to tag-based role mapping."""
         mock_elements = [
