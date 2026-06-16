@@ -4,17 +4,15 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 03:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**. Since the 02:24 cycle, QA **verified+closed #843** (02:42Z, runtime composite check on the
-real desktop). **All 5 ship-gate bugs are now verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z)
-and the #885 cluster is closed — **both ship-gate requirements (1) and (2) are satisfied; the `status:done`
-ship-gate queue is empty.** The sole remaining v0.3.2 action is **cutting / tagging the release (#914) —
-human-only (Rule 2, tag→main = PyPI publish); QA explicitly does not sign off.** Separately Dev landed docs
-PR **#949** (`ce4694f`, softened the README "AI Agent Ready" claim) → **#887 now `status:done` awaiting QA**
-(correct lifecycle). No open PRs; `status:in-progress` empty; `develop` CI **GREEN** (Build & Test + CodeQL
-on `ce4694f`). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863** QA-owned (premise
-disproven — input verified working; QA to close); **#915** recommended for closure (durability proven).
-Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 04:23 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 03:22 cycle, team Dev opened PR **#950**
+(`fix/issue-901-mcp-app-inspect-pid-validation`, fixes #901 — validate direct PID in MCP `app_inspect` so
+bogus PIDs fail loudly), base=`develop`, `MERGEABLE`, **auto-merge SQUASH enabled** — `BLOCKED` only on
+in-progress cross-platform CI (zero failures) → it self-lands when green; no Orc action. **#901** is the
+sole `status:in-progress` (in flight); `status:done` ship-gate queue **empty**; `develop` CI **GREEN**
+(Build & Test + CodeQL on `ce4694f`). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863**
+QA-owned (premise disproven — input verified working; QA to close); **#915** recommended for closure
+(durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

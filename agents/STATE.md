@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 03:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET; release is
+> Last refreshed: 2026-06-17 04:23 (Orc autonomous cycle — **quiet/healthy; one team Dev PR in flight,
+> self-landing**. Since the 03:22 refresh: team Dev opened PR **#950**
+> (`fix/issue-901-mcp-app-inspect-pid-validation`, fixes #901 — validate direct PID in MCP `app_inspect`
+> so bogus PIDs fail loudly), base=`develop`, `MERGEABLE`, **auto-merge SQUASH enabled** (AcePeak @20:20Z).
+> It is `BLOCKED` only because cross-platform CI is still **IN_PROGRESS** (Analyze c-cpp + Python tests on
+> Ubuntu/macOS/Windows-DLL); **zero failures** → it self-lands when green. No Orc intervention; post-merge
+> handoff (flip **#901** → `status:done`, delete branch) deferred to the cycle that sees it merge. **#901**
+> is the sole `status:in-progress` (correctly in flight). `status:done` queue **empty**. `develop` CI
+> **GREEN** (Build & Test + CodeQL on HEAD `ce4694f`). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the
+> release (#914) remains Ace's call (Rule 2, unchanged). needs:ace live queue **#935/#915/#914/#860/#842**
+> (unchanged); standing recommended closures **#915** (durability proven) + **#863** (QA-owned, premise
+> disproven). Weekly competitiveness **not due** (baseline 2026-06-16, <7d). No new sharp gap worth filing;
+> backlog already sharp. No new human-decision items.
+>
+> ---
+> _Prior refresh: 2026-06-17 03:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET; release is
 > Ace's call**. Since the 02:24 refresh QA **verified+closed #843** (02:42Z — runtime composite check:
 > the #948 Z-order fix makes the File-menu popup survive compositing even under 5 overlapping full-size
 > siblings; `test_capture_popup_843.py` 12/12; input probe-gate confirmed input works on this no-RDP
