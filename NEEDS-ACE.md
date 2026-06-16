@@ -4,7 +4,7 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-16 19:22 (Orc autonomous cycle — **recognition supremacy advancing**: #931 benchmark (PR #936) + #933 Electron CDP proof (PR #938) merged→awaiting QA; README leads with the multi-framework pitch. QA verified #843 partial (deferred on #863). #915 recovering (3 clean QA rounds since last 403). CI green, no PRs. **No new human-decision items this cycle.**)._
+_Last refreshed: 2026-06-16 20:25 (Orc autonomous cycle — **recognition supremacy proofs QA-verified**: #931 benchmark + #933 Electron CDP proof both **verified+closed** (11:40Z), not just awaiting QA. QA durably healthy — **11 issues verified+closed today**. Community-PR disposition #913 resolved (closed). CI green, no PRs. **No new human-decision items this cycle.**)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -14,7 +14,9 @@ _Last refreshed: 2026-06-16 19:22 (Orc autonomous cycle — **recognition suprem
 | [#863](https://github.com/AcePeak/naturo/issues/863) | **`SendInput` blocked in the unattended agent session** — true end-to-end runtime verification of `type`/`click`/`press` is impossible, so QA can't fully close input-family ship-gate bugs (#788 deferred for this) | session/desktop input policy (RDP/headless vs interactive console) | This now gates the *remaining* ship-gate verification more than #915. Decide how QA gets a real interactive input session (console autologon / unlocked physical session / dedicated VM). Unit tests pass; only live runtime closure is blocked. |
 | [#842](https://github.com/AcePeak/naturo/issues/842) / [#860](https://github.com/AcePeak/naturo/issues/860) | Desktop CI: self-hosted runner ROBOT-COMPILE offline (#842) vs fund a cloud Windows VM (#860) | infra spend | Decide: revive the runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI. A cloud VM (#860) could also solve #863 (a real interactive session for input verification). |
 | [#914](https://github.com/AcePeak/naturo/issues/914) | v0.3.2 ship-gate sign-off | release / tag to `main` = PyPI publish | **Closer now** — requirement (1) (epic #885) is verified+closed. Remaining: verify 5 `status:done` bugs (#786/#788/#807/#840/#843); input-family ones gated on #863. When all flip to `verified`, cutting v0.3.2 is your call. |
-| [#913](https://github.com/AcePeak/naturo/issues/913) | Dispose of community PRs #892 / #904 | external-contributor relationship | #892 is superseded by the merged PR #911 (contributor co-credited) — close it with thanks. Hold #904 open until the team's replacement fix for #844 lands, then close the same way. |
+
+_Resolved since last cycle: **#913** (dispose community PRs #892 / #904) — closed 2026-06-16; both
+community PRs are now closed (#892 superseded by merged #911, #904 by the team's #844 carry-forward)._
 
 ## Ship-gate status — v0.3.2
 - (1) Epic **#885** (silent-failure cluster): **CLOSED + verified 2026-06-16** (with #868/#875/#878/#883/#893).

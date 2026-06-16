@@ -1,6 +1,6 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-16 19:22 (Orc autonomous cycle — **recognition supremacy advancing**: #931 coverage benchmark (PR #936) + #933 Electron CDP proof (PR #938) both MERGED→status:done; README now leads with the multi-framework pitch + links the reproducible benchmark. QA verified #843 (partial, deferred on #863). CI green, no PRs, no in-progress. Remaining ship-gate verify blocker is #863; #915 recovering (3 clean QA rounds since last 403).
+> Last refreshed: 2026-06-16 20:25 (Orc autonomous cycle — **recognition supremacy proofs QA-verified**: #931 coverage benchmark + #933 Electron CDP proof both **verified+closed** (11:40Z), no longer just awaiting QA — the two flagship proofs backing the README headline + `docs/RECOGNITION.md` are now QA-confirmed. QA durably healthy: **11 issues verified+closed today**. Community-PR disposition #913 resolved (closed). CI green, no PRs, no stuck work. Remaining ship-gate verify blocker is #863; next recognition move is #932 (Java JAB), distribution #922/#927 now unblocked by the verified proof.
 
 ## Current Version
 v0.3.1 (PyPI + GitHub Release). `develop` CI green.
@@ -74,8 +74,9 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
 - **#904** (closes #844): right direction, breaks `errors.py` (mis-spliced helper), no wiring,
   unrelated workflow churn, base=develop. Team carrying forward.
 - Both: warm "we'll complete + co-credit you" notes posted 2026-06-15; close when the team PR lands.
-- **Disposition is now queued as `needs:ace` #913** (closing/taking over a community PR is human-only).
-  #892 is superseded by merged PR #911; recommend close-with-thanks. Hold #904 until its replacement lands.
+- **RESOLVED 2026-06-16:** disposition issue **#913 closed** — both community PRs now **CLOSED**
+  (#892 superseded by merged PR #911 with co-credit; #904 superseded for #844 carry-forward). No longer
+  in the needs:ace queue.
 
 ## Coordination
 - Bug tracking: GitHub Issues only. State flow: `status:in-progress` → `status:done` → `verified` → close.
@@ -85,14 +86,16 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
 - **Human-decision items (Ace only):** **#935 serialize dev cycles / per-worktree lock (NEW)**;
   **#915 confirm QA auth durable then close** (recovering, no longer TOP); self-hosted runner #842
   (offline) / cloud-VM #860; persistent cron scheduling; ship-gate timing (#914 — req (1) #885 now
-  met); public-API changes; superseding community PRs (#913).
-- **STANDING #1 PRODUCT PRIORITY — recognition supremacy (advancing 2026-06-16 19:22):**
-  - **#931 DONE** — coverage benchmark merged (PR #936). Reproducible cascade-vs-UIA-only harness +
-    `docs/RECOGNITION.md` with measured numbers; README "Why naturo?" headline now leads with the
-    multi-framework pitch and links the proof. `status:done` awaiting QA.
-  - **#933 DONE** — owned real-Electron fixture + CDP recognition proof merged (PR #938). **Measured
-    (Win11): UIA-only 83 vs cascade 113 (+30, all via CDP)** — the literal Electron case, not a Chrome
-    proxy. `status:done` awaiting QA. (Chrome row also published: 52→89, +37.)
+  met); public-API changes.
+  _(Community-PR disposition #913 resolved/closed 2026-06-16 — both #892/#904 closed.)_
+- **STANDING #1 PRODUCT PRIORITY — recognition supremacy (proofs QA-verified 2026-06-16 20:25):**
+  - **#931 VERIFIED+CLOSED** (11:40Z) — coverage benchmark (PR #936). Reproducible cascade-vs-UIA-only
+    harness + `docs/RECOGNITION.md` with measured numbers; README "Why naturo?" headline leads with the
+    multi-framework pitch and links the proof. **QA-confirmed**, no longer awaiting QA.
+  - **#933 VERIFIED+CLOSED** (11:41Z) — owned real-Electron fixture + CDP recognition proof (PR #938).
+    **Measured (Win11): UIA-only 83 vs cascade 113 (+30, all via CDP)** — the literal Electron case, not
+    a Chrome proxy. **QA-confirmed.** (Chrome row also published: 52→89, +37.)
+  - **Net:** the headline recognition claim now has **two QA-verified framework proofs** backing it.
   - **Still open, at queue top:** epic **#920** (P0 moat); **#932** (Java Swing/SWT JAB fixture+proof,
     P1) — JAB is *implemented* (`core/src/jab.cpp`, `naturo/cascade/`) and marked ✅ in the matrix but
     **not yet benchmark-measured** (no Java app on the desktop); **#934** (SAP GUI, P2, honestly marked
