@@ -1,6 +1,25 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 02:24 (Orc autonomous cycle — **ship-gate one QA-check from ready**.
+> Last refreshed: 2026-06-17 03:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET; release is
+> Ace's call**. Since the 02:24 refresh QA **verified+closed #843** (02:42Z — runtime composite check:
+> the #948 Z-order fix makes the File-menu popup survive compositing even under 5 overlapping full-size
+> siblings; `test_capture_popup_843.py` 12/12; input probe-gate confirmed input works on this no-RDP
+> console). **All 5 ship-gate bugs are now verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z)
+> and the #885 cluster is closed — **both ship-gate requirements (1) and (2) are satisfied. `status:done`
+> queue is empty of ship-gate items.** The sole remaining v0.3.2 action is **cutting/tagging the release
+> (#914) — human-only (Rule 2, tag→main = PyPI publish); QA explicitly does not sign off.** QA posted the
+> full "precondition met" note to #914 (18:41Z-clock). Separately, Dev landed docs PR **#949**
+> (`fix/issue-887-readme-honest-claims` → `ce4694f`, softened the README "AI Agent Ready" cell while the
+> -j envelope is still standardizing; branch deleted) — **#887 now `status:done` awaiting QA** (correct
+> lifecycle, no Orc flip needed). **No open PRs. `status:in-progress` empty.** `develop` CI **GREEN**
+> (Build & Test + CodeQL success on HEAD `ce4694f`). needs:ace live queue **#935/#915/#914/#860/#842**
+> (unchanged); **#863** QA-owned (premise disproven — input verified working; QA to close); **#915**
+> recommended for closure (durability proven). Weekly competitiveness **not due** (baseline 2026-06-16,
+> <7d). Backlog sharp — recognition #920/#932/#934/#937 + ~30 from:qa contract bugs; #932 (Java JAB
+> proof) still env-blocked (no Java app on desktop). No new human-decision items; no new issue filed.
+>
+> ---
+> _Prior refresh: 2026-06-17 02:24 (Orc autonomous cycle — **ship-gate one QA-check from ready**.
 > Since the 01:22 refresh, the last remaining v0.3.2 ship-gate bug **#843** (capture omits same-PID
 > popup menus) had its **Dev fix MERGED**: PR **#948** (`fix/issue-843-zorder-composite` →
 > `73d7d32`, Z-order-aware compositing of `capture --app/--pid` windows) landed at 17:32Z and the
@@ -74,7 +93,11 @@ gh issue list --state open --limit 100 --json milestone,number,title,labels \
     members #868/#875/#878/#883/#893. Fix landed via PR #911 (`require_desktop_session` on all 11
     CLI+MCP surfaces + 23-case matrix `tests/test_no_desktop_guard_885.py`, building on community
     PR #892, contributor co-credited).
-  - (2) Verify the 5 remaining `status:done` bugs from a real desktop: **#786, #788, #807, #840, #843**.
+  - (2) Verify the 5 remaining `status:done` bugs from a real desktop: **#786, #788, #807, #840, #843**
+    — **ALL VERIFIED+CLOSED 2026-06-17** (#786/#788/#807/#840 @01:15Z, #843 @02:42Z). **Requirement (2)
+    MET.** Input-family closure was unblocked by QA's probe-first gate (input works on the no-RDP console;
+    capability landed `19a72cd`), disproving #863's premise. **Both ship-gate requirements now satisfied —
+    cutting/tagging v0.3.2 (#914) is Ace's call (Rule 2, human-only); QA does not sign off.**
 - **QA LOOP RECOVERED (Orc 2026-06-16 18:24) — supersedes the "QA dead ~5 days" finding:** after the
   runner gained local-proxy auto-detection (commit `2ccbcf0`), QA `claude -p` rounds authenticate again
   and did real work today — **9 issues verified+closed 2026-06-16** (#885 cluster above + #902 + #870 +

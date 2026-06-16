@@ -4,22 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 02:24 (Orc autonomous cycle — **ship-gate one QA-check from ready**. The last
-remaining v0.3.2 ship-gate bug **#843** (capture omits same-PID popup menu) had its **Dev fix MERGED** this
-cycle: PR **#948** (`fix/issue-843-zorder-composite` → `73d7d32`, Z-order-aware compositing of
-`capture --app/--pid`) landed at 17:32Z; branch deleted. Orc did the **post-merge handoff: flipped #843
-`status:in-progress` → `status:done`** with a QA verification comment. **#843 is now the sole `status:done`
-item and the last ship-gate blocker — once QA verifies it, req (2) is fully met and cutting v0.3.2 (#914) is
-your call.** No open PRs; `status:in-progress` empty; `develop` CI **GREEN** (Build & Test + CodeQL on
-`73d7d32`). #862 (PR #947 macos split) confirmed already **verified+closed** by QA. Live needs:ace queue
-**#935/#915/#914/#860/#842** unchanged; **#863** already de-labeled (now QA-owned `from:qa`, awaiting QA
-close); **#915** still recommended for closure (durability proven across a day+ of clean rounds incl. live
-input). Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 03:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**. Since the 02:24 cycle, QA **verified+closed #843** (02:42Z, runtime composite check on the
+real desktop). **All 5 ship-gate bugs are now verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z)
+and the #885 cluster is closed — **both ship-gate requirements (1) and (2) are satisfied; the `status:done`
+ship-gate queue is empty.** The sole remaining v0.3.2 action is **cutting / tagging the release (#914) —
+human-only (Rule 2, tag→main = PyPI publish); QA explicitly does not sign off.** Separately Dev landed docs
+PR **#949** (`ce4694f`, softened the README "AI Agent Ready" claim) → **#887 now `status:done` awaiting QA**
+(correct lifecycle). No open PRs; `status:in-progress` empty; `develop` CI **GREEN** (Build & Test + CodeQL
+on `ce4694f`). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#863** QA-owned (premise
+disproven — input verified working; QA to close); **#915** recommended for closure (durability proven).
+Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
-| [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** | release / tag to `main` = PyPI publish | **One QA-check from ready.** Req (1) (epic #885) verified+closed; of the 5 status:done bugs, **4 verified+closed** (#786/#788/#807/#840 — 01:15Z). The 5th, **#843**, now has its **fix merged** (PR #948, `73d7d32`) and sits `status:done` awaiting QA. **When QA verifies #843, cutting v0.3.2 is your call.** |
+| [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** | release / tag to `main` = PyPI publish | **READY TO CUT — this is now the top actionable item.** Both ship-gate requirements are met: req (1) (epic #885 cluster) verified+closed; req (2) **all 5 status:done bugs verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z). `develop` CI green on `ce4694f`. **Cutting / tagging v0.3.2 (tag→main = PyPI publish) is your call — the loop cannot and will not do it (Rule 2).** |
 | [#935](https://github.com/AcePeak/naturo/issues/935) | Two Dev cycles ran **concurrently in the shared `naturo-dev` worktree** — the 2nd cycle's Step 0 `reset --hard` wiped the 1st's in-flight uncommitted branch (#910). **Rule 4 violation at the orchestration layer.** | orchestration / scheduling policy (runner.ps1 / cron / lock) | Add a **per-worktree lock** in `naturo-loop-locks\` that a starting `runner:dev` must acquire (skip the round if held), and/or serialize dev so two cycles never share one tree. Self-fixing is unsafe — concurrent git ops would corrupt the peer cycle. |
 | [#842](https://github.com/AcePeak/naturo/issues/842) / [#860](https://github.com/AcePeak/naturo/issues/860) | Desktop CI: self-hosted runner ROBOT-COMPILE offline (#842) vs fund a cloud Windows VM (#860) | infra spend | Decide: revive the runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI. (No longer needed for input verification — see #863 below — but still the only path to desktop-marked CI jobs.) |
 
@@ -31,18 +31,20 @@ input). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-06-16; both community PRs closed._
 
-## Ship-gate status — v0.3.2
+## Ship-gate status — v0.3.2  →  **FULLY MET (release is Ace's call, #914)**
 - (1) Epic **#885** (silent-failure cluster): **CLOSED + verified 2026-06-16** (with #868/#875/#878/#883/#893).
   **Requirement (1) MET.**
 - (2) QA-verify the 5 `status:done` bugs on a real desktop: **#786, #788, #807, #840** → **VERIFIED + CLOSED
-  2026-06-17 01:15Z** (input confirmed working unattended via probe-first gate). **#843** → **fix MERGED**
-  2026-06-17 (PR #948, `73d7d32` — Z-order-aware compositing); now `status:done` **awaiting QA verification**.
-  **This is the sole remaining ship-gate item, and it's now a QA verification, not a code fix.**
+  2026-06-17 01:15Z**; **#843** → **VERIFIED + CLOSED 2026-06-17 02:42Z** (runtime composite check confirms
+  the #948 Z-order fix; `test_capture_popup_843.py` 12/12). **Requirement (2) MET — `status:done` ship-gate
+  queue empty.**
+- **Both requirements satisfied. The only remaining action is cutting / tagging the release (#914) —
+  human-only (Rule 2); the loop will not tag `main`.**
 
 ## Blocks
-- **#843 (P1)** — capture popup compositing: **fix merged (PR #948), awaiting QA verification.** The last
-  v0.3.2 ship-gate item.
-- `develop` CI: **green** (Build & Test + CodeQL success on HEAD `73d7d32`).
+- **None blocking the ship-gate.** #843 (capture popup compositing) **verified+closed 2026-06-17 02:42Z** —
+  the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
+- `develop` CI: **green** (Build & Test + CodeQL success on HEAD `ce4694f`).
 - Desktop CI runner **#842** offline (chronic; infra decision above).
 - _Cleared this cycle:_ **#863** (input verification — proven possible) and **#915** (QA auth — recovered)
   are no longer blocks; both recommended for closure above.
