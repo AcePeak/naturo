@@ -67,6 +67,7 @@ found the elements UIA alone could not.
 | App | Framework | UIA-only | Cascade | Delta | Extra via |
 | --- | --- | ---: | ---: | ---: | --- |
 | Chrome (local web/Electron-class app) | Electron/CDP | 52 | 89 | **+37** | cdp (+34) |
+| Owned Electron fixture (real Electron app) | Electron/CDP | 83 | 113 | **+30** | cdp (+30) |
 
 **Documented gaps (measured honestly — no fabrication):**
 
@@ -86,10 +87,18 @@ In the Chrome run, the UIA-only baseline recognized **52** elements — and
 content elements that UIA is structurally blind to. That is precisely the class
 of element a UIA-only tool would fail to click.
 
-> **Why Chrome proves the Electron case.** Electron apps embed the identical
-> Chromium content layer and expose the same CDP endpoint. The web-content
-> recognition gap measured here is exactly the gap a UIA-only tool hits on VS
-> Code, Slack, or Feishu.
+The second row is the **literal Electron case**: naturo's own Electron fixture
+(`benchmarks/recognition/fixtures/electron/`) is a genuine Electron main process
+rendering a `BrowserWindow`, not a browser standing in for one. There, UIA-only
+recognized **83** elements (the native window frame) while the cascade reached
+**113** — the **CDP** provider recovered **30** renderer controls (toolbar
+buttons, the environment tree, release-form inputs, the task list, the
+deployments table) that the Windows UIA tree collapses into one opaque node.
+
+> **Why Chrome also proves the Electron case.** Electron apps embed the identical
+> Chromium content layer and expose the same CDP endpoint, so the Chrome row and
+> the owned-Electron row measure the same recognition gap two ways — the gap a
+> UIA-only tool hits on VS Code, Slack, or Feishu.
 
 ## Reproduce it
 
@@ -109,13 +118,30 @@ delta is deterministic and **offline** — no network, no live-site drift. It
 also probes for common Electron/Java apps that happen to be open and includes
 them when present.
 
+To include the **owned, real Electron** row, install the fixture's toolchain
+once (Node.js required); the runner adds the row automatically when present and
+documents it as a gap when not:
+
+```bash
+cd benchmarks/recognition/fixtures/electron && npm install   # pins electron via package-lock.json
+```
+
 The harness is reusable directly:
 
 ```python
-from benchmarks.recognition.harness import ChromiumFixtureApp, measure_running_app
+from benchmarks.recognition.harness import (
+    ChromiumFixtureApp,
+    ElectronFixtureApp,
+    measure_running_app,
+)
 
 # Reproducible Electron-class case (launches + cleans up its own browser):
 with ChromiumFixtureApp() as app:
+    result = app.measure()
+    print(result.uia_only_count, result.cascade_count, result.extra_sources)
+
+# Literal Electron case (launches + cleans up a real Electron process):
+with ElectronFixtureApp() as app:        # requires `npm install` in the fixture dir
     result = app.measure()
     print(result.uia_only_count, result.cascade_count, result.extra_sources)
 

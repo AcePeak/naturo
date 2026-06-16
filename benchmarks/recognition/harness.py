@@ -37,6 +37,10 @@ Public entry points
 * :func:`measure_window` — measure an *already-open* window by HWND/PID.
 * :func:`ChromiumFixtureApp` — launch/stop a controlled Chromium app on the
   bundled fixture (the reproducible Electron-class case).
+* :func:`ElectronFixtureApp` — launch/stop an *owned, real* Electron process
+  (``fixtures/electron/``) and measure it. This is a genuine Electron app, not
+  a browser standing in for one, so the CDP delta it shows is the literal
+  Electron case rather than a representative proxy.
 * :func:`measure_running_app` — find a running app by window-title substring
   and measure it (for ad-hoc Electron/Java apps available on the desktop).
 """
@@ -58,6 +62,9 @@ logger = logging.getLogger(__name__)
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 DEFAULT_CDP_PORT = 9222
+#: CDP port for the owned Electron fixture — deliberately distinct from the
+#: Chromium fixture's 9222 so both can run back-to-back without colliding.
+DEFAULT_ELECTRON_CDP_PORT = 9333
 
 
 @dataclass
@@ -418,6 +425,238 @@ class ChromiumFixtureApp:
             self._user_data_dir = None
 
     def __enter__(self) -> "ChromiumFixtureApp":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.stop()
+
+
+def _resolve_electron_binary(fixture_dir: Path) -> Optional[str]:
+    """Locate the installed Electron executable for the fixture.
+
+    Electron's npm package records the path to its bundled binary (relative to
+    the package root) in ``node_modules/electron/path.txt``.  We honour that
+    first and fall back to the conventional ``dist/electron.exe`` location.
+
+    Args:
+        fixture_dir: The ``fixtures/electron`` directory containing
+            ``node_modules`` after ``npm install``.
+
+    Returns:
+        Absolute path to ``electron.exe``, or ``None`` if Electron is not
+        installed (``npm install`` has not been run).
+    """
+    electron_pkg = fixture_dir / "node_modules" / "electron"
+    path_txt = electron_pkg / "path.txt"
+    if path_txt.is_file():
+        try:
+            relative = path_txt.read_text(encoding="utf-8").strip()
+        except OSError:
+            relative = ""
+        if relative:
+            candidate = electron_pkg / "dist" / relative
+            if candidate.is_file():
+                return str(candidate)
+    fallback = electron_pkg / "dist" / "electron.exe"
+    if fallback.is_file():
+        return str(fallback)
+    return None
+
+
+class ElectronFixtureApp:
+    """Launch and control naturo's *owned*, real Electron fixture app.
+
+    Unlike :class:`ChromiumFixtureApp` (a browser standing in for the Electron
+    content layer), this spins up an actual Electron main process from
+    ``fixtures/electron/`` whose single :class:`BrowserWindow` renders varied
+    interactive controls (toolbar buttons, text inputs, a tree, a task list, a
+    data table).  The window is launched with a CDP remote-debugging endpoint,
+    so the cascade's CDP provider enumerates the renderer DOM that the Windows
+    UIA tree collapses into one opaque node.
+
+    Because this is a genuine Electron process, the measured delta is the
+    literal Electron case — not a representative proxy.
+
+    Use as a context manager::
+
+        with ElectronFixtureApp() as app:
+            result = app.measure()
+    """
+
+    #: Window title set by ``fixtures/electron/main.js`` (used to find the HWND).
+    WINDOW_TITLE_SUBSTRING = "Naturo Electron Recognition Fixture"
+
+    def __init__(
+        self,
+        *,
+        port: int = DEFAULT_ELECTRON_CDP_PORT,
+        electron_path: Optional[str] = None,
+    ) -> None:
+        """Initialise the controller.
+
+        Args:
+            port: CDP remote-debugging port the Electron app should expose.
+            electron_path: Override the auto-detected Electron executable.
+        """
+        self.app_dir = FIXTURES_DIR / "electron"
+        self.port = port
+        self.electron_path = electron_path or _resolve_electron_binary(self.app_dir)
+        self._process: Optional[subprocess.Popen] = None
+        self._user_data_dir: Optional[str] = None
+
+    @property
+    def available(self) -> bool:
+        """Whether Electron is installed and the fixture sources are present."""
+        return (
+            self.electron_path is not None
+            and (self.app_dir / "main.js").is_file()
+            and (self.app_dir / "index.html").is_file()
+        )
+
+    def start(self, ready_timeout: float = 60.0) -> None:
+        """Launch the Electron app and wait for both CDP and page load.
+
+        Args:
+            ready_timeout: Maximum seconds to wait for the CDP endpoint and a
+                rendered renderer page.
+
+        Raises:
+            RuntimeError: If Electron is unavailable, or the CDP endpoint /
+                renderer does not become ready within ``ready_timeout``.
+        """
+        import os
+        import tempfile
+
+        if not self.available or self.electron_path is None:
+            raise RuntimeError(
+                "Electron fixture unavailable: "
+                f"electron={self.electron_path!r}, app_dir={self.app_dir!r}. "
+                "Run `npm install` in benchmarks/recognition/fixtures/electron/."
+            )
+
+        self._user_data_dir = tempfile.mkdtemp(prefix="naturo_bench_electron_")
+        env = dict(os.environ)
+        env["NATURO_FIXTURE_CDP_PORT"] = str(self.port)
+        env["NATURO_FIXTURE_USER_DATA_DIR"] = self._user_data_dir
+        args: List[str] = [
+            self.electron_path,
+            str(self.app_dir),
+            f"--remote-debugging-port={self.port}",
+            "--remote-allow-origins=*",
+        ]
+        logger.info("Launching Electron fixture: %s", self.app_dir)
+        self._process = subprocess.Popen(args, env=env)
+
+        deadline = time.monotonic() + ready_timeout
+        while time.monotonic() < deadline:
+            if _port_is_open("127.0.0.1", self.port):
+                break
+            time.sleep(0.5)
+        else:
+            self.stop()
+            raise RuntimeError(
+                f"Electron CDP endpoint did not open on port {self.port} "
+                f"within {ready_timeout:.0f}s."
+            )
+
+        if not self._wait_page_loaded(deadline):
+            self.stop()
+            raise RuntimeError("Electron renderer did not finish loading in time.")
+
+    def _wait_page_loaded(self, deadline: float) -> bool:
+        """Poll the CDP ``/json`` list until the renderer page is available.
+
+        Args:
+            deadline: ``time.monotonic()`` value after which to give up.
+
+        Returns:
+            ``True`` once the fixture's renderer is the active target, else
+            ``False`` on timeout.
+        """
+        url = f"http://127.0.0.1:{self.port}/json"
+        while time.monotonic() < deadline:
+            try:
+                with urllib.request.urlopen(url, timeout=2) as response:
+                    import json
+
+                    targets = json.loads(response.read().decode("utf-8"))
+                for target in targets:
+                    if target.get("type") == "page" and "index.html" in target.get(
+                        "url", ""
+                    ):
+                        time.sleep(1.0)  # settle the render
+                        return True
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.5)
+        return False
+
+    def find_window(self):
+        """Find the Electron fixture window via the backend.
+
+        Returns:
+            A window-info object (with ``hwnd``/``pid``) for the fixture
+            window, or ``None`` if it cannot be located.
+        """
+        backend = get_backend()
+        for window in backend.list_windows():
+            if self.WINDOW_TITLE_SUBSTRING in (window.title or ""):
+                return window
+        return None
+
+    def measure(self, depth: int = 15) -> CoverageResult:
+        """Measure recognition coverage on the Electron fixture window.
+
+        Args:
+            depth: Maximum accessibility-tree depth to walk.
+
+        Returns:
+            A :class:`CoverageResult` for the owned Electron app.
+
+        Raises:
+            RuntimeError: If the fixture window cannot be found.
+        """
+        window = self.find_window()
+        if window is None:
+            raise RuntimeError(
+                "Could not locate the Electron fixture window. "
+                "Did the Electron app launch and render the fixture?"
+            )
+        return measure_window(
+            app="Owned Electron fixture (real Electron app)",
+            framework="Electron/CDP",
+            hwnd=window.hwnd,
+            pid=window.pid,
+            depth=depth,
+            notes=(
+                "A real Electron process: the renderer's interactive controls "
+                "(toolbar, inputs, tree, task list, table) live in the Chromium "
+                "content layer that UIA collapses to one opaque node. Only the "
+                "CDP provider recovers them — this is the literal Electron case, "
+                "not a browser proxy."
+            ),
+        )
+
+    def stop(self) -> None:
+        """Terminate the Electron app and remove its throwaway profile."""
+        if self._process is not None:
+            try:
+                self._process.terminate()
+                self._process.wait(timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    self._process.kill()
+                except OSError:
+                    pass
+            self._process = None
+        if self._user_data_dir is not None:
+            import shutil
+
+            shutil.rmtree(self._user_data_dir, ignore_errors=True)
+            self._user_data_dir = None
+
+    def __enter__(self) -> "ElectronFixtureApp":
         self.start()
         return self
 

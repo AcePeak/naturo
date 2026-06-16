@@ -15,6 +15,7 @@ import pytest
 from benchmarks.recognition.harness import (
     ChromiumFixtureApp,
     CoverageResult,
+    ElectronFixtureApp,
     _provider_counts,
 )
 from benchmarks.recognition import run_benchmark
@@ -149,4 +150,34 @@ def test_chromium_fixture_shows_cdp_delta() -> None:
     assert result.extra_sources.get("cdp", 0) >= 20, (
         "Expected the CDP provider to recognize the fixture's web content "
         f"that UIA cannot see; got {result.extra_sources}."
+    )
+
+
+@pytest.mark.desktop
+def test_electron_fixture_shows_cdp_delta() -> None:
+    """Live proof on a real Electron app: cascade beats UIA via CDP.
+
+    Launches naturo's owned Electron fixture (a genuine Electron main process)
+    and asserts the full cascade recognizes meaningfully more elements than the
+    UIA-only baseline, with the extra elements coming from the CDP provider.
+    This is the literal Electron case, not a browser proxy.
+    """
+    fixture = ElectronFixtureApp()
+    if not fixture.available:
+        pytest.skip(
+            "Electron not installed (run `npm install` in "
+            "benchmarks/recognition/fixtures/electron/)."
+        )
+    try:
+        from naturo.cdp import CDPClient  # noqa: F401
+    except Exception:
+        pytest.skip("websocket-client (naturo[cdp]) not installed.")
+
+    with fixture:
+        result = fixture.measure()
+
+    assert result.cascade_count > result.uia_only_count
+    assert result.extra_sources.get("cdp", 0) >= 20, (
+        "Expected the CDP provider to recognize the Electron renderer's "
+        f"content that UIA cannot see; got {result.extra_sources}."
     )

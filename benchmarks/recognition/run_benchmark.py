@@ -6,10 +6,11 @@ Usage::
     python -m benchmarks.recognition.run_benchmark --json     # JSON output
     python -m benchmarks.recognition.run_benchmark --markdown # Markdown table
 
-The benchmark always runs the reproducible Chromium fixture (the
-Electron-class web-content case).  It additionally probes for a few common
-real apps (a JetBrains IDE, DBeaver, Feishu) that may be open on the current
-desktop, and includes them when present — documenting them as gaps when not.
+The benchmark runs two reproducible fixtures — the Chromium HTML fixture (the
+Electron-class web-content case) and an owned, real Electron app (the literal
+Electron case) — and additionally probes for a few common real apps (a
+JetBrains IDE, DBeaver, Feishu) that may be open on the current desktop,
+including them when present and documenting them as gaps when not.
 
 Each row reports, on the *same* app:
 
@@ -33,6 +34,7 @@ from typing import List
 from benchmarks.recognition.harness import (
     ChromiumFixtureApp,
     CoverageResult,
+    ElectronFixtureApp,
     measure_running_app,
 )
 
@@ -80,7 +82,18 @@ def collect_results() -> tuple[List[CoverageResult], List[str]]:
             "machine."
         )
 
-    # 2. Optional real desktop apps (included only when actually open).
+    # 2. Owned, real Electron fixture (the literal Electron case).
+    electron = ElectronFixtureApp()
+    if electron.available:
+        with electron:
+            results.append(electron.measure())
+    else:
+        gaps.append(
+            "Electron fixture skipped: Electron not installed. Run `npm "
+            "install` in benchmarks/recognition/fixtures/electron/."
+        )
+
+    # 3. Optional real desktop apps (included only when actually open).
     for spec in OPTIONAL_APPS:
         result = measure_running_app(
             app=spec["app"],
@@ -95,7 +108,7 @@ def collect_results() -> tuple[List[CoverageResult], List[str]]:
                 f"desktop — no window titled '*{spec['title_substring']}*'."
             )
 
-    # 3. SAP GUI is not available in this environment.
+    # 4. SAP GUI is not available in this environment.
     gaps.append(
         "SAP GUI (SAP scripting/COM): not installed in this environment — "
         "future work."
