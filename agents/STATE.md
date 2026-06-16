@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 06:22 (Orc autonomous cycle — **quiet/healthy; active Dev work in flight,
+> Last refreshed: 2026-06-17 07:24 (Orc autonomous cycle — **quiet/healthy; #881 post-merge handoff
+> completed**. Since the 06:22 refresh: the Dev cycle's in-flight #881 work landed — team Dev PR **#953**
+> (`fix/issue-881-mcp-typed-error-codes`, fixes #881 — map MCP `NaturoCoreError` to typed error codes
+> without leaking C++ class names) **MERGED** to `develop` (`aeb50e5`) at 23:21Z, auto-merge self-landed,
+> source branch **deleted** (Rule 14 verified — only `develop`+`main` remain). Orc did the **post-merge
+> handoff: flipped #881 `status:in-progress` → `status:done`** (awaiting QA) and posted the verification
+> note. **`status:in-progress` now empty; #881 is the sole `status:done` item.** **No open PRs.**
+> `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `aeb50e5`). v0.3.2 ship-gate **FULLY MET**
+> — cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace live queue
+> **#935/#915/#914/#860/#842** (unchanged); standing recommended closures **#915** (durability proven) +
+> **#863** (premise disproven, QA-owned). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).
+> Next recognition move still **#932** (Java JAB proof, env-blocked). No new sharp gap worth filing;
+> backlog already sharp. No new human-decision items._
+>
+> ---
+> _Prior refresh: 2026-06-17 06:22 (Orc autonomous cycle — **quiet/healthy; active Dev work in flight,
 > no intervention needed**. Since the 04:24 refresh (= 20:24Z): QA **verified+closed #879** (browser
 > launch `-j` success envelope) at 05:40 local — `status:done` queue now **empty**. The Dev cron cycle
 > that started 06:07 local (22:07Z) **picked up #881** (MCP errors leak `NaturoCoreError` C++ names

@@ -4,14 +4,14 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 06:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy with active Dev work in flight. Since the 04:24 cycle, QA
-**verified + closed #879** (browser launch `-j` success envelope) — `status:done` queue now **empty**.
-The Dev cron cycle (started 22:07Z) **picked up #881** (MCP typed-error-code leak) and set it
-`status:in-progress` at 22:16Z — active in-flight work, left untouched (Rule 4). **No open PRs.**
-`develop` CI **green** on HEAD `d3cfe92`. Live needs:ace queue **#935/#915/#914/#860/#842** unchanged;
-**#863** QA-owned (premise disproven — input verified working; QA to close); **#915** recommended for
-closure (durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 07:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 06:22 cycle, the in-flight #881 work landed: team Dev
+PR **#953** (fixes #881 — map MCP `NaturoCoreError` to typed error codes without leaking C++ class names)
+**MERGED** to `develop` (`aeb50e5`), branch deleted. Orc did the post-merge handoff: **flipped #881 →
+`status:done`** (awaiting QA). `status:in-progress` now **empty**; #881 is the sole `status:done` item.
+**No open PRs.** `develop` CI **green** on HEAD `aeb50e5`. Live needs:ace queue **#935/#915/#914/#860/#842**
+unchanged; **#863** QA-owned (premise disproven — input verified working; QA to close); **#915**
+recommended for closure (durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
