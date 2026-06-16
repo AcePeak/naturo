@@ -134,6 +134,8 @@ no_implicit_optional = false
 module = [
     "naturo.backends.windows",
     "naturo.backends.windows.*",
+    "naturo.backends.macos",
+    "naturo.backends.macos.*",
     "naturo.backends.linux",
     "naturo.registry",
     "naturo.bridge",
