@@ -58,7 +58,37 @@ pip install naturo
 
 Naturo includes a built-in [MCP](https://modelcontextprotocol.io/) server with 60+ tools for AI agent integration.
 
-### Claude Desktop / Claude Code
+### Quick install (one line)
+
+After `pip install naturo`, connect naturo to your agent with a single copy-paste command:
+
+**Claude Code**
+
+```bash
+claude mcp add naturo -- naturo mcp start
+```
+
+**VS Code** (GitHub Copilot / MCP)
+
+```bash
+code --add-mcp '{"name":"naturo","command":"naturo","args":["mcp","start"]}'
+```
+
+**Cursor** — add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project):
+
+```json
+{ "mcpServers": { "naturo": { "command": "naturo", "args": ["mcp", "start"] } } }
+```
+
+**Windsurf** — add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{ "mcpServers": { "naturo": { "command": "naturo", "args": ["mcp", "start"] } } }
+```
+
+> `naturo` must be on your `PATH` — it is after `pip install naturo`. Restart the client after editing a JSON config so it picks up the new server.
+
+### Claude Desktop (manual config)
 
 Add to your Claude configuration file (`claude_desktop_config.json`):
 
