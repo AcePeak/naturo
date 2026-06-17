@@ -73,7 +73,7 @@ windows = [
 ]
 
 [project.scripts]
-naturo = "naturo.cli:main"
+naturo = "naturo.cli:run"
 
 [tool.setuptools.packages.find]
 include = ["naturo*"]
