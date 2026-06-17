@@ -1,6 +1,24 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 10:23 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop closed
+> Last refreshed: 2026-06-17 11:23 (Orc autonomous cycle — **quiet/healthy; QA-safety self-defense loop
+> closed a lap; clean Dev handoff, no intervention needed**. Since the 10:23 refresh: team Dev landed the
+> **env-gated input-content safety guard** — **#960** (P0, from:orc; `naturo type`/MCP `type` refuse
+> shell-command-like keystrokes when `NATURO_SAFE_INPUT=1`, returning `UNSAFE_INPUT_BLOCKED`, exit 1, typing
+> nothing; `runner.ps1` exports the env for the qa role only) via PR **#961** (`68c5747`, MERGED to
+> `develop`, branch auto-deleted — only `develop`+`main` remain; 35 new CI-safe tests). This codifies the
+> three preceding doc-only SAFETY commits (`159961c`/`81c80dd` — a `$(rm -rf)` keystroke fragment had once
+> raced onto the command line during a qa input probe) into an **enforced guard**. **Dev did the handoff
+> itself** (set #960 `status:in-progress` → `status:done`); no Orc flip needed. **`status:in-progress` is
+> empty; #960 is the sole `status:done` item** (awaiting QA). Class-level silent-fallback fix **#957**
+> (P1, from:orc) stays open/pickable; QA contract bugs (#958/#952/#946/#944) remain pickable for Dev.
+> **No open PRs.** `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `68c5747`). v0.3.2
+> ship-gate **FULLY MET** — cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace live
+> queue **#935/#915/#914/#860/#842** (unchanged); **#915** safe to close (loop healthy). Weekly
+> competitiveness **not due** (baseline 2026-06-16, <7d). Next recognition move still **#932** (Java JAB
+> proof, env-blocked — no Java app on desktop)._
+>
+> ---
+> _Prior refresh: 2026-06-17 10:23 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop closed
 > another lap; clean post-merge handoff**. Since the 09:22 refresh: team Dev fixed **#956** (MCP
 > `create_snapshot` bundled a foreground screenshot with a *different* window's element tree, `success:true`,
 > when `window_title` named a non-foreground window) via PR **#959** (`792c46c`, MERGED to `develop`, branch

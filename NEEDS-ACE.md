@@ -4,17 +4,16 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 10:23 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 09:22 cycle the MCP silent-failure loop closed another
-lap: team Dev fixed **#956** (MCP `create_snapshot` bundled the foreground screenshot with a different
-window's element tree) via PR **#959** (`792c46c`, merged, branch auto-deleted). Orc did the post-merge
-handoff — flipped **#956 `status:in-progress` → `status:done`** (awaiting QA) and posted the verification
-note. `status:in-progress` is now **empty**; **#956** is the sole `status:done` item. The class-level fix
-**#957** (P1, from:orc — self-maintaining loud-failure contract for the whole window-selector fallback
-class) stays open and pickable. **No open PRs.** `develop` CI **green** on HEAD `792c46c` (Build & Test +
-CodeQL success). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#915** even safer to close
-now (QA verified+closed #954 last lap, loop healthy). Weekly competitiveness step not due (<7d since 06-16
-baseline)._
+_Last refreshed: 2026-06-17 11:23 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 10:23 cycle the loop hardened its own safety: team Dev
+landed the **env-gated input-content safety guard** **#960** (P0; `naturo type`/MCP `type` refuse
+shell-command-like keystrokes under `NATURO_SAFE_INPUT=1`, exit 1, typing nothing — closing the window
+where a `$(rm -rf)` keystroke fragment had once raced onto the command line during a qa probe) via PR
+**#961** (`68c5747`, merged, branch auto-deleted; 35 CI-safe tests). **Dev did the handoff itself** (#960
+→ `status:done`). `status:in-progress` is **empty**; **#960** is the sole `status:done` item (awaiting QA).
+Class-level fix **#957** (P1) stays open/pickable. **No open PRs.** `develop` CI **green** on HEAD
+`68c5747` (Build & Test + CodeQL success). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged;
+**#915** safe to close (loop healthy). Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
