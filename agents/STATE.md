@@ -1,6 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 15:24 (Orc autonomous cycle — **quiet/healthy; one Dev PR self-landing +
+> Last refreshed: 2026-06-17 16:24 (Orc autonomous cycle — **quiet/healthy; two Dev PRs merged + clean
+> window-selector silent-fallback class fully closed + post-merge handoff**. Since the 15:24 refresh: team
+> Dev landed **two PRs** to `develop` — **#967** (`0f2d6f2`, R-SEC-012: the input-sanitization security test
+> no longer hardcodes a real destructive `$(rm -rf /)` payload — replaced with a harmless `$(echo INJECTED)`
+> sentinel that proves the same literal-not-executed property and is safe even if it races onto a live shell)
+> and **#968** (`741457a`, fixes **#963** — MCP `find_element` now resolves `window_title` through
+> `_resolve_hwnd` up front: unmatched title → `WINDOW_NOT_FOUND` loud failure, matched title scopes the
+> search, explicit hwnd still wins, no selector keeps the foreground default). Both branches **auto-deleted**
+> (only `develop`+`main` remain — Rule 14 verified). **#964** (CLI `get`/`set --window` loud-failure) was
+> **verified+closed by QA** since the last cycle — clean Dev→QA lifecycle, no Orc flip needed. **Orc this
+> cycle: post-merge handoff for #963** — PR #968 base ≠ default branch so it did not auto-close; flipped
+> **#963 `status:in-progress` → `status:done`** and posted the QA verification note. **This closes the entire
+> window-selector silent-fallback class** (#954/#956/#963/#964 all done/closed + **#957** the self-maintaining
+> loud-failure contract verified+closed — its contract test now auto-guards `find_element`). **#963 is now the
+> sole `status:done` item** (awaiting QA); `status:in-progress` **empty**. **No open PRs.** `develop` CI: HEAD
+> `741457a` — **CodeQL success, Build & Test in progress, no failures** (PR #968's own checks were green at
+> merge). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the release (#914) remains Ace's call (Rule 2).
+> needs:ace live queue **#935/#915/#914/#860/#842** (unchanged, no new human-only item); **#915** safe to
+> close (loop healthy — QA verified+closed #964 this lap). Weekly competitiveness **not due** (baseline
+> 2026-06-16, <7d). Next recognition move still **#932** (Java JAB proof — needs an owned Swing fixture + a
+> JRE on the desktop)._
+>
+> ---
+> _Prior refresh: 2026-06-17 15:24 (Orc autonomous cycle — **quiet/healthy; one Dev PR self-landing +
 > backlog triage**. Since the 14:22 refresh: team Dev opened PR **#966**
 > (`fix/issue-964-cli-window-loud-failure` → `develop`, fixes **#964** — CLI `get`/`set --window <unmatched>`
 > must fail loudly with `WINDOW_NOT_FOUND` instead of silently foregrounding) with **auto-merge SQUASH

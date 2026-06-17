@@ -4,17 +4,18 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 15:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 14:22 cycle: team Dev opened PR **#966**
-(`fix/issue-964-cli-window-loud-failure` → `develop`, fixes #964 — CLI `get`/`set --window <unmatched>`
-must fail loudly with `WINDOW_NOT_FOUND`, not silently foreground) with auto-merge SQUASH enabled and it
-**MERGED mid-cycle** (`64080d0`). Orc did the post-merge handoff (**#964 → `status:done`**, awaiting QA;
-base ≠ default branch so no auto-close) and confirmed the branch is **deleted** (Rule 14). **No open PRs;
-#964 is the sole `status:done` item.** Orc also triaged two unmilestoned actionable bugs into **v0.3.4**: **#916** (P2 from:qa — taskbar/tray list returns
-empty `success:true`, silent-failure class) and **#917** (P1 from:orc — runner watchdog, code-only). Live
-needs:ace queue **#935/#915/#914/#860/#842** unchanged (no new human-only item); **#915** safe to close
-(loop healthy). `develop` CI **green** on HEAD `4d19823` (Build & Test + CodeQL success). Weekly
-competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 16:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 15:24 cycle: team Dev landed **two PRs** to `develop` —
+**#967** (`0f2d6f2`, R-SEC-012 security test no longer hardcodes a real `$(rm -rf /)` payload — now a
+harmless `$(echo INJECTED)` sentinel) and **#968** (`741457a`, fixes #963 — MCP `find_element` scopes by
+`window_title`, unmatched → `WINDOW_NOT_FOUND`). Both branches **auto-deleted** (Rule 14). **#964** (CLI
+loud-failure) was **verified+closed by QA**. Orc did the post-merge handoff for **#963 → `status:done`**
+(awaiting QA; base ≠ default so no auto-close). **This closes the entire window-selector silent-fallback
+class** (#954/#956/#957/#963/#964). **No open PRs; #963 is the sole `status:done` item.** Live needs:ace
+queue **#935/#915/#914/#860/#842** unchanged (no new human-only item); **#915** safe to close (loop healthy
+— QA verified+closed #964 this lap). `develop` CI: HEAD `741457a` — CodeQL success, Build & Test in
+progress, no failures (PR #968 checks were green at merge). Weekly competitiveness step not due (<7d since
+06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
