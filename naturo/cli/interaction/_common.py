@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from typing import Callable, Optional
+from typing import Callable, NoReturn, Optional
 
 import click
 
@@ -755,30 +755,34 @@ def _check_desktop_session() -> None:
 
 
 def _get_backend(json_output: bool = False):
-    """Return the platform backend, raising UsageError if unavailable.
+    """Return the platform backend, failing loudly if unavailable.
 
-    Also performs a pre-flight check for an interactive desktop session
-    on Windows to provide clear errors instead of cryptic COM exceptions.
+    Performs a pre-flight check for an interactive desktop session on Windows
+    to provide clear errors instead of cryptic COM exceptions.  A missing
+    desktop or unavailable backend is a runtime/environment failure, not a
+    CLI usage error: it exits with status 1 and a clean message (JSON envelope
+    under ``-j``), never Click's exit-2 ``Usage:`` banner (#866).
 
     Args:
-        json_output: When True, emit JSON-formatted error and sys.exit
-            instead of raising an exception for NoDesktopSessionError.
+        json_output: When True, emit a JSON error envelope; when False, emit a
+            clean ``Error: ...`` message.  Either way the process exits 1 on
+            failure.
+
+    Returns:
+        A Backend instance for the current platform.
+
+    Raises:
+        SystemExit: With status 1 if no desktop session or no backend.
     """
     try:
         _check_desktop_session()
     except Exception as exc:
-        if json_output:
-            from naturo.cli.error_helpers import json_error
-            click.echo(json_error("NO_DESKTOP_SESSION", str(exc)))
-            sys.exit(1)
-        raise click.UsageError(str(exc))
+        _json_err(str(exc), json_output, code="NO_DESKTOP_SESSION")
     from naturo.backends.base import get_backend
     try:
         return get_backend()
     except Exception as exc:
-        if json_output:
-            _json_err(str(exc), True, code="BACKEND_ERROR")
-        raise click.UsageError(str(exc))
+        _json_err(str(exc), json_output, code="BACKEND_ERROR")
 
 
 _VERIFICATION_KEYS = frozenset({
@@ -808,10 +812,13 @@ def _json_ok(data: dict, json_output: bool) -> None:
 
 
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
-              code: str = "ACTION_ERROR") -> None:
+              code: str = "ACTION_ERROR") -> NoReturn:
     """Emit error result as JSON or plain text, then exit.
 
     Includes agent-friendly recovery hints from the error_helpers registry.
+    The plain-text path prints ``Error: <msg>`` to stderr (no Click ``Usage:``
+    banner) so runtime failures keep exit code 1 instead of Click's usage-error
+    exit code 2 (#866).  Always terminates the process; never returns.
     """
     if json_output:
         from naturo.cli.error_helpers import json_error

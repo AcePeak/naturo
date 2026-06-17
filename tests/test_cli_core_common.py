@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-import click
 import pytest
 
 from naturo.cli.core._common import (
@@ -22,12 +21,15 @@ class TestGetBackend:
 
     @patch("naturo.cli.core._common._json_error_str")
     @patch("naturo.cli.interaction._check_desktop_session")
-    def test_desktop_check_fails_plain_raises_usage_error(
+    def test_desktop_check_fails_plain_exits_1_not_usage_error(
         self, mock_check, mock_json_err
     ):
+        # A missing desktop is a runtime failure: exit 1, never Click's exit-2
+        # UsageError / 'Usage:' banner (#866).
         mock_check.side_effect = RuntimeError("no desktop")
-        with pytest.raises(click.UsageError, match="no desktop"):
+        with pytest.raises(SystemExit) as exc_info:
             _get_backend(json_output=False)
+        assert exc_info.value.code == 1
 
     @patch("naturo.cli.core._common._json_error_str", return_value='{"error": "x"}')
     @patch("naturo.cli.interaction._check_desktop_session")

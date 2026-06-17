@@ -643,15 +643,18 @@ class TestGetBackend:
             result = _get_backend()
         assert result is mock_backend
 
-    def test_raises_usage_error_on_no_desktop(self):
+    def test_exits_1_on_no_desktop_plain(self):
+        # A missing desktop is a runtime failure: exit 1, never Click's exit-2
+        # UsageError / 'Usage:' banner (#866).
         from naturo.cli.interaction._common import _get_backend
         from naturo.errors import NoDesktopSessionError
         with patch(
             "naturo.cli.interaction._common._check_desktop_session",
             side_effect=NoDesktopSessionError("no desktop"),
         ):
-            with pytest.raises(Exception):  # click.UsageError
+            with pytest.raises(SystemExit) as exc_info:
                 _get_backend(json_output=False)
+        assert exc_info.value.code == 1
 
     def test_json_mode_exits_on_no_desktop(self):
         from naturo.cli.interaction._common import _get_backend
