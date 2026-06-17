@@ -229,7 +229,11 @@ class TestSelectorList:
         result = runner.invoke(main, ["selector", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert "notepad" in data
+        # #876: standard envelope — top-level success + count, selectors as a list.
+        assert data["success"] is True
+        assert data["count"] == 1
+        assert data["selectors"][0]["app"] == "notepad"
+        assert data["selectors"][0]["name"] == "btn1"
 
 
 # ── selector show ────────────────────────────────────────────────────────────

@@ -247,7 +247,26 @@ def selector_list(app_name: Optional[str], builtin: bool, json_output: bool):
             all_selectors = {}
 
     if json_output:
-        click.echo(json.dumps(all_selectors))
+        selectors = []
+        for app, sels in all_selectors.items():
+            for name, info in sels.items():
+                if isinstance(info, dict):
+                    selector_value = info.get("selector", "")
+                    description = info.get("description", "")
+                else:
+                    selector_value = info
+                    description = ""
+                selectors.append({
+                    "app": app,
+                    "name": name,
+                    "selector": selector_value,
+                    "description": description,
+                })
+        click.echo(json.dumps({
+            "success": True,
+            "selectors": selectors,
+            "count": len(selectors),
+        }))
         return
 
     if not all_selectors:
