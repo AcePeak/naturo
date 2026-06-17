@@ -88,6 +88,22 @@ def register_input_tools(server, _get_backend, _safe_tool):
         """
         if wpm < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"wpm must be >= 1, got {wpm}"}}
+        # (#960) Opt-in input-content safety guard. When NATURO_SAFE_INPUT=1 is
+        # set (the unattended QA loop), refuse to inject shell-command-like
+        # text — a SendInput focus race could otherwise deliver a destructive
+        # fragment (e.g. "$(rm -rf /)") to a terminal. Normal users (env unset)
+        # are unaffected.
+        from naturo.safety import unsafe_input_reason
+        unsafe = unsafe_input_reason(text)
+        if unsafe:
+            return {
+                "success": False,
+                "error": {
+                    "code": "UNSAFE_INPUT_BLOCKED",
+                    "message": f"Refusing to inject unsafe content ({unsafe}) because "
+                    f"NATURO_SAFE_INPUT=1 is set. Nothing was typed.",
+                },
+            }
         backend = _get_backend()
         backend.type_text(text=text, wpm=wpm, input_mode=input_mode)
         return {"success": True}

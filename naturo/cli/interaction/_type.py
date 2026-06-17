@@ -132,6 +132,24 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         _common._json_err(f"--wpm must be >= 1, got {wpm}", json_output, code="INVALID_INPUT")
         return
 
+    # (#960) Opt-in input-content safety guard. When NATURO_SAFE_INPUT=1 is set
+    # (the unattended QA loop), refuse to inject text that looks like a shell
+    # command — a SendInput focus race could otherwise deliver a destructive
+    # fragment (e.g. "$(rm -rf /)") to a terminal. Validates the final resolved
+    # content, so it also covers --paste/--file. Normal users (env unset) are
+    # unaffected.
+    if text is not None:
+        from naturo.safety import unsafe_input_reason
+        _unsafe = unsafe_input_reason(text)
+        if _unsafe:
+            _common._json_err(
+                f"Refusing to inject unsafe content ({_unsafe}) because "
+                f"NATURO_SAFE_INPUT=1 is set. Nothing was typed.",
+                json_output,
+                code="UNSAFE_INPUT_BLOCKED",
+            )
+            return
+
     backend = _common._get_backend(json_output)
 
     # Auto-routing: detect best interaction method for target app

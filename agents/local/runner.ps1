@@ -40,7 +40,7 @@ New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
 switch ($Role) {
   'dev'  { $Wt = 'C:\Users\Naturobot\naturo-dev'; $Cycle = 'agents/local/dev-cycle.md' }
-  'qa'   { $Wt = 'C:\Users\Naturobot\naturo-qa';  $Cycle = 'agents/local/qa-cycle.md' }
+  'qa'   { $Wt = 'C:\Users\Naturobot\naturo-qa';  $Cycle = 'agents/local/qa-cycle.md'; $env:NATURO_SAFE_INPUT = '1' }  # (#960) code-enforced input-content guard for the unattended QA loop
   'orch' { $Wt = $Main;                           $Cycle = 'agents/local/orch-review.md' }
 }
 
