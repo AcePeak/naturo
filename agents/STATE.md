@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 11:23 (Orc autonomous cycle — **quiet/healthy; QA-safety self-defense loop
+> Last refreshed: 2026-06-17 12:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lifecycle lap +
+> active in-flight Dev work + light backlog triage**. Since the 11:23 refresh: **QA verified+closed #960**
+> (03:42Z — the env-gated input-content safety guard; closed with `verified`+`status:done`, correct
+> lifecycle, no Orc flip needed) → **`status:done` queue now empty**; and **Dev picked up #957** (P1,
+> from:orc — window-selector silent-fallback → loud-failure contract class) at 04:15Z (`status:in-progress`,
+> assigned, **no branch pushed**; 8 min old — active in-flight, left untouched per Rule 4). **Orc backlog
+> triage (Step 3):** milestoned 4 untriaged `from:qa` contract/test bugs to **v0.3.4** — **#958** (UWP
+> PID drift), **#952** (handle/hwnd field drift), **#946** (path-test POSIX slashes), **#944** (Windows
+> test fail); they were `m=none`. **No open PRs.** `develop` CI **GREEN** (Build & Test + CodeQL success on
+> HEAD `68c5747`). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the release (#914) remains Ace's call
+> (Rule 2). needs:ace live queue **#935/#915/#914/#860/#842** (unchanged); **#915** safe to close (loop
+> healthy). Weekly competitiveness **not due** (baseline 2026-06-16, <7d). Next recognition move still
+> **#932** (Java JAB proof, env-blocked — no Java app on desktop)._
+>
+> ---
+> _Prior refresh: 2026-06-17 11:23 (Orc autonomous cycle — **quiet/healthy; QA-safety self-defense loop
 > closed a lap; clean Dev handoff, no intervention needed**. Since the 10:23 refresh: team Dev landed the
 > **env-gated input-content safety guard** — **#960** (P0, from:orc; `naturo type`/MCP `type` refuse
 > shell-command-like keystrokes when `NATURO_SAFE_INPUT=1`, returning `UNSAFE_INPUT_BLOCKED`, exit 1, typing
