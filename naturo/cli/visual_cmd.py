@@ -185,7 +185,11 @@ def visual_list(json_output: bool):
     baselines = list_baselines()
 
     if json_output:
-        click.echo(json.dumps({"baselines": baselines}))
+        click.echo(json.dumps({
+            "success": True,
+            "baselines": baselines,
+            "count": len(baselines),
+        }))
         return
 
     if not baselines:

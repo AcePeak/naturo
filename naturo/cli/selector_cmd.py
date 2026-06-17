@@ -305,7 +305,22 @@ def selector_show(app_name: str, json_output: bool):
     builtin = _list_builtin_selectors().get(app_name, {})
 
     if json_output:
-        click.echo(json.dumps({"user": selectors, "builtin": builtin}))
+        if not selectors and not builtin:
+            # A nonexistent app (no user and no built-in selectors) must fail
+            # loudly so scripters can distinguish it from an existing app that
+            # simply has zero selectors. Mirrors `record show <nonexistent> -j`.
+            click.echo(json.dumps({
+                "success": False,
+                "error": f"No selectors saved for app '{app_name}'",
+            }))
+            sys.exit(1)
+        click.echo(json.dumps({
+            "success": True,
+            "app": app_name,
+            "selectors": selectors,
+            "builtin": builtin,
+            "count": len(selectors) + len(builtin),
+        }))
         return
 
     if not selectors and not builtin:
