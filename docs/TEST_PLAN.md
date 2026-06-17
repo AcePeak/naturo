@@ -475,7 +475,7 @@ These are not unit or integration tests — they are real-world scenario validat
 | R-SEC-009 | Hook safety: `--input-mode hardware` displays note about driver requirements | P2 | ✅ Pass | test_phase2_comprehensive.py |
 | R-SEC-010 | DLL load safety: library search order does not include CWD before package directory (prevents DLL hijacking) | P0 | ✅ Pass | test_security.py |
 | R-SEC-011 | DLL load safety: NATURO_CORE_PATH env var is validated (file exists, has expected exports) before loading | P3 | ❌ Missing | - |
-| R-SEC-012 | Input sanitization: `type` command does not execute shell commands — typing `$(rm -rf /)` literally types the string | P2 | ✅ Pass | test_phase2_comprehensive.py |
+| R-SEC-012 | Input sanitization: `type` command does not execute shell commands — typing the harmless sentinel `$(echo INJECTED)` literally types the string (it is not shell-evaluated). Payload is intentionally non-destructive: keystroke simulation can race a fragment into a real terminal, so test payloads must never be real commands like `rm -rf /`. | P2 | ✅ Pass | test_phase2_comprehensive.py |
 | R-SEC-013 | Resource exhaustion: very large element tree (depth=10 on complex app) does not OOM — buffer retry has upper bound | P3 | ❌ Missing | - |
 
 ### DevOps Role — Build & Deploy Testing

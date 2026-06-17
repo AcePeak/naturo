@@ -304,26 +304,33 @@ class TestExportShellEscaping:
             assert "naturo type '`whoami`'" in result.output
 
     def test_bash_export_escapes_dollar_expansion(self, runner):
+        # SAFETY: harmless sentinel — never a real destructive command (rm,
+        # del, format, ...) as a type/recording payload, since keystroke
+        # simulation can race a fragment into a terminal. `$(echo INJECTED)`
+        # still proves command substitution is safely quoted, and is harmless
+        # even if executed.
         rec = Recording(
             name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
-            steps=[ActionStep("type", {"text": "$(rm -rf /)"}, 1000.0)],
+            steps=[ActionStep("type", {"text": "$(echo INJECTED)"}, 1000.0)],
         )
         with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
             result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
             assert result.exit_code == 0
             # Must be safely quoted, not raw command substitution
-            assert '"$(rm -rf /)"' not in result.output
-            assert "naturo type '$(rm -rf /)'" in result.output
+            assert '"$(echo INJECTED)"' not in result.output
+            assert "naturo type '$(echo INJECTED)'" in result.output
 
     def test_bash_export_escapes_semicolons(self, runner):
+        # SAFETY: harmless sentinel — `echo INJECTED` instead of a destructive
+        # command, while still exercising semicolon command-chaining escaping.
         rec = Recording(
             name="Test", recording_id="rec_test", created_at="2026-04-01T12:00:00",
-            steps=[ActionStep("type", {"text": "hello; rm -rf /"}, 1000.0)],
+            steps=[ActionStep("type", {"text": "hello; echo INJECTED"}, 1000.0)],
         )
         with patch("naturo.cli.recording_cmd.load_recording", return_value=rec):
             result = runner.invoke(main, ["record", "export", "rec_test", "--format", "bash"])
             assert result.exit_code == 0
-            assert "naturo type 'hello; rm -rf /'" in result.output
+            assert "naturo type 'hello; echo INJECTED'" in result.output
 
     def test_bash_export_escapes_single_quotes_in_text(self, runner):
         rec = Recording(

@@ -546,16 +546,23 @@ class TestSecurityInputSanitization:
 
     def test_type_does_not_execute_shell(self, runner):
         """R-SEC-012: type command does not execute shell commands."""
-        # The type command should literally type the string, not execute it
-        # We can only verify the CLI doesn't crash and returns expected output
-        result = runner.invoke(main, ["type", "$(rm -rf /)", "--json"])
+        # The type command should literally type the string, not execute it.
+        #
+        # SAFETY: NEVER use real destructive commands (rm, del, format,
+        # shutdown, etc.) as an input-sanitization test payload. Keystroke
+        # simulation can race a fragment into a real terminal, where $()
+        # substitution + Enter would execute it. We use a harmless sentinel:
+        # if it were wrongly executed the output would contain "INJECTED";
+        # if it is typed literally the literal "$(echo INJECTED)" survives.
+        # `echo INJECTED` is harmless even if it ever reaches a real shell.
+        result = runner.invoke(main, ["type", "$(echo INJECTED)", "--json"])
         # Should fail on non-Windows but not crash
         if result.output.strip():
             try:
                 data = json.loads(result.output)
                 # If it ran, it should report typing the literal string
                 if data.get("success"):
-                    assert data.get("data", {}).get("text") == "$(rm -rf /)"
+                    assert data.get("data", {}).get("text") == "$(echo INJECTED)"
             except json.JSONDecodeError:
                 pass
 
