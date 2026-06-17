@@ -16,6 +16,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ContentBlock
 
+from naturo.version import __version__
 from naturo.backends.base import get_backend, Backend
 from naturo.bridge import NaturoCoreError
 from naturo.errors import ErrorCode, NaturoError
@@ -137,6 +138,13 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             "and interact with click, type_text, press_key, etc."
         ),
     )
+    # (#873) Advertise naturo's own version in the MCP ``serverInfo`` handshake.
+    # FastMCP exposes no ``version=`` argument and never forwards one to its
+    # low-level ``Server``; left unset, the initialize handler falls back to the
+    # installed ``mcp`` package version (e.g. ``1.26.0``), misleading clients
+    # that branch on ``serverInfo.version`` for naturo capability detection.
+    # Setting the low-level server's version is the only interception point.
+    server._mcp_server.version = __version__
 
     def _get_backend() -> Backend:
         """Get the platform backend, raising clear errors.
