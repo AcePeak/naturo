@@ -1,18 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 07:24 (Orc autonomous cycle — **quiet/healthy; #881 post-merge handoff
-> completed**. Since the 06:22 refresh: the Dev cycle's in-flight #881 work landed — team Dev PR **#953**
-> (`fix/issue-881-mcp-typed-error-codes`, fixes #881 — map MCP `NaturoCoreError` to typed error codes
-> without leaking C++ class names) **MERGED** to `develop` (`aeb50e5`) at 23:21Z, auto-merge self-landed,
-> source branch **deleted** (Rule 14 verified — only `develop`+`main` remain). Orc did the **post-merge
-> handoff: flipped #881 `status:in-progress` → `status:done`** (awaiting QA) and posted the verification
-> note. **`status:in-progress` now empty; #881 is the sole `status:done` item.** **No open PRs.**
-> `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `aeb50e5`). v0.3.2 ship-gate **FULLY MET**
-> — cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace live queue
-> **#935/#915/#914/#860/#842** (unchanged); standing recommended closures **#915** (durability proven) +
-> **#863** (premise disproven, QA-owned). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).
-> Next recognition move still **#932** (Java JAB proof, env-blocked). No new sharp gap worth filing;
-> backlog already sharp. No new human-decision items._
+> Last refreshed: 2026-06-17 09:22 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop ran a
+> full lap + drove the product**. Since the 07:24 refresh: team Dev fixed **#954** (MCP `capture_window`
+> silently ignored `window_title`, captured foreground with `success:true`) via PR **#955** (`0eff973`,
+> branch deleted), and **QA verified+closed #954** at 00:42Z — clean end-to-end Dev→QA lifecycle, no Orc
+> intervention needed. QA filed the sibling **#956** (MCP `create_snapshot` bundles a foreground screenshot
+> with a *different* window's element tree, `success:true`) which **Dev picked up** (`status:in-progress`,
+> created 00:44Z, in flight, **no branch pushed** — only `develop`+`main`; left untouched per Rule 4).
+> **Step 3 product drive:** Orc filed **#957** (P1, `silent-failure`, `from:orc`, v0.3.4) to convert this
+> whole **window-selector silent-fallback class into a self-maintaining loud-failure contract** — confirmed
+> *more* unfixed instances in `naturo/mcp/_inspect.py` (`set_element_value`/`toggle_element`/+2 swallow
+> `_resolve_hwnd` failure at debug level then act on foreground). Scoped to not overlap #956 (one-issue-one-PR).
+> **No open PRs.** `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `0eff973`). v0.3.2 ship-gate
+> **FULLY MET** — cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace live queue
+> **#935/#915/#914/#860/#842** (unchanged); **#915** even safer to close (QA verified+closed #954 this lap);
+> **#863** premise disproven, QA-owned. Weekly competitiveness **not due** (baseline 2026-06-16, <7d). Next
+> recognition move still **#932** (Java JAB proof, env-blocked)._
 >
 > ---
 > _Prior refresh: 2026-06-17 06:22 (Orc autonomous cycle — **quiet/healthy; active Dev work in flight,

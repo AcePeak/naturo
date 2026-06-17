@@ -4,14 +4,17 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 07:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 06:22 cycle, the in-flight #881 work landed: team Dev
-PR **#953** (fixes #881 — map MCP `NaturoCoreError` to typed error codes without leaking C++ class names)
-**MERGED** to `develop` (`aeb50e5`), branch deleted. Orc did the post-merge handoff: **flipped #881 →
-`status:done`** (awaiting QA). `status:in-progress` now **empty**; #881 is the sole `status:done` item.
-**No open PRs.** `develop` CI **green** on HEAD `aeb50e5`. Live needs:ace queue **#935/#915/#914/#860/#842**
-unchanged; **#863** QA-owned (premise disproven — input verified working; QA to close); **#915**
-recommended for closure (durability proven). Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 09:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 07:24 cycle the MCP silent-failure loop ran a full lap:
+team Dev fixed **#954** (MCP `capture_window` silently ignored `window_title` → foreground) via PR **#955**
+(`0eff973`, branch deleted) and **QA verified+closed #954** (00:42Z) — clean end-to-end lifecycle. QA also
+filed the sibling **#956** (MCP `create_snapshot` bundles the foreground screenshot with a different
+window's tree) which Dev **picked up** (`status:in-progress`, in flight, no branch yet — left untouched per
+Rule 4). Orc drove the product: filed **#957** (P1, from:orc) to convert this whole window-selector
+silent-fallback class into a **self-maintaining loud-failure contract test** (more unfixed instances confirmed
+in `_inspect.py`). **No open PRs.** `develop` CI **green** on HEAD `0eff973`. Live needs:ace queue
+**#935/#915/#914/#860/#842** unchanged; **#915** even safer to close now (QA verified+closed #954 this lap).
+Weekly competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
