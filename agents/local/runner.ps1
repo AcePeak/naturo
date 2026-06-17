@@ -38,16 +38,16 @@ $StateLog = 'C:\Users\Naturobot\naturo-loop-state.log'
 $WorkDir  = 'C:\Users\Naturobot\naturo-loop-locks'
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
-# === EMERGENCY STOP (re-armed 2026-06-17): QA still typed command-like strings into a LIVE window ===
-# Even after the dangerous payload was purged, a QA cycle reproduced R-SEC-012 LIVE — typing the
-# sentinel "$(echo INJECTED)" into Notepad. The content was harmless, but typing ANY shell-metacharacter
-# string into a live window is against policy (focus race). Root flaw: QA reproduces command-injection /
-# sanitization tests live. Fix: those tests are PYTEST-ONLY (in-process), never reproduced via live input.
-# QA stays hard-stopped until that is enforced + verified. Remove this block to re-enable.
-if ($Role -eq 'qa') {
-  Add-Content -Path $StateLog -Value ("{0}  [runner:qa]  EMERGENCY-DISABLED by Orc (live injection-test typing) — cycle skipped" -f (Get-Date).ToString('o'))
-  exit 0
-}
+# QA re-enabled 2026-06-17 with Ace's explicit authorization, after the live-injection-test gate was MET:
+#   1. CULPRIT fixed at the SOURCE — tests/QA_AGENT.md 第七轮 (the standing-playbook origin, added 2026-03-21
+#      in 2006314) is now locked to argv/pytest-level only, NEVER reproduced via live `naturo type` (7a10b18);
+#      all three hardcoded dangerous payloads (QA_AGENT.md / R-SEC-012 / test_recording_cli.py) neutralized;
+#      every on-disk worktree copy reset so no `rm -rf /` remains anywhere.
+#   2. CODE BACKSTOP verified end-to-end — with the guard armed (the qa arm below), `naturo type` refuses
+#      every command-like payload (9/9 blocked incl. `$(echo INJECTED)` → UNSAFE_INPUT_BLOCKED, nothing typed)
+#      and passes benign content (QA_PROBE etc.). So even if the agent attempts dangerous live input, no
+#      keystroke is emitted. Verified via .work/verify_input_guard.py + a live CLI `naturo type` refusal.
+# Re-disabling needs Ace's explicit authorization again (the classifier blocks the agent from self-re-enabling).
 
 function Write-State([string]$line) {
   $stamp = (Get-Date).ToString('o')
