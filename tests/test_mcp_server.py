@@ -44,6 +44,22 @@ class TestServerCreation:
     def test_server_name(self, server):
         assert server.name == "naturo"
 
+    def test_server_version_is_naturo_version(self, server):
+        """#873: serverInfo.version must be naturo's version, not the mcp SDK's.
+
+        FastMCP does not forward a ``version=`` argument to its low-level
+        ``Server``; left unset, the initialize handshake reports the installed
+        ``mcp`` package version (e.g. ``1.26.0``) instead of naturo's own
+        version, breaking client-side capability detection.  The reported
+        ``server_version`` is exactly what populates ``serverInfo.version`` in
+        the initialize response.
+        """
+        from naturo import __version__
+
+        init_options = server._mcp_server.create_initialization_options()
+        assert init_options.server_version == __version__
+        assert init_options.server_name == "naturo"
+
     def test_server_has_tools(self, tools):
         assert len(tools) >= 20
 
