@@ -44,16 +44,17 @@ def require_desktop_session(json_output: bool = False) -> Callable[[_F], _F]:
 
     Args:
         json_output: When True, emit a JSON ``NO_DESKTOP_SESSION`` error
-            envelope and exit with status 1.  When False, raise
-            :class:`click.UsageError` so Click prints a human-readable
-            message and exits with status 1.
+            envelope and exit with status 1.  When False, emit a clean
+            ``Error: ...`` message and exit with status 1 (no Click
+            ``Usage:`` banner — a missing desktop is a runtime failure, not a
+            usage error; see #866).
 
     Returns:
         A decorator that wraps the target command function with the guard.
 
     Raises:
-        click.UsageError: If no interactive desktop session is available and
-            ``json_output`` is False.
+        SystemExit: With status 1 if no interactive desktop session is
+            available.
     """
     def decorator(func: _F) -> _F:
         @functools.wraps(func)
@@ -70,13 +71,13 @@ def _enforce_desktop_session(json_output: bool) -> None:
     """Run the desktop-session pre-flight check, failing loudly on miss.
 
     Args:
-        json_output: When True, emit a JSON ``NO_DESKTOP_SESSION`` error and
-            ``sys.exit(1)``.  When False, raise :class:`click.UsageError`.
+        json_output: When True, emit a JSON ``NO_DESKTOP_SESSION`` envelope;
+            when False, emit a clean ``Error: ...`` message.  Either way the
+            process exits with status 1 — never Click's exit-2 ``Usage:``
+            banner, which is reserved for genuine argument errors (#866).
 
     Raises:
-        SystemExit: When ``json_output`` is True and no desktop session exists.
-        click.UsageError: When ``json_output`` is False and no desktop session
-            exists.
+        SystemExit: With status 1 when no desktop session exists.
     """
     from naturo.cli.interaction import _check_desktop_session
     try:
@@ -84,8 +85,12 @@ def _enforce_desktop_session(json_output: bool) -> None:
     except Exception as exc:
         if json_output:
             click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
-            raise SystemExit(1)
-        raise click.UsageError(str(exc))
+        else:
+            # A missing desktop is a runtime/environment failure, not a usage
+            # error: emit a clean message and exit 1, never Click's exit-2
+            # ``Usage:`` banner (#866).
+            click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
 
 
 def _get_backend(json_output: bool = False):
@@ -103,7 +108,7 @@ def _get_backend(json_output: bool = False):
         A Backend instance for the current platform.
 
     Raises:
-        click.UsageError: If no interactive desktop session or no backend.
+        SystemExit: With status 1 if no interactive desktop session exists.
     """
     _enforce_desktop_session(json_output)
     from naturo.backends.base import get_backend
