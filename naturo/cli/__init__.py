@@ -256,6 +256,39 @@ def _wants_global_json(argv: list[str]) -> bool:
     return False
 
 
+def _wants_json(argv: list[str]) -> bool:
+    """Return True if ``-j``/``--json`` appears anywhere on the command line.
+
+    Unlike :func:`_wants_global_json` (which only inspects the leading global
+    options), this scans the full token list so a subcommand-level ``-j`` placed
+    *after* the command name — e.g. ``naturo see --hwnd abc -j`` — is detected
+    too. Used to decide whether a parse-time usage error should be rendered as a
+    JSON envelope (#872). Tokens after a literal ``--`` are positional and never
+    treated as flags.
+
+    Args:
+        argv: CLI arguments excluding the program name.
+
+    Returns:
+        True when JSON output was requested anywhere, otherwise False.
+    """
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token == "--":
+            break  # everything after -- is a positional argument
+        if token in ("-j", "--json"):
+            return True
+        # Combined short-flag cluster, e.g. "-vj".
+        if token.startswith("-") and not token.startswith("--") and "j" in token[1:]:
+            return True
+        if token in _GLOBAL_VALUE_OPTIONS:
+            index += 2  # skip the option and its value
+            continue
+        index += 1
+    return False
+
+
 def _first_command_token(argv: list[str]) -> str | None:
     """Return the first positional token (the subcommand), or None.
 
@@ -310,22 +343,33 @@ def _root_help_json() -> str:
     )
 
 
-def _emit_root_usage_error_json(exc: click.UsageError) -> None:
-    """Emit a JSON error envelope for a root-level usage error and exit 1.
+def _emit_usage_error_json(exc: click.UsageError) -> None:
+    """Emit a JSON error envelope for any parse-time usage error and exit 1.
+
+    Handles both root-group errors (#874) and subcommand errors (#872): every
+    Click parse failure class — unknown option, unknown command, missing
+    argument, and invalid option/argument values (bad int/float/choice) — is
+    mapped onto the standard ``{success: false, error: {...}}`` envelope. The
+    ``--help`` hint targets the failing command so the suggested action is
+    actionable for nested commands (e.g. ``naturo clipboard set``).
 
     Args:
-        exc: The Click usage error raised by the root group.
+        exc: The Click usage error raised during argument parsing.
     """
     message = exc.format_message()
+    # ``exc.ctx`` is the context of the command that failed to parse; its
+    # ``command_path`` is "naturo" for the root group or e.g. "naturo clipboard
+    # set" for a nested subcommand.
+    help_target = "naturo" if exc.ctx is None else exc.ctx.command_path
     if isinstance(exc, click.NoSuchOption):
         code = "UNKNOWN_OPTION"
-        action = "Run 'naturo --help' to see the available options."
+        action = f"Run '{help_target} --help' to see the available options."
     elif message.startswith("No such command"):
         code = "UNKNOWN_COMMAND"
-        action = "Run 'naturo --help' for the command list."
+        action = f"Run '{help_target} --help' for the command list."
     else:
         code = "INVALID_INPUT"
-        action = "Run 'naturo --help' for usage."
+        action = f"Run '{help_target} --help' for usage."
     click.echo(json_error(code, message, suggested_action=action))
     # Contract exit code is 1 (runtime error), not Click's UsageError 2 — same
     # axis as #866/#872.
@@ -342,6 +386,9 @@ def run() -> None:
     """
     argv = sys.argv[1:]
     json_mode = _wants_global_json(argv)
+    # Usage errors honour ``-j`` placed anywhere (global or subcommand-level),
+    # since a parse failure can occur before Click binds the flag (#872).
+    json_usage = _wants_json(argv)
 
     # --version/--help are eager: Click runs and prints them before command
     # dispatch, so intercept them here when global JSON is requested and no
@@ -362,11 +409,12 @@ def run() -> None:
         result = main.main(args=argv, prog_name="naturo", standalone_mode=False)
         sys.exit(result if isinstance(result, int) else 0)
     except click.UsageError as exc:
-        # Only root-group usage errors are in scope; subcommand usage errors
-        # keep Click's default rendering (subcommand JSON is #872/#897).
-        is_root = exc.ctx is None or exc.ctx.command is main
-        if json_mode and is_root:
-            _emit_root_usage_error_json(exc)
+        # Every parse-time usage error — root group (#874) or subcommand
+        # (#872) — is wrapped in the JSON envelope when JSON was requested.
+        # Runtime guards (e.g. NO_DESKTOP_SESSION) emit their own envelope and
+        # sys.exit before reaching here, so this only catches parse failures.
+        if json_usage:
+            _emit_usage_error_json(exc)
         exc.show()
         sys.exit(exc.exit_code)
     except click.Abort:
