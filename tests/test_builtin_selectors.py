@@ -106,9 +106,14 @@ class TestBuiltinCLIIntegration:
         result = runner.invoke(main, ["selector", "list", "--builtin", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert len(data) == 20
+        # #876: standard envelope — success + count + a flat selector list,
+        # each record self-describing its owning app.
+        assert data["success"] is True
+        assert data["count"] == len(data["selectors"])
+        apps = {entry["app"] for entry in data["selectors"]}
+        assert len(apps) == 20
         for app in EXPECTED_APPS:
-            assert app in data
+            assert app in apps
 
     def test_list_builtin_filter_by_app(self, runner):
         result = runner.invoke(main, [

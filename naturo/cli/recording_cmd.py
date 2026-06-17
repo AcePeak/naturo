@@ -197,7 +197,11 @@ def record_list(json_output: bool):
     active = get_active_recording()
 
     if json_output:
-        output: dict = {"recordings": recordings}
+        output: dict = {
+            "success": True,
+            "recordings": recordings,
+            "count": len(recordings),
+        }
         if active:
             output["active"] = {
                 "recording_id": active.recording_id,
