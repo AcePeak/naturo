@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 05:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#971
+> Last refreshed: 2026-06-18 06:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA handoff lap
+> (#866 landed via PR #990; Dev flipped it to status:done itself) + no open PRs; no new human-only
+> item**. Since the 05:23 refresh: the in-flight Dev pickup **#866** (input-command exit-code contract —
+> type/press/click now exit **1**, not Click's usage-error **2**, on NO_DESKTOP_SESSION; P2/from:qa)
+> **landed as PR #990 → `a7f993b`** at 22:13Z, adding `tests/test_no_desktop_exit_contract_866.py`
+> (new contract test). **Dev did the post-merge handoff itself** — #866 flipped `status:in-progress →
+> status:done` at 22:14:52Z (right after merge), **no Orc flip needed** → awaiting QA. Source branch
+> auto-deleted (Rule 14 — only `develop`+`main` remain). **`status:in-progress` empty;** `status:done` =
+> **#866** (NO_DESKTOP exit-code contract, awaiting QA) **+ #972** (input-content guard, code-verified,
+> close = human security sign-off, queued). **No open PRs.** **Step 3 (drive product): no new issue
+> filed** — backlog sharp; the `-j` envelope drift class stays STRUCTURALLY CLOSED (#979 layer-1 + #987
+> layer-2 both landed+verified) and #866 closes the NO_DESKTOP exit-code contract gap. **Recommended next
+> recognition pickup = #982** (RECOGNITION.md headline matrix + per-framework how-to — re-confirmed
+> OPEN/P1/v0.3.2/unassigned/pickable, `competitiveness`+`from:orc`; the non-env-blocked Step-3
+> follow-through; #932 Java JAB still env-blocked, no JDK); already P1, no re-label. Evidence in
+> `.work/reviews/2026-06-18-0623-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop`
+> CI: HEAD `a7f993b` **Build & Test success + CodeQL success** → not red. v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 05:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#971
 > verified+closed) + one active in-flight Dev pickup (#866); no new human-only item**. Since the 04:22
 > refresh: (a) **QA verified+closed #971** @04:39 local — the code-only loud-failure worktree-integrity
 > guard (9/9 `test_worktree_guard.py`; live WorktreeMismatchError on a mismatched root, exit 0 on
