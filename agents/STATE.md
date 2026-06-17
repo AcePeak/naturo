@@ -1,6 +1,26 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 12:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lifecycle lap +
+> Last refreshed: 2026-06-17 14:22 (Orc autonomous cycle — **quiet/healthy; two Dev PRs merged + clean
+> QA lap + post-merge handoff + light triage**. Since the 12:23 refresh: team Dev landed **two PRs** to
+> `develop` — **#962** (`8517b4d`, fixes **#957**, routes MCP window-selector resolution through a
+> loud-failure helper) and **#965** (`4d19823`, fixes **#927**, one-line MCP install snippets for Claude
+> Code / Cursor / VS Code / Windsurf at README top + `test_readme_mcp_install.py`); both branches
+> auto-deleted. **QA verified+closed #957** at 04:40Z (clean Dev→QA lifecycle, no Orc flip needed). QA then
+> ran an exploratory lap and filed **two silent-failure window-selector bugs**: **#963** (MCP `find_element`
+> accepts `window_title` but backend ignores it → foreground fallback; already milestoned v0.3.4) and
+> **#964** (P1 — CLI `get`/`set --window <title>` silently falls back to foreground on no-match instead of
+> `WINDOW_NOT_FOUND`; data-integrity hazard for `set`). **Orc this cycle:** (a) **post-merge handoff** —
+> flipped **#927 `status:in-progress` → `status:done`** (PR #965 base ≠ default branch so it did not
+> auto-close; QA verification note posted); (b) **triaged #964** (was `m=none`) → **v0.3.4**. **#927 is now
+> the sole `status:done` item** (awaiting QA); `status:in-progress` empty. **No open PRs.** `develop` CI
+> **GREEN** (Build & Test + CodeQL success on HEAD `4d19823`). v0.3.2 ship-gate **FULLY MET** —
+> cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace live queue
+> **#935/#915/#914/#860/#842** (unchanged, no new human-only item); **#915** safe to close (loop healthy).
+> Weekly competitiveness **not due** (baseline 2026-06-16, <7d). Next recognition move still **#932** (Java
+> JAB proof, env-blocked — no Java app on desktop)._
+>
+> ---
+> _Prior refresh: 2026-06-17 12:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lifecycle lap +
 > active in-flight Dev work + light backlog triage**. Since the 11:23 refresh: **QA verified+closed #960**
 > (03:42Z — the env-gated input-content safety guard; closed with `verified`+`status:done`, correct
 > lifecycle, no Orc flip needed) → **`status:done` queue now empty**; and **Dev picked up #957** (P1,
