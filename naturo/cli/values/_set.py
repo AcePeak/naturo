@@ -243,26 +243,29 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
 
 
 def _resolve_hwnd(backend, app, window_title):
-    """Resolve app/window_title to a window handle.
+    """Resolve an explicitly-supplied app/window_title selector to a handle.
+
+    Called only when ``app`` or ``window_title`` was provided, so an unmatched
+    selector is an error, not a cue to fall back to the foreground window:
+    ``backend._resolve_hwnd`` raises :class:`~naturo.errors.WindowNotFoundError`
+    on no match and the exception propagates to the command's error handler,
+    which emits a ``WINDOW_NOT_FOUND`` envelope. Swallowing it and returning
+    ``0`` (foreground) was the silent-failure bug #964 — for ``set`` it wrote
+    the value to whatever window happened to be focused. Mirrors the MCP #957
+    ``require_hwnd`` loud-failure contract.
 
     Args:
         backend: Backend instance.
-        app: Application name.
-        window_title: Window title pattern.
+        app: Application name (partial match), or ``None``.
+        window_title: Window title pattern (partial match), or ``None``.
 
     Returns:
-        Window handle (int), or 0 if not resolved.
+        The resolved window handle (int).
+
+    Raises:
+        WindowNotFoundError: When the supplied selector matches no window.
     """
-    try:
-        return backend._resolve_hwnd(app=app, window_title=window_title)
-    except Exception:
-        if window_title:
-            core = backend._ensure_core()
-            wins = core.list_windows()
-            for w in wins:
-                if window_title.lower() in (w.title or "").lower():
-                    return w.hwnd
-    return 0
+    return backend._resolve_hwnd(app=app, window_title=window_title)
 
 
 def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
