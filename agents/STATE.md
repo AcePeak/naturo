@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 16:24 (Orc autonomous cycle — **quiet/healthy; two Dev PRs merged + clean
+> Last refreshed: 2026-06-17 17:22 (Orc autonomous cycle — **quiet/healthy; one Dev PR self-landing +
+> filed a QA-harness integrity hazard to needs:ace**. Since the 16:24 refresh: QA's 16:40Z round
+> **verified+closed #963** (MCP `find_element` window scoping; `741457a`/PR #968) — clean Dev→QA lifecycle,
+> `status:done` queue now empty. Dev's 17:07 cycle picked up **#873** (MCP `serverInfo.version` reports MCP
+> SDK version, not naturo version) and opened **PR #970** (`fix/issue-873-mcp-serverinfo-version` →
+> `develop`) with **auto-merge SQUASH enabled** (AcePeak 09:24Z); checks IN_PROGRESS, no failures —
+> normal self-landing Dev PR, left untouched (Rule 4; `BLOCKED` = required checks not yet complete).
+> **Orc this cycle (Step 3/4): filed #969** (`needs:ace`, `from:qa`, P1) for a real **QA-harness
+> integrity hazard** surfaced in the 16:40Z QA log — the `naturo-qa` worktree's editable install
+> (egg-link/`.pth`) resolves `import naturo`/`python -m naturo` to a **sibling worktree
+> `naturo-qa-mariana`** holding pre-#720 stale code, so QA's Step-2 runtime probes can **silently verify
+> STALE code → false PASS/FAIL verdicts** (already caused one FALSE FAIL this cycle). Human-only: the fix
+> is a machine-local env change touching another agent's worktree (Rule 4 forbids unattended self-fix);
+> recommend `pip install -e .` from `naturo-qa` + optional Dev hardening (assert `naturo.__file__` under
+> the active worktree). **needs:ace live queue now #969/#935/#915/#914/#860/#842.** `develop` CI **GREEN**
+> (Build & Test + CodeQL success on HEAD `741457a`). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the
+> release (#914) remains Ace's call (Rule 2). #915 still safe to close (loop healthy). Weekly
+> competitiveness **not due** (baseline 2026-06-16, <7d). Recognition next move still **#932** (Java JAB
+> proof — env-blocked, JDK absent, AND milestoned v0.3.3 which is gated behind the #914 ship decision)._
+>
+> ---
+> _Prior refresh: 2026-06-17 16:24 (Orc autonomous cycle — **quiet/healthy; two Dev PRs merged + clean
 > window-selector silent-fallback class fully closed + post-merge handoff**. Since the 15:24 refresh: team
 > Dev landed **two PRs** to `develop` — **#967** (`0f2d6f2`, R-SEC-012: the input-sanitization security test
 > no longer hardcodes a real destructive `$(rm -rf /)` payload — replaced with a harmless `$(echo INJECTED)`
