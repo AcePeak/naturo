@@ -171,6 +171,31 @@ naturo see --app code --backend auto --stats
 
 Install the CDP dependency with `pip install naturo[cdp]`.
 
+**Try it against the owned fixture (no external app required).** The repo ships a
+real Electron app under `benchmarks/recognition/fixtures/electron/`, so you can
+reproduce the CDP recognition delta end-to-end without installing VS Code, Slack
+or any third-party Electron app:
+
+```bash
+# 1. Build the owned fixture once (Node.js required; electron is pinned by the lockfile):
+cd benchmarks/recognition/fixtures/electron && npm install
+
+# 2. Launch it with a CDP endpoint (main.js also reads NATURO_FIXTURE_CDP_PORT):
+npx electron . --remote-debugging-port=9222 --remote-allow-origins=*
+
+# 3. From another shell, let the cascade fuse UIA window chrome + CDP renderer
+#    content. `--stats` prints the per-provider breakdown; the `cdp` rows are the
+#    renderer controls (toolbar, release form, task list, deployments table) that
+#    a UIA-only tool collapses into one opaque node.
+naturo see --window "Naturo Electron Recognition Fixture" --cascade --stats
+
+# 4. Find a renderer control by its visible label — recognized via CDP, not UIA:
+naturo find "Submit release" --app electron
+
+# 5. Click one (e.g. the toolbar's Deploy button) by text within the window:
+naturo click "Deploy" --window "Naturo Electron Recognition Fixture"
+```
+
 ### Java Swing / SWT (Java Access Bridge)
 
 Enable the Java Access Bridge once per machine, then use the `jab` backend (the
