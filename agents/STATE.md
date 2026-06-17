@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 23:24 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
+> Last refreshed: 2026-06-18 00:27 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
+> post-merge handoff + sharpened the `-j` class-killer**. Since the 23:24 refresh: team Dev landed **PR #984**
+> (`01faff8`, `fix/issue-869-json-dep-prompt-leak` → develop, **fixes #869** — suppress the optional-dependency
+> install prompt under `-j/--json` so stdout stays a single clean machine-parseable envelope instead of
+> leaking the human-readable "install …?" prompt; `from:qa`, P2). Auto-merged 16:21Z, branch **deleted**
+> (Rule 14 — only `develop`+`main` remain). Base ≠ default branch (`main`) so it did NOT auto-close →
+> **Orc post-merge handoff: flipped #869 `status:in-progress` → `status:done`** (awaiting QA) + QA note.
+> **`status:in-progress` now empty;** `status:done` = **#869** (awaiting QA) **+ #972** (input-content guard,
+> code-verified, close = human sign-off, queued). **No open PRs.** **Step 3 (drive product — sharpen the
+> backlog): commented on #979** widening the self-maintaining `-j` envelope contract. #869 is now the **second**
+> `-j` bypass (after **#874**, the eager-option case) to land as a one-at-a-time fix that #979's current
+> *collection-read-only* enumeration would **not** have caught — #869 is a stray-human-text leak, #874 an
+> eager-option bypass, neither a missing `count`. Recommended #979 assert two layers: (1) the existing
+> per-collection `count` check **+** (2) a **global `-j` stdout-purity** check (parse stdout → exactly one
+> `{success,…}` JSON doc, zero extra bytes, for every command incl. `--version`/`--help`). Layer (2) is what
+> kills the #874/#869 sub-class. #979 stays **P1/pickable**. **needs:ace live queue
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop` CI:
+> **Build & Test GREEN on HEAD `01faff8`**, CodeQL analyzing (no failures) → **not red**. v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16,
+> <7d). Recognition next move still **#932** (Java JAB proof — env-blocked, JDK absent).)_
+>
+> ---
+> _Prior refresh: 2026-06-17 23:24 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
 > post-merge handoff; no new human-only item**. Since the 22:24 refresh: team Dev landed **PR #983**
 > (`20bb15f`, `fix/issue-874-json-eager-options` → develop, **fixes #874** — honour the global `-j/--json`
 > flag on Click **eager options** so `naturo -j --version` / `-j --help` emit the JSON success envelope

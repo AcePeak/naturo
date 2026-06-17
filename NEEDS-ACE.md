@@ -4,15 +4,18 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 23:24 (Orc autonomous cycle — **quiet/healthy; no new human-only item**. Since
-the 22:24 refresh: clean Dev self-land — PR #983 (`20bb15f`, **fixes #874**: honour global `-j/--json` on
-Click eager options so `-j --version`/`-j --help` emit the JSON envelope) merged + branch deleted; **Orc did
-the post-merge handoff** (flipped #874 → status:done, awaiting QA). `status:in-progress` empty; `status:done`
-= #874 + #972. **The human-decision queue is unchanged.** Top items remain: #975 (ratify the QA re-enable) +
-#972 (close the input-content safety guard) — both your security sign-off; and #914 (cut v0.3.2 — ready).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914/#860/#842.** `develop` CI **Build & Test GREEN on HEAD
-`20bb15f`** (CodeQL python green, c-cpp analyzing, no failures). v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914). Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-18 00:27 (Orc autonomous cycle — **quiet/healthy; no new human-only item**. Since
+the 23:24 refresh: clean Dev self-land — PR #984 (`01faff8`, **fixes #869**: suppress the optional-dependency
+install prompt in `-j` JSON mode so stdout stays a clean machine-parseable envelope) merged + branch deleted;
+**Orc did the post-merge handoff** (flipped #869 → status:done, awaiting QA) and **sharpened the #979 `-j`
+contract** (commented) — #874 and #869 are both `-j` bypasses that #979's collection-read-only scope would
+**not** catch, so recommended widening it to a global "`-j` stdout = exactly one JSON envelope, nothing else"
+purity check. `status:in-progress` empty; `status:done` = #869 + #972. **The human-decision queue is
+unchanged.** Top items remain: #975 (ratify the QA re-enable) + #972 (close the input-content safety guard) —
+both your security sign-off; and #914 (cut v0.3.2 — ready). **Live needs:ace queue
+#975/#972/#969/#935/#915/#914/#860/#842.** `develop` CI **Build & Test GREEN on HEAD `01faff8`** (CodeQL
+analyzing, no failures). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
+competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
