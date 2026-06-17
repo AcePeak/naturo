@@ -26,10 +26,20 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
 
 
-def _ensure_pyvda() -> None:
-    """Ensure pyvda is available, prompting to install if missing."""
+def _ensure_pyvda(json_output: bool = False) -> None:
+    """Ensure pyvda is available, prompting to install if missing.
+
+    Args:
+        json_output: When ``True``, suppress the interactive install prompt and
+            any prose so the JSON envelope stays the sole stdout content (#869).
+    """
     from naturo.deps import ensure_package
-    ensure_package("pyvda", feature="Virtual desktop", install_extra="desktop")
+    ensure_package(
+        "pyvda",
+        feature="Virtual desktop",
+        install_extra="desktop",
+        json_output=json_output,
+    )
 
 
 @_click.group(cls=FuzzyGroup)
@@ -69,7 +79,7 @@ def desktop_list(json_output: bool) -> None:
     from naturo.errors import NaturoError
 
     try:
-        _ensure_pyvda()
+        _ensure_pyvda(json_output)
         backend = get_backend()
         desktops = backend.virtual_desktop_list()
 
@@ -120,7 +130,7 @@ def desktop_switch(index: int, json_output: bool) -> None:
         )
 
     try:
-        _ensure_pyvda()
+        _ensure_pyvda(json_output)
         backend = get_backend()
         result = backend.virtual_desktop_switch(index)
 
@@ -155,7 +165,7 @@ def desktop_create(name: str | None, json_output: bool) -> None:
     from naturo.errors import NaturoError
 
     try:
-        _ensure_pyvda()
+        _ensure_pyvda(json_output)
         backend = get_backend()
         result = backend.virtual_desktop_create(name=name)
 
@@ -198,7 +208,7 @@ def desktop_close(index: int | None, json_output: bool) -> None:
         )
 
     try:
-        _ensure_pyvda()
+        _ensure_pyvda(json_output)
         backend = get_backend()
         result = backend.virtual_desktop_close(index=index)
 
@@ -259,7 +269,7 @@ def desktop_move_window(
         )
 
     try:
-        _ensure_pyvda()
+        _ensure_pyvda(json_output)
         backend = get_backend()
         result = backend.virtual_desktop_move_window(
             desktop_index=index,
