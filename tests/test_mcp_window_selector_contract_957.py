@@ -55,12 +55,6 @@ _SEMANTIC_EXCEPTIONS = {
     # the silent-foreground-fallback bug this contract guards against.
     "wait_for_element",
     "wait_until_gone",
-    # find_element forwards window_title to backend.find_element, which does
-    # not implement title scoping yet (the param is reserved) and searches the
-    # foreground window. That is a separate silent-fallback gap tracked on its
-    # own issue; it cannot return WINDOW_NOT_FOUND until the backend resolves
-    # the title. Listed here so this contract stays green while that lands.
-    "find_element",
 }
 
 
@@ -117,6 +111,9 @@ def _make_backend():
     backend._resolve_hwnds.side_effect = not_found
     backend.get_element_tree.side_effect = not_found
     backend.get_element_value.side_effect = not_found
+    # find_element resolves window_title internally via _resolve_hwnd (#963), so
+    # an unmatched title raises here exactly as the real backend does.
+    backend.find_element.side_effect = not_found
     return backend
 
 

@@ -32,12 +32,22 @@ class ElementTreeMixin:
 
         Args:
             selector: Element selector in "role:name" or "name" format.
-            window_title: Not yet used (reserved for future).
+            window_title: Window title pattern (partial match, case-insensitive).
+                When provided, the search is scoped to the matching window.
             hwnd: Target window handle.  When provided, searches within this
-                window instead of the foreground window (#525).
+                window instead of the foreground window (#525) and takes
+                priority over ``window_title``.
 
         Returns:
             ElementInfo if found, None otherwise.
+
+        Raises:
+            WindowNotFoundError: When ``window_title`` is supplied but matches no
+                window. The selector is resolved up front through
+                ``_resolve_hwnd`` and the error is allowed to propagate rather
+                than degrading to the foreground window — the silent-fallback
+                bug #963 (sibling of #957/#964 and the same path used by
+                ``get_element_value``).
         """
         core = self._ensure_core()
 
@@ -51,7 +61,16 @@ class ElementTreeMixin:
         else:
             name = selector if selector else None
 
-        result = core.find_element(hwnd=hwnd or 0, role=role, name=name)
+        # Resolve the window selector before searching. A window_title that is
+        # supplied but matches nothing must fail loudly: ``_resolve_hwnd`` raises
+        # WindowNotFoundError and we let it propagate instead of silently
+        # searching the foreground window (HWND 0). With no selector the
+        # documented foreground default is preserved.
+        target_hwnd = hwnd or 0
+        if window_title and not target_hwnd:
+            target_hwnd = self._resolve_hwnd(window_title=window_title)
+
+        result = core.find_element(hwnd=target_hwnd, role=role, name=name)
         if result is None:
             return None
 
