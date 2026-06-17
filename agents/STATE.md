@@ -1,6 +1,26 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 17:22 (Orc autonomous cycle — **quiet/healthy; one Dev PR self-landing +
+> Last refreshed: 2026-06-17 18:20 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lifecycle lap +
+> filed a code-only Dev guard for the live #969 harness hazard**. Since the 17:22 refresh: PR **#970**
+> (fixes **#873** — MCP `serverInfo.version` reports naturo's version `0.3.1`, not the leaked mcp SDK
+> `1.26.0`) **merged** (`8355d7a`) and **QA verified+closed #873 @09:39Z** (over-the-wire stdio handshake +
+> in-process `server_version` + regression test all PASS) — clean Dev→QA lifecycle, no Orc flip needed.
+> `status:done` and `status:in-progress` both **empty**; **no open PRs**. **Orc this cycle (Step 3): filed
+> #971** (P1, `silent-failure`, `from:orc`, v0.3.4) — a **code-only** loud-failure guard that aborts a QA
+> round when `naturo.__file__` resolves **outside the active worktree**. This is the loop-shippable half of
+> the **#969** stale-sibling hazard (the *env* fix stays human-only, Rule 4); confirmed live this cycle —
+> QA's #873 verification had to **hand-force `sys.path`/`PYTHONPATH`** to dodge #969 (fragile manual
+> workaround #971 removes). #971 pairs with #917 (watchdog catches a *dead* loop; #971 catches a *lying*
+> loop); cross-linked from #969. **needs:ace live queue unchanged: #969/#935/#915/#914/#860/#842** (no new
+> human-only item — #971 is deliberately Dev-actionable). `develop` CI **GREEN** (Build & Test + CodeQL
+> success on HEAD `8355d7a`; the two red 3.9 lanes on PR #970 are the pre-existing tomllib gap #910 —
+> non-required, `mcp` needs 3.10+). v0.3.2 ship-gate **FULLY MET** — cutting/tagging the release (#914)
+> remains Ace's call (Rule 2). #915 still safe to close (loop healthy). Weekly competitiveness **not due**
+> (baseline 2026-06-16, <7d). Recognition next move still **#932** (Java JAB proof — env-blocked, JDK
+> absent, milestoned v0.3.3 gated behind #914)._
+>
+> ---
+> _Prior refresh: 2026-06-17 17:22 (Orc autonomous cycle — **quiet/healthy; one Dev PR self-landing +
 > filed a QA-harness integrity hazard to needs:ace**. Since the 16:24 refresh: QA's 16:40Z round
 > **verified+closed #963** (MCP `find_element` window scoping; `741457a`/PR #968) — clean Dev→QA lifecycle,
 > `status:done` queue now empty. Dev's 17:07 cycle picked up **#873** (MCP `serverInfo.version` reports MCP

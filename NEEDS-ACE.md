@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 17:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; one Dev PR self-landing; **NEW human-only item #969**. Since the 16:24 cycle: QA's 16:40Z
-round **verified+closed #963** (MCP `find_element` window scoping) — `status:done` queue now empty. Dev's
-17:07 cycle opened **PR #970** (fixes #873, MCP `serverInfo.version`) with auto-merge SQUASH on — normal
-self-landing, left untouched (Rule 4). **Orc filed #969** (`needs:ace`, P1): the `naturo-qa` worktree's
-editable install resolves `import naturo`/`python -m naturo` to a SIBLING worktree (`naturo-qa-mariana`,
-pre-#720 stale code), so **QA runtime probes can silently verify STALE code → false verdicts** (one FALSE
-FAIL already this cycle). Human-only — machine-local env fix touching another agent's worktree (Rule 4).
-Live needs:ace queue now **#969/#935/#915/#914/#860/#842**; **#915** still safe to close (loop healthy).
-`develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `741457a`). Weekly competitiveness step not
-due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 18:20 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; quiet/healthy lap, **no new human-only item**. Since the 17:22 cycle: PR **#970** merged
+(`8355d7a`) and QA **verified+closed #873** @09:39Z (MCP `serverInfo.version` now reports naturo `0.3.1`,
+not the leaked mcp SDK `1.26.0`) — clean Dev→QA lifecycle. `status:done`/`status:in-progress` both empty;
+no open PRs. **Orc this cycle filed #971** (P1, Dev-actionable, NOT needs:ace) — the **code-only** loud-
+failure guard for the #969 stale-sibling hazard (abort a QA round when `naturo.__file__` resolves outside
+the active worktree). #969 confirmed **live**: QA's #873 verification had to hand-force `sys.path` to dodge
+it. Live needs:ace queue **unchanged: #969/#935/#915/#914/#860/#842**; **#915** still safe to close (loop
+healthy). `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `8355d7a`; PR #970's two red 3.9
+lanes are the pre-existing tomllib gap #910 — non-required). Weekly competitiveness step not due (<7d since
+06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
 | [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** | release / tag to `main` = PyPI publish | **READY TO CUT — this is now the top actionable item.** Both ship-gate requirements are met: req (1) (epic #885 cluster) verified+closed; req (2) **all 5 status:done bugs verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z). `develop` CI green on `d3cfe92`. **Cutting / tagging v0.3.2 (tag→main = PyPI publish) is your call — the loop cannot and will not do it (Rule 2).** |
-| [#969](https://github.com/AcePeak/naturo/issues/969) | **QA-harness integrity hazard** — the `naturo-qa` worktree's editable install (egg-link/`.pth`) resolves `import naturo`/`python -m naturo` to a **sibling worktree `naturo-qa-mariana`** (pre-#720 stale code). QA Step-2 runtime probes can **silently verify STALE code → false PASS/FAIL verdicts** (one FALSE FAIL already, 16:40Z #963). | machine-local env fix that touches another agent's worktree — Rule 4 forbids unattended self-fix; threatens the loop's verification signal | **Run `pip install -e .` from the `naturo-qa` worktree** (or fix the egg-link/`.pth`) so QA's import resolves to the worktree under test. Optional Dev hardening: assert `naturo.__file__` is under the active worktree in `runner.ps1`/`qa-cycle.md` Step-2, fail loudly otherwise (pairs with the #917 watchdog). |
+| [#969](https://github.com/AcePeak/naturo/issues/969) | **QA-harness integrity hazard** — the `naturo-qa` worktree's editable install (egg-link/`.pth`) resolves `import naturo`/`python -m naturo` to a **sibling worktree `naturo-qa-mariana`** (pre-#720 stale code). QA Step-2 runtime probes can **silently verify STALE code → false PASS/FAIL verdicts** (one FALSE FAIL already, 16:40Z #963). | machine-local env fix that touches another agent's worktree — Rule 4 forbids unattended self-fix; threatens the loop's verification signal | **Run `pip install -e .` from the `naturo-qa` worktree** (or fix the egg-link/`.pth`) so QA's import resolves to the worktree under test. The code-only loud-failure guard (assert `naturo.__file__` under the active worktree, fail loudly otherwise) is now tracked as **[#971](https://github.com/AcePeak/naturo/issues/971)** — Dev-actionable, the loop will ship it; this row remains the **env fix** which is human-only (Rule 4). Pairs with the #917 watchdog. |
 | [#935](https://github.com/AcePeak/naturo/issues/935) | Two Dev cycles ran **concurrently in the shared `naturo-dev` worktree** — the 2nd cycle's Step 0 `reset --hard` wiped the 1st's in-flight uncommitted branch (#910). **Rule 4 violation at the orchestration layer.** | orchestration / scheduling policy (runner.ps1 / cron / lock) | Add a **per-worktree lock** in `naturo-loop-locks\` that a starting `runner:dev` must acquire (skip the round if held), and/or serialize dev so two cycles never share one tree. Self-fixing is unsafe — concurrent git ops would corrupt the peer cycle. |
 | [#842](https://github.com/AcePeak/naturo/issues/842) / [#860](https://github.com/AcePeak/naturo/issues/860) | Desktop CI: self-hosted runner ROBOT-COMPILE offline (#842) vs fund a cloud Windows VM (#860) | infra spend | Decide: revive the runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI. (No longer needed for input verification — see #863 below — but still the only path to desktop-marked CI jobs.) |
 
