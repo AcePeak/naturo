@@ -4,17 +4,17 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 09:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 07:24 cycle the MCP silent-failure loop ran a full lap:
-team Dev fixed **#954** (MCP `capture_window` silently ignored `window_title` → foreground) via PR **#955**
-(`0eff973`, branch deleted) and **QA verified+closed #954** (00:42Z) — clean end-to-end lifecycle. QA also
-filed the sibling **#956** (MCP `create_snapshot` bundles the foreground screenshot with a different
-window's tree) which Dev **picked up** (`status:in-progress`, in flight, no branch yet — left untouched per
-Rule 4). Orc drove the product: filed **#957** (P1, from:orc) to convert this whole window-selector
-silent-fallback class into a **self-maintaining loud-failure contract test** (more unfixed instances confirmed
-in `_inspect.py`). **No open PRs.** `develop` CI **green** on HEAD `0eff973`. Live needs:ace queue
-**#935/#915/#914/#860/#842** unchanged; **#915** even safer to close now (QA verified+closed #954 this lap).
-Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 10:23 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 09:22 cycle the MCP silent-failure loop closed another
+lap: team Dev fixed **#956** (MCP `create_snapshot` bundled the foreground screenshot with a different
+window's element tree) via PR **#959** (`792c46c`, merged, branch auto-deleted). Orc did the post-merge
+handoff — flipped **#956 `status:in-progress` → `status:done`** (awaiting QA) and posted the verification
+note. `status:in-progress` is now **empty**; **#956** is the sole `status:done` item. The class-level fix
+**#957** (P1, from:orc — self-maintaining loud-failure contract for the whole window-selector fallback
+class) stays open and pickable. **No open PRs.** `develop` CI **green** on HEAD `792c46c` (Build & Test +
+CodeQL success). Live needs:ace queue **#935/#915/#914/#860/#842** unchanged; **#915** even safer to close
+now (QA verified+closed #954 last lap, loop healthy). Weekly competitiveness step not due (<7d since 06-16
+baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -44,7 +44,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
 ## Blocks
 - **None blocking the ship-gate.** #843 (capture popup compositing) **verified+closed 2026-06-17 02:42Z** —
   the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** (Build & Test + CodeQL success on HEAD `d3cfe92`).
+- `develop` CI: **green** (Build & Test + CodeQL success on HEAD `792c46c`).
 - Desktop CI runner **#842** offline (chronic; infra decision above).
 - _Cleared this cycle:_ **#863** (input verification — proven possible) and **#915** (QA auth — recovered)
   are no longer blocks; both recommended for closure above.

@@ -1,6 +1,25 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-17 09:22 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop ran a
+> Last refreshed: 2026-06-17 10:23 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop closed
+> another lap; clean post-merge handoff**. Since the 09:22 refresh: team Dev fixed **#956** (MCP
+> `create_snapshot` bundled a foreground screenshot with a *different* window's element tree, `success:true`,
+> when `window_title` named a non-foreground window) via PR **#959** (`792c46c`, MERGED to `develop`, branch
+> auto-deleted — only `develop`+`main` remain). The PR did not auto-close the issue (base ≠ default branch),
+> so Orc did the **post-merge handoff: flipped #956 `status:in-progress` → `status:done`** and posted the QA
+> verification note (call `create_snapshot` on a non-foreground `window_title`; confirm screenshot+tree share
+> one resolved hwnd and unresolvable titles fail loudly). **`status:in-progress` is now empty; #956 is the
+> sole `status:done` item** (awaiting QA). The class-level fix **#957** (P1, from:orc — self-maintaining
+> loud-failure contract for the window-selector fallback class; #954/#956 were instances) stays open and
+> pickable for Dev. **No open PRs.** `develop` CI **GREEN** (Build & Test + CodeQL success on HEAD `792c46c`).
+> v0.3.2 ship-gate **FULLY MET** — cutting/tagging the release (#914) remains Ace's call (Rule 2). needs:ace
+> live queue **#935/#915/#914/#860/#842** (unchanged); **#915** even safer to close (loop healthy across
+> #954/#956 laps). **Step 3:** backlog already sharp — the silent-fallback class is captured by #957 and QA
+> has fresh contract bugs filed (#958 UWP PID, #952 handle/hwnd field drift, #946 path-test slashes); no
+> duplicate gap worth filing this cycle. Weekly competitiveness **not due** (baseline 2026-06-16, <7d). Next
+> recognition move still **#932** (Java JAB proof, env-blocked — no Java app on desktop)._
+>
+> ---
+> _Prior refresh: 2026-06-17 09:22 (Orc autonomous cycle — **quiet/healthy; MCP silent-failure loop ran a
 > full lap + drove the product**. Since the 07:24 refresh: team Dev fixed **#954** (MCP `capture_window`
 > silently ignored `window_title`, captured foreground with `success:true`) via PR **#955** (`0eff973`,
 > branch deleted), and **QA verified+closed #954** at 00:42Z — clean end-to-end Dev→QA lifecycle, no Orc
