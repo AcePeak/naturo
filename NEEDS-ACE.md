@@ -4,16 +4,17 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-17 14:22 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
-call (#914)**; otherwise quiet/healthy. Since the 12:23 cycle the loop landed **two Dev PRs** to `develop`
-— **#962** (`8517b4d`, fixes #957, MCP window-selector loud-failure helper) and **#965** (`4d19823`, fixes
-#927, README MCP install snippets); both branches auto-deleted. **QA verified+closed #957** at 04:40Z (clean
-lifecycle) and filed two new silent-failure window-selector bugs — **#963** (MCP `find_element` ignores
-`window_title`) and **#964** (P1 — CLI `get`/`set --window` silent foreground fallback). Orc did the
-post-merge handoff (**#927 → `status:done`**, awaiting QA) and triaged #964 → v0.3.4. **No open PRs.**
-`develop` CI **green** on HEAD `4d19823` (Build & Test + CodeQL success). Live needs:ace queue
-**#935/#915/#914/#860/#842** unchanged (no new human-only item); **#915** safe to close (loop healthy).
-Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-17 15:24 (Orc autonomous cycle — **v0.3.2 SHIP-GATE FULLY MET — release is your
+call (#914)**; otherwise quiet/healthy. Since the 14:22 cycle: team Dev opened PR **#966**
+(`fix/issue-964-cli-window-loud-failure` → `develop`, fixes #964 — CLI `get`/`set --window <unmatched>`
+must fail loudly with `WINDOW_NOT_FOUND`, not silently foreground) with **auto-merge SQUASH enabled**;
+checks in-flight (CodeQL + Ubuntu/macOS test lanes running) — **self-landing once green**, left untouched.
+**#964 stays `status:in-progress`** with its PR (correct in-flight state). **status:done queue empty.** Orc
+triaged two unmilestoned actionable bugs into **v0.3.4**: **#916** (P2 from:qa — taskbar/tray list returns
+empty `success:true`, silent-failure class) and **#917** (P1 from:orc — runner watchdog, code-only). Live
+needs:ace queue **#935/#915/#914/#860/#842** unchanged (no new human-only item); **#915** safe to close
+(loop healthy). `develop` CI **green** on HEAD `4d19823` (Build & Test + CodeQL success). Weekly
+competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
