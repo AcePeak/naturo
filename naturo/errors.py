@@ -47,6 +47,7 @@ class ErrorCode:
     # System / environment errors
     NO_DESKTOP_SESSION = "NO_DESKTOP_SESSION"
     FILE_IO_ERROR = "FILE_IO_ERROR"
+    WORKTREE_MISMATCH = "WORKTREE_MISMATCH"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 
     # AI errors
@@ -331,6 +332,30 @@ class FileIOError(NaturoError):
             category=ErrorCategory.IO,
             context=ctx,
             is_recoverable=True,
+            **kwargs,
+        )
+
+
+class WorktreeMismatchError(NaturoError):
+    """Imported ``naturo`` resolves outside the expected worktree root.
+
+    Raised by the opt-in import guard (#971) when a stale editable install
+    shadows the checkout under test with a sibling worktree's code, which would
+    otherwise let runtime verification silently validate the wrong source.
+    """
+
+    def __init__(self, message: str, **kwargs: Any) -> None:
+        kwargs.setdefault(
+            "suggested_action",
+            "The imported 'naturo' is not under NATURO_EXPECTED_ROOT. Re-run "
+            "'pip install -e .' from the active worktree (or fix the stale "
+            ".pth/egg-link), or unset NATURO_EXPECTED_ROOT if the guard is "
+            "misconfigured.",
+        )
+        super().__init__(
+            message=message,
+            code=ErrorCode.WORKTREE_MISMATCH,
+            category=ErrorCategory.ENVIRONMENT,
             **kwargs,
         )
 
