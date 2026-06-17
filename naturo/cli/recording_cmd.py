@@ -12,6 +12,7 @@ from datetime import datetime
 
 import click
 
+from naturo.cli.error_helpers import collection_read, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.recording import (
     Recording,
@@ -181,6 +182,7 @@ def record_play(recording_id: str, speed: float, dry_run: bool, json_output: boo
                     f"{error_count} failed, {skipped_count} skipped")
 
 
+@collection_read("recordings")
 @click.command("list")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def record_list(json_output: bool):
@@ -197,11 +199,7 @@ def record_list(json_output: bool):
     active = get_active_recording()
 
     if json_output:
-        output: dict = {
-            "success": True,
-            "recordings": recordings,
-            "count": len(recordings),
-        }
+        output: dict = success_envelope("recordings", recordings)
         if active:
             output["active"] = {
                 "recording_id": active.recording_id,

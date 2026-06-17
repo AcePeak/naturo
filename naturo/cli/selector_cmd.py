@@ -12,6 +12,7 @@ from typing import Optional
 
 import click
 
+from naturo.cli.error_helpers import collection_read, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 
@@ -222,6 +223,7 @@ def selector_load(app_name: str, name: str, json_output: bool):
         click.echo(sel_str)
 
 
+@collection_read("selectors")
 @click.command("list")
 @click.option("--app", "app_name", default=None, help="Filter by app name.")
 @click.option("--builtin", is_flag=True, help="Show built-in templates.")
@@ -262,11 +264,7 @@ def selector_list(app_name: Optional[str], builtin: bool, json_output: bool):
                     "selector": selector_value,
                     "description": description,
                 })
-        click.echo(json.dumps({
-            "success": True,
-            "selectors": selectors,
-            "count": len(selectors),
-        }))
+        click.echo(json.dumps(success_envelope("selectors", selectors)))
         return
 
     if not all_selectors:
