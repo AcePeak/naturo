@@ -13,6 +13,7 @@ from typing import Optional
 
 import click
 
+from naturo.cli.error_helpers import collection_read, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.visual import (
     save_baseline,
@@ -173,6 +174,7 @@ def visual_diff(image1: str, image2: str, output: Optional[str],
             click.echo(f"  Diff image: {output}")
 
 
+@collection_read("baselines")
 @click.command("list")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def visual_list(json_output: bool):
@@ -185,11 +187,7 @@ def visual_list(json_output: bool):
     baselines = list_baselines()
 
     if json_output:
-        click.echo(json.dumps({
-            "success": True,
-            "baselines": baselines,
-            "count": len(baselines),
-        }))
+        click.echo(json.dumps(success_envelope("baselines", baselines)))
         return
 
     if not baselines:

@@ -11,11 +11,65 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any, NoReturn, Optional
+from typing import Any, Callable, Iterable, NoReturn, Optional, TypeVar
 
 import click
 
 from naturo.errors import NaturoError
+
+_CommandT = TypeVar("_CommandT", bound=click.Command)
+
+
+def success_envelope(collection_key: str, items: Iterable[Any]) -> dict[str, Any]:
+    """Build the canonical ``-j`` success envelope for a collection read.
+
+    Every ``list``-style command that returns a collection under ``-j`` must emit
+    the same three-key shape so scripters and AI agents can rely on it. Routing
+    those callsites through this single helper keeps the shape from drifting (see
+    issue #979) — the matching contract test in ``tests/test_json_envelope_contract``
+    pins it.
+
+    Args:
+        collection_key: Top-level key under which the collection is published
+            (e.g. ``"selectors"``, ``"baselines"``, ``"recordings"``).
+        items: The collection to publish. Materialised into a fresh list so the
+            envelope never aliases (or is mutated by) the caller's sequence.
+
+    Returns:
+        A dict ``{"success": True, collection_key: [...], "count": len([...])}``,
+        with keys in that exact order, ready for ``json.dumps``.
+    """
+    materialised = list(items)
+    return {"success": True, collection_key: materialised, "count": len(materialised)}
+
+
+def collection_read(collection_key: str) -> Callable[[_CommandT], _CommandT]:
+    """Tag a Click command as a ``-j`` collection read for the contract test.
+
+    The decorator records ``collection_key`` on the command object so the
+    self-maintaining contract test can auto-enumerate the Click tree and assert
+    every tagged command emits :func:`success_envelope`'s canonical shape. It does
+    not alter the command's behaviour.
+
+    Apply it *above* ``@click.command`` so it receives the constructed command::
+
+        @collection_read("selectors")
+        @click.command("list")
+        def selector_list(...): ...
+
+    Args:
+        collection_key: The top-level collection key the command publishes; must
+            match the key it passes to :func:`success_envelope`.
+
+    Returns:
+        A decorator that annotates the command and returns it unchanged.
+    """
+
+    def decorator(command: _CommandT) -> _CommandT:
+        command._naturo_collection_key = collection_key  # type: ignore[attr-defined]
+        return command
+
+    return decorator
 
 # ── Recovery hint registry ───────────────────────────────────────────────────
 # Maps error codes to (suggested_action, recoverable) when we don't have a
