@@ -400,20 +400,16 @@ class ElementTreeMixin:
                     f"Run 'naturo see' first to capture elements."
                 )
 
-        # Resolve app/window_title to HWND for targeted lookup
+        # Resolve app/window_title to HWND for targeted lookup. A selector that
+        # is supplied but matches nothing must fail loudly: ``_resolve_hwnd``
+        # raises WindowNotFoundError and we let it propagate, rather than
+        # swallowing it and degrading to the foreground window (HWND 0). The old
+        # ``except`` + manual title scan only ever reproduced ``_resolve_hwnd``'s
+        # own substring matching, so a raise meant no window matched anywhere —
+        # falling back to the focused window was the silent-failure bug #964
+        # (the CLI analog of the MCP #957 ``require_hwnd`` contract).
         if (app or window_title) and not target_hwnd:
-            try:
-                target_hwnd = self._resolve_hwnd(
-                    app=app, window_title=window_title
-                )
-            except Exception:
-                # Fall back to scanning windows manually
-                if window_title:
-                    wins = core.list_windows()
-                    for w in wins:
-                        if window_title.lower() in (w.title or "").lower():
-                            target_hwnd = w.hwnd
-                            break
+            target_hwnd = self._resolve_hwnd(app=app, window_title=window_title)
 
         if not resolved_aid and not resolved_role and not resolved_name:
             # (#242) Fallback: when no element identifiers are provided but
