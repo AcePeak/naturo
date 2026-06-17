@@ -1,15 +1,21 @@
-"""Tests for the opt-in input-content safety guard (naturo.safety, #960).
+"""Tests for the opt-in input-content safety guard (naturo.safety, #960/#972).
 
-The guard refuses to inject shell-command-like keystrokes when
-``NATURO_SAFE_INPUT=1`` is set, so a focus race in an unattended QA loop cannot
-deliver a destructive fragment (e.g. ``$(rm -rf /)``) to a terminal.  Normal
-users (env unset) must be completely unaffected.
+The guard refuses to inject shell-command-like keystrokes when it is active, so
+a focus race in an unattended QA loop cannot deliver a destructive fragment
+(e.g. ``$(rm -rf /)``) to a terminal.  It activates on **either** of two
+independent signals (#972): the ``NATURO_SAFE_INPUT=1`` environment variable or
+a sentinel lock file at ``~/.naturo/safe-input.lock``.  The file-based signal is
+the robust primary because it survives across process boundaries with no
+env-inheritance dependency.  Normal users (neither signal present) must be
+completely unaffected.
 
-All tests are pure-Python (no desktop, no DLL) and run on Linux CI.
+All tests are pure-Python (no desktop, no DLL, no real keystrokes) and run on
+Linux CI; the sentinel filesystem is mocked via a tmp HOME.
 """
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -43,6 +49,64 @@ class TestEnvGating:
     def test_enabled_when_exactly_one(self):
         with _enabled():
             assert is_safe_input_enabled() is True
+
+
+class TestSentinelFileGating:
+    """The sentinel lock file activates the guard independently of the env var.
+
+    This is the #972 robustness fix: the env var alone proved fragile because it
+    must be inherited by every process in the injection chain.  The lock file is
+    probed from disk on each call, so it works regardless of how ``naturo`` was
+    spawned.  The filesystem is mocked via a tmp HOME so no real file under the
+    developer's ``~/.naturo`` is touched.
+    """
+
+    @staticmethod
+    def _home(monkeypatch, tmp_path):
+        """Point ``Path.home()`` at ``tmp_path`` and clear the guard env var."""
+        monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+        monkeypatch.delenv(SAFE_INPUT_ENV, raising=False)
+        return tmp_path / ".naturo" / "safe-input.lock"
+
+    def test_lock_path_lives_under_dot_naturo(self, monkeypatch, tmp_path):
+        from naturo.safety import _safe_input_lock_path
+
+        self._home(monkeypatch, tmp_path)
+        assert _safe_input_lock_path() == tmp_path / ".naturo" / "safe-input.lock"
+
+    def test_active_when_sentinel_exists_and_env_unset(self, monkeypatch, tmp_path):
+        """The exact #972 scenario: env var UNSET but the sentinel file exists."""
+        lock = self._home(monkeypatch, tmp_path)
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.touch()
+
+        assert SAFE_INPUT_ENV not in __import__("os").environ
+        assert is_safe_input_enabled() is True
+        # And it actually blocks the near-miss payload from the incident.
+        assert unsafe_input_reason("$(rm -rf /)") is not None
+
+    def test_inactive_when_neither_env_nor_sentinel(self, monkeypatch, tmp_path):
+        self._home(monkeypatch, tmp_path)  # tmp HOME has no .naturo dir/lock
+
+        assert is_safe_input_enabled() is False
+        # Dangerous content passes untouched — normal users are unaffected.
+        assert unsafe_input_reason("$(rm -rf /)") is None
+
+    def test_benign_passes_even_when_sentinel_present(self, monkeypatch, tmp_path):
+        lock = self._home(monkeypatch, tmp_path)
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.touch()
+
+        assert is_safe_input_enabled() is True
+        assert unsafe_input_reason("QA_PROBE") is None
+
+    def test_env_alone_still_works_without_sentinel(self, monkeypatch, tmp_path):
+        """Env-var fallback is preserved even when no sentinel file exists."""
+        self._home(monkeypatch, tmp_path)
+        monkeypatch.setenv(SAFE_INPUT_ENV, "1")
+
+        assert is_safe_input_enabled() is True
+        assert unsafe_input_reason("$(rm -rf /)") is not None
 
 
 class TestBlocksDangerousContent:

@@ -10,10 +10,22 @@ by Enter, it could have wiped the machine.
 
 Instruction-level guardrails are necessary but not sufficient once an agent can
 improvise input, so this module adds *code* enforcement.  It is strictly
-opt-in: the guard activates only when ``NATURO_SAFE_INPUT=1`` is set in the
-environment (the unattended QA role sets it).  Normal users — for whom typing
-shell commands into an editor is a legitimate use of a general automation tool —
-are unaffected when the variable is unset.
+opt-in.  The guard activates when **either** of two independent signals is
+present (#972):
+
+* the ``NATURO_SAFE_INPUT=1`` environment variable, or
+* a sentinel lock file at ``~/.naturo/safe-input.lock``.
+
+The sentinel file exists because the environment variable alone proved
+fragile: it has to be inherited by every process in the chain that ultimately
+injects keystrokes, and on 2026-06-17 a QA cycle still typed ``$(rm -rf /)``
+because the opt-in env var was not effective for that cycle.  A file-based
+signal survives across process boundaries with no env-inheritance dependency,
+so the loop drops the lock once and every later ``naturo`` invocation sees it.
+
+Normal users — for whom typing shell commands into an editor is a legitimate
+use of a general automation tool — are unaffected: neither signal is present
+for interactive/TTY use, so the guard stays off.
 
 The matcher is deliberately conservative: for a destructive-command blocker a
 false positive (refusing a benign-but-suspicious string in a QA probe) is
@@ -23,6 +35,7 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 from typing import Optional
 
 #: Environment variable that, when set to ``"1"``, enables the input guard.
@@ -54,22 +67,64 @@ _DANGEROUS_PATTERNS: tuple[tuple[str, "re.Pattern[str]"], ...] = (
 )
 
 
+def _safe_input_lock_path() -> Path:
+    """Return the path to the sentinel lock file that activates the guard.
+
+    Uses the same ``~/.naturo`` directory naturo already uses for snapshots,
+    app-id maps and other per-user state, so the signal lives alongside the
+    rest of naturo's runtime files.  Resolved on each call (not cached) so a
+    test that points ``HOME``/``USERPROFILE`` at a temporary directory, or a
+    user whose home moves, is honoured.
+    """
+    return Path.home() / ".naturo" / "safe-input.lock"
+
+
+def _safe_input_active() -> bool:
+    """Return whether the opt-in input-content guard is currently active.
+
+    The guard activates when **either** signal is present (#972):
+
+    * the ``NATURO_SAFE_INPUT`` environment variable is exactly ``"1"``, or
+    * the sentinel lock file ``~/.naturo/safe-input.lock`` exists.
+
+    Either signal alone is sufficient.  The env var is kept as a fallback for
+    callers that still set it, but the file-based signal is the robust primary
+    because it does not depend on environment inheritance across process
+    boundaries.  When neither is present the guard is a no-op, so interactive
+    and normal-user sessions are never affected.
+    """
+    if os.environ.get(SAFE_INPUT_ENV) == "1":
+        return True
+    try:
+        return _safe_input_lock_path().exists()
+    except (OSError, RuntimeError):
+        # Probing the sentinel must never crash input.  ``Path.home()`` raises
+        # ``RuntimeError`` when the home directory cannot be determined (e.g. no
+        # HOME/USERPROFILE), and ``exists()`` can raise ``OSError``; in either
+        # case fall back to "not active via the file" (env was already checked).
+        return False
+
+
 def is_safe_input_enabled() -> bool:
     """Return whether the opt-in input-content guard is active.
 
+    Retained as the stable public name; delegates to :func:`_safe_input_active`
+    so the env var **or** the sentinel lock file enables the guard.
+
     Returns:
-        ``True`` only when the ``NATURO_SAFE_INPUT`` environment variable is
-        exactly ``"1"``.  Any other value (including unset) leaves the guard
-        disabled so normal users are never affected.
+        ``True`` when ``NATURO_SAFE_INPUT`` is exactly ``"1"`` or the sentinel
+        file ``~/.naturo/safe-input.lock`` exists; otherwise ``False`` so
+        normal users are never affected.
     """
-    return os.environ.get(SAFE_INPUT_ENV) == "1"
+    return _safe_input_active()
 
 
 def unsafe_input_reason(text: Optional[str]) -> Optional[str]:
     """Return why ``text`` is unsafe to inject, or ``None`` if it may proceed.
 
-    The guard is a no-op (always returns ``None``) when
-    ``NATURO_SAFE_INPUT`` is not set to ``"1"``, so callers can invoke this
+    The guard is a no-op (always returns ``None``) when it is inactive — that
+    is, when neither ``NATURO_SAFE_INPUT=1`` nor the sentinel lock file
+    ``~/.naturo/safe-input.lock`` is present — so callers can invoke this
     unconditionally before typing/pasting without affecting normal users.
 
     Args:

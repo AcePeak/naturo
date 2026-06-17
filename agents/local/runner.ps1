@@ -47,15 +47,26 @@ if ($Role -eq 'qa') {
   exit 0
 }
 
-switch ($Role) {
-  'dev'  { $Wt = 'C:\Users\Naturobot\naturo-dev'; $Cycle = 'agents/local/dev-cycle.md' }
-  'qa'   { $Wt = 'C:\Users\Naturobot\naturo-qa';  $Cycle = 'agents/local/qa-cycle.md'; $env:NATURO_SAFE_INPUT = '1' }  # (#960) code-enforced input-content guard for the unattended QA loop
-  'orch' { $Wt = $Main;                           $Cycle = 'agents/local/orch-review.md' }
-}
-
 function Write-State([string]$line) {
   $stamp = (Get-Date).ToString('o')
   Add-Content -Path $StateLog -Value "$stamp  [runner:$Role]  $line"
+}
+
+switch ($Role) {
+  'dev'  { $Wt = 'C:\Users\Naturobot\naturo-dev'; $Cycle = 'agents/local/dev-cycle.md' }
+  'qa'   {
+    $Wt = 'C:\Users\Naturobot\naturo-qa';  $Cycle = 'agents/local/qa-cycle.md'
+    # (#960) code-enforced input-content guard for the unattended QA loop. Two
+    # independent signals activate it so it survives env-inheritance gaps (#972):
+    #   1. the env var (inherited by direct children of this process), and
+    #   2. a sentinel lock file under ~/.naturo, which every `naturo` invocation
+    #      probes regardless of how it was spawned.
+    $env:NATURO_SAFE_INPUT = '1'
+    $SafeInputLock = Join-Path $env:USERPROFILE '.naturo\safe-input.lock'
+    New-Item -ItemType File -Force -Path $SafeInputLock | Out-Null
+    Write-State "input-safety guard armed (NATURO_SAFE_INPUT=1 + sentinel $SafeInputLock)"
+  }
+  'orch' { $Wt = $Main;                           $Cycle = 'agents/local/orch-review.md' }
 }
 
 # --- Proxy: the cycle needs the internet (Claude API + GitHub). The interactive `pon` is a cmd
