@@ -1,4 +1,7 @@
 """Naturo CLI — Windows desktop automation, aligned with Peekaboo."""
+from __future__ import annotations
+
+import json
 import os
 import sys
 
@@ -20,6 +23,7 @@ if sys.platform == "win32" and not os.environ.get("PYTHONUTF8"):
 
 import click
 from naturo.version import __version__
+from naturo.cli.error_helpers import json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, highlight
@@ -207,3 +211,167 @@ app.add_command(app_unhide, "unhide")  # alias for restore
 
 # ── Patch all commands to propagate global --json to subcommands ─────────────
 _patch_all_commands(main)
+
+
+# ── Console-script wrapper: honour global -j/--json on Click's eager paths ───
+# Click resolves --version/--help and reports unknown commands *before* any
+# naturo command code runs, emitting plain text and (for unknown commands)
+# exit code 2. That breaks the global JSON contract for callers that pipe
+# ``naturo -j --version`` / ``-j --help`` / ``-j <unknown>`` into a JSON parser.
+# ``run`` (the console-script entry point) wraps the group to close that gap
+# while leaving every other code path byte-for-byte identical to plain Click.
+# See #874 (top-level twin of the subcommand-level #872).
+
+# The only root-group option that consumes a following token as its value.
+_GLOBAL_VALUE_OPTIONS = {"--log-level"}
+
+
+def _wants_global_json(argv: list[str]) -> bool:
+    """Return True if a global ``-j``/``--json`` precedes any subcommand.
+
+    Scans the leading option tokens only: a ``-j`` placed *after* the
+    subcommand name is a subcommand-level flag, not the global one.
+
+    Args:
+        argv: CLI arguments excluding the program name.
+
+    Returns:
+        True when global JSON output was requested, otherwise False.
+    """
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token in ("-j", "--json"):
+            return True
+        # Combined short-flag cluster, e.g. "-vj".
+        if token.startswith("-") and not token.startswith("--") and "j" in token[1:]:
+            return True
+        if token in _GLOBAL_VALUE_OPTIONS:
+            index += 2  # skip the option and its value
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        break  # first positional token is the subcommand
+    return False
+
+
+def _first_command_token(argv: list[str]) -> str | None:
+    """Return the first positional token (the subcommand), or None.
+
+    Args:
+        argv: CLI arguments excluding the program name.
+
+    Returns:
+        The subcommand name, or None when only global options were given.
+    """
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token in _GLOBAL_VALUE_OPTIONS:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token
+    return None
+
+
+def _root_help_json() -> str:
+    """Build the structured JSON envelope for root-level ``--help``.
+
+    Returns:
+        A JSON string with ``success`` and a ``help`` object containing the
+        usage line, visible subcommands, and global options.
+    """
+    ctx = click.Context(main, info_name="naturo")
+    commands = []
+    for name in main.list_commands(ctx):
+        cmd = main.get_command(ctx, name)
+        if cmd is None or cmd.hidden:
+            continue
+        commands.append({"name": name, "help": cmd.get_short_help_str()})
+
+    options = []
+    for param in main.get_params(ctx):
+        if not isinstance(param, click.Option):
+            continue
+        record = param.get_help_record(ctx)
+        if record is not None:
+            options.append({"name": record[0], "help": record[1]})
+
+    usage = "naturo " + " ".join(main.collect_usage_pieces(ctx))
+    return json.dumps(
+        {
+            "success": True,
+            "help": {"usage": usage, "commands": commands, "options": options},
+        }
+    )
+
+
+def _emit_root_usage_error_json(exc: click.UsageError) -> None:
+    """Emit a JSON error envelope for a root-level usage error and exit 1.
+
+    Args:
+        exc: The Click usage error raised by the root group.
+    """
+    message = exc.format_message()
+    if isinstance(exc, click.NoSuchOption):
+        code = "UNKNOWN_OPTION"
+        action = "Run 'naturo --help' to see the available options."
+    elif message.startswith("No such command"):
+        code = "UNKNOWN_COMMAND"
+        action = "Run 'naturo --help' for the command list."
+    else:
+        code = "INVALID_INPUT"
+        action = "Run 'naturo --help' for usage."
+    click.echo(json_error(code, message, suggested_action=action))
+    # Contract exit code is 1 (runtime error), not Click's UsageError 2 — same
+    # axis as #866/#872.
+    sys.exit(1)
+
+
+def run() -> None:
+    """Console-script entry point wrapping the Click group (#874).
+
+    Preserves the global ``-j/--json`` contract for code paths Click would
+    otherwise emit as plain text — the eager ``--version`` / ``--help``
+    handlers and root-level usage errors — while delegating every other
+    invocation to standard Click dispatch unchanged.
+    """
+    argv = sys.argv[1:]
+    json_mode = _wants_global_json(argv)
+
+    # --version/--help are eager: Click runs and prints them before command
+    # dispatch, so intercept them here when global JSON is requested and no
+    # subcommand was given (subcommand-level --help stays Click's job).
+    if json_mode and _first_command_token(argv) is None:
+        if "--version" in argv:
+            click.echo(json.dumps({"success": True, "version": __version__}))
+            sys.exit(0)
+        if "--help" in argv:
+            click.echo(_root_help_json())
+            sys.exit(0)
+
+    try:
+        # standalone_mode=False so usage errors propagate here instead of being
+        # printed by Click; it also makes eager handlers (--version/--help on a
+        # subcommand) and ctx.exit() *return* their exit code rather than
+        # raising SystemExit, so propagate that explicitly.
+        result = main.main(args=argv, prog_name="naturo", standalone_mode=False)
+        sys.exit(result if isinstance(result, int) else 0)
+    except click.UsageError as exc:
+        # Only root-group usage errors are in scope; subcommand usage errors
+        # keep Click's default rendering (subcommand JSON is #872/#897).
+        is_root = exc.ctx is None or exc.ctx.command is main
+        if json_mode and is_root:
+            _emit_root_usage_error_json(exc)
+        exc.show()
+        sys.exit(exc.exit_code)
+    except click.Abort:
+        click.echo("Aborted!", err=True)
+        sys.exit(1)
+    except click.ClickException as exc:
+        exc.show()
+        sys.exit(exc.exit_code)

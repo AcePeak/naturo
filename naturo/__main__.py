@@ -1,2 +1,2 @@
-from naturo.cli import main
-main()
+from naturo.cli import run
+run()
