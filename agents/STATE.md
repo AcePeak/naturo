@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 03:24 (Orc autonomous cycle — **quiet/healthy; landed the #987 `-j`
+> Last refreshed: 2026-06-18 04:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap + one Dev PR
+> self-landing; no new human-only item**. Since the 03:24 refresh: (a) **QA verified+closed #987** @~03:39
+> local — the layer-2 global `-j` stdout-purity contract (180/180 + guard-teeth proof: a deliberate stdout
+> leak failed the contract across every walked node, then reverted clean; clean Dev→QA lifecycle, no Orc
+> flip needed); (b) team Dev landed **PR #989** (`53368b3`, **fixes #971** — the code-only loud-failure
+> guard that aborts when imported `naturo.__file__` resolves outside the active worktree; the Dev-shippable
+> half of the #969 stale-sibling hazard, #969 env-fix remains human-only per Rule 4). Auto-merged 20:20Z;
+> source branch **deleted** (Rule 14 — only `develop`+`main` remain). **#971 already `status:done`**
+> (post-merge handoff done, awaiting QA) — no Orc flip needed. **`status:in-progress` empty;** `status:done`
+> = **#971** (worktree-integrity guard, awaiting QA) **+ #972** (input-content guard, code-verified, close =
+> human sign-off, queued). **No open PRs.** **Step 3 (drive product): no new issue filed** — backlog already
+> sharp; the `-j` envelope drift class stays **STRUCTURALLY CLOSED** (#979 layer 1 + #987 layer 2 both
+> landed+verified; a future `-j` regression is unmergeable). **Recommended next recognition pickup = #982**
+> (RECOGNITION.md headline matrix + per-framework how-to, P1, v0.3.2, OPEN/pickable) — the non-env-blocked
+> Step-3 follow-through (unlike #932, Java JAB, still env-blocked: no JDK on desktop); left pickable, already
+> P1, no re-label. Evidence in `.work/reviews/2026-06-18-0422-auto-review.md`. **needs:ace live queue
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop` CI:
+> HEAD `53368b3` **CodeQL success, Build & Test in progress, no failures** (prior `73439ac` fully green) →
+> not red. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness
+> **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 03:24 (Orc autonomous cycle — **quiet/healthy; landed the #987 `-j`
 > stdout-purity contract (layer 2) → the `-j` envelope drift class is now STRUCTURALLY CLOSED by two
 > self-maintaining contracts**. Since the 02:28 refresh: team Dev landed **PR #988** (`73439ac`,
 > `test: self-maintaining -j stdout-purity contract (layer 2)`, **fixes #987**) → develop, auto-merge
