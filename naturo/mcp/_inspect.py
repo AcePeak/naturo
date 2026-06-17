@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from naturo.mcp._resolve import require_hwnd
+
 logger = logging.getLogger(__name__)
 
 
@@ -282,7 +284,6 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         resolved_aid = automation_id
         resolved_role = role
         resolved_name = name
-        target_hwnd = hwnd or 0
 
         if ref and not resolved_aid:
             from naturo.snapshot import get_snapshot_manager
@@ -296,12 +297,11 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                     resolved_role = resolved_role or elem.role
                     resolved_name = resolved_name or elem.title or elem.label
 
-        # Resolve window title to HWND
-        if window_title and not target_hwnd:
-            try:
-                target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception as exc:
-                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
+        # (#957) Resolve the window selector through the shared helper: an
+        # unmatched window_title raises WindowNotFoundError (mapped to a
+        # WINDOW_NOT_FOUND envelope) rather than silently targeting the
+        # foreground window and reporting success on the wrong window.
+        target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
 
         success = backend.set_element_value(
             text=value,
@@ -345,12 +345,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             Dict with success flag and new toggle state.
         """
         backend = _get_backend()
-        target_hwnd = hwnd or 0
-        if window_title and not target_hwnd:
-            try:
-                target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception as exc:
-                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
+        # (#957) Loud window resolution — see set_element_value for rationale.
+        target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
 
         new_state = backend.toggle_element(
             hwnd=target_hwnd,
@@ -393,12 +389,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             Dict with success flag.
         """
         backend = _get_backend()
-        target_hwnd = hwnd or 0
-        if window_title and not target_hwnd:
-            try:
-                target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception as exc:
-                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
+        # (#957) Loud window resolution — see set_element_value for rationale.
+        target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
 
         success = backend.select_element(
             hwnd=target_hwnd,
@@ -443,12 +435,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             Dict with success flag and action performed.
         """
         backend = _get_backend()
-        target_hwnd = hwnd or 0
-        if window_title and not target_hwnd:
-            try:
-                target_hwnd = backend._resolve_hwnd(window_title=window_title)
-            except Exception as exc:
-                logger.debug("HWND resolution failed for window '%s': %s", window_title, exc)
+        # (#957) Loud window resolution — see set_element_value for rationale.
+        target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
 
         success = backend.expand_collapse_element(
             hwnd=target_hwnd,

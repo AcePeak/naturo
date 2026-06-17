@@ -321,14 +321,19 @@ class TestSetElementValue:
         })
         mock_backend._resolve_hwnd.assert_called_once_with(window_title="Notepad")
 
-    def test_hwnd_resolution_failure_graceful(self, server, mock_backend):
-        mock_backend._resolve_hwnd.side_effect = Exception("window gone")
+    def test_unresolvable_window_title_fails_loudly(self, server, mock_backend):
+        """(#957) An unmatched window_title must fail loudly, never silently
+        target the foreground window."""
+        from naturo.errors import WindowNotFoundError
+        mock_backend._resolve_hwnd.side_effect = WindowNotFoundError("Gone")
         result = _call_tool(server, "set_element_value", {
             "value": "test", "window_title": "Gone",
         })
         data = json.loads(result[0].text)
-        # Should still attempt set_element_value (with hwnd=0)
-        mock_backend.set_element_value.assert_called_once()
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        # The element write must NOT run against the foreground window.
+        mock_backend.set_element_value.assert_not_called()
 
     def test_ref_resolves_via_snapshot(self, server, mock_backend):
         mock_elem = MagicMock()
