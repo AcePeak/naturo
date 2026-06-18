@@ -1,6 +1,41 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 05:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+> Last refreshed: 2026-06-19 07:23 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed
+> clean since 05:23 (#1020 → #880 QA verified+closed same lap; #1021 → #889 auto-merged mid-cycle, Dev
+> self-handoff to status:done) → develop green, no open PRs, status:in-progress now empty, no abandoned
+> work, no new human-only item; needs:ace queue unchanged**. Since the 05:23 refresh:
+> **PR #1020 landed** (`ccb43ec`, **fixes #880** — `fix: suggest correct command for subgroup/
+> renamed intent verbs`; the CLI typo-suggester now resolves subgroup commands like `launch`/`open`/
+> `screenshot` so first-time users don't hit a dead end). Merged 22:33Z, **Build & Test + CodeQL
+> success**; source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). **#880 is CLOSED
+> + `verified` + `status:done`** — QA picked it up and closed it the same lap (merged commit present →
+> Rule 1 clean; **no Orc post-merge handoff needed**). **PR #1021 landed** (`2280079`, HEAD,
+> **fixes #889** — `fix: stop 'Did you mean' suggesting unrelated commands for short verbs`,
+> `ai`→`wait`/`tap`→`app` no longer mis-suggested); auto-merge SQUASH (armed 23:22:23Z) **landed it
+> mid-cycle** — at sweep it was `MERGEABLE`/`BLOCKED` only on pending CI (no failed lanes) and the gate
+> went green during the cycle. Branch untouched throughout (Rule 4); source branch auto-deleted (only
+> `develop`+`main` remain, Rule 14 clean). **Post-merge handoff: Dev flipped #889 `status:in-progress`
+> → `status:done` itself** (base `develop` ≠ default branch → no auto-close) → **no Orc flip needed.**
+> Continues the same suggester-precision theme as #880. **`status:in-progress` now empty** → no in-flight
+> pickup, no abandoned work. **`status:done` = #889** (suggester short-verb precision, awaiting QA) **+
+> #972** (input-content guard, code-verified, close = human security sign-off, queued). **No open PRs.**
+> **Step 2 health: no abandoned work, nothing to close.** **Step 3
+> (drive product): no new issue filed (Rule 9)** — priority-honesty scan (`no:milestone` open): only the
+> `needs:ace` human-only items (#975/#969/#935/#915) + the parked Linux/cross-platform `help wanted`
+> community backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned actionable Dev work**; the
+> suggester-precision cluster shipped both halves this cycle (#880 verified+closed, #889 merged → awaiting
+> QA), the `-j` envelope classes stay structurally closed, and the recent test-honesty / cross-platform
+> cluster (#894/#999/#1010/#1016/#944/#946) has all shipped. Recognition hardening env-blocked (#932
+> Java/no JDK; #934 SAP/no install); distribution backlog sharp (#997/#930/#922/#928). Evidence in
+> `.work/reviews/2026-06-19-0723-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop`
+> CI: HEAD `2280079` (#1021) Build & Test + CodeQL **in progress, no failed lanes** (prior HEAD `ccb43ec`
+> #1020 Build & Test + CodeQL success) → **not red.** v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16,
+> <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 05:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
 > clean since 04:22 + one Orc post-merge handoff (#946 → status:done) → develop green, no open PRs,
 > status:in-progress now empty, no abandoned work, no new human-only item; needs:ace queue unchanged**.
 > Since the 04:22 refresh: **PR #1019 landed** (`99eed64`, HEAD, **fixes #946** — `test: assert browser

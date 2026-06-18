@@ -4,27 +4,30 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 05:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed clean +
-one Orc post-merge handoff → `develop` green, no open PRs, status:in-progress now empty, no new human-only
-item; the queue below is unchanged**. Since the 04:22 refresh: **PR #1019 landed** (`99eed64`, HEAD,
-**fixes #946** — `test: assert browser user-data-dir paths by parts, not slash substrings`: a test-only
-portability fix — `test_browser_launcher.py` asserted POSIX-slash substrings (`'a/b' in str(path)`) which
-fail on a real Windows host where `WindowsPath` is `\`-separated, so the tests now assert on path *parts*;
-production code is correct, same honest-test class as #999/#910/#867). Merged 21:14:14Z, Build & Test +
-CodeQL success; source branch auto-deleted (Rule 14 clean). **Post-merge handoff:** #946 was still
-`status:in-progress` (PR didn't flip it; base `develop` ≠ default → no auto-close) → Orc flipped it to
-**status:done** for QA. `status:in-progress` = **empty** (no in-flight pickup, no abandoned work).
-`status:done` = **#946** (browser-launcher path portability test, awaiting QA) **+ #972** (input-content
-guard, code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)** — the `-j` envelope
-classes stay structurally closed and the recent test-honesty / cross-platform-portability cluster
-(#894/#999/#1010/#1016/#944/#946) has all shipped; recognition hardening env-blocked (#932/#934);
-distribution backlog sharp (#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues
-(only the `needs:ace` items below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975**
-(ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your security sign-off;
-**#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `99eed64` (#1019)
-**Build & Test + CodeQL success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
-your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-19 07:23 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed clean
+→ `develop` green, no open PRs, status:in-progress empty, no abandoned work, no new human-only item; the
+queue below is unchanged**. Since the 05:23 refresh: **PR #1020 landed** (`ccb43ec`, **fixes #880** —
+`fix: suggest correct command for subgroup/renamed intent verbs`: the CLI typo-suggester now resolves
+subgroup commands like `launch`/`open`/`screenshot` so first-time users don't hit a dead end). Merged
+22:33Z, Build & Test + CodeQL success; source branch auto-deleted (Rule 14 clean). **#880 is CLOSED +
+`verified` + `status:done`** — QA picked it up and closed it the same lap (Rule 1 clean; no Orc handoff
+needed). **PR #1021 landed** (`2280079`, HEAD, **fixes #889** — stop "Did you mean" suggesting unrelated
+commands for short verbs, `ai`→`wait`/`tap`→`app`); auto-merge SQUASH (armed 23:22:23Z) landed it
+mid-cycle once CI went green; branch untouched throughout (Rule 4); source branch auto-deleted (Rule 14
+clean). **Dev did the post-merge handoff itself** → #889 `status:in-progress` → `status:done` (no Orc flip
+needed). Same suggester-precision theme as #880. `status:in-progress` = **empty**. `status:done` = **#889**
+(suggester short-verb precision, awaiting QA) **+ #972** (input-content guard, code-verified, awaiting your
+security sign-off). **No new
+issue filed (Rule 9)** — the suggester cluster is converging on its own, the `-j` envelope classes stay
+structurally closed, the recent test-honesty / cross-platform cluster (#894/#999/#1010/#1016/#944/#946)
+has all shipped; recognition hardening env-blocked (#932/#934); distribution backlog sharp
+(#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues (only the `needs:ace` items
+below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable)
++ **#972** (close the input-content safety guard) — both your security sign-off; **#915 recommended for
+closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
+#975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `2280079` (#1021) **Build & Test + CodeQL
+in progress, no failed lanes** (prior `ccb43ec` #1020 success) → **develop not red.** v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
