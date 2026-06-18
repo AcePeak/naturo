@@ -9,7 +9,7 @@ Phase 4.7 — Agent-friendly Error Messages.
 
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import sys
 from typing import Any, Callable, Iterable, NoReturn, Optional, TypeVar
 
@@ -37,7 +37,7 @@ def success_envelope(collection_key: str, items: Iterable[Any]) -> dict[str, Any
 
     Returns:
         A dict ``{"success": True, collection_key: [...], "count": len([...])}``,
-        with keys in that exact order, ready for ``json.dumps``.
+        with keys in that exact order, ready for ``json_dumps``.
     """
     materialised = list(items)
     return {"success": True, collection_key: materialised, "count": len(materialised)}
@@ -353,7 +353,7 @@ def json_error(
     if extra:
         error.update(extra)
 
-    return json.dumps({"success": False, "error": error})
+    return json_dumps({"success": False, "error": error})
 
 
 def json_error_from_exception(exc: Exception) -> str:
@@ -371,7 +371,7 @@ def json_error_from_exception(exc: Exception) -> str:
     if isinstance(exc, NaturoError):
         # to_json_response() already yields the canonical six-key envelope, so the
         # exception path and the raw-code path emit an identical shape (#884).
-        return json.dumps(exc.to_json_response())
+        return json_dumps(exc.to_json_response())
 
     return json_error("UNKNOWN_ERROR", str(exc))
 

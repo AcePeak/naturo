@@ -6,6 +6,7 @@ for screenshot-based regression testing.
 from __future__ import annotations
 
 import json
+from naturo.cli._jsonio import json_dumps
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -66,7 +67,7 @@ def visual_baseline(name: str, from_path: str, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps({"success": True, "name": name, "path": str(path)}))
+        click.echo(json_dumps({"success": True, "name": name, "path": str(path)}))
     else:
         click.echo(f"Baseline saved: {name}")
         click.echo(f"Path: {path}")
@@ -120,7 +121,7 @@ def visual_compare(name: str, current: str, threshold: float,
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps(result.to_dict()))
+        click.echo(json_dumps(result.to_dict()))
     else:
         status = "PASS" if result.match else "FAIL"
         color = "" if result.match else "! "
@@ -166,7 +167,7 @@ def visual_diff(image1: str, image2: str, output: Optional[str],
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps(result.to_dict()))
+        click.echo(json_dumps(result.to_dict()))
     else:
         status = "MATCH" if result.match else "DIFFER"
         click.echo(f"[{status}] Similarity: {result.similarity:.1%}")
@@ -188,7 +189,7 @@ def visual_list(json_output: bool):
     baselines = list_baselines()
 
     if json_output:
-        click.echo(json.dumps(success_envelope("baselines", baselines)))
+        click.echo(json_dumps(success_envelope("baselines", baselines)))
         return
 
     if not baselines:
@@ -230,7 +231,7 @@ def visual_delete(name: str, force: bool, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps({"success": True, "name": name}))
+        click.echo(json_dumps({"success": True, "name": name}))
     else:
         click.echo(f"Deleted baseline: {name}")
 
@@ -327,7 +328,7 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
             data["errors"] = errors
         if html_error:
             data["html_error"] = html_error
-        click.echo(json.dumps(data))
+        click.echo(json_dumps(data))
     else:
         click.echo(f"\nResults: {report.passed} passed, {report.failed} failed"
                     + (f", {len(skipped)} skipped" if skipped else ""))
@@ -365,7 +366,7 @@ def visual_update(name: str, from_path: str, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps({"success": True, "name": name, "path": str(path)}))
+        click.echo(json_dumps({"success": True, "name": name, "path": str(path)}))
     else:
         click.echo(f"Baseline updated: {name}")
         click.echo(f"Path: {path}")
@@ -403,7 +404,7 @@ def visual_update_all(from_dir: str, json_output: bool):
             skipped.append(name)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "updated": updated,
             "skipped": skipped,
@@ -485,7 +486,7 @@ def visual_suite(suite_path: str, output: Optional[str], json_output: bool):
                 click.echo(f"Error generating report: {e}", err=True)
 
     if json_output:
-        click.echo(json.dumps(report.to_dict()))
+        click.echo(json_dumps(report.to_dict()))
     else:
         click.echo(f"\nResults: {report.passed} passed, {report.failed} failed")
 

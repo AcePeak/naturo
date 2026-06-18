@@ -12,7 +12,7 @@ Examples:
 
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 import sys
 
 import click
@@ -28,7 +28,7 @@ def _get_backend(json_output: bool = False):
         return get_backend()
     except Exception as exc:
         if json_output:
-            click.echo(_json.dumps({
+            click.echo(json_dumps({
                 "success": False,
                 "error": "BACKEND_ERROR",
                 "message": str(exc),
@@ -77,7 +77,7 @@ def get(fmt: str, json_output: bool) -> None:
         return
 
     if json_output:
-        click.echo(_json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "action": "clipboard_get",
             "format": fmt,
@@ -112,7 +112,7 @@ def set(text: str, json_output: bool) -> None:
         return
 
     if json_output:
-        click.echo(_json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "action": "clipboard_set",
             "length": len(text),
@@ -140,7 +140,7 @@ def clear(json_output: bool) -> None:
         return
 
     if json_output:
-        click.echo(_json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "action": "clipboard_clear",
         }))
@@ -169,7 +169,7 @@ def info(json_output: bool) -> None:
         return
 
     if json_output:
-        click.echo(_json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "action": "clipboard_info",
             **clip_info,

@@ -5,7 +5,7 @@ that wrap the recording engine in naturo/recording.py.
 """
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import shlex
 import sys
 from datetime import datetime
@@ -82,7 +82,7 @@ def record_start(name: str, json_output: bool):
     set_active_recording(rec)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "recording_id": rec_id,
             "name": rec_name,
@@ -121,7 +121,7 @@ def record_stop(json_output: bool):
     set_active_recording(None)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "recording_id": active.recording_id,
             "name": active.name,
@@ -176,7 +176,7 @@ def record_play(recording_id: str, speed: float, dry_run: bool, json_output: boo
     skipped_count = sum(1 for r in results if r["status"] == "skipped")
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": error_count == 0,
             "recording_id": recording_id,
             "total_steps": len(results),
@@ -214,7 +214,7 @@ def record_list(json_output: bool):
                 "name": active.name,
                 "step_count": len(active.steps),
             }
-        click.echo(json.dumps(output))
+        click.echo(json_dumps(output))
     else:
         if active:
             click.echo(f"[RECORDING] {active.recording_id} — {active.name} "
@@ -255,7 +255,7 @@ def record_show(recording_id: str, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps(rec.to_dict()))
+        click.echo(json_dumps(rec.to_dict()))
     else:
         click.echo(f"Recording: {rec.recording_id}")
         click.echo(f"Name:      {rec.name}")
@@ -302,7 +302,7 @@ def record_delete(recording_id: str, force: bool, json_output: bool):
 
     deleted = delete_recording(recording_id)
     if json_output:
-        click.echo(json.dumps({"success": deleted, "recording_id": recording_id}))
+        click.echo(json_dumps({"success": deleted, "recording_id": recording_id}))
     else:
         click.echo(f"Deleted: {recording_id}")
 
@@ -345,14 +345,14 @@ def record_export(recording_id: str, fmt: str, output_path: str | None,
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True, "path": output_path, "format": fmt,
             }))
         else:
             click.echo(f"Exported to {output_path} ({fmt})")
     else:
         if json_output:
-            click.echo(json.dumps({"success": True, "format": fmt, "content": content}))
+            click.echo(json_dumps({"success": True, "format": fmt, "content": content}))
         else:
             click.echo(content)
 
@@ -360,7 +360,7 @@ def record_export(recording_id: str, fmt: str, output_path: str | None,
 def _export_recording(rec: Recording, fmt: str) -> str:
     """Generate export content for a recording."""
     if fmt == "json":
-        return json.dumps(rec.to_dict(), indent=2, ensure_ascii=False)
+        return json_dumps(rec.to_dict(), indent=2, ensure_ascii=False)
 
     if fmt == "python":
         lines = [

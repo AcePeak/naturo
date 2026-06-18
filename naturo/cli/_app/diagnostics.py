@@ -1,7 +1,7 @@
 """App detection and diagnostics — inspect command."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import sys
 
 import click
@@ -107,7 +107,7 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output) -> None:
                     f"Connect via RDP or Console to interact with desktop apps."
                 )
                 if json_output:
-                    click.echo(json.dumps({
+                    click.echo(json_dumps({
                         "success": False,
                         "error": {
                             "code": "NO_DESKTOP_SESSION",
@@ -154,7 +154,7 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output) -> None:
     )
 
     if json_output:
-        click.echo(json.dumps({"success": True, **result.to_dict()}, indent=2))
+        click.echo(json_dumps({"success": True, **result.to_dict()}, indent=2))
     else:
         _print_inspect_result(result)
 
@@ -239,7 +239,7 @@ def _inspect_all_windows(quick: bool, json_output: bool) -> None:
                     pass  # skip windows that fail detection
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "apps": [r.to_dict() for r in results],
             "count": len(results),

@@ -1,7 +1,7 @@
 """App lifecycle commands — launch, quit, relaunch, list, find."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import os
 import sys
 
@@ -62,7 +62,7 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
             no_focus=no_focus,
         )
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "process": {
                     "pid": info.pid,
@@ -76,7 +76,7 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
             _safe_echo(f"Launched {info.name} (PID: {info.pid})")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -135,12 +135,12 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
     try:
         quit_app(name=name, pid=pid, force=force, timeout=timeout)
         if json_output:
-            click.echo(json.dumps({"success": True, "message": f"Quit {name or pid}"}))
+            click.echo(json_dumps({"success": True, "message": f"Quit {name or pid}"}))
         else:
             _safe_echo(f"Quit {name or pid}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -182,7 +182,7 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) ->
     try:
         info = relaunch_app(name=name, wait_until_ready=wait_until_ready, timeout=timeout)
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "process": {
                     "pid": info.pid,
@@ -196,7 +196,7 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) ->
             _safe_echo(f"Relaunched {info.name} (PID: {info.pid})")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -336,7 +336,7 @@ def app_list(ctx, show_all, json_output) -> None:
                 for a in background_apps
             ]
             result["total_count"] = len(windows) + len(background_apps)
-        click.echo(json.dumps(result, indent=2))
+        click.echo(json_dumps(result, indent=2))
     else:
         from naturo.cli.table import print_table
 
@@ -395,7 +395,7 @@ def app_find(ctx, name, pid, json_output) -> None:
     proc = find_process(name=name, pid=pid)
     if proc:
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "process": {
                     "pid": proc.pid,
@@ -409,7 +409,7 @@ def app_find(ctx, name, pid, json_output) -> None:
             _safe_echo(f"Found: {proc.name} (PID: {proc.pid})")
     else:
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": False,
                 "process": None,
                 "error": {

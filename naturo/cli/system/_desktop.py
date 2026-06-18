@@ -17,7 +17,7 @@ Examples:
 
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 
 import click as _click
 
@@ -84,7 +84,7 @@ def desktop_list(json_output: bool) -> None:
         desktops = backend.virtual_desktop_list()
 
         if json_output:
-            _click.echo(_json.dumps({
+            _click.echo(json_dumps({
                 "success": True,
                 "desktops": desktops,
                 "count": len(desktops),
@@ -135,7 +135,7 @@ def desktop_switch(index: int, json_output: bool) -> None:
         result = backend.virtual_desktop_switch(index)
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             _click.echo(f"Switched to desktop {result['index']}: {result['name']}")
 
@@ -170,7 +170,7 @@ def desktop_create(name: str | None, json_output: bool) -> None:
         result = backend.virtual_desktop_create(name=name)
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             _click.echo(f"Created desktop {result['index']}: {result['name']}")
 
@@ -213,7 +213,7 @@ def desktop_close(index: int | None, json_output: bool) -> None:
         result = backend.virtual_desktop_close(index=index)
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             _click.echo(f"Closed desktop {result['index']}: {result['name']}")
 
@@ -278,7 +278,7 @@ def desktop_move_window(
         )
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             target = result.get("target_name", f"Desktop {index}")
             _click.echo(f"Moved window to {target}")

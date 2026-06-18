@@ -1,7 +1,7 @@
 """Window state management — focus, close, minimize, maximize, restore, move, windows."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import sys
 
 import click
@@ -60,7 +60,7 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
         backend = get_backend()
         backend.focus_window(**_resolve_window_target(name, window_title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "focus"}))
+            click.echo(json_dumps({"success": True, "action": "focus"}))
         else:
             _safe_echo(f"Focused window: {name or window_title or hwnd}")
     except NaturoError as exc:
@@ -112,7 +112,7 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> No
         kwargs["force"] = force
         backend.close_window(**kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "close", "force": force}))
+            click.echo(json_dumps({"success": True, "action": "close", "force": force}))
         else:
             _safe_echo(f"Closed window: {name or window_title or hwnd}")
     except NaturoError as exc:
@@ -156,7 +156,7 @@ def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
         backend = get_backend()
         backend.minimize_window(**_resolve_window_target(name, window_title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "minimize"}))
+            click.echo(json_dumps({"success": True, "action": "minimize"}))
         else:
             _safe_echo(f"Minimized window: {name or window_title or hwnd}")
     except NaturoError as exc:
@@ -200,7 +200,7 @@ def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
         backend = get_backend()
         backend.maximize_window(**_resolve_window_target(name, window_title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "maximize"}))
+            click.echo(json_dumps({"success": True, "action": "maximize"}))
         else:
             _safe_echo(f"Maximized window: {name or window_title or hwnd}")
     except NaturoError as exc:
@@ -244,7 +244,7 @@ def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
         backend = get_backend()
         backend.restore_window(**_resolve_window_target(name, window_title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "restore"}))
+            click.echo(json_dumps({"success": True, "action": "restore"}))
         else:
             _safe_echo(f"Restored window: {name or window_title or hwnd}")
     except NaturoError as exc:
@@ -354,7 +354,7 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) ->
             msg = f"Resized window to {width}x{height}"
 
         if json_output:
-            click.echo(json.dumps(result_data))
+            click.echo(json_dumps(result_data))
         else:
             _safe_echo(msg)
     except NaturoError as exc:
@@ -407,7 +407,7 @@ def app_windows(ctx, name, pid, json_output) -> None:
             windows = [w for w in windows if w.pid == pid]
 
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "windows": [
                     {

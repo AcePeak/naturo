@@ -17,7 +17,7 @@ Examples:
 
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -92,7 +92,7 @@ def detect(app, hwnd, app_id, json_output) -> None:
                 "dialogs": [d.to_dict() for d in dialogs],
                 "count": len(dialogs),
             }
-            click.echo(_json.dumps(result))
+            click.echo(json_dumps(result))
         else:
             if not dialogs:
                 click.echo("No dialogs detected.")
@@ -176,7 +176,7 @@ def accept(app, hwnd, app_id, json_output) -> None:
         backend.click(x=accept_btn.x, y=accept_btn.y)
 
         if json_output:
-            click.echo(_json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "dialog_title": target_dialog.title,
                 "button_clicked": accept_btn.name,
@@ -250,7 +250,7 @@ def dismiss(app, hwnd, app_id, json_output) -> None:
         backend.click(x=dismiss_btn.x, y=dismiss_btn.y)
 
         if json_output:
-            click.echo(_json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "dialog_title": target_dialog.title,
                 "button_clicked": dismiss_btn.name,
@@ -303,7 +303,7 @@ def click_button(button, app, hwnd, app_id, json_output) -> None:
         result = backend.dialog_click_button(button=button, app=app, hwnd=hwnd)
 
         if json_output:
-            click.echo(_json.dumps({"success": True, **result}))
+            click.echo(json_dumps({"success": True, **result}))
         else:
             click.echo(
                 f"Clicked '{result['button_clicked']}' in dialog '{result['dialog_title']}'"
@@ -369,7 +369,7 @@ def dialog_type(text, do_accept, app, hwnd, app_id, json_output) -> None:
             out = {"success": True, **result}
             if accepted_button:
                 out["accepted_with"] = accepted_button
-            click.echo(_json.dumps(out))
+            click.echo(json_dumps(out))
         else:
             msg = f"Typed '{text}' in dialog '{result['dialog_title']}'"
             if accepted_button:

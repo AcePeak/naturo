@@ -14,7 +14,7 @@ Commands
 """
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import os
 from typing import Optional
 
@@ -82,7 +82,7 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
     if token is None:
         if json_output:
             msg = "Token required when using --json. Pass --token <value>."
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
             raise SystemExit(1)
 
         if mode == "api_key":
@@ -99,7 +99,7 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
     if not token:
         msg = "Token cannot be empty."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -112,7 +112,7 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
     save_credentials(creds)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "provider": "anthropic",
             "auth_mode": mode,
@@ -156,7 +156,7 @@ def config_show(json_output: bool) -> None:
             }
         for var, val in env_vars.items():
             result["env"][var] = "set" if val else "not set"
-        click.echo(json.dumps(result, indent=2))
+        click.echo(json_dumps(result, indent=2))
     else:
         click.echo(f"Credentials: {CREDENTIALS_PATH}")
         click.echo("")
@@ -198,7 +198,7 @@ def config_clear(provider: str, yes: bool, json_output: bool) -> None:
     if not targets:
         msg = f"No stored credentials for '{provider}'."
         if json_output:
-            click.echo(json.dumps({"success": True, "cleared": [], "message": msg}))
+            click.echo(json_dumps({"success": True, "cleared": [], "message": msg}))
         else:
             click.echo(msg)
         return
@@ -213,6 +213,6 @@ def config_clear(provider: str, yes: bool, json_output: bool) -> None:
     save_credentials(creds)
 
     if json_output:
-        click.echo(json.dumps({"success": True, "cleared": targets}))
+        click.echo(json_dumps({"success": True, "cleared": targets}))
     else:
         click.echo(f"Cleared credentials: {', '.join(targets)}")

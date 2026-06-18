@@ -14,7 +14,7 @@ Examples:
 
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 
 import click as _click
 
@@ -62,7 +62,7 @@ def taskbar_list(json_output) -> None:
         items = backend.taskbar_list()
 
         if json_output:
-            _click.echo(_json.dumps({
+            _click.echo(json_dumps({
                 "success": True,
                 "items": items,
                 "count": len(items),
@@ -107,7 +107,7 @@ def taskbar_click(name, json_output) -> None:
         result = backend.taskbar_click(name=name)
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             _click.echo(f"Clicked taskbar item '{result['name']}'")
 

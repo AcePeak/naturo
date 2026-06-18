@@ -5,7 +5,7 @@ Each command targets a window via ``--app``, ``--title``, or ``--hwnd``.
 """
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import sys
 from typing import Optional
 
@@ -116,12 +116,12 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output) -> None:
         backend = _get_backend()
         backend.focus_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "focus"}))
+            click.echo(json_dumps({"success": True, "action": "focus"}))
         else:
             _safe_echo(f"Focused window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -172,12 +172,12 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output) -> None:
         kwargs["force"] = force
         backend.close_window(**kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "close", "force": force}))
+            click.echo(json_dumps({"success": True, "action": "close", "force": force}))
         else:
             _safe_echo(f"Closed window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -224,12 +224,12 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
         backend = _get_backend()
         backend.minimize_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "minimize"}))
+            click.echo(json_dumps({"success": True, "action": "minimize"}))
         else:
             _safe_echo(f"Minimized window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -276,12 +276,12 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
         backend = _get_backend()
         backend.maximize_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "maximize"}))
+            click.echo(json_dumps({"success": True, "action": "maximize"}))
         else:
             _safe_echo(f"Maximized window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -328,12 +328,12 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output) -> None:
         backend = _get_backend()
         backend.restore_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "restore"}))
+            click.echo(json_dumps({"success": True, "action": "restore"}))
         else:
             _safe_echo(f"Restored window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -388,12 +388,12 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output) -> None:
         kwargs = _resolve_target(app, title, hwnd)
         backend.move_window(x=x, y=y, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "move", "x": x, "y": y}))
+            click.echo(json_dumps({"success": True, "action": "move", "x": x, "y": y}))
         else:
             _safe_echo(f"Moved window to ({x}, {y})")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -457,12 +457,12 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output) -> None:
         kwargs = _resolve_target(app, title, hwnd)
         backend.resize_window(width=width, height=height, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "resize", "width": width, "height": height}))
+            click.echo(json_dumps({"success": True, "action": "resize", "width": width, "height": height}))
         else:
             _safe_echo(f"Resized window to {width}x{height}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -537,12 +537,12 @@ def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output) 
         kwargs = _resolve_target(app, title, hwnd)
         backend.set_bounds(x=x, y=y, width=width, height=height, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}))
+            click.echo(json_dumps({"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}))
         else:
             _safe_echo(f"Set bounds: ({x}, {y}) {width}x{height}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -578,7 +578,7 @@ def window_list(ctx, app, pid, json_output) -> None:
             windows = [w for w in windows if w.pid == pid]
 
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "windows": [
                     {
@@ -604,7 +604,7 @@ def window_list(ctx, app, pid, json_output) -> None:
                 click.echo(f"\n{len(windows)} windows")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)

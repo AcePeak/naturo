@@ -15,7 +15,7 @@ Examples:
 
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 
 import click as _click
 
@@ -63,7 +63,7 @@ def tray_list(json_output) -> None:
         icons = backend.tray_list()
 
         if json_output:
-            _click.echo(_json.dumps({
+            _click.echo(json_dumps({
                 "success": True,
                 "icons": icons,
                 "count": len(icons),
@@ -113,7 +113,7 @@ def tray_click(name, right_click, double_click, json_output) -> None:
         result = backend.tray_click(name=name, button=button, double=double_click)
 
         if json_output:
-            _click.echo(_json.dumps({"success": True, **result}))
+            _click.echo(json_dumps({"success": True, **result}))
         else:
             action = "Double-clicked" if double_click else ("Right-clicked" if right_click else "Clicked")
             _click.echo(f"{action} tray icon '{result['name']}'")
