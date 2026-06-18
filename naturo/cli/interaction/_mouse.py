@@ -91,45 +91,13 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         target_label = f"({x}, {y})"
     elif on_text or element_id:
         target_id = on_text or element_id
-        import re as _re
-        if _re.fullmatch(r"e\d+", target_id):
-            # Resolve eN ref from most recent `see` snapshot
-            from naturo.snapshot import get_snapshot_manager
-            mgr = get_snapshot_manager()
-            resolved = mgr.resolve_ref(target_id, app_name=app)
-            if resolved:
-                x, y = resolved[0], resolved[1]
-                target_label = target_id
-            else:
-                _common._json_err(
-                    f"Element ref '{target_id}' not found. Run 'naturo see' first to "
-                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
-                    json_output,
-                    code="REF_NOT_FOUND",
-                )
-                return
-        else:
-            # Text-based element lookup — find element center via backend
-            try:
-                elem = backend.find_element(target_id)
-                if elem:
-                    x = elem.x + elem.width // 2
-                    y = elem.y + elem.height // 2
-                    target_label = target_id
-                else:
-                    _common._json_err(
-                        f"Element '{target_id}' not found.",
-                        json_output,
-                        code="ELEMENT_NOT_FOUND",
-                    )
-                    return
-            except Exception as exc:
-                _common._json_err(
-                    f"Failed to find element '{target_id}': {exc}",
-                    json_output,
-                    code="ELEMENT_NOT_FOUND",
-                )
-                return
+        resolved = _common._resolve_text_or_ref_target(
+            target_id, backend, app, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
+        target_label = target_id
 
     try:
         backend.scroll(direction=direction, amount=amount, x=x, y=y, smooth=smooth)
@@ -430,6 +398,9 @@ def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overs
     \b
     Examples:
       naturo move --coords 500 300
+      naturo move --to "Save"
+      naturo move --to e42
+      naturo move --id "button_ok"
       naturo move --selector 'app://*/Button[@name="Save"]'
     """
     # (#593) Resolve --app-id to app/hwnd/pid before any other logic
@@ -439,7 +410,7 @@ def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overs
 
     backend = _common._get_backend(json_output)
 
-    # Resolve target: --selector > --coords
+    # Resolve target: --selector > --coords > --to/--id (text or eN ref)
     x, y = None, None
 
     if selector:
@@ -451,8 +422,20 @@ def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overs
         x, y = resolved
     elif coords:
         x, y = coords
+    elif to_text or element_id:
+        target_id = to_text or element_id
+        resolved = _common._resolve_text_or_ref_target(
+            target_id, backend, app, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
     else:
-        _common._json_err("Specify --selector, --coords X Y, or --to", json_output, code="INVALID_INPUT")
+        _common._json_err(
+            "Specify --selector, --coords X Y, --to TEXT, or --id",
+            json_output,
+            code="INVALID_INPUT",
+        )
         return
 
     try:

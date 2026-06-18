@@ -409,6 +409,126 @@ class TestMoveCLIValidation:
         assert result.exit_code != 0
 
 
+class TestMoveTargetResolution:
+    """move resolves --to/--id element targets, not just --coords/--selector (#1007).
+
+    ``move`` advertises and accepts ``--to <text>`` and ``--id <automation-id>``,
+    but its resolver used to branch only on ``--selector``/``--coords`` and fall
+    through to ``INVALID_INPUT: "Specify ... --to"`` — telling the user to pass
+    ``--to`` when they just did. These tests pin that both options now drive the
+    same element-ref → centre-point resolution the sibling ``scroll`` command uses.
+    """
+
+    def test_move_to_text_resolves_to_element_center(self, runner):
+        """``move --to <text>`` finds the element and moves to its centre."""
+        from unittest.mock import patch, MagicMock
+
+        element = MagicMock(x=100, y=200, width=40, height=20)
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = element
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["move", "--to", "Save"])
+        assert result.exit_code == 0, result.output
+        mock_backend.find_element.assert_called_once_with("Save")
+        mock_backend.move_mouse.assert_called_once()
+        args, kwargs = mock_backend.move_mouse.call_args
+        # Centre of (100,200) 40x20 → (120, 210)
+        assert args[0] == 120
+        assert args[1] == 210
+
+    def test_move_id_resolves_to_element_center(self, runner):
+        """``move --id <automation-id>`` resolves the same way as ``--to``."""
+        from unittest.mock import patch, MagicMock
+
+        element = MagicMock(x=10, y=10, width=20, height=20)
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = element
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["move", "--id", "btn_ok"])
+        assert result.exit_code == 0, result.output
+        mock_backend.find_element.assert_called_once_with("btn_ok")
+        mock_backend.move_mouse.assert_called_once()
+        args, _ = mock_backend.move_mouse.call_args
+        assert args[0] == 20
+        assert args[1] == 20
+
+    def test_move_to_missing_element_yields_element_not_found(self, runner):
+        """A missing ``--to`` target yields ELEMENT_NOT_FOUND, never INVALID_INPUT.
+
+        The old bug returned ``INVALID_INPUT: "Specify --selector, --coords X Y,
+        or --to"`` for every ``--to`` value because the option was never read.
+        """
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = None
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["move", "--to", "does_not_exist", "-j"])
+        assert result.exit_code != 0
+        payload = json.loads(result.output)
+        assert payload["success"] is False
+        error = payload["error"]
+        assert error["code"] == "ELEMENT_NOT_FOUND"
+        assert error["category"] == "automation"
+        assert error["recoverable"] is True
+        mock_backend.move_mouse.assert_not_called()
+
+    def test_move_id_missing_element_yields_element_not_found(self, runner):
+        """A missing ``--id`` target yields ELEMENT_NOT_FOUND, never INVALID_INPUT."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        mock_backend.find_element.return_value = None
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["move", "--id", "ghost", "-j"])
+        assert result.exit_code != 0
+        error = json.loads(result.output)["error"]
+        assert error["code"] == "ELEMENT_NOT_FOUND"
+        mock_backend.move_mouse.assert_not_called()
+
+    def test_move_to_eN_ref_resolves_via_snapshot(self, runner):
+        """``move --to eN`` resolves an element ref from the latest snapshot."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        mock_mgr = MagicMock()
+        mock_mgr.resolve_ref.return_value = (333, 444, "snap1")
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
+            result = runner.invoke(main, ["move", "--to", "e7"])
+        assert result.exit_code == 0, result.output
+        mock_mgr.resolve_ref.assert_called_once()
+        mock_backend.find_element.assert_not_called()
+        args, _ = mock_backend.move_mouse.call_args
+        assert args[0] == 333
+        assert args[1] == 444
+
+    def test_move_stale_eN_ref_yields_ref_not_found(self, runner):
+        """A stale ``move --to eN`` ref yields REF_NOT_FOUND, not a move."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        mock_mgr = MagicMock()
+        mock_mgr.resolve_ref.return_value = None
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend), \
+             patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
+            result = runner.invoke(main, ["move", "--to", "e99", "-j"])
+        assert result.exit_code != 0
+        assert json.loads(result.output)["error"]["code"] == "REF_NOT_FOUND"
+        mock_backend.move_mouse.assert_not_called()
+
+    def test_move_no_target_still_reports_invalid_input(self, runner):
+        """With no target flag at all, move still reports INVALID_INPUT."""
+        from unittest.mock import patch, MagicMock
+
+        mock_backend = MagicMock()
+        with patch("naturo.cli.interaction._common._get_backend", return_value=mock_backend):
+            result = runner.invoke(main, ["move", "-j"])
+        assert result.exit_code != 0
+        assert json.loads(result.output)["error"]["code"] == "INVALID_INPUT"
+        mock_backend.move_mouse.assert_not_called()
+
+
 # ── Scroll delta computation logic ────────────────────────────────────────────
 
 

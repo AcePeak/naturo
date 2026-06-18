@@ -614,6 +614,70 @@ def _resolve_selector_target(
     return (x, y)
 
 
+def _resolve_text_or_ref_target(
+    target_id: str,
+    backend,
+    app: Optional[str],
+    json_output: bool,
+) -> Optional[tuple]:
+    """Resolve an element text / automation-id / ``eN`` ref to (x, y) coordinates.
+
+    Shared by ``scroll`` and ``move`` for their ``--on``/``--to`` (text) and
+    ``--id`` targeting. An ``eN`` token is resolved against the most recent
+    ``see`` snapshot; any other string is looked up by name/automation-id through
+    the backend's element search and reduced to the matched element's centre.
+
+    On failure this emits the canonical error envelope — ``REF_NOT_FOUND`` for a
+    stale ``eN`` ref, ``ELEMENT_NOT_FOUND`` for a missing text/id target — and
+    terminates the process (via :func:`_json_err`), so callers treat a ``None``
+    return as "stop".
+
+    Args:
+        target_id: The element token — an ``eN`` snapshot ref, visible text, or
+            automation ID.
+        backend: The platform backend instance.
+        app: Application name filter, used when resolving an ``eN`` ref.
+        json_output: Whether to emit a JSON error envelope on failure.
+
+    Returns:
+        ``(x, y)`` centre coordinates of the resolved element, or ``None`` on
+        failure (after an error has already been emitted).
+    """
+    import re as _re
+    if _re.fullmatch(r"e\d+", target_id):
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
+        resolved = mgr.resolve_ref(target_id, app_name=app)
+        if resolved:
+            return resolved[0], resolved[1]
+        _json_err(
+            f"Element ref '{target_id}' not found. Run 'naturo see' first to "
+            f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+            json_output,
+            code="REF_NOT_FOUND",
+        )
+        return None
+
+    # Text / automation-id lookup — find element center via backend.
+    try:
+        elem = backend.find_element(target_id)
+    except Exception as exc:
+        _json_err(
+            f"Failed to find element '{target_id}': {exc}",
+            json_output,
+            code="ELEMENT_NOT_FOUND",
+        )
+        return None
+    if elem:
+        return elem.x + elem.width // 2, elem.y + elem.height // 2
+    _json_err(
+        f"Element '{target_id}' not found.",
+        json_output,
+        code="ELEMENT_NOT_FOUND",
+    )
+    return None
+
+
 # ── Shared helper ────────────────────────────────────────────────────────────
 
 
