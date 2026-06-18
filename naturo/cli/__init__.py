@@ -51,6 +51,21 @@ from naturo.cli.recording_cmd import record
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 
 
+# Accept ``-h`` as the POSIX synonym for ``--help`` (#899). Declaring it on the
+# root group lets child contexts inherit ``help_option_names`` *when they are
+# reached through the root*. That inheritance alone is not enough, though:
+# Click (>=8.1.8) lazily builds the help option from the first context a command
+# is invoked under and then caches it on ``Command._help_option`` forever. If a
+# command is ever first invoked through a parentless context — e.g. a test doing
+# ``CliRunner().invoke(subcommand, ["--help"])`` — that context falls back to the
+# default ``["--help"]`` and the command caches a help option without ``-h``.
+# To make ``-h`` reliable on every command regardless of invocation order, we
+# also stamp ``help_option_names`` onto each command's own ``context_settings``
+# (see ``_apply_short_help``), so even a parentless context resolves ``-h``.
+HELP_OPTION_NAMES = ["-h", "--help"]
+CONTEXT_SETTINGS = {"help_option_names": HELP_OPTION_NAMES}
+
+
 def _patch_json_flag(cmd) -> None:
     """Patch --json/-j flag on a Click command to inherit from parent ctx.obj['json'].
 
@@ -79,15 +94,32 @@ def _patch_json_flag(cmd) -> None:
             break
 
 
+def _apply_short_help(cmd: click.Command) -> None:
+    """Ensure ``-h`` works as ``--help`` on ``cmd`` regardless of invocation order.
+
+    Stamps ``help_option_names`` onto the command's own ``context_settings`` so
+    that even a parentless context (which would otherwise default to
+    ``["--help"]``) resolves ``-h``, and clears any help option Click may have
+    already cached so it is rebuilt with the new names (#899).
+    """
+    cmd.context_settings["help_option_names"] = list(HELP_OPTION_NAMES)
+    # Click caches the help option on first use; drop the cache so the next
+    # invocation rebuilds it from the names above. ``_help_option`` is absent on
+    # older Click versions that do not cache, so guard with ``hasattr``.
+    if hasattr(cmd, "_help_option"):
+        cmd._help_option = None
+
+
 def _patch_all_commands(group: click.Command) -> None:
-    """Recursively patch all commands under a group for --json propagation."""
+    """Recursively patch all commands under a group for --json and ``-h`` support."""
     if isinstance(group, click.Group):
         for cmd in group.commands.values():
             _patch_all_commands(cmd)
     _patch_json_flag(group)
+    _apply_short_help(group)
 
 
-@click.group(cls=FuzzyGroup)
+@click.group(cls=FuzzyGroup, context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, prog_name="naturo")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose logging")
@@ -397,7 +429,7 @@ def run() -> None:
         if "--version" in argv:
             click.echo(json.dumps({"success": True, "version": __version__}))
             sys.exit(0)
-        if "--help" in argv:
+        if "--help" in argv or "-h" in argv:
             click.echo(_root_help_json())
             sys.exit(0)
 
