@@ -65,6 +65,29 @@ class TestShortHelpFlag:
         result = runner.invoke(main, ["--help"])
         assert "-h, --help" in result.output
 
+    @pytest.mark.parametrize("argv", [["click"], ["type"], ["app", "launch"]])
+    def test_short_flag_survives_standalone_help_caching(self, argv):
+        """``-h`` works even after a command is first invoked parentless.
+
+        Click (>=8.1.8) caches the help option on first use, derived from the
+        first context the command runs under. A parentless invocation — e.g.
+        ``CliRunner().invoke(subcommand, ["--help"])`` elsewhere in the suite —
+        defaults to ``["--help"]`` and would cache a help option without ``-h``,
+        making a later ``<cmd> -h`` fail with exit 2. This pins that the
+        per-command ``help_option_names`` stamping defeats that order-dependence
+        (regression for the CI-only failure on click 8.4.1; see #899).
+        """
+        runner = CliRunner()
+        # Resolve and pollute the leaf command standalone (parentless context).
+        leaf = main
+        for token in argv:
+            leaf = leaf.commands[token]
+        runner.invoke(leaf, ["--help"])
+        # ``-h`` through the root must still be accepted.
+        result = runner.invoke(main, [*argv, "-h"])
+        assert result.exit_code == 0, f"{argv} -h exited {result.exit_code}: {result.output}"
+        assert "No such option" not in result.output
+
 
 class TestShortHelpJsonContract:
     """The global ``-j`` JSON-help envelope is identical for ``-h`` and ``--help``."""
