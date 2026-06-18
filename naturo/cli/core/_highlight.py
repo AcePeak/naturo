@@ -1,7 +1,7 @@
 """Highlight command — highlight UI elements on screen."""
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 import logging
 
 import click
@@ -151,7 +151,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
                 )
                 if result_path:
                     if json_output:
-                        click.echo(_json.dumps({
+                        click.echo(json_dumps({
                             "success": True,
                             "backend": backend,
                             "annotate_path": result_path,
@@ -195,7 +195,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
             "refs": refs_list,
             "show_all": show_all,
         }
-        click.echo(_json.dumps(result))
+        click.echo(json_dumps(result))
     else:
         click.echo("Done.")
 

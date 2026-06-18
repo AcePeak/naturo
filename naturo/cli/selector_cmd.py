@@ -6,6 +6,7 @@ for persisting and managing UI element selectors.
 from __future__ import annotations
 
 import json
+from naturo.cli._jsonio import json_dumps
 import sys
 from pathlib import Path
 from typing import Optional
@@ -164,7 +165,7 @@ def selector_save(app_name: str, name: str, selector_value: str,
     path = _save_selectors(app_name, selectors)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "app": app_name,
             "name": name,
@@ -212,7 +213,7 @@ def selector_load(app_name: str, name: str, json_output: bool):
     source = "user" if name in user_sels else "builtin"
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "app": app_name,
             "name": name,
@@ -265,7 +266,7 @@ def selector_list(app_name: Optional[str], builtin: bool, json_output: bool):
                     "selector": selector_value,
                     "description": description,
                 })
-        click.echo(json.dumps(success_envelope("selectors", selectors)))
+        click.echo(json_dumps(success_envelope("selectors", selectors)))
         return
 
     if not all_selectors:
@@ -313,7 +314,7 @@ def selector_show(app_name: str, json_output: bool):
                 f"No selectors saved for app '{app_name}'",
             ))
             sys.exit(1)
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "app": app_name,
             "selectors": selectors,
@@ -373,7 +374,7 @@ def selector_delete(app_name: str, name: str, force: bool, json_output: bool):
             path.unlink()
 
     if json_output:
-        click.echo(json.dumps({"success": True, "deleted": f"@{app_name}/{name}"}))
+        click.echo(json_dumps({"success": True, "deleted": f"@{app_name}/{name}"}))
     else:
         click.echo(f"Deleted: @{app_name}/{name}")
 
@@ -407,7 +408,7 @@ def selector_clear(app_name: str, force: bool, json_output: bool):
         path.unlink()
 
     if json_output:
-        click.echo(json.dumps({"success": True, "app": app_name, "deleted_count": len(selectors)}))
+        click.echo(json_dumps({"success": True, "app": app_name, "deleted_count": len(selectors)}))
     else:
         click.echo(f"Cleared {len(selectors)} selectors for '{app_name}'.")
 
@@ -438,13 +439,13 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
         sys.exit(1)
 
     export_data = {"app": app_name, "selectors": merged}
-    content = json.dumps(export_data, indent=2, ensure_ascii=False)
+    content = json_dumps(export_data, indent=2, ensure_ascii=False)
 
     if output_path:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
         if json_output:
-            click.echo(json.dumps({"success": True, "path": output_path, "count": len(merged)}))
+            click.echo(json_dumps({"success": True, "path": output_path, "count": len(merged)}))
         else:
             click.echo(f"Exported {len(merged)} selectors to {output_path}")
     else:
@@ -488,7 +489,7 @@ def selector_import(file_path: str, merge: bool, json_output: bool):
         count = len(imported)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True, "app": app_name,
             "imported": count, "mode": "merge" if merge else "replace",
         }))
@@ -539,7 +540,7 @@ def selector_test(app_name: str, name: str, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "name": f"@{app_name}/{name}",
             "selector": sel_str,

@@ -1,5 +1,5 @@
 """CLI wait command — wait for a duration, or for elements/windows to appear/disappear."""
-import json
+from naturo.cli._jsonio import json_dumps
 import time
 
 from naturo.cli.error_helpers import json_error as _json_error_str
@@ -84,7 +84,7 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
 
         time.sleep(duration)
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "mode": "duration",
                 "wait_time": round(duration, 3),
@@ -148,7 +148,7 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
             return  # unreachable
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             click.echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -179,7 +179,7 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
                 "width": result.element.width,
                 "height": result.element.height,
             }
-        click.echo(json.dumps(output, indent=2))
+        click.echo(json_dumps(output, indent=2))
         if not result.found:
             sys.exit(1)
     else:

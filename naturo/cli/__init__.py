@@ -1,7 +1,7 @@
 """Naturo CLI — Windows desktop automation, aligned with Peekaboo."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import os
 import sys
 
@@ -367,7 +367,7 @@ def _root_help_json() -> str:
             options.append({"name": record[0], "help": record[1]})
 
     usage = "naturo " + " ".join(main.collect_usage_pieces(ctx))
-    return json.dumps(
+    return json_dumps(
         {
             "success": True,
             "help": {"usage": usage, "commands": commands, "options": options},
@@ -427,7 +427,7 @@ def run() -> None:
     # subcommand was given (subcommand-level --help stays Click's job).
     if json_mode and _first_command_token(argv) is None:
         if "--version" in argv:
-            click.echo(json.dumps({"success": True, "version": __version__}))
+            click.echo(json_dumps({"success": True, "version": __version__}))
             sys.exit(0)
         if "--help" in argv or "-h" in argv:
             click.echo(_root_help_json())

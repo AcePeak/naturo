@@ -1,7 +1,7 @@
 """Legacy hidden commands — hide, unhide, switch (backward compatibility)."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import sys
 
@@ -63,12 +63,12 @@ def app_hide(ctx, name, app_name, json_output) -> None:
             except Exception as exc:
                 logger.debug("Failed to minimize window %s: %s", w.handle, exc)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "hide", "app": name, "windows_minimized": count}))
+            click.echo(json_dumps({"success": True, "action": "hide", "app": name, "windows_minimized": count}))
         else:
             _safe_echo(f"Minimized {count} window(s) of {name}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -120,12 +120,12 @@ def app_unhide(ctx, name, app_name, json_output) -> None:
             except Exception as exc:
                 logger.debug("Failed to restore window %s: %s", w.handle, exc)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "unhide", "app": name, "windows_restored": count}))
+            click.echo(json_dumps({"success": True, "action": "unhide", "app": name, "windows_restored": count}))
         else:
             _safe_echo(f"Restored {count} window(s) of {name}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -165,12 +165,12 @@ def app_switch(ctx, name, app_name, json_output) -> None:
         target = matched[0]
         backend.focus_window(hwnd=target.handle)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "switch", "app": name, "window_title": target.title, "handle": target.handle}))
+            click.echo(json_dumps({"success": True, "action": "switch", "app": name, "window_title": target.title, "handle": target.handle}))
         else:
             _safe_echo(f"Switched to {name}: {target.title}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)

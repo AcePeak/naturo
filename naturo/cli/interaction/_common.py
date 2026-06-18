@@ -1,7 +1,7 @@
 """Interaction commands: click, type, press (includes hotkey), scroll, drag, move."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import sys
 from typing import Callable, NoReturn, Optional
@@ -867,7 +867,7 @@ def _json_ok(data: dict, json_output: bool) -> None:
     end users (#273).  JSON mode retains all fields.
     """
     if json_output:
-        click.echo(json.dumps({"success": True, "data": data}))
+        click.echo(json_dumps({"success": True, "data": data}))
     else:
         for k, v in data.items():
             if k in _VERIFICATION_KEYS:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import sys
 
@@ -492,7 +493,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             # Merge verification data into error output
             err_data = json.loads(json_error("VERIFICATION_FAILED", _verification.detail))
             err_data["data"] = result_data
-            click.echo(json.dumps(err_data))
+            click.echo(json_dumps(err_data))
             sys.exit(1)
         else:
             click.echo(f"WARNING: {_verification.detail}", err=True)

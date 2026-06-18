@@ -1,5 +1,5 @@
 """Shared helpers for ``naturo app`` CLI subcommands."""
-import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import os
 import re
@@ -126,7 +126,7 @@ def _require_target(name, window_title, hwnd, json_output):
 def _handle_naturo_error(exc, json_output) -> None:
     """Emit a NaturoError and exit."""
     if json_output:
-        click.echo(json.dumps(exc.to_json_response()))
+        click.echo(json_dumps(exc.to_json_response()))
     else:
         _safe_echo(f"Error: {exc.message}", err=True)
     sys.exit(1)
