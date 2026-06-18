@@ -1,6 +1,7 @@
 """Press and hotkey commands — single keys, combos, or sequential sequences."""
 from __future__ import annotations
 
+import difflib
 import logging
 
 import click
@@ -8,6 +9,67 @@ import click
 import naturo.cli.interaction._common as _common
 
 logger = logging.getLogger(__name__)
+
+
+# Representative valid key names, used only to build recovery hints and the
+# fuzzy "did you mean" suggestion (#991).  This list is NEVER consulted to
+# decide whether a key is valid — the native core is the sole authority on
+# that — so an omission here can only cost a suggestion, never wrongly reject a
+# key the core would have accepted.
+_COMMON_KEY_NAMES: tuple[str, ...] = (
+    "enter", "tab", "escape", "esc", "space", "backspace", "delete",
+    "insert", "home", "end", "pageup", "pagedown",
+    "up", "down", "left", "right",
+    "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
+    "ctrl", "alt", "shift", "win",
+)
+
+_VALID_KEY_HINT = (
+    "Valid keys include enter, tab, esc, space, up/down/left/right, f1-f12, "
+    "and combos like 'ctrl+c'. Run 'naturo press --help' for examples."
+)
+
+
+def _emit_unknown_key_error(key_spec: str, json_output: bool) -> None:
+    """Emit an ``INVALID_INPUT`` envelope for a key the native core rejected.
+
+    The core rejects an unrecognized key name with a generic ``Invalid
+    argument`` whose message leaks the internal function name (e.g.
+    ``key_press('entr')``) and carries no recovery guidance (#991).  Translate
+    that into the same agent-friendly envelope every other command emits: an
+    ``INVALID_INPUT`` code, a clean user-facing message, and a
+    ``suggested_action`` listing valid keys plus a fuzzy "did you mean" hint
+    for near-misses.  Validity itself is never decided here — this runs only
+    after the core has already rejected the key.
+
+    Args:
+        key_spec: The key spec the user supplied (e.g. ``"entr"`` or
+            ``"ctrl+notakey"``), reported back verbatim so the caller can see
+            exactly what was rejected.
+        json_output: Whether to emit the JSON envelope instead of plain text.
+
+    Returns:
+        Never returns — always exits the process with status 1.
+    """
+    from naturo.cli.error_helpers import emit_error
+
+    stripped = key_spec.strip()
+    if not stripped:
+        message = "Empty key name."
+        suggested_action = _VALID_KEY_HINT
+    else:
+        message = f"Unknown key: {key_spec!r}"
+        suggested_action = _VALID_KEY_HINT
+        # Bonus: fuzzy "did you mean" for a single near-miss key name (#149).
+        if "+" not in stripped:
+            close = difflib.get_close_matches(
+                stripped.lower(), _COMMON_KEY_NAMES, n=1, cutoff=0.6,
+            )
+            if close:
+                suggested_action = f"Did you mean '{close[0]}'? {suggested_action}"
+
+    emit_error("INVALID_INPUT", message, json_output,
+               suggested_action=suggested_action)
 
 
 def _is_combo(key_str: str) -> bool:
@@ -288,6 +350,14 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
             if idx < len(keys) - 1 and delay > 0:
                 time.sleep(delay / 1000.0)
     except Exception as exc:
+        # An unrecognized key name reaches us as NaturoCoreError(code=-1)
+        # ("Invalid argument") — bad input, not a runtime action failure.
+        # Re-map it to a clean INVALID_INPUT envelope (#991); ``key_spec`` is
+        # the key the loop was processing when the core rejected it.
+        from naturo.bridge import NaturoCoreError
+        if isinstance(exc, NaturoCoreError) and exc.code == -1:
+            _emit_unknown_key_error(key_spec, json_output)
+            return
         _common._json_err(str(exc), json_output, exc=exc)
         return
     finally:

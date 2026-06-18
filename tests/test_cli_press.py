@@ -8,6 +8,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from naturo.bridge import NaturoCoreError
 from naturo.cli.interaction._press import (
     _is_combo, _is_standalone_modifier, _normalize_modifier, press, hotkey,
 )
@@ -382,6 +383,112 @@ class TestPressErrors:
         assert result.exit_code == 0
         backend.focus_window.assert_called_once_with(hwnd=12345)
         backend.press_key.assert_called_once()
+
+
+# ── press command — invalid key name (#991) ─────
+
+
+class TestPressInvalidKey:
+    """#991: an unknown key name must surface as an agent-friendly INVALID_INPUT
+    envelope (clean message + suggested_action), not a raw ACTION_ERROR that
+    leaks the internal ``key_press('...')`` function name.
+
+    The native core is the sole authority on key validity: it rejects an
+    unknown key with ``NaturoCoreError(code=-1)`` ("Invalid argument"). The CLI
+    translates *only* that code into INVALID_INPUT — a genuine runtime failure
+    (code=-2, System/COM error) must keep its ACTION_ERROR categorization.
+    """
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_single_key_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["category"] == "validation"
+        # Clean, user-facing message — names the offending key, hides internals.
+        assert err["message"] == "Unknown key: 'entr'"
+        assert "key_press(" not in result.output
+        assert "Invalid argument" not in result.output
+        # Recovery guidance is present (unlike the old null suggested_action).
+        assert err["suggested_action"]
+        assert "press --help" in err["suggested_action"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_single_key_fuzzy_did_you_mean(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--json", "--no-verify"], catch_exceptions=False)
+        err = json.loads(result.output)["error"]
+        assert "Did you mean 'enter'?" in err["suggested_action"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_key_in_combo_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.hotkey.side_effect = NaturoCoreError(-1, "key_hotkey(('ctrl', 'notakey'))")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["ctrl+notakey", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["message"] == "Unknown key: 'ctrl+notakey'"
+        assert "key_hotkey(" not in result.output
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_empty_key_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["message"] == "Empty key name."
+        assert "key_press(" not in result.output
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_system_error_stays_action_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """A genuine runtime failure (code=-2) must NOT be remapped to INVALID_INPUT."""
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-2, "key_press('enter')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["enter", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "ACTION_ERROR"
+        assert "System/COM error" in err["message"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_key_plain_text(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        assert "Unknown key: 'entr'" in result.output
+        assert "key_press(" not in result.output
 
 
 # ── press command — --on element ────────────────
