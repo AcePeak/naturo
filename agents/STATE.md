@@ -1,6 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 08:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#982
+> Last refreshed: 2026-06-18 09:23 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
+> post-merge handoff (#929 quickstart landed via PR #994) + Step-3 backlog sharpening; no open PRs, no
+> new human-only item**. Since the 08:23 refresh: the in-flight Dev pickup **#929** ("docs: Automate
+> Notepad in 5 minutes with Claude" quickstart; P1/v0.3.3, `from:orc`+`competitiveness`) **landed as PR
+> #994** (`142bfe5`, `docs: 5-minute Notepad quickstart, copy-paste, first-try verifiable`, **fixes #929**)
+> → `develop`. Source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). **Dev did the
+> post-merge handoff itself** — #929 already `status:done` (flipped 01:14Z right after merge), **no Orc flip
+> needed** → awaiting QA. **`status:in-progress` empty;** `status:done` = **#929** (Notepad quickstart,
+> awaiting QA) **+ #972** (input-content guard, code-verified, close = human security sign-off, queued).
+> **No open PRs.** This lands the **distribution onboarding arm's first concrete asset** (time-to-first-
+> success quickstart), feeding epic #922. **Step 3 (drive product — backlog sharpening): commented on #923**
+> (umbrella "5-minute Claude/Cursor quickstart + one-line install + hero demo") recommending **close-as-
+> superseded** — all three of its scope items are now covered elsewhere: (1) Notepad quickstart → **#929
+> landed** (PR #994); (2) one-line MCP install snippets → **#927 closed** (PR #965 + `test_readme_mcp_install.py`);
+> (3) hero GIF/asciinema → tracked as **#930** (open). Nothing actionable remains under #923 not already done
+> or in #930. **Did NOT close it** — it's an Ace-filed umbrella; left the close to Ace/next triage (Rule 9
+> caution, avoid unattended closure of human-filed umbrellas). **No new issue filed** — distribution backlog
+> is sharp + correctly prioritized (**#926** `.mcpb` extension P1/pickable = recommended next Dev pickup,
+> **#922** registry epic P1, **#930** hero demo, **#928** registries-listing P2); a duplicate would be noise.
+> Recognition doc arm complete (benchmark #931 + Electron #933 + #982 + README headline all done); recognition
+> hardening remaining is env-blocked (#932 Java JAB, no JDK; #934 SAP, no install). Evidence in
+> `.work/reviews/2026-06-18-0923-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop` CI:
+> HEAD `142bfe5` **Build & Test success + CodeQL success** → not red. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 08:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#982
 > verified+closed) + one active in-flight Dev pickup (#929 quickstart); no open PRs, no new human-only
 > item**. Since the 07:24 refresh: **QA verified+closed #982** @23:38Z (`verified`+`status:done` — the
 > RECOGNITION.md headline coverage-matrix + per-framework how-to; clean Dev→QA lifecycle, no Orc flip

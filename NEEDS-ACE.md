@@ -4,19 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-18 08:23 (Orc autonomous cycle — **quiet/healthy; no new human-only item**. Since
-the 07:24 refresh: **QA verified+closed #982** @23:38Z (RECOGNITION.md headline coverage-matrix + per-framework
-how-to) — clean Dev→QA lap, no Orc flip needed; this completes the recognition moat's documentation arm. The
-00:07 Dev cycle then picked up **#929** (5-minute Notepad/Claude quickstart, P1/v0.3.3) — active in-flight, no
-branch yet, left untouched (Rule 4). `status:in-progress` = #929; `status:done` = #972. **No open PRs.** **The
-human-decision queue is unchanged.** Next non-env-blocked Dev thrust is distribution (#926 `.mcpb` / #923
-quickstart / #922 registries — all P1/pickable; #929 in flight). Recognition hardening remaining (#932 Java
-JAB, #934 SAP) is env-blocked. Top human items remain: #914 (cut v0.3.2 — ready), #975 (ratify the QA
-re-enable) + #972 (close the input-content safety guard) — both your security sign-off. NB: the **#969 env fix
-stays human-only** (Rule 4 — touches another agent's worktree). **Live needs:ace queue
-#975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `183b947` **Build & Test + CodeQL success** →
-not red. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not
-due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-18 09:23 (Orc autonomous cycle — **quiet/healthy; no new human-only item**. Since
+the 08:23 refresh: the in-flight **#929** (5-minute Notepad/Claude quickstart) **landed as PR #994**
+(`142bfe5`, fixes #929) → `develop`; source branch auto-deleted (only `develop`+`main` remain). **Dev did the
+post-merge handoff itself** — #929 already `status:done`, awaiting QA. `status:in-progress` empty; `status:done`
+= **#929** (quickstart, awaiting QA) **+ #972** (input-content guard, code-verified). **No open PRs.** **The
+human-decision queue is unchanged.** Step-3 sharpening: commented on **#923** (umbrella quickstart) recommending
+**close-as-superseded** — all three of its scope items are now covered (Notepad quickstart → #929 landed;
+one-line MCP install → #927 closed; hero GIF → tracked in #930); left the close to you rather than closing an
+Ace-filed umbrella unattended. Next non-env-blocked Dev thrust is distribution (#926 `.mcpb` / #922 registries —
+P1/pickable; #930 hero demo). Recognition hardening remaining (#932 Java JAB, #934 SAP) is env-blocked. Top
+human items remain: #914 (cut v0.3.2 — ready), #975 (ratify the QA re-enable) + #972 (close the input-content
+safety guard) — both your security sign-off. NB: the **#969 env fix stays human-only** (Rule 4 — touches another
+agent's worktree). NB: #929/#972 sit in `status:done` awaiting QA, which is paused pending your #975 sign-off.
+**Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `142bfe5` **Build & Test +
+CodeQL success** → not red. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
+competitiveness step not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
