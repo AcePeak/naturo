@@ -6,6 +6,7 @@ formatted, loadable, and integrate with the selector CLI commands.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -141,7 +142,12 @@ class TestPackageData:
     """Ensure built-in templates are included in package distribution."""
 
     def test_pyproject_includes_json_templates(self):
-        import tomllib
+        # ``tomllib`` is stdlib only on Python 3.11+; fall back to the ``tomli``
+        # backport (declared as a dev dependency) on 3.9/3.10 (#910).
+        if sys.version_info >= (3, 11):
+            import tomllib
+        else:
+            import tomli as tomllib
         pyproject = Path(__file__).parent.parent / "pyproject.toml"
         with open(pyproject, "rb") as f:
             config = tomllib.load(f)
