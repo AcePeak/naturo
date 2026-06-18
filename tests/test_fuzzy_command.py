@@ -13,12 +13,13 @@ def runner():
 class TestFuzzyTopLevel:
     """Fuzzy matching on top-level naturo commands."""
 
+    # Only visible commands are valid suggestions. ``window``/``snapshot`` are
+    # registered ``hidden=True`` and must NOT be suggested (#867) — that case is
+    # covered by tests/test_fuzzy_group.py::TestRealCliHiddenSuggestions.
     @pytest.mark.parametrize("typo,expected", [
         ("captur", "capture"),
         ("clck", "click"),
         ("tpye", "type"),
-        ("widnow", "window"),
-        ("snapshto", "snapshot"),
         ("appp", "app"),
     ])
     def test_suggests_close_match(self, runner, typo, expected):
