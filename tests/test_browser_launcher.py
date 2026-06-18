@@ -193,25 +193,32 @@ class TestResolveProfileDirectory:
 
 
 class TestDefaultUserDataDir:
-    """Tests for OS-specific default user data directory."""
+    """Tests for OS-specific default user data directory.
+
+    Assertions compare ``Path.parts`` (OS-agnostic components) rather than
+    slash-joined substrings: ``_default_user_data_dir`` builds the path with
+    ``pathlib.Path``, which renders with the *host* separator, so a
+    ``"a/b"`` substring check never matches when the suite runs on Windows
+    (backslash separators). See #946.
+    """
 
     @patch("platform.system", return_value="Linux")
     def test_linux_path(self, mock_system):
         result = _default_user_data_dir()
         assert result is not None
-        assert ".config/google-chrome" in str(result)
+        assert result.parts[-2:] == (".config", "google-chrome")
 
     @patch("platform.system", return_value="Darwin")
     def test_macos_path(self, mock_system):
         result = _default_user_data_dir()
         assert result is not None
-        assert "Application Support/Google/Chrome" in str(result)
+        assert result.parts[-3:] == ("Application Support", "Google", "Chrome")
 
     @patch("platform.system", return_value="Windows")
     def test_windows_path(self, mock_system):
         result = _default_user_data_dir()
         assert result is not None
-        assert "Google" in str(result) and "Chrome" in str(result)
+        assert result.parts[-3:] == ("Google", "Chrome", "User Data")
 
 
 # ---------------------------------------------------------------------------
