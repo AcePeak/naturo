@@ -350,7 +350,7 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                 backend.click(x=x, y=y, button=button, double=double,
                               input_mode=input_mode)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # (#168) Clipboard modifiers: --paste, --copy, --cut (post-click actions)

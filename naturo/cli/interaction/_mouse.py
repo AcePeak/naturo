@@ -134,7 +134,7 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
     try:
         backend.scroll(direction=direction, amount=amount, x=x, y=y, smooth=smooth)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action
@@ -375,7 +375,7 @@ def drag(from_text, from_coords, from_selector, from_element,
                      overshoot=overshoot,
                      release_delay_ms=int(release_delay * 1000))
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action
@@ -465,7 +465,7 @@ def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overs
             overshoot=overshoot,
         )
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action

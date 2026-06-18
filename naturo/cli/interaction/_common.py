@@ -812,14 +812,38 @@ def _json_ok(data: dict, json_output: bool) -> None:
 
 
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
-              code: str = "ACTION_ERROR") -> NoReturn:
+              code: str = "ACTION_ERROR", *,
+              exc: Optional[BaseException] = None) -> NoReturn:
     """Emit error result as JSON or plain text, then exit.
 
     Includes agent-friendly recovery hints from the error_helpers registry.
     The plain-text path prints ``Error: <msg>`` to stderr (no Click ``Usage:``
     banner) so runtime failures keep exit code 1 instead of Click's usage-error
     exit code 2 (#866).  Always terminates the process; never returns.
+
+    When ``exc`` is a semantic :class:`~naturo.errors.NaturoError`, its full
+    envelope (``code``/``category``/``suggested_action``/``recoverable``) is
+    preserved instead of being flattened to the generic ``code`` — so an
+    action-phase ``ElementNotFoundError`` surfaces as ``ELEMENT_NOT_FOUND``/
+    ``automation`` with its recovery hint, identical to ``get``/``scroll``,
+    rather than ``ACTION_ERROR``/``unknown`` (#1004). ``code`` is still used as
+    the fallback for non-``NaturoError`` exceptions and the ``exc``-less callers,
+    and the plain-text ``Error: <message>`` line is unchanged in every case
+    (``str(NaturoError) == NaturoError.message``).
+
+    Args:
+        msg: Human-readable error message (used as-is when no semantic ``exc``).
+        json_output: Whether to emit the JSON envelope instead of plain text.
+        exit_code: Process exit code (default 1).
+        code: Error code for the JSON envelope and the non-semantic fallback.
+        exc: The original exception, when available, so a ``NaturoError``'s
+            structured identity can be preserved.
     """
+    from naturo.errors import NaturoError
+    if isinstance(exc, NaturoError):
+        from naturo.cli.error_helpers import emit_exception_error
+        emit_exception_error(exc, json_output, fallback_code=code,
+                             exit_code=exit_code)
     if json_output:
         from naturo.cli.error_helpers import json_error
         click.echo(json_error(code, msg))

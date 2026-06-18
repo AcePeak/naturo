@@ -259,7 +259,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     )
                     return
             except Exception as exc:
-                _common._json_err(str(exc), json_output)
+                _common._json_err(str(exc), json_output, exc=exc)
                 return
         try:
             backend.click(click_x, click_y, button="left", input_mode=input_mode)
@@ -387,7 +387,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             backend.press_key("escape")
 
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     action = "pasted" if paste_mode else "typed"

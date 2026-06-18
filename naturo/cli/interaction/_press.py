@@ -162,7 +162,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     )
                     return
             except Exception as exc:
-                _common._json_err(str(exc), json_output)
+                _common._json_err(str(exc), json_output, exc=exc)
                 return
         try:
             backend.click(click_x, click_y, button="left", input_mode=input_mode)
@@ -288,7 +288,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
             if idx < len(keys) - 1 and delay > 0:
                 time.sleep(delay / 1000.0)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
     finally:
         if _orig_handler is not None:

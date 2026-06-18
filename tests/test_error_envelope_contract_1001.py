@@ -34,7 +34,17 @@ Three layers, by where an error can be born:
    historically drifted (``app``/``see``/``find``/``get``/``set``/``click``/
    ``type``/``drag``/``record``/``selector``/``visual``). Proves the runtime path,
    not just the parse wrapper, stays canonical.
-3. **Source-of-truth completeness.** Every code in the recovery-hint registry,
+3. **Action-phase semantic identity (interaction commands).** #884 converged the
+   envelope *shape* and #877 fixed the *semantics* for ``get``/``set``, but the
+   interaction commands' action-phase catch-alls still flattened a real
+   :class:`~naturo.errors.NaturoError` to ``ACTION_ERROR``/``unknown``/
+   ``recoverable:false`` — defeating the agent self-correction contract on the
+   single most-used command, ``click`` (#1004). This layer drives every
+   interaction command (``click``/``type``/``press``/``scroll``/``drag``/``move``)
+   with a backend whose action raises an ``ElementNotFoundError`` and asserts the
+   envelope keeps the exception's *code* and *category* — not just its shape — so
+   a future catch-all that drops ``exc=`` re-flattens here on day one.
+4. **Source-of-truth completeness.** Every code in the recovery-hint registry,
    and the base :class:`NaturoError` serializer, must yield the canonical schema —
    so the per-command paths above cannot drift from the contract they target.
 
@@ -46,6 +56,7 @@ from __future__ import annotations
 
 import json
 from typing import Iterator
+from unittest.mock import MagicMock
 
 import click
 import pytest
@@ -53,7 +64,7 @@ from click.testing import CliRunner
 
 from naturo.cli import main, run
 from naturo.cli.error_helpers import _RECOVERY_HINTS, json_error
-from naturo.errors import NaturoError, category_for_code
+from naturo.errors import ElementNotFoundError, NaturoError, category_for_code
 
 # The six canonical keys, in canonical order — identical to NaturoError.to_dict()
 # and the object json_error builds. The single shape every -j error must carry.
@@ -212,7 +223,96 @@ def test_runtime_failure_is_canonical(argv, expected_code) -> None:
     )
 
 
-# ── 3. source-of-truth completeness ──────────────────────────────────────────
+# ── 3. action-phase semantic identity (interaction commands, #1004) ──────────
+
+# (argv, backend-action-method) for every interaction command, driven through a
+# backend whose action method raises a semantic NaturoError. Coordinate / no-target
+# invocations are used so the failure is born in the action call itself — not in
+# element resolution — and reaches the command's action-phase catch-all. The
+# method name is the single backend call each command makes inside that try block.
+_INTERACTION_ACTION_FAILURES = [
+    (["click", "--coords", "500", "300"], "click"),
+    (["type", "hello"], "type_text"),
+    (["press", "enter"], "press_key"),
+    (["scroll", "down"], "scroll"),
+    (["drag", "--from-coords", "100", "100", "--to-coords", "500", "300"], "drag"),
+    (["move", "--coords", "500", "300"], "move_mouse"),
+]
+
+
+@pytest.mark.parametrize(
+    "argv,action_method",
+    _INTERACTION_ACTION_FAILURES,
+    ids=[argv[0] for argv, _ in _INTERACTION_ACTION_FAILURES],
+)
+def test_interaction_action_error_keeps_semantic_identity(argv, action_method, monkeypatch) -> None:
+    """An action-phase ``NaturoError`` keeps its code/category, not just its shape.
+
+    The interaction catch-alls used to flatten a real ``ElementNotFoundError`` to
+    ``ACTION_ERROR``/``unknown``/``recoverable:false`` (#1004), so an agent that
+    dispatches on ``error.code == "ELEMENT_NOT_FOUND"`` (the #877 contract) got the
+    wrong code from the most-used command. With a backend whose action raises that
+    error, every interaction command must now surface its *semantic* envelope —
+    identical code/category to ``get``/``scroll`` — and stay canonical in shape.
+    """
+    backend = MagicMock()
+    getattr(backend, action_method).side_effect = ElementNotFoundError(_ABSENT_ENTITY)
+    # Every interaction command obtains its backend through this one seam, so the
+    # patch covers click/type/press/scroll/drag/move (and any future command) alike.
+    monkeypatch.setattr(
+        "naturo.cli.interaction._common._get_backend",
+        lambda *args, **kwargs: backend,
+    )
+
+    result = CliRunner().invoke(main, [*argv, "-j"], catch_exceptions=True)
+
+    error = _single_error_object(result.output)
+    assert list(error.keys())[:6] == _CANONICAL_KEYS, (
+        f"{' '.join(argv)} -j error drifted from the canonical schema: {list(error.keys())}"
+    )
+    assert error["code"] == "ELEMENT_NOT_FOUND", (
+        f"{' '.join(argv)} flattened the semantic error to {error['code']} (#1004 regression)"
+    )
+    assert error["category"] == "automation", (
+        f"{' '.join(argv)} lost the error category: {error['category']}"
+    )
+    assert error["recoverable"] is True, f"{' '.join(argv)} dropped recoverable=true"
+    assert error["suggested_action"], f"{' '.join(argv)} dropped the recovery hint"
+
+
+def test_json_err_preserves_naturoerror_but_falls_back_for_plain_exception(capsys) -> None:
+    """``_common._json_err`` is the funnel #1004 fixed — pin both of its branches.
+
+    A ``NaturoError`` passed via ``exc=`` must keep its structured identity even
+    when the caller supplies a generic ``code``; a plain exception must fall back
+    to that ``code``. Both stay canonical in shape. Pinning the funnel directly
+    guards the mechanism even for callsites the command-level parametrization
+    above does not enumerate.
+    """
+    from naturo.cli.interaction import _common
+
+    # NaturoError: identity preserved, generic fallback code ("ACTION_ERROR") ignored.
+    with pytest.raises(SystemExit) as semantic_exit:
+        _common._json_err("flat message", json_output=True, code="ACTION_ERROR",
+                          exc=ElementNotFoundError("x"))
+    assert semantic_exit.value.code == 1
+    semantic = _single_error_object(capsys.readouterr().out)
+    assert list(semantic.keys())[:6] == _CANONICAL_KEYS
+    assert semantic["code"] == "ELEMENT_NOT_FOUND"
+    assert semantic["category"] == "automation"
+    assert semantic["recoverable"] is True
+
+    # Plain exception: falls back to the supplied code, shape still canonical.
+    with pytest.raises(SystemExit) as plain_exit:
+        _common._json_err("boom", json_output=True, code="ACTION_ERROR",
+                          exc=ValueError("boom"))
+    assert plain_exit.value.code == 1
+    plain = _single_error_object(capsys.readouterr().out)
+    assert list(plain.keys()) == _CANONICAL_KEYS
+    assert plain["code"] == "ACTION_ERROR"
+
+
+# ── 4. source-of-truth completeness ──────────────────────────────────────────
 
 def test_naturo_error_serializer_is_canonical() -> None:
     """The base exception serializer pins the canonical schema in one place."""
