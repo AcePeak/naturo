@@ -149,6 +149,55 @@ def _skip_desktop_tests(request: pytest.FixtureRequest):
             pytest.skip("No interactive desktop session available")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _forbid_unsafe_live_input():
+    """Structural backstop: no test may live-type shell metacharacters (#976).
+
+    R-SEC-012: an unattended QA cycle once typed ``$(rm -rf /)`` into a live
+    window through a global-``SendInput`` focus race.  The lesson is that a
+    safety test must never be able to perform the unsafe act it guards against —
+    the injection-safety property must be asserted in-process, never by putting
+    shell metacharacters on a real keyboard.
+
+    This session-wide tripwire patches the real keystroke-delivery boundary (the
+    ``SendInput`` and Phys32 input strategies) so that any attempt — by any test,
+    intentional or accidental — to type a string containing shell-command
+    content raises loudly *before* a single keystroke is emitted.  Benign text
+    still reaches the original implementation, so legitimate desktop ``type``
+    tests are unaffected.  Detection is ungated (it does not depend on the opt-in
+    ``NATURO_SAFE_INPUT`` runtime guard) so the backstop holds in every run.
+    """
+    from naturo.backends.windows import _strategies
+    from naturo.safety import contains_dangerous_input
+
+    originals: dict[type, object] = {}
+
+    def _make_guarded(original):
+        def guarded(self, text, delay_ms=5):
+            reason = contains_dangerous_input(text)
+            if reason is not None:
+                raise AssertionError(
+                    "R-SEC-012 tripwire: refusing to live-type shell-unsafe "
+                    f"content ({reason}) via {type(self).__name__}.type_text. "
+                    "Injection-safety must be asserted in-process (see "
+                    "tests/test_input_injection_safety_976.py), never through "
+                    f"real keystrokes. Payload repr: {text!r}"
+                )
+            return original(self, text, delay_ms)
+
+        return guarded
+
+    for strategy_cls in (_strategies.SendInputStrategy, _strategies.Phys32Strategy):
+        originals[strategy_cls] = strategy_cls.type_text
+        strategy_cls.type_text = _make_guarded(strategy_cls.type_text)  # type: ignore[method-assign]
+
+    try:
+        yield
+    finally:
+        for strategy_cls, original in originals.items():
+            strategy_cls.type_text = original  # type: ignore[method-assign]
+
+
 def cli_stdout(result):
     """Extract stdout-only text from a Click CliRunner result.
 

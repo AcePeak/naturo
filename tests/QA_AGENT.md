@@ -96,6 +96,11 @@ naturo app list
 >
 > ⛔ **即便如此,payload 仍必须永远无害**(双保险):绝不用真实破坏性命令(`rm -rf`、`del`、`format`、
 > `shutdown` 等),只用无害哨兵 `; echo INJECTED`——被错误执行也只打印 `INJECTED`。路径穿越同理用无害探针。
+>
+> ✅ **注入安全这一条已是进程内断言,不是 live 动作(#976):** `tests/test_input_injection_safety_976.py`
+> 在进程内断言守卫拒绝 shell 元字符且**零击键**(对 mock 的 SendInput/Phys32 边界);`tests/conftest.py` 的
+> 会话级 tripwire 进一步保证**任何**测试都无法把 shell 元字符经真实键盘打出(命中即 `AssertionError`)。
+> 因此 QA 只需运行 `pytest`,**不要**自己经 live `naturo type` 复现注入。
 - 命令注入(**仅 argv,传给 `see --app`,绝不 `type`**)：`naturo see --app "; echo INJECTED"`
 - 路径穿越(**仅 argv**)：`naturo capture live --path "../../naturo-path-traversal-probe.txt"`(无害探针)
 - 超长输入缓冲区(**用无害字符如 `A`×N,经 pytest 或 argv,不经 live type**)

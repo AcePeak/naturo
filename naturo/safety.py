@@ -119,13 +119,43 @@ def is_safe_input_enabled() -> bool:
     return _safe_input_active()
 
 
+def contains_dangerous_input(text: Optional[str]) -> Optional[str]:
+    """Return why ``text`` looks like shell-command content, or ``None``.
+
+    This is the *ungated* matcher: unlike :func:`unsafe_input_reason`, it does
+    **not** consult :func:`is_safe_input_enabled`, so it classifies content the
+    same way whether or not the opt-in runtime guard is armed.  It carries no
+    policy of its own — it never blocks anything — and so does not change
+    runtime behaviour.  It exists so a safety *backstop* (e.g. the test-suite
+    tripwire that refuses live keystrokes of shell metacharacters, #976) can
+    detect the unsafe shape unconditionally, since such a backstop must hold
+    regardless of whether a given run happened to arm the opt-in guard.
+
+    Args:
+        text: The literal content that would be injected as keystrokes (or via
+            clipboard paste).  ``None`` or empty text is always safe.
+
+    Returns:
+        A short human-readable reason (e.g. ``"destructive command 'rm'"``)
+        when the content matches a dangerous pattern; otherwise ``None``.
+    """
+    if not text:
+        return None
+    for reason, pattern in _DANGEROUS_PATTERNS:
+        if pattern.search(text):
+            return reason
+    return None
+
+
 def unsafe_input_reason(text: Optional[str]) -> Optional[str]:
     """Return why ``text`` is unsafe to inject, or ``None`` if it may proceed.
 
     The guard is a no-op (always returns ``None``) when it is inactive — that
     is, when neither ``NATURO_SAFE_INPUT=1`` nor the sentinel lock file
     ``~/.naturo/safe-input.lock`` is present — so callers can invoke this
-    unconditionally before typing/pasting without affecting normal users.
+    unconditionally before typing/pasting without affecting normal users.  When
+    the guard is active it delegates to :func:`contains_dangerous_input` for the
+    actual content classification.
 
     Args:
         text: The literal content that would be injected as keystrokes (or via
@@ -138,9 +168,4 @@ def unsafe_input_reason(text: Optional[str]) -> Optional[str]:
     """
     if not is_safe_input_enabled():
         return None
-    if not text:
-        return None
-    for reason, pattern in _DANGEROUS_PATTERNS:
-        if pattern.search(text):
-            return reason
-    return None
+    return contains_dangerous_input(text)
