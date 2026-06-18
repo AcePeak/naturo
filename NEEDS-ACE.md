@@ -4,25 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-18 12:22 (Orc autonomous cycle — **quiet/healthy; two Dev PRs landed clean since
-the last refresh + post-merge handoff + backlog triage; no new human-only item**. Since the 11:22 refresh:
-(a) the previously-stuck **PR #995** (#867, hidden-command typo suggestions) **was fixed and merged** — Dev
-owned the not-found path as dispatched; `develop` Build & Test + CodeQL both **success**, **#867 QA
-verified+closed**. The click 8.4.1 vs 8.3.1 cross-platform diagnosis held. (b) Team Dev landed **PR #996**
-(`feat/issue-926-mcpb-bundle`, **fixes #926** — the Claude Desktop Extension `.mcpb` manifest+bundle:
-`packaging/mcpb/manifest.json`, `scripts/build_mcpb.py`, `tests/test_mcpb_bundle.py`). Both source branches
-auto-deleted (only `develop`+`main` remain, Rule 14). **Orc post-merge handoff: flipped #926
-`status:in-progress` → `status:done`** (Dev hadn't; base ≠ default branch so no auto-close) + QA verification
-note. **Step 3 triage (priority honesty): milestoned 3 unmilestoned actionable issues** — **#997**
-(self-contained `.mcpb` bundle, the v0.4.0 embedded-runtime/standalone-exe follow-on to #926) → **v0.4.0**;
-**#993** (`-j` error-envelope bare-string/missing-`error` bug) + **#991** (`press` invalid-key error quality)
-→ **v0.3.4**. **The human-decision queue is unchanged.** `status:in-progress` empty; `status:done` = **#926**
-(mcpb bundle, awaiting QA) **+ #972** (input-content guard, code-verified). Top human items remain: #914 (cut
-v0.3.2 — ready), #975 (ratify the QA re-enable) + #972 (close the input-content safety guard) — both your
-security sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays
-human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: merge
-commit `915b0a9` (#996) **Build & Test + CodeQL success** → **develop not red**. v0.3.2 ship-gate unchanged
-(FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-18 13:22 (Orc autonomous cycle — **quiet/healthy; clean sweep, no new human-only
+item; the queue below is unchanged**. Since the 12:22 refresh: nothing landed — team Dev's 13:09-local cycle
+**picked up #993** (`-j` error-envelope bug, P2/v0.3.4) at 05:09:49Z, **no branch pushed → active in-flight,
+left untouched (Rule 4)**. `status:in-progress` = **#993** (active); `status:done` = **#972** (input-content
+guard, code-verified, awaiting your security sign-off). **No open PRs;** branches `develop`+`main` only.
+**Step 3 (priority honesty): no triage needed** — the only unmilestoned open issues are the four `needs:ace`
+ops/security items below (#975/#969/#935/#915), correctly unmilestoned; all actionable dev work is milestoned.
+**No new issue filed** — recognition hardening is env-blocked (#932 Java/no JDK re-confirmed: `java` not on
+PATH; #934 SAP/no install); distribution backlog sharp (#997/#929/#930/#922/#928). Top human items unchanged:
+**#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety
+guard) — both your security sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969
+env fix stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.**
+`develop` CI: HEAD `915b0a9` (#996) **Build & Test + CodeQL success** → **develop not red**. v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

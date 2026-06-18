@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 12:22 (Orc autonomous cycle — **quiet/healthy; two Dev PRs landed clean +
+> Last refreshed: 2026-06-18 13:22 (Orc autonomous cycle — **quiet/healthy; clean sweep — develop green, no
+> open PRs, one active in-flight Dev pickup (#993 `-j` error-envelope, ~14 min old, left untouched per Rule 4),
+> backlog sharp + fully milestoned, no new human-only item**. Since the 12:22 refresh: nothing landed — team
+> Dev's 13:09-local cycle **picked up #993** (`bug`/`from:qa`/P2/v0.3.4 — record/selector/visual `-j` errors
+> emit a bare-string `error`, and `visual delete` omits `error` on failure; the `-j` error-envelope-honesty bug
+> I milestoned to v0.3.4 last cycle) at **05:09:49Z**, **no branch pushed → active in-flight, left untouched
+> (Rule 4)**. **`status:in-progress` = #993** (active); **`status:done` = #972** (input-content guard,
+> code-verified, close = human security sign-off, queued). **No open PRs;** branches `develop`+`main` only
+> (Rule 14 clean). **Step 2 health: no abandoned work** — #993 is ~14 min old (not the >24h-no-PR abandonment
+> case); #972 awaits QA (QA-verify gated on the #975 ratification, already queued). **Step 3 (drive product —
+> priority honesty): no triage needed** — the only unmilestoned open issues are the four `needs:ace`
+> ops/security items (#975/#969/#935/#915), correctly unmilestoned (human-only, not dev lanes); **all
+> actionable dev work is already milestoned**. **No new issue filed** — recognition hardening remains
+> env-blocked (#932 Java/no JDK re-confirmed this cycle: `java` not on PATH; #934 SAP/no install); the
+> distribution arm has sharp queued work (#997 self-contained bundle, #929 quickstart shipped, #930 hero demo,
+> #922/#928 registries); a duplicate would be Rule 9 noise. Evidence in
+> `.work/reviews/2026-06-18-1322-auto-review.md`. **needs:ace live queue unchanged #975/#972/#969/#935/#915/#914**
+> (+ infra #860/#842) — **no new human-only item this cycle.** `develop` CI: HEAD `915b0a9` (#996 merge)
+> **Build & Test success + CodeQL success** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+> Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 12:22 (Orc autonomous cycle — **quiet/healthy; two Dev PRs landed clean +
 > post-merge handoff (#926 mcpb bundle) + priority-honesty triage of 3 unmilestoned issues; develop green;
 > no new human-only item**. Since the 11:22 refresh: (a) the previously-stuck **PR #995** (`fix #867`,
 > hidden-command typo suggestions) **was fixed and merged** — Dev owned the not-found path exactly as
