@@ -92,8 +92,9 @@ class TestSelectorShowEnvelope:
         assert result.exit_code == 1
         data = json.loads(result.output)
         assert data["success"] is False
-        assert "error" in data
-        assert "nonexistentABCXYZ" in data["error"]
+        # error is the canonical object envelope (#993), not a bare string.
+        assert data["error"]["code"] == "SELECTOR_NOT_FOUND"
+        assert "nonexistentABCXYZ" in data["error"]["message"]
 
     def test_text_mode_empty_unchanged(self, runner):
         """Text mode for a nonexistent app stays a friendly exit-0 message
