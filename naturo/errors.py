@@ -22,6 +22,7 @@ class ErrorCode:
     ELEMENT_NOT_FOUND = "ELEMENT_NOT_FOUND"
     MENU_NOT_FOUND = "MENU_NOT_FOUND"
     SNAPSHOT_NOT_FOUND = "SNAPSHOT_NOT_FOUND"
+    STALE_SNAPSHOT_CACHE = "STALE_SNAPSHOT_CACHE"
     FILE_NOT_FOUND = "FILE_NOT_FOUND"
     RECORDING_NOT_FOUND = "RECORDING_NOT_FOUND"
     SELECTOR_NOT_FOUND = "SELECTOR_NOT_FOUND"
@@ -213,6 +214,35 @@ class SnapshotNotFoundError(NaturoError):
             code=ErrorCode.SNAPSHOT_NOT_FOUND,
             category=ErrorCategory.SESSION,
             context={"snapshot_id": snapshot_id},
+            **kwargs,
+        )
+
+
+class StaleSnapshotCacheError(NaturoError):
+    """Element ref could not be resolved against the snapshot cache.
+
+    Raised when a ``get``/``set`` (or any ref-targeting command) is given an
+    element ref (e.g. ``e47``) that is absent from the most recent snapshot —
+    typically because no ``naturo see`` has run yet, or the cached snapshot is
+    stale and no longer contains that ref. Carries a semantic ``code`` and a
+    ``suggested_action`` so machine consumers can dispatch on the error and
+    self-correct instead of parsing the human message (see issue #877).
+    """
+
+    def __init__(self, ref: str, **kwargs: Any) -> None:
+        kwargs.setdefault(
+            "suggested_action",
+            "Run 'naturo see' to capture a fresh element snapshot, then retry.",
+        )
+        kwargs.setdefault("is_recoverable", True)
+        super().__init__(
+            message=(
+                f"Element ref '{ref}' not found in snapshot cache. "
+                f"Run 'naturo see' first to capture elements."
+            ),
+            code=ErrorCode.STALE_SNAPSHOT_CACHE,
+            category=ErrorCategory.SESSION,
+            context={"ref": ref},
             **kwargs,
         )
 

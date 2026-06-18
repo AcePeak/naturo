@@ -115,6 +115,10 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "Snapshot ID not found. Use 'naturo snapshot list' to see available snapshots.",
         False,
     ),
+    "STALE_SNAPSHOT_CACHE": (
+        "Run 'naturo see' to capture a fresh element snapshot, then retry.",
+        True,
+    ),
     "RECORDING_NOT_FOUND": (
         "Recording not found. Use 'naturo record list' to see saved recordings.",
         False,

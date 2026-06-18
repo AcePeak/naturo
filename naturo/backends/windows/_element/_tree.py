@@ -16,7 +16,7 @@ from typing import Optional
 
 from naturo.backends.base import ElementInfo as BaseElementInfo
 from naturo.bridge import populate_hierarchy
-from naturo.errors import NaturoError
+from naturo.errors import NaturoError, StaleSnapshotCacheError
 
 logger = logging.getLogger(__name__)
 
@@ -414,10 +414,7 @@ class ElementTreeMixin:
                         f"for value lookup"
                     )
             else:
-                raise NaturoError(
-                    f"Element ref '{ref}' not found in snapshot cache. "
-                    f"Run 'naturo see' first to capture elements."
-                )
+                raise StaleSnapshotCacheError(ref)
 
         # Resolve app/window_title to HWND for targeted lookup. A selector that
         # is supplied but matches nothing must fail loudly: ``_resolve_hwnd``

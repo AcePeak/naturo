@@ -11,7 +11,7 @@ import platform
 import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
-from naturo.errors import NaturoError
+from naturo.errors import NaturoError, StaleSnapshotCacheError
 
 
 def _get_backend():
@@ -59,10 +59,7 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
                     f"for value setting"
                 )
         else:
-            raise NaturoError(
-                f"Element ref '{ref}' not found in snapshot cache. "
-                f"Run 'naturo see' first to capture elements."
-            )
+            raise StaleSnapshotCacheError(ref)
     return automation_id, role, name
 
 
