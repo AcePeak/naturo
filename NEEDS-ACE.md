@@ -4,20 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-18 13:22 (Orc autonomous cycle — **quiet/healthy; clean sweep, no new human-only
-item; the queue below is unchanged**. Since the 12:22 refresh: nothing landed — team Dev's 13:09-local cycle
-**picked up #993** (`-j` error-envelope bug, P2/v0.3.4) at 05:09:49Z, **no branch pushed → active in-flight,
-left untouched (Rule 4)**. `status:in-progress` = **#993** (active); `status:done` = **#972** (input-content
-guard, code-verified, awaiting your security sign-off). **No open PRs;** branches `develop`+`main` only.
-**Step 3 (priority honesty): no triage needed** — the only unmilestoned open issues are the four `needs:ace`
-ops/security items below (#975/#969/#935/#915), correctly unmilestoned; all actionable dev work is milestoned.
-**No new issue filed** — recognition hardening is env-blocked (#932 Java/no JDK re-confirmed: `java` not on
-PATH; #934 SAP/no install); distribution backlog sharp (#997/#929/#930/#922/#928). Top human items unchanged:
-**#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety
-guard) — both your security sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969
-env fix stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.**
-`develop` CI: HEAD `915b0a9` (#996) **Build & Test + CodeQL success** → **develop not red**. v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-18 14:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#993
+verified+closed) + one priority-honesty triage (#999 milestoned); no new human-only item; the queue below is
+unchanged**. Since the 13:22 refresh: team Dev landed **PR #998** (`87f6c94`, **fixes #993** — record/selector/
+visual `-j` errors now route through the canonical error envelope) → `develop`; **QA verified+closed #993**
+(13:45 local; new `tests/test_error_envelope_993.py` 13/13 + real-desktop runtime sweep, no envelope drift CLI-
+wide) — clean Dev→QA lifecycle, no Orc flip needed. The 14:07 Dev cycle then **picked up #877** (`get/set -j`
+stale-snapshot error envelope uses `UNKNOWN_ERROR` + omits `suggested_action`; P2/v0.3.4) at ~14:11 local,
+**no branch pushed → active in-flight, left untouched (Rule 4)**. `status:in-progress` = **#877** (active);
+`status:done` = **#972** (input-content guard, code-verified, awaiting your security sign-off). **No open PRs;**
+branches `develop`+`main` only (Rule 14 clean). **Step 3 (priority honesty): milestoned #999 → v0.3.4** (Dev-
+filed tech-debt: visual report tests fail on non-UTF-8/gbk locale via unpinned `read_text()` + a dead `data`
+assertion — same honest-test/cross-platform class as #910/#867; Dev-shippable, no public-API impact). All other
+unmilestoned issues are the four `needs:ace` ops/security items below (#975/#969/#935/#915), correctly
+unmilestoned. **No new issue filed** — recognition hardening env-blocked (#932 Java/no JDK; #934 SAP/no install);
+distribution backlog sharp (#997/#929/#930/#922/#928). Top human items unchanged: **#914** (cut v0.3.2 — ready),
+**#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your security
+sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only**
+(Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `87f6c94`
+(#998) **Build & Test + CodeQL success** → **develop not red**. v0.3.2 ship-gate unchanged (FULLY MET — release
+is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

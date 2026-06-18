@@ -1,6 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 13:22 (Orc autonomous cycle — **quiet/healthy; clean sweep — develop green, no
+> Last refreshed: 2026-06-18 14:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#993
+> verified+closed) + one priority-honesty triage (#999 milestoned); develop green, no open PRs, one active
+> in-flight Dev pickup (#877 `get/set -j` stale-snapshot envelope, ~11 min old, left untouched per Rule 4),
+> backlog sharp + fully milestoned, no new human-only item**. Since the 13:22 refresh: team Dev landed **PR
+> #998** (`87f6c94`, **fixes #993** — record/selector/visual `-j` errors now route through the canonical error
+> envelope; `visual delete` no longer omits `error`) → `develop`, source branch auto-deleted (only
+> `develop`+`main` remain, Rule 14 clean). **QA verified+closed #993** @13:45 local
+> (`verified`+`status:done`→closed — new `tests/test_error_envelope_993.py` 13/13 + real-desktop runtime sweep:
+> record play / selector load / visual delete on missing targets all emit canonical error OBJECTs with
+> `RECORDING_NOT_FOUND`/`SELECTOR_NOT_FOUND`/`BASELINE_NOT_FOUND`, no envelope drift CLI-wide) — clean Dev→QA
+> lifecycle, no Orc flip needed. The **14:07 Dev cycle then picked up #877** (`get/set -j` stale-snapshot error
+> envelope uses `UNKNOWN_ERROR` + omits `suggested_action`; `bug`/`from:qa`/P2/v0.3.4, assigned AcePeak) at
+> ~14:11 local, **no branch pushed → active in-flight, left untouched (Rule 4)** (not the >24h-no-PR abandonment
+> case). **`status:in-progress` = #877** (active); **`status:done` = #972** (input-content guard, code-verified,
+> close = human security sign-off, queued). **No open PRs;** branches `develop`+`main` only (Rule 14 clean).
+> **Step 3 (drive product — priority honesty): milestoned #999 → v0.3.4** (+ framing comment). Dev filed #999
+> this cycle as tech-debt but left it unmilestoned; it is a real honest-test / cross-platform robustness defect
+> of the **same class as #910 (tomllib) and #867 (click-version split)**: (1) visual report tests use
+> `read_text()` without `encoding='utf-8'` → break on a non-UTF-8/gbk CJK locale while passing on CI's UTF-8
+> lanes (silent host-vs-CI divergence); (2) `test_report_errors_exit_nonzero` asserts on a `data` binding never
+> exercised (dead assertion). Both Dev-shippable, test-only, no public-API impact → now pickable. All other
+> unmilestoned open issues are the four `needs:ace` ops/security items (#975/#969/#935/#915), correctly
+> unmilestoned (human-only); **all actionable dev work is milestoned**. **No new issue filed** — recognition
+> hardening remains env-blocked (#932 Java/no JDK; #934 SAP/no install); the distribution arm has sharp queued
+> work (#997 self-contained bundle, #929 quickstart shipped, #930 hero demo, #922/#928 registries); a duplicate
+> would be Rule 9 noise. Evidence in `.work/reviews/2026-06-18-1422-auto-review.md`. **needs:ace live queue
+> unchanged #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.**
+> `develop` CI: HEAD `87f6c94` (#998 merge) **Build & Test success + CodeQL success** → **not red.** v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline
+> 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 13:22 (Orc autonomous cycle — **quiet/healthy; clean sweep — develop green, no
 > open PRs, one active in-flight Dev pickup (#993 `-j` error-envelope, ~14 min old, left untouched per Rule 4),
 > backlog sharp + fully milestoned, no new human-only item**. Since the 12:22 refresh: nothing landed — team
 > Dev's 13:09-local cycle **picked up #993** (`bug`/`from:qa`/P2/v0.3.4 — record/selector/visual `-j` errors
