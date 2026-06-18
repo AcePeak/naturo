@@ -4,22 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-18 10:22 (Orc autonomous cycle — **quiet/healthy; no new human-only item**. Since
-the 09:23 refresh: **QA verified+closed #929** (5-minute Notepad/Claude quickstart — replayed every copy-paste
-command on a real Win11 desktop with the live DLL; clean Dev→QA lifecycle). The 10:07 Dev cycle then picked up
-**#867** (`'Did you mean' leaks the hidden snapshot command`; P2/from:qa) — active in-flight, no branch yet,
-left untouched (Rule 4). `status:in-progress` = **#867** (active); `status:done` = **#972** (input-content guard,
-code-verified). **No open PRs.** **The human-decision queue is unchanged.** No new issue filed — distribution
-backlog is sharp (#926 `.mcpb` / #922 registries — P1/pickable; #930 hero demo) and recognition hardening
-remaining (#932 Java JAB, #934 SAP) is env-blocked; a duplicate would be noise (Rule 9). Top human items remain:
-#914 (cut v0.3.2 — ready), #975 (ratify the QA re-enable) + #972 (close the input-content safety guard) — both
-your security sign-off; **#915 recommended for closure** (QA durably healthy — it verified+closed #929 today).
-NB: the **#969 env fix stays human-only** (Rule 4 — touches another agent's worktree). NB: #972 sits in
-`status:done` awaiting your sign-off; QA itself is running (verified #929) but intrusive-input verification stays
-paused pending your #975 ratification. **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.**
-`develop` CI: last code commit `142bfe5` **Build & Test + CodeQL success** (HEAD `671c1c6` = orc `[skip ci]`) →
-not red. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not
-due (<7d since 06-16 baseline)._
+_Last refreshed: 2026-06-18 11:22 (Orc autonomous cycle — **quiet/healthy; one stuck Dev PR diagnosed +
+dispatched; no new human-only item**. Since the 10:22 refresh: the in-flight **#867** pickup surfaced as
+**PR #995** (`fix: exclude hidden commands from typo suggestions`, auto-merge SQUASH on) — but it is `BLOCKED`
+on **genuine red CI**: its own new `tests/test_fuzzy_group.py` hidden-command tests fail on the **Ubuntu 3.12 +
+macOS 3.12** lanes while passing on the Windows desktop. **Root cause (verified): the CI runners resolve
+`click 8.4.1`; the desktop has `click 8.3.1`.** click ≥8.4 added a **native** command typo-suggester to
+`Group.resolve_command` that ignores `hidden=True`; `FuzzyGroup` only filters hidden commands in its own
+`difflib` path, then falls through to `super().resolve_command()`, which on click 8.4.1 re-suggests the hidden
+command. The 8.3.1 desktop has no native command "Did you mean", so the fix looked complete locally — the
+classic "green on Windows, red on Linux/macOS". **This is Dev-fixable, not human-only** — dispatched a precise
+diagnostic + fix-direction comment on PR #995 (own the not-found path; don't delegate it to `super()`). **The
+human-decision queue is unchanged.** `status:in-progress` = **#867** (active, PR #995 held by red gate);
+`status:done` = **#972** (input-content guard, code-verified). Top human items remain: #914 (cut v0.3.2 —
+ready), #975 (ratify the QA re-enable) + #972 (close the input-content safety guard) — both your security
+sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only**
+(Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: last code commit
+`142bfe5` **Build & Test + CodeQL success** (HEAD `5d92fcb` = orc `[skip ci]`) → **develop not red** (the red is
+PR-branch-only). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step
+not due (<7d since 06-16 baseline)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

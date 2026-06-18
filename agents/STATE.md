@@ -1,6 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 10:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#929
+> Last refreshed: 2026-06-18 11:22 (Orc autonomous cycle — **quiet/healthy; one stuck Dev PR diagnosed +
+> dispatched (#867 / PR #995, genuine red CI); develop not red; no new human-only item**. Since the 10:22
+> refresh: the in-flight **#867** pickup surfaced as **PR #995** (`fix: exclude hidden commands from typo
+> suggestions`, author AcePeak/team Dev, auto-merge SQUASH on 03:16Z) — but it is `BLOCKED` on **genuine red
+> CI**: its own new `tests/test_fuzzy_group.py` hidden-command tests fail on the **Ubuntu 3.12 + macOS 3.12**
+> lanes (`test_hidden_command_not_suggested` + `TestRealCliHiddenSuggestions::*` — all show
+> `Error: No such command 'interna'. Did you mean 'internal'?`, i.e. the hidden command is still suggested),
+> while passing on the Windows desktop. **Root cause (verified): CI runners resolve `click 8.4.1`; the desktop
+> has `click 8.3.1`.** click ≥8.4 added a **native** command typo-suggester to `Group.resolve_command` that
+> ignores `hidden=True`; PR #995's `FuzzyGroup._suggestable_commands` filters hidden commands only in its own
+> `difflib` path, then falls through to `super().resolve_command()`, which on click 8.4.1 re-suggests the hidden
+> command. The 8.3.1 desktop base resolver has no command-level "Did you mean" (confirmed locally: a plain
+> `click.Group` emits only `No such command 'interna'.`), so the fix looked complete on the desktop — the classic
+> "green on Windows, red on Linux/macOS". **Per orch-review Step 1 this is Dev-fixable, not human-only → dispatched
+> a precise diagnostic + fix-direction comment on PR #995** (own the not-found path: when `cmd is None`, `ctx.fail`
+> with a suggestion drawn only from `_suggestable_commands`, instead of delegating to `super().resolve_command()`;
+> reproduce against click 8.4.1 on Linux, not the 8.3.1 desktop). Did **not** merge (red), did **not** touch the
+> branch (Rule 4), auto-merge correctly held by the gate. **`status:in-progress` = #867** (active, PR #995 held by
+> red gate); **`status:done` = #972** (input-content guard, code-verified, close = human security sign-off, queued).
+> Branches `develop`+`main`+`fix/issue-867-...` (open PR — fine). **Step 3 (drive product): no new issue filed** —
+> the #995 diagnosis/dispatch was the cycle's real Step-1 work; backlog is sharp + correctly prioritized
+> (distribution next: **#926** `.mcpb` P1/pickable, **#922** registries P1, **#930** hero demo; recognition
+> hardening env-blocked — #932 Java/no JDK, #934 SAP/no install). The desktop `click 8.3.1` vs CI `click 8.4.1`
+> divergence is an env-honesty class (akin to #910/#969) but is addressed by the #995 fix being click-version-robust,
+> so no standalone issue filed yet (Rule 9). Evidence in `.work/reviews/2026-06-18-1122-auto-review.md`. **needs:ace
+> live queue unchanged #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.**
+> `develop` CI: last code commit `142bfe5` **Build & Test + CodeQL success** (HEAD `5d92fcb` = orc `[skip ci]`) →
+> **not red** (the red is PR-branch-only). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 10:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#929
 > quickstart verified+closed) + one active in-flight Dev pickup (#867); no open PRs, no new human-only
 > item**. Since the 09:23 refresh: **QA verified+closed #929** @01:38:56Z (`verified`+`status:done` —
 > the 5-minute Notepad/Claude quickstart, `docs/QUICKSTART.md`; QA replayed every copy-paste command on a
