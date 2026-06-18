@@ -1,6 +1,36 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 04:22 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+> Last refreshed: 2026-06-19 05:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+> clean since 04:22 + one Orc post-merge handoff (#946 → status:done) → develop green, no open PRs,
+> status:in-progress now empty, no abandoned work, no new human-only item; needs:ace queue unchanged**.
+> Since the 04:22 refresh: **PR #1019 landed** (`99eed64`, HEAD, **fixes #946** — `test: assert browser
+> user-data-dir paths by parts, not slash substrings`; test-only portability fix — the
+> `test_browser_launcher.py` user-data-dir assertions compared POSIX-slash substrings (`'a/b' in str(path)`)
+> which fail on a real Windows host where `WindowsPath` renders `\`-separated, so the tests now assert on
+> path *parts* (`Path.parts` / segment membership); no source change — production code is correct, the
+> test was non-portable, same honest-test class as #999/#910/#867). Merged 21:14:14Z, **Build & Test +
+> CodeQL success**; source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean).
+> **Post-merge handoff:** #946 was still `status:in-progress` (base `develop` ≠ default branch → no
+> auto-close; PR didn't flip it) → **Orc flipped #946 `status:in-progress` → `status:done`** + QA
+> verification note (run `pytest tests/test_browser_launcher.py` on the Windows desktop; confirm the
+> part-based path assertions pass). **`status:in-progress` now empty** → no in-flight pickup, no abandoned
+> work. **`status:done` = #946** (browser-launcher path portability test, awaiting QA) **+ #972**
+> (input-content guard, code-verified, close = human security sign-off, queued). **No open PRs.**
+> **Step 2 health: clean.** **Step 3 (drive product): no new issue filed (Rule 9)** — priority-honesty
+> scan (`no:milestone` open): only the `needs:ace` human-only items (#975/#969/#935/#915) + the parked
+> Linux/cross-platform `help wanted` community backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero
+> unmilestoned actionable Dev work**; the `-j` success+error envelope classes stay structurally closed,
+> and the recent test-honesty / cross-platform-portability cluster (#894 CJK, #999 utf-8 read, #1010
+> false-warning, #1016 exit-code, #944 stale-HWND, #946 path portability) has all shipped. Recognition
+> hardening env-blocked (#932 Java/no JDK; #934 SAP/no install); distribution backlog sharp
+> (#997/#930/#922/#928). Evidence in `.work/reviews/2026-06-19-0523-auto-review.md`. **needs:ace live
+> queue unchanged #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this
+> cycle.** `develop` CI: HEAD `99eed64` (#1019) **Build & Test + CodeQL success** → **not red.** v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due**
+> (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 04:22 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
 > clean since 03:22 + one Orc post-merge handoff (#944 → status:done) → develop green, no open PRs,
 > status:in-progress now empty, no abandoned work, no new human-only item; needs:ace queue unchanged**.
 > Since the 03:22 refresh: **PR #1018 landed** (`a92bbe6`, HEAD, **fixes #944** — `test: mock

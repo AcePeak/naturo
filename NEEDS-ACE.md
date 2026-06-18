@@ -4,26 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 04:22 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed clean +
+_Last refreshed: 2026-06-19 05:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed clean +
 one Orc post-merge handoff → `develop` green, no open PRs, status:in-progress now empty, no new human-only
-item; the queue below is unchanged**. Since the 03:22 refresh: **PR #1018 landed** (`a92bbe6`, HEAD,
-**fixes #944** — `test: mock _is_hwnd_alive in test_valid_app_id_returns_handle_and_pid`: a test-only fix —
-the test supplied fixture handle `999` but omitted the #788 stale-HWND mock, so on a real Windows host
-`IsWindow(999)=0` made it raise `APP_ID_STALE` instead of returning `(None,999,111)`; production code is
-correct). Merged 20:14:06Z, Build & Test + CodeQL success; source branch auto-deleted (Rule 14 clean).
-**Post-merge handoff:** #944 was still `status:in-progress` (Dev hadn't flipped it; base `develop` ≠ default
-→ no auto-close) → Orc flipped it to **status:done** for QA. `status:in-progress` = **empty** (no in-flight
-pickup, no abandoned work). `status:done` = **#944** (app-id test stale-HWND, awaiting QA) **+ #972**
-(input-content guard, code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)** — the
-`-j` envelope classes stay structurally closed and the recent test-honesty / visual-report cluster
-(#894/#999/#1010/#1016/#944) has all shipped; recognition hardening env-blocked (#932/#934); distribution
-backlog sharp (#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues (only the
-`needs:ace` items below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify
-the QA re-enable) + **#972** (close the input-content safety guard) — both your security sign-off; **#915
-recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live
-needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `a92bbe6` (#1018) **Build &
-Test + CodeQL success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
-#914). Weekly competitiveness step not due (<7d since 06-16)._
+item; the queue below is unchanged**. Since the 04:22 refresh: **PR #1019 landed** (`99eed64`, HEAD,
+**fixes #946** — `test: assert browser user-data-dir paths by parts, not slash substrings`: a test-only
+portability fix — `test_browser_launcher.py` asserted POSIX-slash substrings (`'a/b' in str(path)`) which
+fail on a real Windows host where `WindowsPath` is `\`-separated, so the tests now assert on path *parts*;
+production code is correct, same honest-test class as #999/#910/#867). Merged 21:14:14Z, Build & Test +
+CodeQL success; source branch auto-deleted (Rule 14 clean). **Post-merge handoff:** #946 was still
+`status:in-progress` (PR didn't flip it; base `develop` ≠ default → no auto-close) → Orc flipped it to
+**status:done** for QA. `status:in-progress` = **empty** (no in-flight pickup, no abandoned work).
+`status:done` = **#946** (browser-launcher path portability test, awaiting QA) **+ #972** (input-content
+guard, code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)** — the `-j` envelope
+classes stay structurally closed and the recent test-honesty / cross-platform-portability cluster
+(#894/#999/#1010/#1016/#944/#946) has all shipped; recognition hardening env-blocked (#932/#934);
+distribution backlog sharp (#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues
+(only the `needs:ace` items below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975**
+(ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your security sign-off;
+**#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
+**Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `99eed64` (#1019)
+**Build & Test + CodeQL success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
