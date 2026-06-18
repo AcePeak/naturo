@@ -689,9 +689,11 @@ class TestEnterpriseCLI:
         assert data["baselines"] == []
 
     def test_delete_nonexistent(self, runner, tmp_dirs):
+        # Deleting a missing baseline is a failure and must exit non-zero (#993);
+        # previously it printed "not found" but exited 0, masking the failure.
         result = runner.invoke(main, ["visual", "delete", "nope", "--force"])
-        assert result.exit_code == 0
-        assert "not found" in result.output
+        assert result.exit_code == 1
+        assert "not found" in result.output.lower()
 
     def test_delete_json(self, runner, tmp_dirs, red_image):
         runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])

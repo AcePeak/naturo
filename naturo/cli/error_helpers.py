@@ -115,6 +115,20 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "Snapshot ID not found. Use 'naturo snapshot list' to see available snapshots.",
         False,
     ),
+    "RECORDING_NOT_FOUND": (
+        "Recording not found. Use 'naturo record list' to see saved recordings.",
+        False,
+    ),
+    "SELECTOR_NOT_FOUND": (
+        "Selector not found. Use 'naturo selector list' to see saved selectors, "
+        "or 'naturo selector list --builtin' for built-in templates.",
+        False,
+    ),
+    "BASELINE_NOT_FOUND": (
+        "Visual baseline not found. Use 'naturo visual list' to see saved baselines, "
+        "or 'naturo visual baseline <name> --from <image>' to create one.",
+        False,
+    ),
     "FILE_NOT_FOUND": (
         "The specified file does not exist. Check the file path.",
         False,

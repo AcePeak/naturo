@@ -12,8 +12,9 @@ from typing import Optional
 
 import click
 
-from naturo.cli.error_helpers import collection_read, success_envelope
+from naturo.cli.error_helpers import collection_read, json_error, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.errors import ErrorCode
 
 
 # Default storage locations
@@ -197,7 +198,7 @@ def selector_load(app_name: str, name: str, json_output: bool):
     except KeyError:
         msg = f"Selector not found: @{app_name}/{name}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.SELECTOR_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -307,10 +308,10 @@ def selector_show(app_name: str, json_output: bool):
             # A nonexistent app (no user and no built-in selectors) must fail
             # loudly so scripters can distinguish it from an existing app that
             # simply has zero selectors. Mirrors `record show <nonexistent> -j`.
-            click.echo(json.dumps({
-                "success": False,
-                "error": f"No selectors saved for app '{app_name}'",
-            }))
+            click.echo(json_error(
+                ErrorCode.SELECTOR_NOT_FOUND,
+                f"No selectors saved for app '{app_name}'",
+            ))
             sys.exit(1)
         click.echo(json.dumps({
             "success": True,
@@ -355,7 +356,7 @@ def selector_delete(app_name: str, name: str, force: bool, json_output: bool):
     if name not in selectors:
         msg = f"Selector not found: @{app_name}/{name}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.SELECTOR_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -392,7 +393,7 @@ def selector_clear(app_name: str, force: bool, json_output: bool):
     if not selectors:
         msg = f"No selectors for '{app_name}'."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.SELECTOR_NOT_FOUND, msg))
             sys.exit(1)
         else:
             click.echo(msg)
@@ -430,7 +431,7 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
     if not merged:
         msg = f"No selectors for '{app_name}'."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.SELECTOR_NOT_FOUND, msg))
             sys.exit(1)
         else:
             click.echo(msg)
@@ -472,7 +473,7 @@ def selector_import(file_path: str, merge: bool, json_output: bool):
     if not isinstance(imported, dict):
         msg = "Invalid selector file format."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.INVALID_INPUT, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -516,7 +517,7 @@ def selector_test(app_name: str, name: str, json_output: bool):
     if name not in merged:
         msg = f"Selector not found: @{app_name}/{name}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.SELECTOR_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -529,7 +530,10 @@ def selector_test(app_name: str, name: str, json_output: bool):
         ast = parse(sel_str)
     except Exception as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": f"Parse error: {e}", "selector": sel_str}))
+            click.echo(json_error(
+                ErrorCode.INVALID_INPUT, f"Parse error: {e}",
+                extra={"selector": sel_str},
+            ))
         else:
             click.echo(f"Parse error: {e}")
         sys.exit(1)

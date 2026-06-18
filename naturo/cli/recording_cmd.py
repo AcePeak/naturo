@@ -12,8 +12,9 @@ from datetime import datetime
 
 import click
 
-from naturo.cli.error_helpers import collection_read, success_envelope
+from naturo.cli.error_helpers import collection_read, json_error, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.errors import ErrorCode
 from naturo.recording import (
     Recording,
     generate_recording_id,
@@ -61,7 +62,11 @@ def record_start(name: str, json_output: bool):
     if active is not None:
         msg = f"Recording already in progress: {active.recording_id} ({active.name})"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(
+                ErrorCode.INVALID_INPUT, msg,
+                suggested_action="Run 'naturo record stop' to finish the current recording first.",
+                recoverable=True,
+            ))
         else:
             click.echo(f"Error: {msg}", err=True)
             click.echo("Run 'naturo record stop' to finish the current recording first.")
@@ -104,7 +109,10 @@ def record_stop(json_output: bool):
     if active is None:
         msg = "No active recording to stop."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(
+                ErrorCode.INVALID_INPUT, msg,
+                suggested_action="Start a recording first with 'naturo record start'.",
+            ))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -147,7 +155,7 @@ def record_play(recording_id: str, speed: float, dry_run: bool, json_output: boo
     except FileNotFoundError:
         msg = f"Recording not found: {recording_id}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.RECORDING_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -241,7 +249,7 @@ def record_show(recording_id: str, json_output: bool):
     except FileNotFoundError:
         msg = f"Recording not found: {recording_id}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.RECORDING_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -281,7 +289,7 @@ def record_delete(recording_id: str, force: bool, json_output: bool):
     except FileNotFoundError:
         msg = f"Recording not found: {recording_id}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.RECORDING_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -326,7 +334,7 @@ def record_export(recording_id: str, fmt: str, output_path: str | None,
     except FileNotFoundError:
         msg = f"Recording not found: {recording_id}"
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.RECORDING_NOT_FOUND, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         sys.exit(1)

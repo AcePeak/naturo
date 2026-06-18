@@ -13,8 +13,9 @@ from typing import Optional
 
 import click
 
-from naturo.cli.error_helpers import collection_read, success_envelope
+from naturo.cli.error_helpers import collection_read, json_error, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
+from naturo.errors import ErrorCode
 from naturo.visual import (
     save_baseline,
     update_baseline,
@@ -59,7 +60,7 @@ def visual_baseline(name: str, from_path: str, json_output: bool):
         path = save_baseline(from_path, name)
     except ImportError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.DEPENDENCY_MISSING, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -107,13 +108,13 @@ def visual_compare(name: str, current: str, threshold: float,
                                        ignore_regions=regions)
     except FileNotFoundError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.BASELINE_NOT_FOUND, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
     except ImportError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.DEPENDENCY_MISSING, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -159,7 +160,7 @@ def visual_diff(image1: str, image2: str, output: Optional[str],
         )
     except ImportError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.DEPENDENCY_MISSING, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -220,13 +221,18 @@ def visual_delete(name: str, force: bool, json_output: bool):
         click.confirm(f"Delete baseline '{name}'?", abort=True)
 
     deleted = delete_baseline(name)
-    if json_output:
-        click.echo(json.dumps({"success": deleted, "name": name}))
-    else:
-        if deleted:
-            click.echo(f"Deleted baseline: {name}")
+    if not deleted:
+        msg = f"Baseline not found: {name}"
+        if json_output:
+            click.echo(json_error(ErrorCode.BASELINE_NOT_FOUND, msg, extra={"name": name}))
         else:
-            click.echo(f"Baseline not found: {name}")
+            click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+
+    if json_output:
+        click.echo(json.dumps({"success": True, "name": name}))
+    else:
+        click.echo(f"Deleted baseline: {name}")
 
 
 @click.command("report")
@@ -272,7 +278,7 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
     if not names:
         msg = "No baselines to compare."
         if json_output:
-            click.echo(json.dumps({"success": False, "error": msg}))
+            click.echo(json_error(ErrorCode.BASELINE_NOT_FOUND, msg))
             sys.exit(1)
         else:
             click.echo(msg)
@@ -347,13 +353,13 @@ def visual_update(name: str, from_path: str, json_output: bool):
         path = update_baseline(from_path, name)
     except FileNotFoundError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.BASELINE_NOT_FOUND, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
     except ImportError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.DEPENDENCY_MISSING, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -441,9 +447,15 @@ def visual_suite(suite_path: str, output: Optional[str], json_output: bool):
     """
     try:
         suite = load_suite(suite_path)
-    except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
+    except FileNotFoundError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.FILE_NOT_FOUND, str(e)))
+        else:
+            click.echo(f"Error loading suite: {e}", err=True)
+        sys.exit(1)
+    except (ValueError, json.JSONDecodeError) as e:
+        if json_output:
+            click.echo(json_error(ErrorCode.INVALID_INPUT, f"Invalid suite file: {e}"))
         else:
             click.echo(f"Error loading suite: {e}", err=True)
         sys.exit(1)
@@ -452,7 +464,7 @@ def visual_suite(suite_path: str, output: Optional[str], json_output: bool):
         report = run_suite(suite)
     except ImportError as e:
         if json_output:
-            click.echo(json.dumps({"success": False, "error": str(e)}))
+            click.echo(json_error(ErrorCode.DEPENDENCY_MISSING, str(e)))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
