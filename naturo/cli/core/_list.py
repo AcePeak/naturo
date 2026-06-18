@@ -48,6 +48,9 @@ def windows(app, pid, json_output) -> None:
     try:
         backend = _common._get_backend(json_output)
         win_list = backend.list_windows()
+        # Raw enumeration count, captured before any filtering — this, not the
+        # post-filter list, is what tells us whether a desktop session exists.
+        raw_window_count = len(win_list)
 
         # Exclude own process and parent (terminal) to avoid matching
         # the terminal running the command (#358)
@@ -65,16 +68,19 @@ def windows(app, pid, json_output) -> None:
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
-        # Warn if empty result on Windows (may indicate no desktop session)
-        if not win_list and platform.system() == "Windows":
-            session_warning = ""
-            session_id = os.environ.get("SESSIONNAME", "")
-            if not session_id or session_id.lower() == "services":
-                session_warning = " (Warning: no interactive desktop session detected — running via SSH or service?)"
-            click.echo(
-                f"Warning: no windows found{session_warning}",
-                err=True,
-            )
+        # Warn only when an empty result genuinely indicates no interactive
+        # desktop session — i.e. the *raw* enumeration found nothing and the
+        # canonical WTS check confirms this process has no desktop (#1010).
+        # An empty result produced by a --app/--pid filter on a desktop that
+        # did enumerate windows is normal and must not raise this warning.
+        if not win_list and raw_window_count == 0 and platform.system() == "Windows":
+            from naturo.cli.interaction._common import _is_current_session_interactive
+            if not _is_current_session_interactive():
+                click.echo(
+                    "Warning: no windows found "
+                    "(no interactive desktop session detected — running via SSH or service?)",
+                    err=True,
+                )
 
         if json_output:
             data = [
