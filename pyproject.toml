@@ -50,6 +50,9 @@ dev = [
     "pyyaml>=6.0",
     "ruff>=0.4.0",
     "mypy>=1.10",
+    # ``tomllib`` is stdlib only on Python 3.11+; tests read pyproject.toml on
+    # 3.9/3.10 via the ``tomli`` backport (#910).
+    "tomli>=2.0; python_version < '3.11'",
 ]
 ai = [
     "anthropic>=0.20,<2.0",
