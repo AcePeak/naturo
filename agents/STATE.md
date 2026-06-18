@@ -1,6 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 01:23 (Orc autonomous cycle — **quiet/healthy; two more team-Dev PRs
+> Last refreshed: 2026-06-19 02:23 (Orc autonomous cycle — **quiet/healthy; one more team-Dev PR
+> landed clean (#1015 / fixes #999) → develop green, no open PRs, status:in-progress now empty, no
+> abandoned work, no new human-only item; needs:ace queue unchanged**. Since the 01:23 refresh:
+> **PR #1015 landed** (`53dbed2`, HEAD, **fixes #999** — `test: pin utf-8 on visual report reads +
+> drop dead assertion`; the cross-platform honest-test fix: visual report tests now read with
+> `encoding='utf-8'` so they pass on a non-UTF-8/gbk CJK locale, and the dead `data` assertion in
+> `test_report_errors_exit_nonzero` is dropped). Merged 18:15:52Z, **Build & Test + CodeQL success**;
+> source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). **Post-merge handoff:**
+> #999 was still `status:in-progress` (updated 18:12:35Z, ~3 min before the merge — Dev hadn't flipped
+> it; base `develop` ≠ default branch → no auto-close) → **Orc flipped #999 `status:in-progress` →
+> `status:done`** + QA verification note (utf-8 read on non-UTF-8 locale + dead-assertion removal).
+> Also this window: last cycle's `status:done` **#1010 was QA verified+closed** @17:38:45Z (clean
+> Dev→QA lap, Rule 1 clean). **`status:in-progress` now empty** → no in-flight pickup, no abandoned
+> work. **`status:done` = #999** (visual-report utf-8 read fix, awaiting QA) **+ #972** (input-content
+> guard, code-verified, close = human security sign-off, queued). **No open PRs.** **Step 2 health:
+> clean.** **Step 3 (drive product): no new issue filed (Rule 9)** — priority-honesty scan:
+> unmilestoned open = only the `needs:ace` human-only items (#975/#969/#935/#915) → **zero unmilestoned
+> actionable Dev work**; the `-j` success+error envelope classes stay structurally closed, and the
+> recent `from:qa` polish bugs (#894 CJK, #1010 false-warning, #999 utf-8 read) all shipped. Recognition
+> hardening env-blocked (#932 Java/no JDK; #934 SAP/no install); distribution backlog sharp
+> (#997/#930/#922/#928). Evidence in `.work/reviews/2026-06-19-0223-auto-review.md`. **needs:ace live
+> queue unchanged #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this
+> cycle.** `develop` CI: HEAD `53dbed2` (#1015) **Build & Test + CodeQL success** → **not red.** v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due**
+> (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 01:23 (Orc autonomous cycle — **quiet/healthy; two more team-Dev PRs
 > landed clean since 00:23 → develop green, no open PRs, status:in-progress empty, no abandoned
 > work, no new human-only item; needs:ace queue unchanged**. Since the 00:23 refresh: (a) **PR #1013
 > landed** (`9c3377f`, **fixes #894** — emit literal non-ASCII in CLI `-j` JSON output, resolving the
