@@ -844,12 +844,14 @@ class TestVisualReportCLI:
         assert "FAIL" in result.output
 
     def test_report_no_baselines(self, runner, tmp_dirs, tmp_path):
+        """#1016: plain-output report must exit non-zero with no baselines, matching
+        the JSON path (#781) and the #993 report-errors-exit-non-zero contract."""
         current_dir = tmp_path / "current"
         current_dir.mkdir()
         result = runner.invoke(main, [
             "visual", "report", "--current-dir", str(current_dir),
         ])
-        assert result.exit_code == 0
+        assert result.exit_code != 0
         assert "No baselines" in result.output
 
     def test_report_named_report(self, runner, tmp_dirs, red_image, tmp_path):
