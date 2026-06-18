@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 07:24 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA handoff lap —
+> Last refreshed: 2026-06-18 08:23 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA lap (#982
+> verified+closed) + one active in-flight Dev pickup (#929 quickstart); no open PRs, no new human-only
+> item**. Since the 07:24 refresh: **QA verified+closed #982** @23:38Z (`verified`+`status:done` — the
+> RECOGNITION.md headline coverage-matrix + per-framework how-to; clean Dev→QA lifecycle, no Orc flip
+> needed). This completes the recognition moat's **documentation arm** (benchmark #931 + Electron #933 +
+> #982 + README headline all done). The 00:07 Dev cycle then **picked up #929** ("docs: Automate Notepad
+> in 5 minutes with Claude quickstart"; P1/v0.3.3, `from:orc`+`competitiveness`) at 00:11Z, ~12 min before
+> sweep, **no branch pushed → active in-flight, left untouched (Rule 4)**. This is the distribution
+> feed-forward pickup recommended last cycle. **`status:in-progress` = #929** (active); **`status:done` =
+> #972** (input-content guard, code-verified, close = human security sign-off, queued). **No open PRs;**
+> branches `develop`+`main` only (Rule 14 clean). **Step 3 (drive product): no new issue filed** — the
+> recognition doc arm is complete; the next thrust is **distribution** (epic #922) and its backlog is sharp
+> + correctly prioritized (**#926** `.mcpb` extension P1/pickable, **#923** quickstart+hero P1/pickable,
+> **#922** registry epic P1; #927 closed), with **#929 in flight** — a duplicate would be noise (Rule 9).
+> Recognition hardening remaining is env-blocked (#932 Java JAB, no JDK; #934 SAP, no install). Evidence in
+> `.work/reviews/2026-06-18-0823-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop`
+> CI: HEAD `183b947` **Build & Test success + CodeQL success** → not red. v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 07:24 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA handoff lap —
 > the recognition headline pickup (#982) landed; no open PRs, no new human-only item**. Since the 06:23
 > refresh: team Dev landed **PR #992** (`183b947`, `docs: copy-paste see/find/click how-to against the
 > owned Electron fixture`, **fixes #982** — the RECOGNITION.md headline coverage-matrix + per-framework
