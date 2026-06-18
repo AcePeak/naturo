@@ -1,6 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 19:25 (Orc autonomous cycle — **quiet/healthy; two Dev PRs landed clean
+> Last refreshed: 2026-06-18 20:22 (Orc autonomous cycle — **quiet/healthy; clean Dev→QA→Dev lap closed
+> the #1004/#1007 interaction-error chain; develop green, no open PRs, status:in-progress empty, no new
+> human-only item**. Since the 19:25 refresh: (a) **QA verified+closed #1004** @19:42 local (the
+> `NaturoError`-identity fix on `click`/`type`/`press`/`mouse` `-j` errors — live repro on a real desktop,
+> NO live keystrokes since every command errors at element resolution before any input; all now emit
+> `code:ELEMENT_NOT_FOUND`/`category:automation`/`recoverable:true`/non-null `suggested_action`, exit 1,
+> matching the `get`/`scroll` siblings; the self-maintaining contract `test_error_envelope_contract_1001.py`
+> 204 passed). (b) QA **filed #1007** as a lateral finding during that verify (`move --to <text>` /
+> `move --id <aid>` were dead options — the resolver `_mouse.py:442-456` ignored `to_text`/`element_id` and
+> always errored "Specify ... --to"). (c) the 20:07 Dev cycle **picked up #1007 and landed PR #1008**
+> (`7fb71d0`, **fixes #1007** — extracted the eN-ref/text/automation-id centre-point resolution into a shared
+> `_common._resolve_text_or_ref_target`, refactored `scroll` onto it (behaviour identical), wired
+> `move --to/--id` through it (`REF_NOT_FOUND` stale ref / `ELEMENT_NOT_FOUND` missing target / `INVALID_INPUT`
+> bare move), documented the options in `move --help`; +7 `TestMoveTargetResolution` tests). Base `develop` ≠
+> default branch → no auto-close; **Dev did the post-merge handoff itself** → #1007 already `status:done`
+> (12:18Z) → **no Orc flip needed**. Source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean).
+> **`status:in-progress` now empty;** `status:done` = **#1007** (move resolver fix, awaiting QA) **+ #972**
+> (input-content guard, code-verified, close = human security sign-off, queued). **No open PRs.** **Step 2
+> health: no abandoned work.** **Step 3 (drive product): no new issue filed (Rule 9)** — the `-j`
+> ERROR-envelope class stays STRUCTURALLY CLOSED (#1001 *shape* across the full Click tree + #1006 *semantics*
+> on the action commands; future re-drift unmergeable, mirrors #979/#987); #1007 was QA's lateral finding and
+> Dev already shipped it. Recognition hardening env-blocked (#932 Java/no JDK; #934 SAP/no install);
+> distribution backlog sharp (#997/#930/#922/#928). **Priority honesty:** unmilestoned scan = only the
+> `needs:ace` items (#975/#969/#935/#915, human-only) + the deliberately-parked Linux/cross-platform community
+> backlog (#88/#87/#84/#77/#75/#74/#68/#66, `help wanted`) → **zero unmilestoned actionable Dev work.**
+> Evidence in `.work/reviews/2026-06-18-2022-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop` CI:
+> HEAD `7fb71d0` (#1008) **Build & Test + CodeQL success** → **not red.** v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 19:25 (Orc autonomous cycle — **quiet/healthy; two Dev PRs landed clean
 > since 18:23 → the `-j` ERROR-envelope class is now STRUCTURALLY CLOSED + one Orc post-merge handoff
 > (#1004 → status:done); develop not red, no open PRs, no new human-only item**. Since the 18:23 refresh:
 > (a) **PR #1005 landed** (`0244512`, **fixes #1001** — the self-maintaining `-j` ERROR-envelope
