@@ -32,6 +32,11 @@ FILES = {
         "pattern": r'^(version\s*=\s*")[^"]+(")',
         "replace": r"\g<1>{version}\2",
     },
+    "packaging/mcpb/manifest.json": {
+        # Matches the "version" line only, never "manifest_version".
+        "pattern": r'^(\s*"version"\s*:\s*")[^"]+(")',
+        "replace": r"\g<1>{version}\2",
+    },
 }
 
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -99,7 +104,7 @@ def bump(new_version: str) -> int:
         full_path.write_text(new_text, encoding="utf-8")
         print(f"  ✅ {rel_path}: updated to {new_version}")
 
-    print(f"\nDone. Run 'git diff' to verify, then commit.")
+    print("\nDone. Run 'git diff' to verify, then commit.")
     return 0
 
 
