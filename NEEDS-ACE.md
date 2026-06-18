@@ -4,25 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 02:23 (Orc autonomous cycle — **quiet/healthy; one more team-Dev PR landed
-clean → `develop` green, no open PRs, status:in-progress now empty, no new human-only item; the queue below
-is unchanged**. Since the 01:23 refresh: **PR #1015 landed** (`53dbed2`, HEAD, **fixes #999** — pin utf-8
-on visual report reads + drop a dead assertion: the cross-platform honest-test fix so the visual report
-tests pass on a non-UTF-8/gbk CJK locale, not only on CI's UTF-8 lanes). Merged 18:15:52Z, Build & Test +
-CodeQL success; source branch auto-deleted (Rule 14 clean). **Post-merge handoff:** #999 was still
-`status:in-progress` (Dev hadn't flipped it; base `develop` ≠ default → no auto-close) → Orc flipped it to
-**status:done** for QA. Also this window: last cycle's `status:done` **#1010 was QA verified+closed**
-@17:38Z (clean Dev→QA lap). `status:in-progress` = **empty** (no in-flight pickup, no abandoned work).
-`status:done` = **#999** (visual-report utf-8 read fix, awaiting QA) **+ #972** (input-content guard,
-code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)** — the `-j` envelope classes
-stay structurally closed; recognition hardening env-blocked (#932/#934); distribution backlog sharp
-(#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues (only the `needs:ace` items
-below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable)
-+ **#972** (close the input-content safety guard) — both your security sign-off; **#915 recommended for
-closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
-#975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `53dbed2` (#1015) **Build & Test + CodeQL
-success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
-competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-19 03:22 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed clean +
+one Orc post-merge handoff → `develop` green, no open PRs, status:in-progress now empty, no new human-only
+item; the queue below is unchanged**. Since the 02:23 refresh: **PR #1017 landed** (`98e8f34`, HEAD,
+**fixes #1016** — `test: align test_report_no_baselines with non-zero exit contract`: a test-only fix so
+`visual report` with no baselines is asserted to exit non-zero, matching the #781 JSON-path + #993
+report-errors contract; source already exited 1, only the stale plain-output test assertion was wrong).
+Merged 19:13:42Z, Build & Test + CodeQL success; source branch auto-deleted (Rule 14 clean). Also this
+window: QA **verified+closed #999** @18:42Z (the utf-8 visual-report read fix, reproduced on a real
+cp936/gbk zh-CN host). **Post-merge handoff:** #1016 was still `status:in-progress` (Dev hadn't flipped it;
+base `develop` ≠ default → no auto-close) → Orc flipped it to **status:done** for QA. `status:in-progress`
+= **empty** (no in-flight pickup, no abandoned work). `status:done` = **#1016** (report no-baselines
+exit-code, awaiting QA) **+ #972** (input-content guard, code-verified, awaiting your security sign-off).
+**No new issue filed (Rule 9)** — the `-j` envelope classes stay structurally closed; recognition hardening
+env-blocked (#932/#934); distribution backlog sharp (#997/#930/#922/#928). Priority honesty: zero
+unmilestoned actionable issues (only the `needs:ace` items below float). Top human items unchanged: **#914**
+(cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) —
+both your security sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix
+stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop`
+CI: HEAD `98e8f34` (#1017) **Build & Test + CodeQL success** → **develop not red.** v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

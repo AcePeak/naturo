@@ -1,6 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 02:23 (Orc autonomous cycle — **quiet/healthy; one more team-Dev PR
+> Last refreshed: 2026-06-19 03:22 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+> clean since 02:23 + one Orc post-merge handoff (#1016 → status:done) → develop green, no open PRs,
+> status:in-progress now empty, no abandoned work, no new human-only item; needs:ace queue unchanged**.
+> Since the 02:23 refresh: **PR #1017 landed** (`98e8f34`, HEAD, **fixes #1016** — `test: align
+> test_report_no_baselines with non-zero exit contract`; test-only option-2 fix: source `visual_cmd.py`
+> already `sys.exit(1)` on no-baselines in both plain + JSON paths, so the stale `test_report_no_baselines`
+> plain-output assertion was flipped exit 0 → `!= 0` to match the #781 JSON-path contract + #993
+> report-errors-exit-non-zero direction; no source change). Merged 19:13:42Z, **Build & Test + CodeQL
+> success**; source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). Also this window
+> (per loop log): QA **verified+closed #999** @18:42Z (the utf-8 visual-report read fix, reproduced on a
+> real cp936/gbk zh-CN host = true regression check), and Dev filed+picked #1016 the same lap → clean
+> Dev→QA→Dev cadence. **Post-merge handoff:** #1016 was still `status:in-progress` (Dev hadn't flipped it;
+> base `develop` ≠ default branch → no auto-close) → **Orc flipped #1016 `status:in-progress` →
+> `status:done`** + QA verification note (confirm `visual report` / `-j` against an empty baseline set
+> both exit ≠ 0 with the canonical error envelope, no silent exit-0). **`status:in-progress` now empty**
+> → no in-flight pickup, no abandoned work. **`status:done` = #1016** (report no-baselines exit-code,
+> awaiting QA) **+ #972** (input-content guard, code-verified, close = human security sign-off, queued).
+> **No open PRs.** **Step 2 health: clean.** **Step 3 (drive product): no new issue filed (Rule 9)** —
+> priority-honesty scan: unmilestoned open = only the `needs:ace` human-only items (#975/#969/#935/#915)
+> + the parked Linux/cross-platform `help wanted` community backlog (#88/#87/#84/#77/#75/#74/#68/#66) →
+> **zero unmilestoned actionable Dev work**; the `-j` success+error envelope classes stay structurally
+> closed, and the recent `from:qa`/tech-debt visual-report cluster (#894 CJK, #1010 false-warning, #999
+> utf-8 read, #1016 exit-code) has all shipped. Recognition hardening env-blocked (#932 Java/no JDK; #934
+> SAP/no install); distribution backlog sharp (#997/#930/#922/#928). Evidence in
+> `.work/reviews/2026-06-19-0322-auto-review.md`. **needs:ace live queue unchanged
+> #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.** `develop`
+> CI: HEAD `98e8f34` (#1017) **Build & Test + CodeQL success** → **not red.** v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16,
+> <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 02:23 (Orc autonomous cycle — **quiet/healthy; one more team-Dev PR
 > landed clean (#1015 / fixes #999) → develop green, no open PRs, status:in-progress now empty, no
 > abandoned work, no new human-only item; needs:ace queue unchanged**. Since the 01:23 refresh:
 > **PR #1015 landed** (`53dbed2`, HEAD, **fixes #999** — `test: pin utf-8 on visual report reads +
