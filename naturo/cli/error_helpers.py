@@ -15,7 +15,7 @@ from typing import Any, Callable, Iterable, NoReturn, Optional, TypeVar
 
 import click
 
-from naturo.errors import NaturoError
+from naturo.errors import NaturoError, category_for_code
 
 _CommandT = TypeVar("_CommandT", bound=click.Command)
 
@@ -298,37 +298,57 @@ def json_error(
     code: str,
     message: str,
     *,
+    category: Optional[str] = None,
+    context: Optional[dict[str, Any]] = None,
     suggested_action: Optional[str] = None,
     recoverable: Optional[bool] = None,
     extra: Optional[dict[str, Any]] = None,
 ) -> str:
-    """Build a JSON error response string with agent-friendly recovery hints.
+    """Build a JSON error response string in the canonical envelope shape.
 
-    If suggested_action or recoverable are not provided, looks up defaults
-    from the recovery hint registry based on the error code.
+    Every command's ``-j`` error path funnels through here, so the emitted shape
+    is the single source of truth for the CLI error contract. The ``error`` object
+    always carries the same six keys, in the same order, as
+    :meth:`naturo.errors.NaturoError.to_json_response` — ``code``, ``message``,
+    ``category``, ``context``, ``suggested_action`` and ``recoverable`` — so a
+    scripted consumer can rely on every field being present regardless of which
+    command failed or whether the code is recognised (see issue #884). Unspecified
+    fields fall back to sensible defaults rather than being omitted.
+
+    If ``category``, ``suggested_action`` or ``recoverable`` are not provided, they
+    are resolved from the error code: the category from
+    :func:`naturo.errors.category_for_code`, and the recovery hint/recoverability
+    from the local registry.
 
     Args:
         code: Error code string (e.g., 'INVALID_INPUT', 'WINDOW_NOT_FOUND').
         message: Human-readable error message.
-        suggested_action: Recovery hint for AI agents (auto-populated if None).
+        category: Error class (environment/validation/automation/...). Resolved
+            from the code when None, defaulting to 'unknown'.
+        context: Structured detail for the error. Defaults to an empty dict.
+        suggested_action: Recovery hint for AI agents (auto-populated if None;
+            may remain ``null`` when the code has no registered hint).
         recoverable: Whether retrying might help (auto-populated if None).
-        extra: Additional key-value pairs to include in the error object.
+        extra: Additional key-value pairs to merge into the error object on top of
+            the canonical keys.
 
     Returns:
         JSON string ready for click.echo().
     """
-    error: dict[str, Any] = {"code": code, "message": message}
-
     # Look up defaults from registry
     hint_action, hint_recoverable = _RECOVERY_HINTS.get(code, (None, False))
 
     action = suggested_action if suggested_action is not None else hint_action
     is_recoverable = recoverable if recoverable is not None else hint_recoverable
 
-    if action:
-        error["suggested_action"] = action
-    if is_recoverable:
-        error["recoverable"] = True
+    error: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "category": category if category is not None else category_for_code(code),
+        "context": context if context is not None else {},
+        "suggested_action": action,
+        "recoverable": bool(is_recoverable),
+    }
 
     if extra:
         error.update(extra)
@@ -349,17 +369,9 @@ def json_error_from_exception(exc: Exception) -> str:
         JSON string ready for click.echo().
     """
     if isinstance(exc, NaturoError):
-        error: dict[str, Any] = {
-            "code": exc.code,
-            "message": exc.message,
-        }
-        if exc.suggested_action:
-            error["suggested_action"] = exc.suggested_action
-        if exc.is_recoverable:
-            error["recoverable"] = True
-        if exc.context:
-            error["context"] = exc.context
-        return json.dumps({"success": False, "error": error})
+        # to_json_response() already yields the canonical six-key envelope, so the
+        # exception path and the raw-code path emit an identical shape (#884).
+        return json.dumps(exc.to_json_response())
 
     return json_error("UNKNOWN_ERROR", str(exc))
 

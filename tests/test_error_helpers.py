@@ -36,13 +36,20 @@ class TestJsonError:
         assert result["error"]["recoverable"] is True
 
     def test_basic_error_with_unknown_code(self):
-        """Unknown error codes get no recovery hints by default."""
+        """Unknown error codes keep the canonical shape with empty/false defaults.
+
+        Post-#884 the envelope never drops keys: an unrecognised code yields a
+        present-but-empty ``suggested_action`` (null), ``recoverable=False``,
+        ``category='unknown'`` and ``context={}``.
+        """
         result = json.loads(json_error("CUSTOM_ERROR", "Something went wrong"))
         assert result["success"] is False
         assert result["error"]["code"] == "CUSTOM_ERROR"
         assert result["error"]["message"] == "Something went wrong"
-        assert "suggested_action" not in result["error"]
-        assert "recoverable" not in result["error"]
+        assert result["error"]["suggested_action"] is None
+        assert result["error"]["recoverable"] is False
+        assert result["error"]["category"] == "unknown"
+        assert result["error"]["context"] == {}
 
     def test_explicit_suggested_action_overrides_default(self):
         """Explicit suggested_action overrides the registry default."""
@@ -54,13 +61,13 @@ class TestJsonError:
         assert result["error"]["suggested_action"] == "Try 'naturo window focus --app Chrome'"
 
     def test_explicit_recoverable_overrides_default(self):
-        """Explicit recoverable overrides the registry default."""
+        """Explicit recoverable overrides the registry default (and is present)."""
         result = json.loads(json_error(
             "WINDOW_NOT_FOUND",
             "Window not found",
             recoverable=False,
         ))
-        assert "recoverable" not in result["error"]
+        assert result["error"]["recoverable"] is False
 
     def test_extra_fields_included(self):
         """Extra fields are included in the error object."""
@@ -80,9 +87,9 @@ class TestJsonError:
             assert result["error"]["suggested_action"] == action
 
     def test_invalid_input_not_recoverable(self):
-        """INVALID_INPUT errors are not marked as recoverable."""
+        """INVALID_INPUT errors are present but marked not recoverable."""
         result = json.loads(json_error("INVALID_INPUT", "Bad value"))
-        assert "recoverable" not in result["error"]
+        assert result["error"]["recoverable"] is False
 
 
 class TestJsonErrorFromException:

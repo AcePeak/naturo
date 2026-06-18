@@ -79,6 +79,56 @@ class ErrorCategory:
     UNKNOWN = "unknown"
 
 
+# Canonical ``code -> category`` map. Single source of truth for the *raw-code*
+# JSON error path (:func:`naturo.cli.error_helpers.json_error`), where only an
+# error-code string is available — no :class:`NaturoError` instance to read the
+# category from. Keeping it here, beside the codes and the subclasses that define
+# them, lets every error converge on one ``category`` regardless of whether it was
+# raised as an exception or emitted by code string. Codes absent here fall back to
+# :attr:`ErrorCategory.UNKNOWN`. ``tests/test_error_envelope_884.py`` asserts this
+# map agrees with every NaturoError subclass that fixes a category.
+_ERROR_CATEGORIES: dict[str, str] = {
+    ErrorCode.PERMISSION_DENIED: ErrorCategory.PERMISSIONS,
+    ErrorCode.APP_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.WINDOW_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.ELEMENT_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.MENU_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.SNAPSHOT_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.STALE_SNAPSHOT_CACHE: ErrorCategory.SESSION,
+    ErrorCode.FILE_NOT_FOUND: ErrorCategory.IO,
+    ErrorCode.CAPTURE_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.INTERACTION_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
+    ErrorCode.INVALID_INPUT: ErrorCategory.VALIDATION,
+    ErrorCode.INVALID_COORDINATES: ErrorCategory.VALIDATION,
+    ErrorCode.DIALOG_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.DEPENDENCY_MISSING: ErrorCategory.CONFIGURATION,
+    ErrorCode.NO_DESKTOP_SESSION: ErrorCategory.ENVIRONMENT,
+    ErrorCode.FILE_IO_ERROR: ErrorCategory.IO,
+    ErrorCode.WORKTREE_MISMATCH: ErrorCategory.ENVIRONMENT,
+    ErrorCode.UNKNOWN_ERROR: ErrorCategory.UNKNOWN,
+    ErrorCode.AI_PROVIDER_UNAVAILABLE: ErrorCategory.AI,
+    ErrorCode.AI_ANALYSIS_FAILED: ErrorCategory.AI,
+}
+
+
+def category_for_code(code: str) -> str:
+    """Return the canonical error category for a raw error code.
+
+    Used by the raw-code JSON error path (:func:`naturo.cli.error_helpers.json_error`)
+    so an error emitted by code string alone carries the same ``category`` as the
+    equivalent :class:`NaturoError` would. Unrecognised codes degrade gracefully to
+    :attr:`ErrorCategory.UNKNOWN` rather than raising.
+
+    Args:
+        code: A standardized error-code string (e.g. ``"WINDOW_NOT_FOUND"``).
+
+    Returns:
+        The matching :class:`ErrorCategory` string, or ``ErrorCategory.UNKNOWN``.
+    """
+    return _ERROR_CATEGORIES.get(code, ErrorCategory.UNKNOWN)
+
+
 class NaturoError(Exception):
     """Base error for all Naturo operations.
 
