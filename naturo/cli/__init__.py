@@ -51,6 +51,13 @@ from naturo.cli.recording_cmd import record
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 
 
+# Accept ``-h`` as the POSIX synonym for ``--help`` (#899). Click reads
+# ``help_option_names`` from the context, and child contexts inherit it from
+# their parent, so declaring it once on the root group propagates the shorthand
+# to every subcommand and nested subgroup without per-command edits.
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+
 def _patch_json_flag(cmd) -> None:
     """Patch --json/-j flag on a Click command to inherit from parent ctx.obj['json'].
 
@@ -87,7 +94,7 @@ def _patch_all_commands(group: click.Command) -> None:
     _patch_json_flag(group)
 
 
-@click.group(cls=FuzzyGroup)
+@click.group(cls=FuzzyGroup, context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, prog_name="naturo")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose logging")
@@ -397,7 +404,7 @@ def run() -> None:
         if "--version" in argv:
             click.echo(json.dumps({"success": True, "version": __version__}))
             sys.exit(0)
-        if "--help" in argv:
+        if "--help" in argv or "-h" in argv:
             click.echo(_root_help_json())
             sys.exit(0)
 
