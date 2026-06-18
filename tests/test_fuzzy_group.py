@@ -226,3 +226,96 @@ class TestRealCliHiddenSuggestions:
         result = CliRunner().invoke(main, ["captur"])
         assert result.exit_code != 0
         assert "Did you mean 'capture'?" in result.output
+
+
+class TestFuzzyGroupShortQueryPrecision:
+    """A short query that is only an edit-distance neighbor — sharing no real
+    intent — must not produce an authoritative "Did you mean" hint (#889).
+
+    Click's default ``cutoff=0.6`` lets random character overlaps in 2–3 char
+    queries cross the bar (``ai``→``wait``, ``tap``→``app``, both ratio 0.667).
+    Genuine one-character typos of real commands score markedly higher
+    (≥ 0.75), so a tighter cutoff cleanly separates the two.
+    """
+
+    @pytest.fixture
+    def cli(self):
+        @click.group(cls=FuzzyGroup)
+        def app_group():
+            pass
+
+        @app_group.command(name="app")
+        def app_cmd():
+            click.echo("app")
+
+        @app_group.command(name="wait")
+        def wait_cmd():
+            click.echo("wait")
+
+        @app_group.command(name="list")
+        def list_cmd():
+            click.echo("list")
+
+        return app_group
+
+    def test_spurious_short_neighbor_not_suggested(self, cli):
+        """``ai`` is a 0.667-ratio neighbor of ``wait`` but shares no intent."""
+        result = CliRunner().invoke(cli, ["ai"])
+        assert result.exit_code != 0
+        assert "Did you mean" not in result.output
+
+    def test_spurious_short_neighbor_not_aimed_at_app(self, cli):
+        """``tap`` is a 0.667-ratio neighbor of ``app`` but means ``click``."""
+        result = CliRunner().invoke(cli, ["tap"])
+        assert result.exit_code != 0
+        assert "Did you mean" not in result.output
+
+    def test_genuine_short_typo_still_suggested(self, cli):
+        """``lis`` is a genuine one-char-short typo of ``list`` (ratio 0.857)."""
+        result = CliRunner().invoke(cli, ["lis"])
+        assert result.exit_code != 0
+        assert "Did you mean 'list'?" in result.output
+
+
+class TestRealCliSpuriousSuggestions:
+    """#889 — short verbs must not be nudged toward unrelated commands.
+
+    The hint reads as authoritative ("Did you mean ...?"), so aiming it at the
+    wrong command is worse than emitting nothing: a user who types ``naturo ai``
+    and is pointed at ``wait`` concludes naturo has no AI surface.
+    """
+
+    @pytest.mark.parametrize(
+        "verb,wrong_target",
+        [
+            ("ai", "wait"),
+            ("tap", "app"),
+        ],
+    )
+    def test_short_spurious_verb_gives_no_wrong_suggestion(self, verb, wrong_target):
+        from naturo.cli import main
+
+        result = CliRunner().invoke(main, [verb])
+        assert result.exit_code != 0
+        assert f"Did you mean '{wrong_target}'?" not in result.output
+
+    @pytest.mark.parametrize(
+        "typo,target",
+        [
+            ("apps", "app"),
+            ("clik", "click"),
+            ("lis", "list"),
+            ("typ", "type"),
+            ("mov", "move"),
+            ("fnd", "find"),
+            ("dif", "diff"),
+            ("scrol", "scroll"),
+        ],
+    )
+    def test_genuine_near_miss_still_suggested(self, typo, target):
+        """A real one-character typo still surfaces its command (ratio ≥ 0.75)."""
+        from naturo.cli import main
+
+        result = CliRunner().invoke(main, [typo])
+        assert result.exit_code != 0
+        assert f"Did you mean '{target}'?" in result.output

@@ -6,6 +6,16 @@ import difflib
 
 import click
 
+# Minimum ``difflib`` similarity ratio for a typo to earn a "Did you mean"
+# hint. Click's default of 0.6 is too lax for short verbs: a 2–3 char query
+# crosses it on incidental character overlap alone (``ai``→``wait``,
+# ``tap``→``app`` both score 0.667), aiming an authoritative-sounding hint at a
+# semantically unrelated command (#889). Genuine one-character typos of real
+# commands score noticeably higher (``apps``→``app`` 0.857, ``mvoe``→``move``
+# 0.750), so 0.7 sits in the empirical gap — it drops the spurious short-query
+# matches while preserving every real near-miss.
+_SUGGESTION_CUTOFF = 0.7
+
 
 class FuzzyGroup(click.Group):
     """Click Group subclass that suggests the closest command on typos.
@@ -109,7 +119,10 @@ class FuzzyGroup(click.Group):
                     f"No such command '{cmd_name}'. Did you mean '{alias_target}'?"
                 )
             matches = difflib.get_close_matches(
-                cmd_name, self._suggestable_commands(ctx), n=1, cutoff=0.6
+                cmd_name,
+                self._suggestable_commands(ctx),
+                n=1,
+                cutoff=_SUGGESTION_CUTOFF,
             )
             if matches:
                 ctx.fail(
