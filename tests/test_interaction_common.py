@@ -264,7 +264,11 @@ class TestResolveAppId:
         entry = MagicMock(handle=999, pid=111)
         fake_map = MagicMock()
         fake_map.resolve.return_value = entry
-        with patch("naturo.app_ids.get_app_id_map", return_value=fake_map):
+        # The handle (999) is a fixture value, not a real window, so the #788
+        # stale-HWND guard must be mocked alive; otherwise IsWindow(999) returns
+        # 0 on Windows and _resolve_app_id raises APP_ID_STALE (see #944).
+        with patch("naturo.app_ids.get_app_id_map", return_value=fake_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True):
             result = _resolve_app_id("a1", "notepad", None, None, False)
         assert result == (None, 999, 111)
 
