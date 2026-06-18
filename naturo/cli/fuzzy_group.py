@@ -1,5 +1,7 @@
 """FuzzyGroup — Click Group with typo-correcting command suggestions."""
 
+from __future__ import annotations
+
 import difflib
 
 import click
@@ -22,7 +24,29 @@ class FuzzyGroup(click.Group):
     (:class:`click.exceptions.NoSuchCommand`) which matches against *all*
     commands, including ``hidden=True`` ones — so delegating would re-introduce
     the leak this class exists to prevent.
+
+    An optional ``aliases`` map handles intuitive verbs that edit-distance
+    matching cannot discover — either because the real command lives inside a
+    subgroup (``launch`` → ``app launch``) or because it is named differently
+    (``screenshot`` → ``capture``). These curated intents are checked before
+    the fuzzy match and may point at a multi-word command path (see #880).
     """
+
+    def __init__(
+        self, *args: object, aliases: dict[str, str] | None = None, **kwargs: object
+    ) -> None:
+        """Initialize the group, capturing the optional intent-alias map.
+
+        Args:
+            *args: Positional arguments forwarded to :class:`click.Group`.
+            aliases: Optional mapping of an unrecognized command name to the
+                canonical command path to suggest (e.g. ``{"launch": "app
+                launch"}``). The path may contain spaces to reference a
+                subgroup command.
+            **kwargs: Keyword arguments forwarded to :class:`click.Group`.
+        """
+        super().__init__(*args, **kwargs)
+        self.aliases: dict[str, str] = aliases or {}
 
     def _suggestable_commands(self, ctx: click.Context) -> list[str]:
         """Return command names eligible to appear as typo suggestions.
@@ -76,6 +100,14 @@ class FuzzyGroup(click.Group):
         # ``resilient_parsing`` is set during shell completion, where failing
         # would break completion — defer to the base class there too.
         if cmd is None and not ctx.resilient_parsing and not cmd_name.startswith("-"):
+            # Curated intents win over fuzzy guesses: they target the command a
+            # first-time user actually means, which edit distance cannot reach
+            # (subgroup commands or differently-named ones).
+            alias_target = self.aliases.get(cmd_name)
+            if alias_target:
+                ctx.fail(
+                    f"No such command '{cmd_name}'. Did you mean '{alias_target}'?"
+                )
             matches = difflib.get_close_matches(
                 cmd_name, self._suggestable_commands(ctx), n=1, cutoff=0.6
             )

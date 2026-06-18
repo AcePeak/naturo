@@ -119,7 +119,25 @@ def _patch_all_commands(group: click.Command) -> None:
     _apply_short_help(group)
 
 
-@click.group(cls=FuzzyGroup, context_settings=CONTEXT_SETTINGS)
+# Common first-run intents that no edit-distance match can reach: the verb
+# either lives inside a subgroup (``launch`` → ``app launch``) or the real
+# command is named differently (``screenshot`` → ``capture``). FuzzyGroup
+# surfaces these as "Did you mean" hints so an intuitive verb is not a dead
+# end on a fresh install (#880).
+_COMMAND_INTENT_ALIASES = {
+    "launch": "app launch",
+    "open": "app launch",
+    "run": "app launch",
+    "start": "app launch",
+    "screenshot": "capture",
+}
+
+
+@click.group(
+    cls=FuzzyGroup,
+    context_settings=CONTEXT_SETTINGS,
+    aliases=_COMMAND_INTENT_ALIASES,
+)
 @click.version_option(__version__, prog_name="naturo")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose logging")
