@@ -1,6 +1,42 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-18 15:26 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
+> Last refreshed: 2026-06-18 16:22 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land of the
+> #884 error-envelope convergence (PR #1002 auto-merged mid-cycle) + Orc post-merge handoff (#884 →
+> status:done) + concrete pointer to the #1001 enforcement contract; develop green, status:in-progress
+> now empty, no open PRs, no new human-only item**. Since the 15:26 refresh: (a) **QA verified+closed
+> #877** @15:40 (clean Dev→QA lap — `get/set -j` stale-ref envelope, runtime-confirmed canonical
+> `STALE_SNAPSHOT_CACHE` + `suggested_action`, exit 1); (b) a Dev cycle (16:07–16:21) opened **PR #1002**
+> (`fix/issue-884-canonical-error-envelope` → `develop`, **fixes #884**) with auto-merge SQUASH on. At
+> sweep it was `BLOCKED` only because the required **CI Gate** was still IN_PROGRESS; the sole failing
+> lanes were **Ubuntu 3.9 + macOS 3.9** = the known non-blocking **#910 tomllib gap** (`continue-on-error`;
+> failed log: **5251 passed / 1 failed = the tomllib case only**, incl. #884's new 17-case test) → NOT
+> genuine red. **Monitored to completion: CI Gate passed → PR #1002 auto-merged** (`ca4c976`, 08:22:56Z);
+> source branch **auto-deleted** (only `develop`+`main` remain, Rule 14 clean). **What landed (fixes #884):**
+> every raw-code `-j` error now routes through `json_error` emitting the **full canonical six-field schema
+> unconditionally** (`code,message,category,context,suggested_action,recoverable`) — shapes A(6)/B(3)/C(2)
+> converge on one; `json_error_from_exception` delegates to `to_json_response()`; `naturo/errors.py` adds
+> `_ERROR_CATEGORIES`+`category_for_code()`; no-subclass codes degrade to `category="unknown"` by design.
+> **Orc post-merge handoff: flipped #884 `status:in-progress` → `status:done`** + QA note (base ≠ default
+> branch → no auto-close; Dev hadn't flipped it). **`status:in-progress` now empty;** `status:done` = **#884**
+> (awaiting QA) **+ #972** (input-content guard, code-verified, close = human security sign-off, queued).
+> **No open PRs.** **Step 2 health:** no abandoned work. **Step 3 (drive product):** the `-j` **error**-envelope
+> drift class now mirrors the **success** envelope's posture — the convergence *fix* landed (#1002/#884), and
+> the self-maintaining *contract* that makes future re-drift unmergeable is **#1001** (OPEN, P1, `test`/`from:orc`,
+> v0.3.4). Posted a **concrete status comment on #1001**: now that #884 defines `_ERROR_CATEGORIES`/
+> `category_for_code()`/the six-field order, #1001's enforcement target is concrete (walk the Click tree, assert
+> each `-j` `error` equals the six canonical keys in order incl. the no-subclass `record`/`wait` families) —
+> recommended next Dev pickup (#1001 is to the error envelope what #987 is to the success envelope). **No new
+> issue filed** — backlog sharp, the highest-leverage next move already exists; a dup would be Rule 9 noise.
+> Recognition hardening env-blocked (#932 Java/no JDK; #934 SAP/no install); distribution backlog sharp
+> (#997/#929/#930/#922/#928). **Priority honesty:** unmilestoned-non-`needs:ace` scan returned **zero** — all
+> actionable Dev work milestoned. Evidence in `.work/reviews/2026-06-18-1622-auto-review.md`. **needs:ace live
+> queue unchanged #975/#972/#969/#935/#915/#914** (+ infra #860/#842) — **no new human-only item this cycle.**
+> `develop` CI: HEAD `ca4c976` (#1002) — required **CI Gate success** (only non-blocking 3.9 tomllib lanes #910
+> red) → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Weekly competitiveness
+> **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-18 15:26 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
 > post-merge handoff (#877 via PR #1000) + one sharp Step-3 gap filed (#1001 layer-3 error-envelope
 > contract); develop green, no open PRs, one active in-flight Dev pickup (#884 error-envelope schema
 > drift, ~12 min old, left untouched per Rule 4), backlog sharp + fully milestoned, no new human-only

@@ -4,28 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-18 15:26 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
-post-merge handoff (#877 via PR #1000) + one sharp Step-3 gap filed (#1001); no new human-only item; the
-queue below is unchanged**. Since the 14:22 refresh: team Dev landed **PR #1000** (`81d5d66`, **fixes #877** —
-`get/set` stale-ref `-j` errors now route through a semantic envelope with a real `error_code` +
-`suggested_action`; new `tests/test_error_envelope_877.py` 13 cases) → `develop`, merged 06:26Z, source branch
-auto-deleted (only `develop`+`main` remain, Rule 14 clean). **Orc post-merge handoff: flipped #877
-`status:in-progress` → `status:done`** + QA note (base ≠ default branch → no auto-close; Dev hadn't flipped it).
-`status:in-progress` = **#884** (JSON error-envelope schema drift — active in-flight Dev pickup, updated 07:13Z
-~12 min before sweep, **no branch pushed → left untouched, Rule 4**); `status:done` = **#972** (input-content
-guard, code-verified, awaiting your security sign-off). **No open PRs.** **Step 3 (drive product): filed #1001**
-(`test`/`from:orc`/P1/v0.3.4) — a **self-maintaining error-envelope schema contract** (layer 3): #884 keeps
-spawning new `-j` error shapes as QA finds them (now A/B/C/D + the `wait` family), the same recurrence the
-*success* envelope had before #979/#987 closed it; #1001 auto-enumerates the command tree and fails CI on any
-drift, so it survives #884's closure as the enforcement layer. Test-only, Dev-actionable — not human-only. All
-other unmilestoned issues are the four `needs:ace` ops/security items below (#975/#969/#935/#915), correctly
-unmilestoned. **No duplicate filed** — recognition hardening env-blocked (#932 Java/no JDK; #934 SAP/no install);
-distribution backlog sharp (#997/#929/#930/#922/#928). Top human items unchanged: **#914** (cut v0.3.2 — ready),
-**#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your security
-sign-off; **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only**
-(Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `81d5d66`
-(#1000) **Build & Test + CodeQL success** → **develop not red**. v0.3.2 ship-gate unchanged (FULLY MET — release
-is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-18 16:22 (Orc autonomous cycle — **quiet/healthy; clean Dev self-land +
+post-merge handoff (#884 via PR #1002) + concrete pointer to the #1001 enforcement contract; no new human-only
+item; the queue below is unchanged**. Since the 15:26 refresh: QA verified+closed **#877** @15:40 (clean
+Dev→QA lap), then team Dev landed **PR #1002** (`ca4c976`, **fixes #884** — every raw-code `-j` error now emits
+the **canonical six-field shape unconditionally** via `json_error`; shapes A/B/C converge; `naturo/errors.py`
+adds `_ERROR_CATEGORIES`+`category_for_code()`; new `tests/test_error_envelope_884.py` 17 cases) → `develop`,
+auto-merged 08:22:56Z, source branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). **Orc
+post-merge handoff: flipped #884 `status:in-progress` → `status:done`** + QA note (base ≠ default branch → no
+auto-close; Dev hadn't flipped it). `status:in-progress` now **empty**; `status:done` = **#884** (awaiting QA) **+
+#972** (input-content guard, code-verified, awaiting your security sign-off). **No open PRs.** **Step 3 (drive
+product):** the `-j` **error**-envelope class has now reached the same posture the **success** envelope did with
+#979/#987 — the convergence *fix* landed (#1002), and the self-maintaining *contract* that makes re-drift
+unmergeable is **#1001** (open, P1, `test`/`from:orc`, v0.3.4); posted a concrete status comment (its enforcement
+target is now defined by #884's landed schema) — recommended next Dev pickup. **No duplicate filed** — recognition
+hardening env-blocked (#932 Java/no JDK; #934 SAP/no install); distribution backlog sharp (#997/#929/#930/#922/#928).
+Priority honesty: zero unmilestoned actionable issues (only the `needs:ace` items below float). Top human items
+unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content
+safety guard) — both your security sign-off; **#915 recommended for closure** (QA durably healthy). NB: the
+**#969 env fix stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914 /#860/#842.**
+`develop` CI: HEAD `ca4c976` (#1002) — required **CI Gate passed** (only the non-blocking Ubuntu/macOS 3.9
+tomllib lanes #910 red) → **develop not red**. v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
+#914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
