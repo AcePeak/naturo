@@ -88,7 +88,7 @@ class TestSaveBaseline:
     def test_save_metadata(self, tmp_dirs, red_image):
         bd, _ = tmp_dirs
         visual_mod.save_baseline(red_image, "test_screen", bd)
-        meta = json.loads((bd / "test_screen.json").read_text())
+        meta = json.loads((bd / "test_screen.json").read_text(encoding="utf-8"))
         assert meta["name"] == "test_screen"
         assert meta["size"] == [100, 100]
 
@@ -218,7 +218,7 @@ class TestHTMLReport:
         report.add_result(result)
         html_path = visual_mod.generate_html_report(report, rd / "report.html")
         assert html_path.exists()
-        content = html_path.read_text()
+        content = html_path.read_text(encoding="utf-8")
         assert "Test Report" in content
         assert "FAILED" in content
         assert "test" in content
@@ -672,8 +672,6 @@ class TestEnterpriseCLI:
         ])
         assert result.exit_code != 0
 
-        assert data["name"] == "screen1"
-
     def test_list_json(self, runner, tmp_dirs, red_image):
         runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
         result = runner.invoke(main, ["visual", "list", "--json"])
@@ -867,5 +865,5 @@ class TestVisualReportCLI:
             "-o", str(html_out),
         ])
         assert result.exit_code == 0
-        content = html_out.read_text()
+        content = html_out.read_text(encoding="utf-8")
         assert "Sprint 42 Regression" in content
