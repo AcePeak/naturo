@@ -10,6 +10,7 @@ This gives a single consistent mock-patch path:
 """
 from __future__ import annotations
 
+import errno
 import functools
 import json as json_module  # noqa: F401 — re-exported for submodules
 import logging
@@ -151,6 +152,45 @@ def _platform_error_msg(feature: str) -> str:
     return f"{feature} is not supported on {system}."
 
 
+# Stable, English-only reasons keyed by ``errno``. ``OSError.strerror`` is
+# rendered by the OS in the system locale, so interpolating it leaks non-English
+# text into naturo's English-only CLI/``-j`` contract on a localized Windows
+# (#1031). Map the errno to a fixed phrase instead; the numeric errno is kept for
+# diagnostics, but never the localized string.
+_OSERROR_REASONS: dict[int, str] = {
+    errno.ENOENT: "a path component is missing or is not a directory",
+    errno.ENOTDIR: "a path component is not a directory",
+    errno.EACCES: "permission denied",
+    errno.EPERM: "operation not permitted",
+    errno.EEXIST: "a file already exists at that path",
+    errno.EROFS: "the filesystem is read-only",
+    errno.ENOSPC: "no space left on the device",
+    errno.ENAMETOOLONG: "the path is too long",
+}
+
+
+def _oserror_reason(exc: OSError) -> str:
+    """Return a stable, English-only reason describing an :class:`OSError`.
+
+    Avoids ``exc.strerror``, which the OS renders in the system locale and would
+    otherwise leak non-English text into naturo's English-only error contract
+    (#1031). Falls back to the numeric errno (still English) for codes that are
+    not explicitly mapped.
+
+    Args:
+        exc: The ``OSError`` raised while creating the output directory.
+
+    Returns:
+        An ASCII/English-only phrase suitable for interpolating into a
+        user-facing message.
+    """
+    if exc.errno in _OSERROR_REASONS:
+        return f"{_OSERROR_REASONS[exc.errno]} (errno {exc.errno})"
+    if exc.errno is not None:
+        return f"OS error {exc.errno}"
+    return "the directory could not be created"
+
+
 def _ensure_output_dir(path: str, json_output: bool) -> None:
     """Ensure the parent directory of an output file path exists.
 
@@ -176,7 +216,7 @@ def _ensure_output_dir(path: str, json_output: bool) -> None:
     try:
         os.makedirs(parent, exist_ok=True)
     except OSError as exc:
-        reason = exc.strerror or str(exc)
+        reason = _oserror_reason(exc)
         msg = (
             f"Cannot create output directory '{parent}': {reason}. "
             "Choose a writable --path or create the directory first."
