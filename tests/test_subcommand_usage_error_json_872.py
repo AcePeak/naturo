@@ -77,8 +77,12 @@ class TestSubcommandUsageErrorJson:
         return data
 
     def test_missing_required_argument(self, monkeypatch, capsys):
+        # ``app find`` requires a positional NAME and defines ``-j``, so omitting
+        # the argument is a parse-time "Missing argument" error. (``clipboard
+        # set`` used to be the exemplar here but gained optional --file/stdin
+        # sources in #888, so its TEXT argument is no longer required.)
         data = self._assert_envelope(
-            monkeypatch, capsys, ["clipboard", "set", "-j"], "INVALID_INPUT"
+            monkeypatch, capsys, ["app", "find", "-j"], "INVALID_INPUT"
         )
         assert "Missing argument" in data["error"]["message"]
 
@@ -147,10 +151,12 @@ class TestFlagPositionVariants:
 
 class TestPlainTextUnchanged:
     def test_missing_arg_plain_text_exit_2(self, monkeypatch, capsys):
-        code = _run(monkeypatch, ["clipboard", "set"])
+        # See test_missing_required_argument: ``app find`` is the missing-arg
+        # exemplar now that ``clipboard set`` accepts --file/stdin (#888).
+        code = _run(monkeypatch, ["app", "find"])
         captured = capsys.readouterr()
         assert code == 2  # Click's UsageError exit code, unchanged
-        assert "Usage: naturo clipboard set" in captured.err
+        assert "Usage: naturo app find" in captured.err
         assert captured.out == ""  # nothing on stdout — no stray JSON
 
     def test_invalid_value_plain_text_exit_2(self, monkeypatch, capsys):
