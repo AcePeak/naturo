@@ -73,6 +73,11 @@ class FakeShell(ShellMixin):
     def list_windows(self):
         return self._windows
 
+    def _list_windows_unresolved(self):
+        # list_apps consumes the unresolved view so it can run its own UWP
+        # host-PID resolution (#958); the fake serves the same raw windows.
+        return self._windows
+
     def _resolve_uwp_child_pid(self, hwnd):
         return (0, "")
 
