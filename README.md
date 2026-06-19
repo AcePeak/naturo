@@ -404,6 +404,7 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `selector import` | Import selectors from JSON | 0.3.2 |
 | `selector test` | Validate a selector against the parser | 0.3.2 |
 | `config` | View/set naturo configuration | 0.3.0 |
+| `doctor` | Environment self-check (session, deps, providers, DPI, version) | 0.3.4 |
 | `excel open` | Open Excel workbook (Windows only) | 0.1.1 |
 | `excel read` | Read cells from worksheet | 0.1.1 |
 | `excel write` | Write values to cells | 0.1.1 |
