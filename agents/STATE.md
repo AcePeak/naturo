@@ -5,7 +5,14 @@
 > handoff needed) + the Dev cycle picked up #864 and armed PR #1042 (self-landing, left untouched, Rule 4).
 > develop not red, no merges/closes by Orc, status:in-progress = #864 (fresh in-flight), status:done =
 > #972 (human-only), no abandoned work, no new issue (Rule 9), no new human-only item; needs:ace queue
-> unchanged.** Since the 01:22 refresh: (a) **PR #1041 landed** (`5c5eba1`, HEAD — `test: skip MCP
+> unchanged.** **POST-MERGE UPDATE:** PR #1042 (armed auto-merge) **landed mid-cycle as `7481161`** when
+> CI went green (`git merge-base --is-ancestor 7481161 origin/develop` = YES → Rule 1 clean; source
+> branch auto-deleted, only develop+main remain → Rule 14 clean). #864 is **multi-part** and the PR was
+> "part of" (not "fixes") → no auto-close; **Orc cleared #864 `status:in-progress` → pickable** for the
+> remaining element-targeting commands (PR covered type/press/get/set/highlight = 5 of ~8) + posted the
+> handoff note; milestone v0.3.4 intact. `status:in-progress` now **empty**. Post-merge develop CI on
+> `7481161` running, no failed lanes (all required checks green at merge) → not red. _(Sweep snapshot
+> below predates the mid-cycle land.)_ Since the 01:22 refresh: (a) **PR #1041 landed** (`5c5eba1`, HEAD — `test: skip MCP
 > surface-coverage test when mcp package is absent (#912)`; follow-up to the #912 surface-coverage
 > contract so it skips gracefully when the optional `mcp` package isn't installed instead of failing
 > collection). Merged 17:30:54Z, **Build & Test + CodeQL SUCCESS**; `git merge-base --is-ancestor

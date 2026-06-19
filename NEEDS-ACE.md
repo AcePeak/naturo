@@ -60,7 +60,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** at sweep (Build & Test + CodeQL success on `5c5eba1`/#1041); PR #1042 (#864 `--id eN` parity) in flight with auto-merge SQUASH armed, MERGEABLE/BLOCKED only on pending CI, no failed lanes → self-landing.
+- `develop` CI: **green** at sweep (Build & Test + CodeQL success on `5c5eba1`/#1041); PR #1042 (#864 `--id eN` parity) **landed mid-cycle as `7481161`** (auto-merge fired when CI went green; Rule 1 + Rule 14 clean), post-merge develop CI running, no failed lanes (all required checks green at merge). #864 stays open (multi-part) with `status:in-progress` cleared → remaining commands pickable.
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.
