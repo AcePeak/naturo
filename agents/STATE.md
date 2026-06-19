@@ -1,6 +1,56 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 00:50 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed
+> Last refreshed: 2026-06-20 01:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #1038
+> mid-window (no Orc handoff needed) + team-Dev PR #1040 (#912) LANDED mid-cycle + Orc post-merge
+> handoff (#912 → status:done). develop not red, status:in-progress now empty, status:done = #912
+> (awaiting QA) + #972 (human-only), no abandoned work, no new issue (Rule 9), no new human-only item;
+> needs:ace queue unchanged.** **POST-MERGE UPDATE:** PR #1040 (armed auto-merge) **landed mid-cycle
+> as `753aa37`** when CI went green (`git merge-base --is-ancestor 753aa37 origin/develop` = YES →
+> Rule 1 clean; source branch auto-deleted, only develop+main remain → Rule 14 clean); #912 was still
+> `status:in-progress` (base `develop` ≠ default → no auto-close), so **Orc flipped #912
+> `status:in-progress` → `status:done`** + QA verification note (internal test-only, not human-only).
+> `status:in-progress` now **empty**; `status:done` = **#912** (surface-guard coverage test, awaiting
+> QA) **+ #972** (human-only). Post-merge develop CI (Build & Test + CodeQL on `753aa37`) in progress,
+> no failed lanes (all required checks green at merge) → not red. _(Sweep snapshot below predates the
+> mid-cycle land.)_ Since the 00:50 refresh: (a)
+> **QA verified+closed #1038 @00:40Z** (PR #1039 / `08c1add`, `fix: highlight reads newest snapshot,
+> not oldest`) — real-desktop Notepad: `see --path` → `highlight -A` wrote a 1920×1080 PNG with real
+> highlight boxes; bare `see` → `highlight -A` now names the `see --path <file>` prerequisite;
+> live-overlay path reads `snaps[0]` (newest); `-j` envelope clean, exit 0; now **CLOSED + verified**;
+> `git merge-base --is-ancestor 08c1add origin/develop` = YES → **Rule 1 clean**, QA did the close →
+> **no Orc post-merge handoff needed**; drains the prior `status:done` queue. (b) the **01:07 Dev cycle
+> picked up #912 and opened PR #1040** (`test: auto-enumerate CLI/MCP surfaces for desktop-session
+> guard coverage`, head `fix/issue-912-surface-guard-coverage` → `develop`, P2/test/from:orc/v0.3.4 —
+> derives the CLI leaf-command + MCP tool inventory at runtime and asserts every surface is classified
+> as desktop-session-required or session-independent, converting the hand-maintained #885 matrix into a
+> self-maintaining contract so a new unclassified surface fails the test). At sweep it was
+> `MERGEABLE`/`BLOCKED` only on **pending CI** (Commit-Author / Lint&Type / Version-Consistency =
+> SUCCESS; Ubuntu+macOS tests + C++ build + CodeQL = pending; **no failed lanes**) with **auto-merge
+> SQUASH armed by AcePeak @17:22:55Z** → standard self-landing pattern, **branch untouched (Rule 4)**;
+> it lands itself when CI goes green. **Step 0:** `git fetch origin -p` pruned the already-merged
+> `origin/fix/issue-1038-highlight-snapshot-order` (remote auto-deleted at #1039 merge); authoritative
+> `gh api .../branches` = **develop + main + the one live PR-1040 branch** → Rule 14 clean. **Step 1:**
+> PR #1040 in flight (left untouched); no other open PRs. **Step 2 health:** `status:in-progress` =
+> **#912** (active Dev pickup, PR open, updated 17:22Z = minutes before sweep → NOT the >24h
+> abandonment case; correctly milestoned/labeled, left untouched). `status:done` = **#972 only**
+> (input-content guard, code-verified, close = human security sign-off, queued). **Nothing to close**
+> (Rule 1 — #912 in flight, no merged commit; #972 human-only; #1038 already QA-closed), no abandoned
+> work. **Step 3 (drive product): no new issue filed (Rule 9)** — priority-honesty scan (`no:milestone`
+> open): only the `needs:ace` human-only items (#975/#969/#935/#915) + the parked Linux/cross-platform
+> `help wanted` backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned actionable Dev work**;
+> #912 correctly v0.3.4 → no mis-milestone; backlog Dev-pickable (#871 remaining window-targeting flags
+> + the v0.3.4 `from:qa` JSON/MCP consistency lane). Standing #1 priority (recognition supremacy
+> #920/#931/#932/#934) stays top-of-queue but **env-blocked** (no JDK / no SAP install; desktop/QA-gated).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 4
+> (needs:ace): no new human-only item** — live queue **unchanged #975/#972/#969/#935/#915/#914/#897**
+> (all verified open); NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-0122-auto-review.md`. `develop` CI: code HEAD `08c1add` (#1039) **Build &
+> Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 00:50 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed
 > clean since 23:23 (#1037 → part of #871; #1039 → #1038) + one Orc post-merge handoff (#1038 →
 > status:done, milestoned v0.3.4). develop not red, no open PRs, status:in-progress now empty,
 > status:done = #1038 + #972 (human-only), no abandoned work, no new issue (Rule 9), no new human-only
