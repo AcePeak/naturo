@@ -25,6 +25,10 @@ import naturo.cli.core._common as _common
 @click.option("--app", default=None, help="Target app window")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
+@click.option("--hwnd", default=None, type=int, help="Window handle (HWND)")
+@click.option("--pid", default=None, type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.option(
     "--backend", "--method", "-b", "-m",
@@ -43,6 +47,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
              actionable: bool, depth: int, limit: int, ai: bool,
              ai_provider: str, ai_model: str | None, ai_api_key: str | None,
              screenshot: str | None, app: str | None, app_id: str | None,
+             window_title: str | None, hwnd: int | None, pid: int | None,
              json_output: bool, backend: str) -> None:
     """Search for UI elements matching a query.
 
@@ -67,8 +72,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     from naturo.cli.options import maybe_promote_app_to_app_id
     app, app_id = maybe_promote_app_to_app_id(app, app_id)
 
-    # (#593) Resolve --app-id to hwnd before any other logic
-    hwnd = None
+    # (#593) Resolve --app-id to hwnd before any other logic.
+    # An explicit --app-id takes precedence over a raw --hwnd value.
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
         id_map = get_app_id_map()
@@ -107,6 +112,18 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
 
     # AI vision mode — natural language element finding
     if ai:
+        # AI vision operates on a screenshot, not the UIA tree, so window-handle
+        # targeting does not apply.  Reject it explicitly rather than silently
+        # ignoring the flags — use --app to scope the captured app instead.
+        if window_title is not None or hwnd is not None or pid is not None:
+            msg = ("--window/--hwnd/--pid are not supported with --ai "
+                   "(vision mode operates on a screenshot); use --app to scope "
+                   "the target application.")
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
         _find_with_ai(query, ai_provider, screenshot, app, json_output,
                       model=ai_model, api_key=ai_api_key)
         return
@@ -130,7 +147,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
 
     try:
         be = _common._get_backend(json_output)
-        tree = be.get_element_tree(app=app, hwnd=hwnd, depth=depth, backend=backend)
+        tree = be.get_element_tree(app=app, window_title=window_title, hwnd=hwnd,
+                                   pid=pid, depth=depth, backend=backend)
         if tree is None:
             msg = "No window found or UI tree is empty."
             if json_output:
