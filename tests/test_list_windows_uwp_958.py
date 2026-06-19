@@ -18,7 +18,12 @@ from naturo.backends.base import WindowInfo as BaseWindowInfo
 from naturo.backends.windows._shell._app import AppMixin
 from naturo.backends.windows._window import WindowMixin
 
-_AFH = "C:\\Windows\\System32\\ApplicationFrameHost.exe"
+# Bare exe name (no directory): the production basename check runs under
+# Windows ``os.path`` (ntpath) at runtime, but these tests also run on CI
+# Linux/macOS where ``os.path.basename`` would NOT split a Windows path. Using
+# a bare name keeps the host-process detection portable, matching the existing
+# convention in test_app_control.py / test_shell_mixin.py.
+_AFH = "ApplicationFrameHost.exe"
 
 
 def _bridge_window(*, hwnd, title, process_name, pid):
