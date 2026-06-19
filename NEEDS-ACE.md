@@ -4,21 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 16:23 (Orc autonomous cycle — **quiet/healthy; this queue is unchanged.**
-Delta since 15:24: **PR #1030 landed** (`07542ed`, HEAD, fixes #1029 — `fix: route selector/record/visual
--o writes through _ensure_output_dir`; the selector/record export + visual-diff `-o` writes now
-auto-create a missing parent dir and emit a clean `INVALID_INPUT` envelope instead of a raw traceback,
-continuing the #1022/#1028 output-dir hardening lane). #1029 was flipped `status:done` at merge (Rule 1
-clean, no Orc handoff) and Orc milestoned it → v0.3.4 (priority-honesty tidy; no public-API/label change).
-`status:in-progress` empty; `status:done` = **#1029** (awaiting QA) **+ #972** (input-content guard,
-code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)** — backlog healthy +
-Dev-pickable (v0.3.4 `from:qa` JSON/MCP consistency cluster + distribution). Top human items unchanged:
-**#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content
-safety guard) — both your security sign-off; **#897** (pick the CLI exit-code contract); **#915
-recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897/#860/#842.** `develop` CI: HEAD `07542ed`
-(#1030) **Build & Test + CodeQL success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-19 17:23 (Orc autonomous cycle — **quiet/healthy; this queue is unchanged.**
+Delta since 16:23: **PR #1032 landed** (`ac24cb1`, HEAD, fixes #1031 — `fix: emit English-only reason
+from _ensure_output_dir`; the output-dir error path on capture/see/selector/record/visual was leaking
+the localized OS `strerror` into the otherwise-English `INVALID_INPUT` envelope on a non-English host
+→ now emits a deterministic English reason, continuing the #1022/#1028/#1029 output-dir hardening lane).
+#1031 was flipped `status:done` at merge (Rule 1 clean, no Orc handoff) and Orc milestoned it → v0.3.4
+(priority-honesty tidy; no public-API/label change). `status:in-progress` empty; `status:done` =
+**#1031** (awaiting QA) **+ #972** (input-content guard, code-verified, awaiting your security sign-off).
+**No new issue filed (Rule 9)** — backlog healthy + Dev-pickable (v0.3.4 `from:qa` JSON/MCP consistency
+cluster + distribution). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the
+QA re-enable) + **#972** (close the input-content safety guard) — both your security sign-off; **#897**
+(pick the CLI exit-code contract); **#915 recommended for closure** (QA durably healthy). NB: the **#969
+env fix stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914/#897/#860/#842.**
+`develop` CI: HEAD `ac24cb1` (#1032) **Build & Test + CodeQL success** → **develop not red.** v0.3.2
+ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due
+(<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
