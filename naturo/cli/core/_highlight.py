@@ -163,7 +163,12 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
                         click.echo(f"Annotated screenshot saved: {result_path}")
                     return
                 else:
-                    msg = "No snapshot with screenshot available for --annotate. Run 'naturo see' first."
+                    msg = (
+                        "No snapshot with a stored screenshot is available for "
+                        "--annotate. Run 'naturo see --path <file>' first: a "
+                        "screenshot is only persisted into the snapshot when "
+                        "'see' is given --path."
+                    )
                     if json_output:
                         click.echo(_common._json_error_str("NO_SNAPSHOT", msg))
                         raise SystemExit(1)
