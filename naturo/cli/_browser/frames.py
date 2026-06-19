@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -26,7 +26,7 @@ def frames_cmd(ctx: click.Context, json_output: bool) -> None:
     try:
         frame_list = page.frames()
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "frames": frame_list,
                 "count": len(frame_list),
             }, indent=2))
@@ -76,7 +76,7 @@ def frame_eval_cmd(ctx: click.Context, frame_ref: str, expression: str,
 
         result = frame.evaluate(expression)
         if json_output:
-            click.echo(json_module.dumps({"result": result, "frame": frame_ref}))
+            click.echo(json_dumps({"result": result, "frame": frame_ref}))
         else:
             click.echo(result)
     except RuntimeError as exc:
@@ -122,7 +122,7 @@ def frame_find_cmd(ctx: click.Context, frame_ref: str, selector: str,
             if json_output:
                 items = [{"ref": f"e{i+1}", "tag": el.tag_name, "text": el.text[:200]}
                          for i, el in enumerate(elements)]
-                click.echo(json_module.dumps({"elements": items, "count": len(items)}, indent=2))
+                click.echo(json_dumps({"elements": items, "count": len(items)}, indent=2))
             else:
                 if not elements:
                     click.echo("No elements found in frame.")
@@ -134,7 +134,7 @@ def frame_find_cmd(ctx: click.Context, frame_ref: str, selector: str,
         else:
             el = frame.find(selector)
             if json_output:
-                click.echo(json_module.dumps({
+                click.echo(json_dumps({
                     "ref": "e1", "tag": el.tag_name,
                     "text": el.text[:200], "value": el.value,
                 }, indent=2))

@@ -5,7 +5,7 @@ ValuePattern (text fields), TogglePattern (checkboxes),
 SelectionItemPattern (list/radio items), and ExpandCollapsePattern
 (combo boxes).
 """
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 import platform
 
 import click
@@ -301,7 +301,7 @@ def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
         )
 
     if json_output:
-        click.echo(json_module.dumps({
+        click.echo(json_dumps({
             "status": "ok",
             "action": "set_value",
             "ref": ref,
@@ -345,7 +345,7 @@ def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output) -> No
         )
 
     if json_output:
-        click.echo(json_module.dumps({
+        click.echo(json_dumps({
             "status": "ok",
             "action": "toggle",
             "ref": ref,
@@ -390,7 +390,7 @@ def _do_select(backend, hwnd, automation_id, role, name, ref, json_output) -> No
         )
 
     if json_output:
-        click.echo(json_module.dumps({
+        click.echo(json_dumps({
             "status": "ok",
             "action": "select",
             "ref": ref,
@@ -438,7 +438,7 @@ def _do_expand_collapse(backend, hwnd, automation_id, role, name, ref,
         )
 
     if json_output:
-        click.echo(json_module.dumps({
+        click.echo(json_dumps({
             "status": "ok",
             "action": action,
             "ref": ref,

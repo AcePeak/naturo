@@ -1,7 +1,7 @@
 """Menu-inspect command — list menu bar structure."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -91,9 +91,9 @@ def menu_inspect(app, app_id, flat, json_output) -> None:
                 flat_items = []
                 for item in items:
                     flat_items.extend(item.flatten())
-                click.echo(json_module.dumps({"success": True, "menu_items": flat_items}, indent=2))
+                click.echo(json_dumps({"success": True, "menu_items": flat_items}, indent=2))
             else:
-                click.echo(json_module.dumps({"success": True, "menu_items": [item.to_dict() for item in items]}, indent=2))
+                click.echo(json_dumps({"success": True, "menu_items": [item.to_dict() for item in items]}, indent=2))
         else:
             if flat:
                 for item in items:

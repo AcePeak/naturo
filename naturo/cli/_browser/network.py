@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -32,7 +32,7 @@ def requests_cmd(ctx: click.Context, pattern: Optional[str], json_output: bool) 
             snapshot = page.network.find_requests(pattern, snapshot=snapshot)
 
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "requests": snapshot,
                 "count": len(snapshot),
@@ -78,7 +78,7 @@ def intercept_cmd(ctx: click.Context, pattern: str, action: str,
             )
 
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "pattern": pattern,
                 "action": action,

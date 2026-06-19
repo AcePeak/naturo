@@ -4,7 +4,7 @@ Reads the current value of a UI element by querying UIAutomation
 patterns: ValuePattern, TogglePattern, SelectionPattern,
 RangeValuePattern, and TextPattern.
 """
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 import platform
 import sys
 
@@ -193,7 +193,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
                         "width": el.width,
                         "height": el.height,
                     })
-                click.echo(json_module.dumps(output))
+                click.echo(json_dumps(output))
             else:
                 if not matches:
                     filters = []
@@ -286,7 +286,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
                 "width": result.get("width"),
                 "height": result.get("height"),
             }
-            click.echo(json_module.dumps(element_data))
+            click.echo(json_dumps(element_data))
         elif prop:
             # Return just the requested property
             val = result.get(prop)

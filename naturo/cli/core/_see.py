@@ -1,7 +1,7 @@
 """See command — capture screenshot and analyze UI elements."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 import re as _re_mod
 from typing import Any
 
@@ -456,7 +456,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
 
 
-            click.echo(json_module.dumps(out, indent=2))
+            click.echo(json_dumps(out, indent=2))
         else:
             # BUG-071: include short element IDs (e1, e2, ...) that can be
             # passed to ``naturo click e3`` for quick interaction.

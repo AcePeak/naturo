@@ -1,7 +1,7 @@
 """List command group — apps, windows, screens, permissions."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 import ntpath
 import platform
 
@@ -98,7 +98,7 @@ def windows(app, pid, json_output) -> None:
                 }
                 for w in win_list
             ]
-            click.echo(json_module.dumps({"success": True, "windows": data, "count": len(data)}, indent=2))
+            click.echo(json_dumps({"success": True, "windows": data, "count": len(data)}, indent=2))
         else:
             if not win_list:
                 click.echo("No windows found.")
@@ -149,7 +149,7 @@ def screens(json_output) -> None:
                 if m.work_area:
                     item["work_area"] = m.work_area
                 items.append(item)
-            click.echo(json_module.dumps({"success": True, "monitors": items, "count": len(items)}, indent=2))
+            click.echo(json_dumps({"success": True, "monitors": items, "count": len(items)}, indent=2))
         else:
             from naturo.cli.table import print_table
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -31,7 +31,7 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
     try:
         saved_path = page.screenshot(path, full_page=full_page)
         if json_output:
-            click.echo(json_module.dumps({"path": saved_path, "status": "ok"}))
+            click.echo(json_dumps({"path": saved_path, "status": "ok"}))
         else:
             click.echo(f"Screenshot saved: {saved_path}")
     except RuntimeError as exc:

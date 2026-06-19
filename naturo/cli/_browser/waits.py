@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -37,7 +37,7 @@ def wait_cmd(ctx: click.Context, selector: str, by: Optional[str],
     try:
         page.wait_for(selector, timeout=timeout, state=state)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "selector": selector, "state": state}))
+            click.echo(json_dumps({"status": "ok", "selector": selector, "state": state}))
         else:
             click.echo(f"Element '{selector}' is {state}.")
     except TimeoutError as exc:
@@ -64,7 +64,7 @@ def wait_navigation_cmd(ctx: click.Context, timeout: float,
     try:
         new_url = page.wait_for_navigation(timeout=timeout)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "url": new_url}))
+            click.echo(json_dumps({"status": "ok", "url": new_url}))
         else:
             click.echo(f"Navigation complete: {new_url}")
     except TimeoutError as exc:
@@ -95,7 +95,7 @@ def wait_url_cmd(ctx: click.Context, pattern: str, regex: bool,
     try:
         matched_url = page.wait_for_url(pattern, regex=regex, timeout=timeout)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "url": matched_url}))
+            click.echo(json_dumps({"status": "ok", "url": matched_url}))
         else:
             click.echo(f"URL matched: {matched_url}")
     except TimeoutError as exc:
@@ -125,7 +125,7 @@ def wait_function_cmd(ctx: click.Context, expression: str,
     try:
         result = page.wait_for_function(expression, timeout=timeout)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "result": str(result)}))
+            click.echo(json_dumps({"status": "ok", "result": str(result)}))
         else:
             click.echo(f"Expression truthy: {result}")
     except TimeoutError as exc:
@@ -154,7 +154,7 @@ def wait_network_idle_cmd(ctx: click.Context, idle_time: float,
     try:
         page.wait_for_network_idle(idle_time=idle_time, timeout=timeout)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok"}))
+            click.echo(json_dumps({"status": "ok"}))
         else:
             click.echo("Network is idle.")
     except TimeoutError as exc:

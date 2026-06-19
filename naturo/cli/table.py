@@ -5,7 +5,7 @@ across all ``naturo list`` and ``naturo app list`` commands.
 """
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -45,7 +45,7 @@ def print_table(
         out: dict = {"success": True, json_key: items, "count": len(items)}
         if json_extra:
             out.update(json_extra)
-        click.echo(json_module.dumps(out, indent=2))
+        click.echo(json_dumps(out, indent=2))
         return
 
     if not rows:

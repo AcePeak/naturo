@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -66,7 +66,7 @@ def launch_cmd(ctx: click.Context, profile: Optional[str],
             timeout=timeout,
         )
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "action": "browser_launch",
                 "pid": proc.pid,
@@ -104,7 +104,7 @@ def profiles_cmd(user_data_dir: Optional[str], json_output: bool) -> None:
     profiles = _list_profiles(user_data_dir=user_data_dir)
 
     if json_output:
-        click.echo(json_module.dumps({"profiles": profiles, "count": len(profiles)}, indent=2))
+        click.echo(json_dumps({"profiles": profiles, "count": len(profiles)}, indent=2))
     elif not profiles:
         click.echo("No Chrome profiles found.")
         click.echo("Hint: profiles are read from Chrome's 'Local State' file.")
@@ -159,7 +159,7 @@ def download_cmd(
 
         if not wait:
             if json_output:
-                click.echo(json_module.dumps({
+                click.echo(json_dumps({
                     "success": True,
                     "download_dir": abs_dir,
                 }))
@@ -177,7 +177,7 @@ def download_cmd(
             emit_exception_error(exc, json_output, fallback_code="TIMEOUT")
 
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "download_dir": abs_dir,
                 "file": path,

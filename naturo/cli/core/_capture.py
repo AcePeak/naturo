@@ -4,6 +4,7 @@ from __future__ import annotations
 import click
 
 import naturo.cli.core._common as _common
+from naturo.cli._jsonio import json_dumps
 
 
 @click.command("capture")
@@ -266,7 +267,6 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
-            import json as json_module
             out: dict = {
                 "success": True,
                 "path": result.path,
@@ -281,7 +281,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 out["crop_source"] = "element" if element_ref else "region"
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
-            click.echo(json_module.dumps(out))
+            click.echo(json_dumps(out))
         else:
             import os
             full_path = os.path.abspath(result.path)

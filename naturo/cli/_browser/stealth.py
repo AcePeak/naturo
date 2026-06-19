@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -32,7 +32,7 @@ def stealth_cmd(ctx: click.Context, json_output: bool) -> None:
     try:
         count = apply_stealth_patches(page)
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "patches_applied": count,
             }))
@@ -60,7 +60,7 @@ def stealth_flags_cmd(json_output: bool) -> None:
     from naturo.browser._stealth import STEALTH_FLAGS
 
     if json_output:
-        click.echo(json_module.dumps({"flags": STEALTH_FLAGS}))
+        click.echo(json_dumps({"flags": STEALTH_FLAGS}))
     else:
         click.echo(" ".join(STEALTH_FLAGS))
 
@@ -89,7 +89,7 @@ def stealth_check_cmd(ctx: click.Context, json_output: bool) -> None:
         all_passed = all(results.values())
 
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": all_passed,
                 "checks": results,
             }))

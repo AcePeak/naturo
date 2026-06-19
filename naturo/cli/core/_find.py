@@ -1,7 +1,7 @@
 """Find command — search for UI elements matching a query."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Any
 
 import click
@@ -202,7 +202,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 }
                 for r in results
             ]
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "elements": data,
                 "count": len(data),
@@ -291,7 +291,7 @@ def _find_with_ai(
         elif "capture" in msg.lower():
             code = "CAPTURE_FAILED"
         if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": code, "message": msg}}))
+            click.echo(json_dumps({"success": False, "error": {"code": code, "message": msg}}))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
@@ -314,7 +314,7 @@ def _find_with_ai(
                 "code": "ELEMENT_NOT_FOUND",
                 "message": f"AI could not locate: {query}",
             }
-        click.echo(json_module.dumps(output, indent=2))
+        click.echo(json_dumps(output, indent=2))
     else:
         if not result.found:
             click.echo(f"Element not found: {query}")

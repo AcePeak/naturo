@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -33,7 +33,7 @@ def captcha_detect(ctx: click.Context, json_output: bool) -> None:
     captchas = manager.detect()
 
     if json_output:
-        click.echo(json_module.dumps({"captchas": captchas, "count": len(captchas)}))
+        click.echo(json_dumps({"captchas": captchas, "count": len(captchas)}))
     elif not captchas:
         click.echo("No captchas detected on this page.")
     else:
@@ -94,7 +94,7 @@ def captcha_solve(ctx: click.Context, solver: str, token: Optional[str],
     try:
         result_token = manager.solve(solver=solver_instance)
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "solver": solver,
                 "token_length": len(result_token),

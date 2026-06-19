@@ -11,10 +11,19 @@ literal Unicode is safe on every platform.
 These tests pin the contract: the shared :func:`naturo.cli._jsonio.json_dumps` helper
 defaults to ``ensure_ascii=False``, the canonical error envelope preserves literal
 Unicode, and an end-to-end command echoes CJK input without escaping.
+
+#1025 is an incomplete-fix regression of #894: a large set of ``-j`` emit sites were
+missed because they call the raw stdlib ``json`` (often aliased as
+``import json as json_module``) instead of :func:`json_dumps`, so ``see`` / ``find`` /
+``menu-inspect`` / ``list windows`` / ``get`` / ``set`` still emitted ``\\uXXXX``. The
+:class:`TestNoRawJsonDumpsInCliOutput` AST guard pins the whole class shut: every CLI
+emit site must route through :func:`json_dumps`, never the stdlib ``json.dumps``.
 """
 from __future__ import annotations
 
+import ast
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -126,3 +135,114 @@ class TestCliEndToEnd:
         finally:
             for p in patches:
                 p.stop()
+
+
+def _stdlib_json_names(tree: ast.Module) -> set[str]:
+    """Return the names the stdlib ``json`` module is bound to in a module.
+
+    Handles ``import json`` (name ``json``), ``import json as json_module``
+    (the alias used by the modules #1025 missed), and module-level
+    ``from json import dumps`` (name ``dumps``).
+
+    Args:
+        tree: Parsed AST of a Python module.
+
+    Returns:
+        The set of identifiers that refer to the stdlib ``json`` module, plus
+        ``"dumps"`` if it was imported directly from ``json``.
+    """
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "json":
+                    names.add(alias.asname or "json")
+        elif isinstance(node, ast.ImportFrom) and node.module == "json":
+            for alias in node.names:
+                if alias.name == "dumps":
+                    names.add(alias.asname or "dumps")
+    return names
+
+
+def _raw_json_dumps_callsites(path: Path) -> list[int]:
+    """Find line numbers in ``path`` that call the stdlib ``json.dumps``.
+
+    Detects both ``<json-alias>.dumps(...)`` (e.g. ``json_module.dumps``) and a
+    bare ``dumps(...)`` imported via ``from json import dumps`` — the patterns
+    that bypass :func:`naturo.cli._jsonio.json_dumps` and re-introduce the #894
+    ``\\uXXXX`` escaping regression (#1025).
+
+    Args:
+        path: Path to the Python source file to scan.
+
+    Returns:
+        Sorted line numbers of offending callsites (empty if the file is clean).
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    json_names = _stdlib_json_names(tree)
+    hits: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if (isinstance(func, ast.Attribute) and func.attr == "dumps"
+                and isinstance(func.value, ast.Name)
+                and func.value.id in json_names):
+            hits.append(node.lineno)
+        elif (isinstance(func, ast.Name) and func.id == "dumps"
+                and "dumps" in json_names):
+            hits.append(node.lineno)
+    return sorted(hits)
+
+
+class TestNoRawJsonDumpsInCliOutput:
+    """Every CLI ``-j`` emit site must route through :func:`json_dumps` (#1025).
+
+    The original #894 fix added the helper but missed many callsites that use
+    the raw stdlib ``json`` (frequently aliased ``import json as json_module``),
+    which kept emitting ``\\uXXXX`` escapes. A grep audit missed them because of
+    the alias; this AST scan does not.
+    """
+
+    def test_no_module_uses_stdlib_json_dumps(self):
+        cli_dir = Path(__file__).resolve().parent.parent / "naturo" / "cli"
+        # The shared helper is the one and only sanctioned ``json.dumps`` call.
+        sanctioned = cli_dir / "_jsonio.py"
+
+        offenders: dict[str, list[int]] = {}
+        for path in sorted(cli_dir.rglob("*.py")):
+            if path == sanctioned:
+                continue
+            lines = _raw_json_dumps_callsites(path)
+            if lines:
+                offenders[str(path.relative_to(cli_dir.parent.parent))] = lines
+
+        assert not offenders, (
+            "CLI modules must serialize -j output via "
+            "naturo.cli._jsonio.json_dumps (ensure_ascii=False), not the "
+            "stdlib json.dumps which escapes non-ASCII as \\uXXXX (#1025). "
+            f"Offending callsites: {offenders}"
+        )
+
+
+class TestElementTreeSurfacesKeepCjkLiteral:
+    """The element-tree ``-j`` surfaces #1025 called out echo CJK literally."""
+
+    def test_find_ai_error_envelope_keeps_cjk_literal(self, runner):
+        """``find --ai`` JSON error envelope (``_find.py:294``) stays literal.
+
+        This callsite — one of the raw ``json_module.dumps`` sites #1025
+        flagged — echoes the underlying failure message; a CJK message must
+        survive without ``\\uXXXX`` escaping.
+        """
+        with patch("naturo.ai_find.ai_find_element",
+                   side_effect=RuntimeError(f"detector crashed: {_CJK}")):
+            from naturo.cli.core._find import find_cmd
+            result = runner.invoke(
+                find_cmd, ["the close button", "--ai", "--json"],
+            )
+
+        assert result.exit_code != 0
+        assert "AI_FIND_FAILED" in result.output
+        assert _CJK in result.output
+        assert "\\u" not in result.output

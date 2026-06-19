@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 from typing import Optional
 
 import click
@@ -59,7 +59,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
                         "tag": el.tag_name,
                         "text": el.text[:200],
                     })
-                click.echo(json_module.dumps({"elements": items, "count": len(items)}, indent=2))
+                click.echo(json_dumps({"elements": items, "count": len(items)}, indent=2))
             else:
                 if not elements:
                     click.echo("No elements found.")
@@ -71,7 +71,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
         else:
             el = page.find(selector)
             if json_output:
-                click.echo(json_module.dumps({
+                click.echo(json_dumps({
                     "ref": "e1",
                     "tag": el.tag_name,
                     "text": el.text[:200],
@@ -117,7 +117,7 @@ def click_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         el.click(offset_x=offset_x, offset_y=offset_y)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "selector": selector}))
+            click.echo(json_dumps({"status": "ok", "selector": selector}))
         else:
             click.echo(f"Clicked: {selector}")
     except RuntimeError as exc:
@@ -154,7 +154,7 @@ def type_cmd(ctx: click.Context, selector: str, text: str, by: Optional[str],
         el = page.find(selector)
         el.type(text, clear_first=clear_first)
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "selector": selector, "text": text}))
+            click.echo(json_dumps({"status": "ok", "selector": selector, "text": text}))
         else:
             click.echo(f"Typed into: {selector}")
     except RuntimeError as exc:
@@ -192,7 +192,7 @@ def select_cmd(ctx: click.Context, selector: str, value: str,
         el = page.find(selector)
         el.select(value)
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "status": "ok", "selector": selector, "value": value,
             }))
         else:
@@ -228,7 +228,7 @@ def text_cmd(ctx: click.Context, selector: str, by: Optional[str], json_output: 
         el = page.find(selector)
         content = el.text
         if json_output:
-            click.echo(json_module.dumps({"text": content, "selector": selector}))
+            click.echo(json_dumps({"text": content, "selector": selector}))
         else:
             click.echo(content)
     except RuntimeError as exc:
@@ -261,7 +261,7 @@ def attr_cmd(ctx: click.Context, selector: str, attribute: str,
         el = page.find(selector)
         value = el.attr(attribute)
         if json_output:
-            click.echo(json_module.dumps({
+            click.echo(json_dumps({
                 "attribute": attribute, "value": value, "selector": selector,
             }))
         else:
@@ -296,7 +296,7 @@ def html_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         content = el.outer_html if outer else el.inner_html
         if json_output:
-            click.echo(json_module.dumps({"html": content, "selector": selector}))
+            click.echo(json_dumps({"html": content, "selector": selector}))
         else:
             click.echo(content)
     except RuntimeError as exc:
@@ -331,7 +331,7 @@ def hover_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         el.hover()
         if json_output:
-            click.echo(json_module.dumps({"status": "ok", "selector": selector}))
+            click.echo(json_dumps({"status": "ok", "selector": selector}))
         else:
             click.echo(f"Hovered: {selector}")
     except RuntimeError as exc:
