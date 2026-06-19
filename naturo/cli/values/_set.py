@@ -66,7 +66,7 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
 @click.command("set")
 @click.argument("target", required=False)
 @click.argument("value", required=False)
-@click.option("--ref", "-r", "ref", default=None,
+@click.option("--ref", "-r", "--id", "ref", default=None,
               help="Element ref from snapshot (e.g. e47)")
 @click.option("--automation-id", "--aid", "automation_id", default=None,
               help="UIA AutomationId of the target element")
@@ -108,6 +108,7 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
     \b
     Examples:
       naturo set e47 "hello world"       # Set text field value
+      naturo set --id e47 "hello world"  # --id is an alias for the eN ref
       naturo set --aid txtSearch "query"  # Set by AutomationId
       naturo set e12 --toggle            # Toggle a checkbox
       naturo set e8 --select             # Select a list/radio item

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.argument("positional_refs", nargs=-1)
-@click.option("--on", "on_ref", help="Target element ref (eN) to highlight")
+@click.option("--on", "--id", "on_ref", help="Target element ref (eN) to highlight")
 @click.option("--ref", "-r", "ref_option", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--app", "-a", help="Application name (partial match)")
 @click.option("--window", "window_title", default=None,
@@ -65,6 +65,7 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
       naturo highlight --app notepad             # Actionable only
       naturo highlight --app notepad --all       # All elements
       naturo highlight e11 --app notepad         # Specific ref
+      naturo highlight --id e11 --app notepad    # --id is an alias for the eN ref
       naturo highlight --app notepad --filter Button
       naturo highlight --app notepad --visible-only
       naturo highlight --app feishu --cascade -d 10

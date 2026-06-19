@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @click.option("--paste", "paste_mode", is_flag=True, help="Paste via clipboard (Ctrl+V) instead of typing")
 @click.option("--file", "file_path", type=click.Path(), help="Read text from file (use with --paste)")
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste", show_default=True)
-@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
+@click.option("--on", "--id", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -81,6 +81,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type --paste --file mytext.txt
       naturo type --paste                        # paste current clipboard
       naturo type "hello" --on e42               # click e42 then type
+      naturo type "hello" --id e42               # --id is an alias for --on
       naturo type "hello" --on e42 --app feishu  # target app + element
       naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """

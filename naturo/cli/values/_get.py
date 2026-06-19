@@ -56,7 +56,7 @@ def _collect_matching_elements(tree, role=None, name=None):
 
 @click.command("get")
 @click.argument("target", required=False)
-@click.option("--ref", "-r", "ref", default=None,
+@click.option("--ref", "-r", "--id", "ref", default=None,
               help="Element ref from snapshot (e.g. e47)")
 @click.option("--automation-id", "--aid", "automation_id", default=None,
               help="UIA AutomationId of the target element")
@@ -93,6 +93,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
     \b
     Examples:
       naturo get e47                      # Read value by ref
+      naturo get --id e47                 # --id is an alias for the eN ref
       naturo get e47 --json               # JSON output
       naturo get --aid txtSearch          # By AutomationId
       naturo get --role Edit --name Search # By role + name

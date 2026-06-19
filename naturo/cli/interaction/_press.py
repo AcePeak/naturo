@@ -104,7 +104,7 @@ def _normalize_modifier(key_str: str) -> str:
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
 @click.option("--hold-duration", type=float, default=None, help="Hold duration for combos (ms)")
-@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
+@click.option("--on", "--id", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -140,6 +140,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
       naturo press ctrl+c                 # key combination (was: hotkey)
       naturo press ctrl+a ctrl+c          # sequential combos
       naturo press alt+f4
+      naturo press enter --id e42          # focus element e42 then press
       naturo press enter --selector 'app://*/Button[@name="OK"]'
     """
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
