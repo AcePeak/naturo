@@ -13,6 +13,7 @@ from typing import Optional
 
 import click
 
+from naturo.cli.core._common import _ensure_output_dir
 from naturo.cli.error_helpers import collection_read, json_error, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.errors import ErrorCode
@@ -442,6 +443,7 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
     content = json_dumps(export_data, indent=2, ensure_ascii=False)
 
     if output_path:
+        _ensure_output_dir(output_path, json_output)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
         if json_output:

@@ -14,6 +14,7 @@ from typing import Optional
 
 import click
 
+from naturo.cli.core._common import _ensure_output_dir
 from naturo.cli.error_helpers import collection_read, json_error, success_envelope
 from naturo.cli.fuzzy_group import FuzzyGroup
 from naturo.errors import ErrorCode
@@ -154,6 +155,13 @@ def visual_diff(image1: str, image2: str, output: Optional[str],
         naturo visual diff before.png after.png
         naturo visual diff before.png after.png -o diff.png
     """
+    if output:
+        # Auto-create a missing parent dir (and emit a clean INVALID_INPUT
+        # envelope for an uncreatable one) before compare_images writes the
+        # diff, so a missing/uncreatable -o never leaks a raw traceback or
+        # bypasses the -j contract (#1029).
+        _ensure_output_dir(output, json_output)
+
     try:
         result = compare_images(
             image1, image2, name="diff",
