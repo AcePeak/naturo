@@ -114,9 +114,16 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
                 flat_items = []
                 for item in items:
                     flat_items.extend(item.flatten())
-                click.echo(json_dumps({"success": True, "menu_items": flat_items}, indent=2))
+                click.echo(json_dumps(
+                    {"success": True, "menu_items": flat_items, "count": len(flat_items)},
+                    indent=2,
+                ))
             else:
-                click.echo(json_dumps({"success": True, "menu_items": [item.to_dict() for item in items]}, indent=2))
+                tree_items = [item.to_dict() for item in items]
+                click.echo(json_dumps(
+                    {"success": True, "menu_items": tree_items, "count": len(tree_items)},
+                    indent=2,
+                ))
         else:
             if flat:
                 for item in items:
