@@ -115,6 +115,22 @@ class _SanitizingFastMCP(FastMCP):
                 :func:`_format_tool_validation_error`; all other errors
                 propagate unchanged so genuine failures stay diagnosable.
         """
+        # (#891) Reject unknown arguments *before* dispatch.  FastMCP builds
+        # each tool's argument model from the function signature with Pydantic's
+        # default config, which silently discards undeclared arguments — so a
+        # mistyped parameter name (e.g. ``window_title`` for ``focus_window``)
+        # runs with default behaviour instead of failing, focusing the wrong
+        # window with no signal to the agent.  Surfacing this as a ToolError
+        # keeps it on the same ``isError: true`` "Invalid parameters" path as
+        # the Pydantic wrong-type/missing-field validation (#844).
+        allowed = self._allowed_argument_names(name)
+        if allowed is not None and arguments:
+            unknown = sorted(key for key in arguments if key not in allowed)
+            if unknown:
+                raise ToolError(
+                    _format_unknown_arguments_error(name, unknown, allowed)
+                )
+
         try:
             return await super().call_tool(name, arguments)
         except ToolError as exc:
@@ -122,6 +138,37 @@ class _SanitizingFastMCP(FastMCP):
             if cause is not None and hasattr(cause, "errors"):
                 raise ToolError(_format_tool_validation_error(name, cause)) from None
             raise
+
+    def _allowed_argument_names(self, name: str) -> set[str] | None:
+        """Return the argument names tool *name* declares, or ``None``.
+
+        ``None`` signals "do not enforce an allow-list" and is returned when the
+        tool is unknown (so dispatch surfaces the canonical "Unknown tool"
+        error rather than an unknown-argument one) or when its schema explicitly
+        permits additional properties.  The set is drawn from the tool's
+        generated JSON-Schema ``properties``; FastMCP omits the injected
+        ``Context`` parameter from that schema, so it is re-added when present.
+
+        Args:
+            name: Name of the MCP tool being invoked.
+
+        Returns:
+            The set of accepted argument names, or ``None`` when no allow-list
+            should be enforced.
+        """
+        try:
+            tool = self._tool_manager.get_tool(name)
+        except Exception:
+            return None
+        if tool is None:
+            return None
+        schema = tool.parameters or {}
+        if schema.get("additionalProperties") is True:
+            return None
+        allowed = set(schema.get("properties", {}).keys())
+        if tool.context_kwarg:
+            allowed.add(tool.context_kwarg)
+        return allowed
 
 
 def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
@@ -271,6 +318,36 @@ def _format_tool_validation_error(tool_name: str, cause: BaseException) -> str:
         return f"Invalid parameters for {tool_name}: {'; '.join(parts)}"
     except Exception:
         return f"Invalid parameters for {tool_name}"
+
+
+def _format_unknown_arguments_error(
+    tool_name: str, unknown: Sequence[str], allowed: Sequence[str],
+) -> str:
+    """Build a clean error message for unknown MCP tool arguments (#891).
+
+    Names the offending argument(s) and lists the valid ones so an AI agent can
+    self-correct, mirroring the ``Invalid parameters for <tool>`` phrasing used
+    for the Pydantic wrong-type/missing-field path (#844).  Leaks no Pydantic
+    internals.
+
+    Args:
+        tool_name: Name of the MCP tool that was called.
+        unknown: Argument names supplied by the client but not declared by the
+            tool.
+        allowed: The tool's declared argument names.
+
+    Returns:
+        A human-readable error string, e.g. ``"Invalid parameters for
+        focus_window: unexpected argument 'window_title'. Valid arguments: app,
+        hwnd, title."``
+    """
+    unknown_str = ", ".join(f"'{arg}'" for arg in sorted(unknown))
+    noun = "argument" if len(unknown) == 1 else "arguments"
+    valid = ", ".join(sorted(allowed)) if allowed else "(none)"
+    return (
+        f"Invalid parameters for {tool_name}: unexpected {noun} {unknown_str}. "
+        f"Valid arguments: {valid}."
+    )
 
 
 def run_server(transport: str = "stdio", host: str = "localhost", port: int = 3100):
