@@ -19,7 +19,11 @@ from naturo.cli._jsonio import json_dumps
 
 import click as _click
 
-from naturo.cli.core._common import _enforce_desktop_session
+from naturo.cli.core._common import (
+    _enforce_desktop_session,
+    _is_windows_11_or_later,
+    _win11_shell_enumeration_warning,
+)
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
@@ -62,14 +66,29 @@ def tray_list(json_output) -> None:
         backend = get_backend()
         icons = backend.tray_list()
 
+        # (#916) An empty result on Windows 11 is almost certainly the XAML
+        # shell host defeating the legacy Win32 enumeration, not a truly empty
+        # notification area. Surface that explicitly instead of silently
+        # reporting an empty success — empty-but-successful reads are a
+        # silent-failure shape.
+        empty_on_win11 = not icons and _is_windows_11_or_later()
+
         if json_output:
-            _click.echo(json_dumps({
+            payload = {
                 "success": True,
                 "icons": icons,
                 "count": len(icons),
-            }))
+            }
+            if empty_on_win11:
+                payload["warning"] = _win11_shell_enumeration_warning("system tray")
+            _click.echo(json_dumps(payload))
         else:
             if not icons:
+                if empty_on_win11:
+                    _click.echo(
+                        f"Warning: {_win11_shell_enumeration_warning('system tray')}",
+                        err=True,
+                    )
                 _click.echo("No tray icons found.")
             else:
                 for icon in icons:

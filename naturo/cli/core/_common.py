@@ -16,6 +16,7 @@ import json as json_module  # noqa: F401 — re-exported for submodules
 import logging
 import os
 import platform
+import sys
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -130,6 +131,48 @@ def _platform_supports_gui() -> bool:
         import shutil
         return shutil.which("peekaboo") is not None
     return False
+
+
+def _is_windows_11_or_later() -> bool:
+    """Return True when running on Windows 11 (build 22000) or later.
+
+    Windows 11 replaced the classic Win32 taskbar and notification-area
+    toolbars (``MSTaskListWClass`` and ``TrayNotifyWnd`` under
+    ``Shell_TrayWnd``) with a XAML shell host. The legacy UI Automation
+    enumeration that drives ``taskbar list`` / ``tray list`` therefore returns
+    zero elements on Windows 11 even when the taskbar and tray are populated
+    (#916). Callers use this to warn that an empty listing may be incomplete
+    rather than genuinely empty.
+
+    Returns:
+        True only on Windows with an OS build number of 22000 or higher; False
+        on Windows 10 and earlier, and on every non-Windows platform.
+    """
+    if platform.system() != "Windows":
+        return False
+    try:
+        return sys.getwindowsversion().build >= 22000  # type: ignore[attr-defined]
+    except (AttributeError, OSError):
+        return False
+
+
+def _win11_shell_enumeration_warning(surface: str) -> str:
+    """Build the Windows 11 shell-enumeration warning for an empty read.
+
+    Args:
+        surface: Human-readable name of the surface being enumerated, e.g.
+            ``"taskbar"`` or ``"system tray"``.
+
+    Returns:
+        A single-line English warning explaining that the empty result may be
+        incomplete because Windows 11 renders the surface with a XAML shell
+        host that the legacy Win32 enumeration cannot read (#916).
+    """
+    return (
+        f"Windows 11 renders the {surface} with a XAML shell host that the "
+        "legacy Win32 enumeration cannot read, so this empty result may be "
+        "incomplete rather than genuinely empty."
+    )
 
 
 def _platform_error_msg(feature: str) -> str:

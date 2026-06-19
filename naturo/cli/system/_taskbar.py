@@ -18,7 +18,11 @@ from naturo.cli._jsonio import json_dumps
 
 import click as _click
 
-from naturo.cli.core._common import _enforce_desktop_session
+from naturo.cli.core._common import (
+    _enforce_desktop_session,
+    _is_windows_11_or_later,
+    _win11_shell_enumeration_warning,
+)
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 
 
@@ -61,14 +65,28 @@ def taskbar_list(json_output) -> None:
         backend = get_backend()
         items = backend.taskbar_list()
 
+        # (#916) An empty result on Windows 11 is almost certainly the XAML
+        # shell host defeating the legacy Win32 enumeration, not a truly empty
+        # taskbar. Surface that explicitly instead of silently reporting an
+        # empty success — empty-but-successful reads are a silent-failure shape.
+        empty_on_win11 = not items and _is_windows_11_or_later()
+
         if json_output:
-            _click.echo(json_dumps({
+            payload = {
                 "success": True,
                 "items": items,
                 "count": len(items),
-            }))
+            }
+            if empty_on_win11:
+                payload["warning"] = _win11_shell_enumeration_warning("taskbar")
+            _click.echo(json_dumps(payload))
         else:
             if not items:
+                if empty_on_win11:
+                    _click.echo(
+                        f"Warning: {_win11_shell_enumeration_warning('taskbar')}",
+                        err=True,
+                    )
                 _click.echo("No taskbar items found.")
             else:
                 for item in items:
