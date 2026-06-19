@@ -4,30 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 07:23 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed clean
-→ `develop` green, no open PRs, status:in-progress empty, no abandoned work, no new human-only item; the
-queue below is unchanged**. Since the 05:23 refresh: **PR #1020 landed** (`ccb43ec`, **fixes #880** —
-`fix: suggest correct command for subgroup/renamed intent verbs`: the CLI typo-suggester now resolves
-subgroup commands like `launch`/`open`/`screenshot` so first-time users don't hit a dead end). Merged
-22:33Z, Build & Test + CodeQL success; source branch auto-deleted (Rule 14 clean). **#880 is CLOSED +
-`verified` + `status:done`** — QA picked it up and closed it the same lap (Rule 1 clean; no Orc handoff
-needed). **PR #1021 landed** (`2280079`, HEAD, **fixes #889** — stop "Did you mean" suggesting unrelated
-commands for short verbs, `ai`→`wait`/`tap`→`app`); auto-merge SQUASH (armed 23:22:23Z) landed it
-mid-cycle once CI went green; branch untouched throughout (Rule 4); source branch auto-deleted (Rule 14
-clean). **Dev did the post-merge handoff itself** → #889 `status:in-progress` → `status:done` (no Orc flip
-needed). Same suggester-precision theme as #880. `status:in-progress` = **empty**. `status:done` = **#889**
-(suggester short-verb precision, awaiting QA) **+ #972** (input-content guard, code-verified, awaiting your
-security sign-off). **No new
-issue filed (Rule 9)** — the suggester cluster is converging on its own, the `-j` envelope classes stay
-structurally closed, the recent test-honesty / cross-platform cluster (#894/#999/#1010/#1016/#944/#946)
-has all shipped; recognition hardening env-blocked (#932/#934); distribution backlog sharp
+_Last refreshed: 2026-06-19 08:23 (Orc autonomous cycle — **quiet/healthy; one clean Dev→QA close
+(#889 verified+closed) + one queue reconciliation: #897 (CLI exit-code contract) added below — it had
+carried `needs:ace` since 06-19 00:19Z but was never in this digest. `develop` green, no open PRs,
+status:in-progress empty, no abandoned work, no new issue filed.** Since the 07:23 refresh: **QA
+verified+closed #889** (07:38 local / 23:38Z — the short-verb suggester-precision fix from PR #1021,
+`ai`→`wait`/`tap`→`app`; merged commit `2280079` present → Rule 1 clean; Dev had already flipped it to
+`status:done`, QA closed it → no Orc handoff). This completes the #880/#889 suggester cluster (both
+halves shipped + verified). `status:in-progress` = **empty**. `status:done` = **#972** only
+(input-content guard, code-verified, awaiting your security sign-off) — drained from 2 (#889 closed).
+**No new issue filed (Rule 9)** — the `-j` envelope classes stay structurally closed, the recent
+test-honesty / cross-platform cluster (#894/#999/#1010/#1016/#944/#946) + the suggester cluster
+(#880/#889) have all shipped; recognition hardening env-blocked (#932/#934); distribution backlog sharp
 (#997/#930/#922/#928). Priority honesty: zero unmilestoned actionable issues (only the `needs:ace` items
-below float). Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable)
-+ **#972** (close the input-content safety guard) — both your security sign-off; **#915 recommended for
-closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
-#975/#972/#969/#935/#915/#914 /#860/#842.** `develop` CI: HEAD `2280079` (#1021) **Build & Test + CodeQL
-in progress, no failed lanes** (prior `ccb43ec` #1020 success) → **develop not red.** v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+below float). Top human items: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972**
+(close the input-content safety guard) — both your security sign-off; **#897** (pick the CLI exit-code
+contract — new below); **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix
+stays human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914/#897 /#860/#842.**
+`develop` CI: HEAD `2280079` (#1021) **Build & Test + CodeQL success** (prior `ccb43ec` #1020 success) →
+**develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
+competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -37,6 +33,7 @@ unchanged (FULLY MET — release is your call, #914). Weekly competitiveness ste
 | [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** | release / tag to `main` = PyPI publish | **READY TO CUT — this is now the top actionable item.** Both ship-gate requirements are met: req (1) (epic #885 cluster) verified+closed; req (2) **all 5 status:done bugs verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z). `develop` CI green on `d3cfe92`. **Cutting / tagging v0.3.2 (tag→main = PyPI publish) is your call — the loop cannot and will not do it (Rule 2).** |
 | [#969](https://github.com/AcePeak/naturo/issues/969) | **QA-harness integrity hazard** — the `naturo-qa` worktree's editable install (egg-link/`.pth`) resolves `import naturo`/`python -m naturo` to a **sibling worktree `naturo-qa-mariana`** (pre-#720 stale code). QA Step-2 runtime probes can **silently verify STALE code → false PASS/FAIL verdicts** (one FALSE FAIL already, 16:40Z #963). | machine-local env fix that touches another agent's worktree — Rule 4 forbids unattended self-fix; threatens the loop's verification signal | **Run `pip install -e .` from the `naturo-qa` worktree** (or fix the egg-link/`.pth`) so QA's import resolves to the worktree under test. The code-only loud-failure guard (assert `naturo.__file__` under the active worktree, fail loudly otherwise) is now tracked as **[#971](https://github.com/AcePeak/naturo/issues/971)** — Dev-actionable, the loop will ship it; this row remains the **env fix** which is human-only (Rule 4). Pairs with the #917 watchdog. |
 | [#935](https://github.com/AcePeak/naturo/issues/935) | Two Dev cycles ran **concurrently in the shared `naturo-dev` worktree** — the 2nd cycle's Step 0 `reset --hard` wiped the 1st's in-flight uncommitted branch (#910). **Rule 4 violation at the orchestration layer.** | orchestration / scheduling policy (runner.ps1 / cron / lock) | Add a **per-worktree lock** in `naturo-loop-locks\` that a starting `runner:dev` must acquire (skip the round if held), and/or serialize dev so two cycles never share one tree. Self-fixing is unsafe — concurrent git ops would corrupt the peer cycle. |
+| [#897](https://github.com/AcePeak/naturo/issues/897) | **Pick the canonical CLI exit-code contract for usage errors.** `type`/`press`/`find`/`wait`/`get`/`set`/`app launch` missing-required-arg exits **1**; Click-level parse errors (unknown cmd/opt) exit **2**. A POSIX `case $?` scripter misclassifies missing-arg as a transient op-failure and may infinite-retry. Fixing it fully **conflicts with the merged #872/#874 contract** (which deliberately set JSON-mode usage errors to exit 1). | **public CLI exit-code contract** (CLI-contract breaking, human-only guardrail) — reverses a recently-merged decision | **(A) usage errors = exit 2 everywhere** (text + JSON; POSIX-correct, satisfies #897, reverts #872/#874's JSON exit-1 + rewrites `test_subcommand_usage_error_json_872.py`) — **Orc + Dev recommend A**; or **(B)** keep JSON usage errors = exit 1, only fix text-mode in-body validators to exit 2 (documented text-vs-JSON split). Once you pick, Dev ships it in one cycle via a shared `exit_code_for_code` helper. Dev's full analysis is on the issue. |
 | [#842](https://github.com/AcePeak/naturo/issues/842) / [#860](https://github.com/AcePeak/naturo/issues/860) | Desktop CI: self-hosted runner ROBOT-COMPILE offline (#842) vs fund a cloud Windows VM (#860) | infra spend | Decide: revive the runner, fund a cloud Windows VM, or accept GitHub-hosted-only CI. (No longer needed for input verification — see #863 below — but still the only path to desktop-marked CI jobs.) |
 
 ## Recommended for closure (Orc cannot close needs:ace/QA items unattended — your confirm)

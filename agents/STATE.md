@@ -1,6 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 07:23 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed
+> Last refreshed: 2026-06-19 08:23 (Orc autonomous cycle — **quiet/healthy; one clean Dev→QA close
+> (#889 verified+closed by QA) + one needs:ace queue reconciliation (#897 CLI exit-code contract — it
+> carried `needs:ace` since 06-19 00:19Z but had never been in the NEEDS-ACE digest; added this cycle).
+> develop green, no open PRs, status:in-progress empty, no abandoned work, no new issue filed (Rule 9).**
+> Since the 07:23 refresh: **QA verified+closed #889** (07:38 local / 23:38Z — the short-verb
+> suggester-precision fix from PR #1021, `ai`→`wait`/`tap`→`app`; merged commit `2280079` present →
+> **Rule 1 clean**; Dev had already flipped #889 → `status:done` at merge, QA closed it → **no Orc
+> handoff needed**). This completes the **#880/#889 suggester-precision cluster** (both halves shipped +
+> verified). **`status:in-progress` = empty** → no in-flight pickup, no abandoned work. **`status:done`
+> = #972** only (input-content guard, code-verified, close = human security sign-off, queued) — drained
+> from 2 (#889 closed this window). **No open PRs.** **Step 2 health: no abandoned work, nothing to
+> close.** **Step 3 (drive product): no new issue filed (Rule 9)** — priority-honesty scan
+> (`no:milestone` open): only the `needs:ace` human-only items (#975/#969/#935/#915) + the parked
+> Linux/cross-platform `help wanted` community backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero
+> unmilestoned actionable Dev work**; the `-j` envelope classes stay structurally closed, the recent
+> test-honesty / cross-platform cluster (#894/#999/#1010/#1016/#944/#946) + the suggester cluster
+> (#880/#889) have all shipped. Recognition hardening env-blocked (#932 Java/no JDK; #934 SAP/no
+> install); distribution backlog sharp (#997/#930/#922/#928). **Step 4 (needs:ace) — reconciliation:
+> added #897** (`bug: missing-required-arg exit code drift`, P2/from:qa/v0.3.4) to the live queue +
+> NEEDS-ACE.md. Dev had routed it to `needs:ace` at 00:19Z with a full A/B analysis (it's a **public CLI
+> exit-code contract** decision that conflicts with the merged #872/#874 JSON-mode contract → human-only
+> guardrail), but the prior ~7 Orc cycles never carried it into the digest. Orc + Dev recommend **(A)
+> usage errors = exit 2 everywhere**. Evidence in `.work/reviews/2026-06-19-0823-auto-review.md`.
+> **needs:ace live queue now #975/#972/#969/#935/#915/#914/#897** (+ infra #860/#842) — **no NEW
+> human-only item this cycle; #897 is a reconciliation of an existing one.** `develop` CI: HEAD `2280079`
+> (#1021) **Build & Test + CodeQL success** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Weekly competitiveness **not due** (baseline 2026-06-16, <7d).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 07:23 (Orc autonomous cycle — **quiet/healthy; two team-Dev PRs landed
 > clean since 05:23 (#1020 → #880 QA verified+closed same lap; #1021 → #889 auto-merged mid-cycle, Dev
 > self-handoff to status:done) → develop green, no open PRs, status:in-progress now empty, no abandoned
 > work, no new human-only item; needs:ace queue unchanged**. Since the 05:23 refresh:
