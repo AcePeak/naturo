@@ -358,6 +358,15 @@ def detect_electron_app(app_name: str) -> Dict[str, Any]:
             "main_pid": None,
         }
 
+    # Bulk-fetch command lines and exe paths in a single wmic call to avoid
+    # per-PID subprocess overhead. Apps that match many processes (UWP apps,
+    # Chrome/Edge/Teams) would otherwise pay ~0.86 s per PID for the two wmic
+    # calls in each helper, stalling the see/find cascade for 20+ s. This
+    # mirrors list_electron_apps, which already applies the BUG-007 batching
+    # fix that detect_electron_app — the function the cascade actually calls —
+    # was missing (#1023).
+    proc_info = _bulk_get_process_info()
+
     # Check each process for Electron characteristics
     is_electron = False
     debug_port = None
@@ -365,11 +374,11 @@ def detect_electron_app(app_name: str) -> Dict[str, Any]:
 
     for proc in processes:
         pid = proc["pid"]
-        if _is_electron_process(pid):
+        if _is_electron_process(pid, proc_info=proc_info):
             is_electron = True
             if main_pid is None:
                 main_pid = pid
-            port = _find_debug_port_from_cmdline(pid)
+            port = _find_debug_port_from_cmdline(pid, proc_info=proc_info)
             if port is not None:
                 debug_port = port
                 break
