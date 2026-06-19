@@ -1478,19 +1478,25 @@ Write text to the clipboard.
 
 | Name | Type | Required |
 |------|------|----------|
-| `TEXT` | text | yes |
+| `TEXT` | text | no — supply via `TEXT`, `--file`, or stdin (`-`) |
 
 **Options:**
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--file PATH` | path | Read text from a file (mirrors `naturo type --file`) |
 | `--json`, `-j` | boolean | JSON output |
+
+Exactly one source must be supplied. `--file` and stdin avoid the shell
+ARG_MAX limit (~32 KB) that caps a positional argument, and preserve real
+newlines without shell-specific quoting.
 
 **Examples:**
 
 ```bash
-naturo clipboard set "hello world"      # Set clipboard text
-naturo clipboard set "line1\nline2"     # Multi-line text
+naturo clipboard set "hello world"      # Literal text
+naturo clipboard set --file notes.txt   # Read text from a file
+naturo see -j | naturo clipboard set -  # Read text from stdin
 ```
 
 ## `naturo config`

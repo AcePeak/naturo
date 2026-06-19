@@ -17,7 +17,7 @@ import sys
 
 import click
 
-from naturo.cli.error_helpers import emit_exception_error
+from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 
@@ -35,6 +35,59 @@ def _get_backend(json_output: bool = False):
             }))
             sys.exit(1)
         raise click.UsageError(str(exc))
+
+
+def _resolve_set_text(text: str | None, file_path: str | None, json_output: bool) -> str:
+    """Resolve the clipboard-set payload from the chosen input source.
+
+    Exactly one source must be supplied: the positional ``text``, a ``--file``
+    path, or stdin (signalled by passing ``-`` as ``text``, the jq/sed
+    convention). File and stdin sources sidestep the shell ARG_MAX limit that
+    caps a positional argument and preserve real newlines verbatim.
+
+    Args:
+        text: The positional ``TEXT`` argument, ``-`` for stdin, or ``None``.
+        file_path: Path supplied via ``--file``, or ``None``.
+        json_output: Whether errors should be emitted as JSON.
+
+    Returns:
+        The resolved payload string to write to the clipboard.
+
+    Raises:
+        SystemExit: Via :func:`emit_error` when no source, multiple sources, or a
+            missing/unreadable file is supplied. The process exits with code 1
+            and a canonical ``INVALID_INPUT`` error envelope.
+    """
+    if file_path is not None and text is not None:
+        emit_error(
+            "INVALID_INPUT",
+            "Provide the text either as the TEXT argument, via --file, or on "
+            "stdin ('-') — not more than one source.",
+            json_output,
+        )
+
+    if file_path is not None:
+        import os
+        if not os.path.exists(file_path):
+            emit_error("INVALID_INPUT", f"File not found: {file_path}", json_output)
+        try:
+            with open(file_path, "r", encoding="utf-8") as handle:
+                return handle.read()
+        except OSError as exc:
+            emit_error("INVALID_INPUT", f"Could not read file: {exc}", json_output)
+
+    if text == "-":
+        return sys.stdin.read()
+
+    if text is None:
+        emit_error(
+            "INVALID_INPUT",
+            "No text to set. Provide a TEXT argument, --file PATH, or '-' to "
+            "read from stdin.",
+            json_output,
+        )
+
+    return text
 
 
 @click.group(cls=FuzzyGroup)
@@ -92,18 +145,27 @@ def get(fmt: str, json_output: bool) -> None:
 
 
 @clipboard.command()
-@click.argument("text")
+@click.argument("text", required=False)
+@click.option("--file", "file_path", type=click.Path(),
+              help="Read text from a file (mirrors 'naturo type --file')")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def set(text: str, json_output: bool) -> None:
+def set(text: str | None, file_path: str | None, json_output: bool) -> None:
     """Write text to the clipboard.
 
-    Replaces the current clipboard content with the specified text.
+    Replaces the current clipboard content. The payload may come from a
+    positional TEXT argument, from a file via --file, or from stdin by passing
+    ``-`` as TEXT. --file and stdin avoid the shell ARG_MAX limit (~32 KB) that
+    caps a positional argument, and preserve real newlines without shell-specific
+    quoting. Exactly one source must be supplied.
 
     \b
     Examples:
-        naturo clipboard set "hello world"      # Set clipboard text
-        naturo clipboard set "line1\\nline2"     # Multi-line text
+        naturo clipboard set "hello world"      # Literal text
+        naturo clipboard set --file notes.txt   # Read text from a file
+        naturo see -j | naturo clipboard set -  # Read text from stdin
     """
+    text = _resolve_set_text(text, file_path, json_output)
+
     backend = _get_backend(json_output)
     try:
         backend.clipboard_set(text)
