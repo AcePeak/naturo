@@ -89,6 +89,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
         app_label = (app or window_title or "screen").lower().replace(" ", "-")
         path = f"naturo-{app_label}-{timestamp}.{fmt}"
 
+    # (#1022) Auto-create the parent directory so a missing folder doesn't
+    # surface as a raw [Errno 2] mislabeled as a capture failure.
+    _common._ensure_output_dir(path, json_output)
+
     try:
         backend = _common._get_backend(json_output)
         if hwnd or app or window_title or pid:

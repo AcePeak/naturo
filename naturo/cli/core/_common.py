@@ -13,6 +13,7 @@ from __future__ import annotations
 import functools
 import json as json_module  # noqa: F401 — re-exported for submodules
 import logging
+import os
 import platform
 from collections.abc import Callable
 from typing import TypeVar
@@ -148,3 +149,40 @@ def _platform_error_msg(feature: str) -> str:
     if system == "Linux":
         return f"{feature} is not yet supported on Linux. See https://github.com/AcePeak/naturo#platform-support"
     return f"{feature} is not supported on {system}."
+
+
+def _ensure_output_dir(path: str, json_output: bool) -> None:
+    """Ensure the parent directory of an output file path exists.
+
+    Auto-creates the parent directory (and any missing ancestors) so that
+    writing an image to a not-yet-existing folder succeeds, instead of letting
+    the backend raise a raw ``FileNotFoundError`` that downstream code
+    mislabels as a capture failure (issue #1022).
+
+    Args:
+        path: The output file path the caller is about to write to.
+        json_output: Whether the caller emits JSON error envelopes; controls
+            the format of the error reported on failure.
+
+    Raises:
+        SystemExit: With exit code 1 if the parent directory cannot be created
+            (e.g. permission denied, or a file occupies the path). The emitted
+            error is a clear ``INVALID_INPUT`` naming the directory rather than
+            a raw OS errno.
+    """
+    parent = os.path.dirname(os.path.abspath(path))
+    if not parent or os.path.isdir(parent):
+        return
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError as exc:
+        reason = exc.strerror or str(exc)
+        msg = (
+            f"Cannot create output directory '{parent}': {reason}. "
+            "Choose a writable --path or create the directory first."
+        )
+        if json_output:
+            click.echo(_json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)

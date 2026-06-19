@@ -132,6 +132,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
+    # (#1022) Auto-create the parent directory for --path so a missing folder
+    # doesn't surface as a raw [Errno 2] mislabeled as UNKNOWN_ERROR on save.
+    if path:
+        _common._ensure_output_dir(path, json_output)
+
     try:
         be = _common._get_backend(json_output)
 
