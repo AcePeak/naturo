@@ -1,6 +1,36 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 18:22 (Orc autonomous cycle — **quiet/healthy; no PRs, develop green,
+> Last refreshed: 2026-06-19 19:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+> clean since 18:22 (#1033 → #952 — Dev self-handoff to status:done). develop green, no open PRs,
+> status:in-progress now empty, no abandoned work, no new human-only item; needs:ace queue unchanged.**
+> Since the 18:22 refresh: **PR #1033 landed** (`91d2beb`, HEAD, **fixes #952** — `fix: unify list
+> windows / list apps window JSON schema`; the last cycle's in-flight Dev pickup. `list apps -j` and
+> `list windows -j` had used different field names for the same window handle (`handle` vs `hwnd`) and
+> `list windows -j` omitted the stable `id`/`--app-id` → now one canonical window schema across both
+> commands, so a script can join app/window listings on a single field and address windows by the
+> stable id; continues the v0.3.4 JSON/MCP field-name consistency lane (#1025/#894 siblings)). Merged
+> 11:13:47Z, **Build & Test + CodeQL success**; `git merge-base --is-ancestor 91d2beb origin/develop`
+> = **YES** → **Rule 1 clean**; source branch auto-deleted (only `develop`+`main` remain, Rule 14
+> clean). **Post-merge handoff: none needed** — #952 was already flipped `status:in-progress` →
+> `status:done` by Dev at merge (11:14:15Z; base `develop` ≠ default branch → no auto-close).
+> **`status:in-progress` now empty** → no in-flight pickup, no abandoned work. **`status:done` = #952**
+> (list-windows/apps JSON schema, awaiting QA) **+ #972** (input-content guard, code-verified, close =
+> human security sign-off, queued). **No open PRs;** branches `develop`+`main` only (Rule 14 clean).
+> **Step 2 health: nothing to close** (Rule 1 — #952 needs QA `verified`; #972 human-only), no
+> abandoned work. **Step 3 (drive product): no new issue filed (Rule 9)** — priority-honesty scan
+> (`no:milestone` open): only the `needs:ace` human-only items (#975/#969/#935/#915) + the parked
+> Linux/cross-platform `help wanted` backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned
+> actionable Dev work**; backlog Dev-pickable (v0.3.4 `from:qa` JSON/MCP consistency cluster +
+> distribution #997/#922/#928/#930). Standing #1 priority (recognition supremacy #920/#931/#932/#934)
+> stays top-of-queue but **env-blocked** (no JDK / no SAP install; desktop/QA-gated). **Step 3.5
+> competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-19 = 3d < 7). **Step 4 (needs:ace):
+> no new human-only item** — live queue **unchanged #975/#972/#969/#935/#915/#914/#897** (all verified
+> open); NEEDS-ACE.md header refreshed. Evidence in `.work/reviews/2026-06-19-1923-auto-review.md`.
+> `develop` CI: HEAD `91d2beb` (#1033) **Build & Test + CodeQL success** → **not red.** v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 18:22 (Orc autonomous cycle — **quiet/healthy; no PRs, develop green,
 > one fresh in-flight Dev pickup (#952 — left untouched, Rule 4) + one needs:ace queue reconciliation
 > (dropped closed infra #860/#842 from the digest). No new issue (Rule 9), no new human-only item.**
 > Since the 17:23 refresh: no PR landed (HEAD still `ac24cb1`/#1032). The Dev cycle **picked up #952**

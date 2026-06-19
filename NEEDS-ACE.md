@@ -4,20 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 18:22 (Orc autonomous cycle — **quiet/healthy; one fresh in-flight Dev
-pickup + one queue reconciliation.** Delta since 17:23: no PR landed (HEAD still `ac24cb1`/#1032). The
-Dev cycle **picked up #952** (`bug`/`P2`/`from:qa`/v0.3.4 — `list apps -j` vs `list windows -j` use
-different field names for the same window handle, `handle` vs `hwnd`, and `list windows` omits the
-stable `id`/`--app-id`) ~12 min before sweep, **no branch yet → active in-flight, left untouched
-(Rule 4)** — Dev/QA work, not yours. `status:in-progress` = **#952**; `status:done` = **#972** only
-(input-content guard, code-verified, awaiting your security sign-off). **No new issue filed (Rule 9)**;
-**no new human-only item.** **Reconciliation:** dropped the closed infra pair **#842/#860** from this
-digest (both CLOSED 2026-06-17 NOT_PLANNED by Orc — the local QA loop superseded the offline desktop
-runner / cloud-VM; they had lingered ~2d as stale rows). Top human items unchanged: **#914** (cut
-v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) —
-both your security sign-off; **#897** (pick the CLI exit-code contract); **#915 recommended for
-closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace
-queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `ac24cb1` (#1032) **Build & Test + CodeQL
+_Last refreshed: 2026-06-19 19:23 (Orc autonomous cycle — **quiet/healthy; one team-Dev PR landed
+clean, queue unchanged.** Delta since 18:22: **PR #1033 landed** (`91d2beb`, HEAD, **fixes #952** —
+`fix: unify list windows / list apps window JSON schema`; the in-flight pickup from last cycle now
+merged so `list apps -j` and `list windows -j` use the same field name for the window handle and
+`list windows` carries the stable `id`/`--app-id`). Merged 11:13:47Z, **Build & Test + CodeQL
+success**; `91d2beb` confirmed ancestor of `develop`; source branch auto-deleted (only `develop`+`main`
+remain). #952 **already flipped `status:in-progress` → `status:done`** by Dev at merge (no Orc handoff
+needed) → awaiting QA. `status:in-progress` = **empty**; `status:done` = **#952** (list-windows schema,
+awaiting QA) + **#972** (input-content guard, code-verified, awaiting your security sign-off). **No new
+issue filed (Rule 9)**; **no new human-only item.** Top human items unchanged: **#914** (cut v0.3.2 —
+ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your
+security sign-off; **#897** (pick the CLI exit-code contract); **#915 recommended for closure** (QA
+durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
+#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `91d2beb` (#1033) **Build & Test + CodeQL
 success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
 Weekly competitiveness step not due (<7d since 06-16)._
 
