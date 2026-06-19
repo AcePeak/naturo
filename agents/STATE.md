@@ -1,6 +1,42 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 06:24 (Orc autonomous cycle — **quiet/healthy; the PR that was RED-in-flight
+> Last refreshed: 2026-06-20 07:22 (Orc autonomous cycle — **quiet/healthy; since 06:24 QA verified+closed
+> #898 (`naturo doctor`, via merged `fe175d0`) and the 07:07–07:15 Dev cycle picked up #1047 (fresh
+> in-flight, no PR yet — left untouched, Rule 4). develop NOT red, no open PRs, status:in-progress = #1047,
+> status:done = #972 (human-only), nothing closed by Orc (Rule 1), one priority-honesty triage
+> (milestoned new QA gap #1048 → v0.3.4), no new issue (Rule 9), no new human-only item; needs:ace queue
+> unchanged.** **Step 0:** `git fetch origin -p` clean; `git pull --ff-only` = Already up to date (code
+> HEAD `fe175d0`/#1046; tip `237837c` = orc 0624 [skip ci]); authoritative `gh api .../branches` =
+> **develop + main only** → Rule 14 clean. **Step 1:** **no open PRs** (`gh pr list --state open` = `[]`);
+> develop CI on `fe175d0` (#1046) **Build & Test + CodeQL SUCCESS** → not red. **Step 2 health:** **#898
+> verified+CLOSED by QA @06:42Z** (`naturo doctor` — live Win11 26200 runtime PASS, `pytest -k doctor` 21
+> passed; merged `fe175d0` PR #1046 → Rule 1 clean; QA did the close → no Orc handoff needed); drains the
+> prior status:done queue. `status:in-progress` = **#1047** (`find` reports missing window/app as
+> unrecoverable `UNKNOWN_ERROR` vs siblings' recoverable `WINDOW_NOT_FOUND`/`APP_NOT_FOUND`) — picked up
+> by the 07:07–07:15 Dev cycle, label set @07:11 (~8 min before sweep), assignee AcePeak, **no branch/PR
+> pushed yet** → active fresh in-flight, **NOT the >24h abandonment case** → left untouched (Rule 4).
+> `status:done` (open) = **#972 only** (input-content guard, code-verified, close = human security
+> sign-off, queued). **Nothing to close** (Rule 1 — #1047 in flight, no merged commit; #972 human-only),
+> no abandoned work. **Step 3 (drive product): priority-honesty triage** — new QA gap **#1048** (`feat:
+> wire 'naturo info' as an alias for 'naturo doctor' (proposed in #898, not implemented)`, enhancement/P2/
+> from:qa, created @22:39Z) was **unmilestoned** while its `doctor`/#898 sibling work is v0.3.4. The `info`
+> alias was part of the **already-accepted #898 proposal** (no ambiguous product/naming decision) and is
+> **additive, non-breaking** with a concrete Dev pointer (register `info` as a Click alias of `doctor` +
+> one parity test) → not human-only → **Orc milestoned #1048 → v0.3.4.** **No new issue (Rule 9)** — the
+> gap already had a sharp issue (#1048); after milestoning, the `no:milestone` set is only the `needs:ace`
+> human-only items (#975/#969/#935/#915) + the parked Linux/cross-platform `help wanted` backlog
+> (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned actionable Dev work**. Standing #1 priority
+> (recognition supremacy #920/#931/#932/#934) stays top-of-queue but **env-blocked** (no JDK / no SAP
+> install; desktop/QA-gated). **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today
+> 06-20 = 4d < 7). **Step 4 (needs:ace): no new human-only item** — live queue **unchanged
+> #975/#972/#969/#935/#915/#914/#897** (all verified open); NEEDS-ACE.md header + CI line refreshed.
+> Evidence in `.work/reviews/2026-06-20-0722-auto-review.md`. `develop` CI: code HEAD `fe175d0` (#1046)
+> **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+> Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 06:24 (Orc autonomous cycle — **quiet/healthy; the PR that was RED-in-flight
 > last cycle (#1046 → #898 — `naturo doctor` env self-check) LANDED CLEAN once the Dev lane applied the
 > #912 surface-coverage fix Orc had diagnosed. develop NOT red, status:in-progress now empty, status:done
 > = #898 (awaiting QA) + #972 (human-only), nothing closed (Rule 1), one priority-honesty triage

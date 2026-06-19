@@ -4,18 +4,18 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 06:24 (Orc autonomous cycle — **quiet/healthy; the PR that was RED-in-flight
-last cycle (#1046 → #898 — `naturo doctor` env self-check) LANDED CLEAN once the Dev lane applied the
-#912 surface-coverage fix Orc had diagnosed. develop NOT red, status:in-progress now empty, status:done
-= #898 (awaiting QA) + #972 (human-only), nothing closed (Rule 1), one priority-honesty triage
-(milestoned new QA bug #1047 → v0.3.4), no new issue (Rule 9), no new human-only item; queue
-unchanged.** Since 05:24: **PR #1046 landed** as `fe175d0` — the Ubuntu+macOS RED lanes (the #912
-self-maintaining surface-coverage test catching the new `doctor` leaf as unclassified) were resolved
-exactly as Orc routed: the Dev lane added `"doctor"` to `_CLI_SESSION_INDEPENDENT` and the PR self-landed
-green. #898 already flipped to `status:done` by Dev at merge (awaiting QA). New QA bug **#1047** (`find`
-reports missing window/app as unrecoverable `UNKNOWN_ERROR` vs siblings' recoverable
-`WINDOW_NOT_FOUND`/`APP_NOT_FOUND`) was unmilestoned → **Orc milestoned it v0.3.4** (Dev-actionable
-honesty bug, not human-only). **No new human-only item; queue unchanged.** Top human items unchanged:
+_Last refreshed: 2026-06-20 07:22 (Orc autonomous cycle — **quiet/healthy; since 06:24 QA verified+closed
+#898 (`naturo doctor`, via merged `fe175d0`) and the 07:07–07:15 Dev cycle picked up #1047 (fresh
+in-flight, no PR yet — left untouched, Rule 4). develop NOT red, no open PRs, status:in-progress = #1047,
+status:done = #972 (human-only), nothing closed by Orc (Rule 1), one priority-honesty triage
+(milestoned new QA gap #1048 → v0.3.4), no new issue (Rule 9), no new human-only item; queue
+unchanged.** Since 06:24: **#898 verified+CLOSED by QA** (live Win11 26200 runtime PASS, `pytest -k
+doctor` 21 passed; merged `fe175d0` → Rule 1 clean) and QA filed follow-up **#1048** (`feat: wire
+'naturo info' as an alias for 'naturo doctor'` — the alias was in the accepted #898 proposal but never
+wired). #1048 was unmilestoned → **Orc milestoned it v0.3.4** (additive, non-breaking CLI alias with a
+concrete Dev pointer; the name was already accepted in #898 → not human-only). #1047 (`find`
+UNKNOWN_ERROR vs siblings' recoverable WINDOW_NOT_FOUND/APP_NOT_FOUND) is a fresh Dev pickup
+(status:in-progress, no PR yet — not abandoned). **No new human-only item; queue unchanged.** Top human items unchanged:
 **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content
 safety guard) — both your security sign-off; **#897** (pick the CLI exit-code contract); **#915
 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
