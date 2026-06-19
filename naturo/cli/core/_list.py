@@ -83,8 +83,19 @@ def windows(app, pid, json_output) -> None:
                 )
 
         if json_output:
+            # Assign stable session-scoped IDs (a1, a2, ...) on the listed
+            # windows so each entry is directly targetable with --app-id, matching
+            # `list apps` / `app list` (#952). Without this the emitted `id` would
+            # be cosmetic and would not resolve.
+            from naturo.app_ids import get_app_id_map
+            get_app_id_map().assign_ids(win_list)
+
             data = [
                 {
+                    # `id` + `handle` mirror the `list apps` schema; `hwnd` is kept
+                    # as a back-compatible alias so both names resolve (#952).
+                    "id": f"a{i}",
+                    "handle": w.handle,
                     "hwnd": w.handle,
                     "title": w.title,
                     "process_name": w.process_name,
@@ -96,7 +107,7 @@ def windows(app, pid, json_output) -> None:
                     "is_visible": w.is_visible,
                     "is_minimized": w.is_minimized,
                 }
-                for w in win_list
+                for i, w in enumerate(win_list, start=1)
             ]
             click.echo(json_dumps({"success": True, "windows": data, "count": len(data)}, indent=2))
         else:

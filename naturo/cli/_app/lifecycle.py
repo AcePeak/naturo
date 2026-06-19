@@ -318,6 +318,9 @@ def app_list(ctx, show_all, json_output) -> None:
                 {
                     "id": f"a{i}",
                     "handle": w.handle,
+                    # `hwnd` alias mirrors `list windows` so the two commands
+                    # share one interchangeable window schema (#952).
+                    "hwnd": w.handle,
                     "pid": w.pid,
                     "process_name": w.process_name,
                     "title": w.title,
