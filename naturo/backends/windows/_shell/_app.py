@@ -17,7 +17,11 @@ class AppMixin:
         """
         import os
 
-        windows = self.list_windows()
+        # Consume the *unresolved* window list: this method runs its own UWP
+        # child resolution below, keyed off the ApplicationFrameHost host
+        # basename. ``list_windows`` now pre-resolves that host PID (#958), which
+        # would hide the marker this detection depends on — so read the raw view.
+        windows = self._list_windows_unresolved()
         seen_pids: set[int] = set()
         seen_uwp: set[tuple[int, str]] = set()
         apps: list[dict] = []

@@ -359,7 +359,9 @@ class TestUwpAppListDedup:
         ]
 
         backend = WindowsBackend.__new__(WindowsBackend)
-        with patch.object(backend, "list_windows", return_value=fake_windows):
+        # list_apps consumes the *unresolved* window list (#958): it runs its
+        # own UWP child resolution, so patch the raw source it actually reads.
+        with patch.object(backend, "_list_windows_unresolved", return_value=fake_windows):
             apps = backend.list_apps()
 
         uwp_names = [a["name"] for a in apps]
