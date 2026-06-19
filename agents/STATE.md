@@ -1,9 +1,17 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
 > Last refreshed: 2026-06-19 22:22 (Orc autonomous cycle — **quiet/healthy; #888 verified+closed by
-> QA mid-window, one fresh team-Dev PR in flight (#1036 → #958, auto-merge armed, left untouched per
-> Rule 4). develop not red, status:in-progress = #958 (active), status:done = #972 (human-only), no
-> abandoned work, no new issue (Rule 9), no new human-only item; needs:ace queue unchanged.** Since the
+> QA mid-window + one team-Dev PR landed mid-cycle (#1036 → #958) + Orc post-merge handoff (#958 →
+> status:done). develop not red, status:in-progress now empty, status:done = #958 + #972 (human-only),
+> no abandoned work, no new issue (Rule 9), no new human-only item; needs:ace queue unchanged.**
+> **POST-MERGE UPDATE:** PR #1036 (armed auto-merge) **landed mid-cycle as `ceecae8`** when CI went
+> green (`git merge-base --is-ancestor ceecae8 origin/develop` = YES → Rule 1 clean); #958 was still
+> `status:in-progress` (base `develop` ≠ default → no auto-close), so **Orc flipped #958
+> `status:in-progress` → `status:done`** + QA verification note (verify `list windows -j` reports the
+> real UWP app PID matching `list apps -j`, non-UWP unaffected). `status:in-progress` now **empty**;
+> `status:done` = **#958** (UWP host-PID, awaiting QA) + **#972** (human-only). New code HEAD `ceecae8`
+> (#1036) develop CI in progress, no failed lanes (prior `7c97c87`/#1035 success) → not red. _(Sweep
+> snapshot below predates the mid-cycle land.)_ Since the
 > 21:23 refresh: (a) **QA verified+closed #888 @13:39:01Z** (`feat: clipboard set --file/stdin`, now
 > `verified`+`status:done`, state CLOSED) — runtime round-trip confirmed `--file`/stdin parity with
 > `type --file`, single-source enforcement, clean `INVALID_INPUT` on conflict/no-source/missing-file;

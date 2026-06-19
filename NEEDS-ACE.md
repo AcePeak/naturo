@@ -8,16 +8,17 @@ _Last refreshed: 2026-06-19 22:22 (Orc autonomous cycle — **quiet/healthy; #88
 one fresh team-Dev PR in flight, queue unchanged.** Delta since 21:23: (a) **QA verified+closed #888**
 @13:39:01Z (`feat: clipboard set --file/stdin` — runtime round-trip confirmed parity with `type --file`,
 single-source enforcement, clean `INVALID_INPUT` on bad input; `verified`+`status:done`, CLOSED). (b) the
-Dev cycle **opened PR #1036** (`fix: resolve UWP host PID in list_windows to match list_apps`,
-**fixes #958**, P2/v0.3.4) — `MERGEABLE`/`BLOCKED` only on pending CI (no failed lanes), **auto-merge
-SQUASH armed by AcePeak @14:17:31Z** → self-landing, left untouched (Rule 4). `status:in-progress` =
-**#958** (active); `status:done` = **#972** (input-content guard, code-verified, awaiting your security
-sign-off). **No new issue filed (Rule 9)**; **no new human-only item; queue unchanged.** Top human items
+Dev cycle's **PR #1036 landed mid-cycle** as `ceecae8` (`fix: resolve UWP host PID in list_windows to
+match list_apps`, **fixes #958**, P2/v0.3.4; armed auto-merge landed it when CI went green; Rule 1 clean)
+→ Orc flipped **#958 → `status:done`** + QA note (awaiting QA). `status:in-progress` = **empty**;
+`status:done` = **#958** (UWP host-PID) + **#972** (input-content guard, code-verified, awaiting your
+security sign-off). **No new issue filed (Rule 9)**; **no new human-only item; queue unchanged.** Top human items
 unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the
 input-content safety guard) — both your security sign-off; **#897** (pick the CLI exit-code contract);
 **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `7c97c87` (#1035)
-**Build & Test + CodeQL success** (prior `7dc61ef`/#1034 success) → **develop not red.** v0.3.2 ship-gate
+**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: new HEAD `ceecae8` (#1036)
+post-merge CI in progress, no failed lanes (prior `7c97c87`/#1035 **Build & Test + CodeQL success**;
+all required checks green at #1036's merge) → **develop not red.** v0.3.2 ship-gate
 unchanged (FULLY MET — release is your call, #914).
 Weekly competitiveness step not due (<7d since 06-16)._
 
