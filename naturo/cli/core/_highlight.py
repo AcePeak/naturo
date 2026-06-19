@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 @click.option("--on", "on_ref", help="Target element ref (eN) to highlight")
 @click.option("--ref", "-r", "ref_option", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--app", "-a", help="Application name (partial match)")
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
@@ -40,9 +42,9 @@ logger = logging.getLogger(__name__)
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered regions (requires --cascade)")
 @click.option("--pid", type=int, default=None, help="Process ID")
-def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, duration,
-              json_output, backend, show_all, annotate_path, role_filter,
-              visible_only, cascade, fill_gaps, pid) -> None:
+def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_id,
+              depth, duration, json_output, backend, show_all, annotate_path,
+              role_filter, visible_only, cascade, fill_gaps, pid) -> None:
     """Highlight UI elements on screen with colored borders and labels.
 
     By default highlights only actionable elements (Button, Edit, ComboBox,
@@ -91,7 +93,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
 
     be = _common._get_backend(json_output)
     try:
-        handle = be._resolve_hwnd(app=app, hwnd=hwnd, pid=pid)
+        handle = be._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
     except Exception as exc:
         if json_output:
             click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(exc)))
