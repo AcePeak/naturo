@@ -85,6 +85,46 @@ class TestDetectElectronApp:
         assert result["debug_port"] is None
         assert result["app_name"] == "Slack"
 
+    @patch("naturo.electron._get_process_exe_path")
+    @patch("naturo.electron._get_process_command_line")
+    @patch("naturo.electron._bulk_get_process_info")
+    @patch("naturo.electron._find_processes_by_name")
+    def test_uses_single_bulk_query_for_many_pids(
+        self, mock_find, mock_bulk, mock_cmdline, mock_exe,
+    ):
+        """detect_electron_app batches process info into one bulk query.
+
+        Regression for #1023: with many matching PIDs the old code issued
+        two ``wmic`` subprocesses per PID (~0.86 s each), causing a ~23 s
+        stall on the ``see``/``find`` cascade for multi-process apps (e.g.
+        Calculator spawns ~27 processes). The fix mirrors
+        ``list_electron_apps``: fetch ``_bulk_get_process_info`` once and pass
+        it through to the per-PID helpers, which must therefore never fall
+        back to their per-PID ``wmic`` calls.
+        """
+        from naturo.electron import detect_electron_app
+
+        pids = list(range(1000, 1027))  # 27 processes, like a UWP/Electron app
+        mock_find.return_value = [
+            {"pid": pid, "name": "App.exe"} for pid in pids
+        ]
+        mock_bulk.return_value = {
+            pid: {
+                "command_line": '"C:\\App.exe" --type=renderer',
+                "exe_path": "",
+            }
+            for pid in pids
+        }
+
+        result = detect_electron_app("App")
+
+        # Exactly one bulk query, and zero per-PID wmic fallbacks.
+        assert mock_bulk.call_count == 1
+        mock_cmdline.assert_not_called()
+        mock_exe.assert_not_called()
+        # Functional result is unchanged: the renderer marker confirms Electron.
+        assert result["is_electron"] is True
+
 
 # ── list_electron_apps ──────────────────────────
 
