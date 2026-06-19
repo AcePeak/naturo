@@ -4,25 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 01:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #1038
-mid-window + team-Dev PR #1040 (#912) landed mid-cycle + Orc post-merge handoff (#912 → status:done).
-develop not red, status:in-progress empty, status:done = #912 + #972, queue unchanged.** Delta
-since 00:50: (a) **QA verified+closed #1038 @00:40Z** (PR #1039 / `08c1add`, `fix: highlight reads
-newest snapshot, not oldest`) — real-desktop Notepad confirmed `highlight -A` writes the boxed PNG
-from the newest snapshot, names the `see --path` prerequisite on a bare `see`, clean `-j` envelope;
-Rule 1 clean, QA did the close → no Orc handoff needed; drains the prior `status:done` queue. (b) the
-01:07 Dev cycle picked up #912 and **PR #1040 landed mid-cycle as `753aa37`** (`test: auto-enumerate
-CLI/MCP surfaces for desktop-session guard coverage`; turns the hand-maintained #885 guard matrix into
-a self-maintaining contract — a new unclassified surface fails the test); ancestor of develop
-confirmed (Rule 1 clean), source branch auto-deleted (Rule 14 clean). #912 was still
-`status:in-progress` (base `develop` ≠ default → no auto-close) → **Orc flipped #912 → status:done** +
-QA verification note (internal test-only → not human-only). **No new issue filed (Rule 9)**; **no new human-only item; queue unchanged.** Top human items unchanged:
-**#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content
-safety guard) — both your security sign-off; **#897** (pick the CLI exit-code contract); **#915
-recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: code HEAD `08c1add` (#1039)
-**Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 02:24 (Orc autonomous cycle — **quiet/healthy; one follow-up team-Dev PR
+landed clean since 01:22 (#1041 → #912 test-hardening) + QA verified+closed #912 mid-window (no Orc
+handoff needed) + the Dev cycle picked up #864 and armed PR #1042 (self-landing, left untouched).
+develop not red, status:in-progress = #864 (fresh in-flight), status:done = #972 (human-only), queue
+unchanged.** Delta since 01:22: (a) **PR #1041 landed** (`5c5eba1`, HEAD — `test: skip MCP
+surface-coverage test when mcp package is absent (#912)`; makes the #912 surface-coverage contract skip
+gracefully when the optional `mcp` package isn't installed instead of failing collection); Build & Test
++ CodeQL SUCCESS, Rule 1 clean. (b) **QA verified+closed #912 @17:38:56Z** — now CLOSED + `verified` +
+`status:done` (PR #1040 `753aa37` + follow-up #1041 `5c5eba1`); QA did the close → no Orc handoff
+needed; drains #912 from the `status:done` queue. (c) the Dev cycle **picked up #864 and opened PR
+#1042** (`fix: accept --id eN on type/press/get/set/highlight (part of #864)`, head
+`fix/issue-864-id-flag` → develop, P2/from:qa/v0.3.4 — extends `--id eN` element-targeting parity to 5
+more commands; part-of a multi-part issue, so #864 correctly stays in-progress for the remainder);
+auto-merge SQUASH armed @18:20:39Z, MERGEABLE/BLOCKED only on pending CI (no failed lanes) → self-landing,
+branch untouched (Rule 4). **No new issue filed (Rule 9)**; **no new human-only item; queue unchanged.**
+Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972**
+(close the input-content safety guard) — both your security sign-off; **#897** (pick the CLI exit-code
+contract); **#915 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays
+human-only** (Rule 4). **Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: code
+HEAD `5c5eba1` (#1041) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -58,7 +60,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** at sweep (Build & Test + CodeQL success on `08c1add`/#1039); PR #1040 (#912 guard-coverage test) **landed mid-cycle as `753aa37`**, post-merge Build & Test + CodeQL in progress, no failed lanes (all required checks green at merge).
+- `develop` CI: **green** at sweep (Build & Test + CodeQL success on `5c5eba1`/#1041); PR #1042 (#864 `--id eN` parity) in flight with auto-merge SQUASH armed, MERGEABLE/BLOCKED only on pending CI, no failed lanes → self-landing.
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

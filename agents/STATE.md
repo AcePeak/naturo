@@ -1,6 +1,47 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 01:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #1038
+> Last refreshed: 2026-06-20 02:24 (Orc autonomous cycle — **quiet/healthy; one follow-up team-Dev PR
+> landed clean since 01:22 (#1041 → #912 test-hardening) + QA verified+closed #912 mid-window (no Orc
+> handoff needed) + the Dev cycle picked up #864 and armed PR #1042 (self-landing, left untouched, Rule 4).
+> develop not red, no merges/closes by Orc, status:in-progress = #864 (fresh in-flight), status:done =
+> #972 (human-only), no abandoned work, no new issue (Rule 9), no new human-only item; needs:ace queue
+> unchanged.** Since the 01:22 refresh: (a) **PR #1041 landed** (`5c5eba1`, HEAD — `test: skip MCP
+> surface-coverage test when mcp package is absent (#912)`; follow-up to the #912 surface-coverage
+> contract so it skips gracefully when the optional `mcp` package isn't installed instead of failing
+> collection). Merged 17:30:54Z, **Build & Test + CodeQL SUCCESS**; `git merge-base --is-ancestor
+> 5c5eba1 origin/develop` = YES → **Rule 1 clean**; source branch auto-deleted. (b) **QA verified+closed
+> #912 @17:38:56Z** — now CLOSED + `verified` + `status:done`, state COMPLETED (PR #1040 `753aa37` +
+> follow-up #1041 `5c5eba1`, both ancestors of develop → Rule 1 clean; QA did the close → **no Orc
+> post-merge handoff needed**); drains #912 from the status:done queue. (c) the **Dev cycle picked up
+> #864 and opened PR #1042** (`fix: accept --id eN on type/press/get/set/highlight (part of #864)`, head
+> `fix/issue-864-id-flag` → develop, P2/from:qa/v0.3.4 — extends the #864 element-targeting `--id eN`
+> parity to type/press/get/set/highlight; multi-part issue, 8 commands total → this PR covers 5).
+> At sweep it was `MERGEABLE`/`BLOCKED` only on **pending CI** (Lint&Type / Commit-Author /
+> Version-Consistency / Ubuntu 3.9-3.13 / macOS 3.13 / Analyze python = SUCCESS; macOS 3.9-3.12 + C++
+> build + Analyze c-cpp = pending; **no failed lanes**) with **auto-merge SQUASH armed by AcePeak
+> @18:20:39Z** → standard self-landing pattern, **branch untouched (Rule 4)**; it lands itself when CI
+> goes green. **Step 0:** fast-forwarded `3a6a226 → 5c5eba1`; authoritative `gh api .../branches` =
+> **develop + main + the one live PR-1042 branch** → Rule 14 clean. **Step 1:** PR #1042 in flight (left
+> untouched); no other open PRs. **Step 2 health:** `status:in-progress` = **#864** (active Dev pickup,
+> PR open, fresh → NOT the >24h abandonment case; correctly milestoned/labeled, left untouched).
+> `status:done` (open) = **#972 only** (input-content guard, code-verified, close = human security
+> sign-off, queued). **Nothing to close** (Rule 1 — #864 in flight, no merged commit; #972 human-only;
+> #912 already QA-closed), no abandoned work. **Step 3 (drive product): no new issue filed (Rule 9)** —
+> priority-honesty scan (`no:milestone` open): only the `needs:ace` human-only items (#975/#969/#935/#915)
+> + the parked Linux/cross-platform `help wanted` backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero
+> unmilestoned actionable Dev work**; #864 correctly v0.3.4 → no mis-milestone; backlog Dev-pickable
+> (#864 remaining commands + #871 remaining window-targeting flags + the v0.3.4 `from:qa` JSON/MCP
+> consistency lane). Standing #1 priority (recognition supremacy #920/#931/#932/#934) stays top-of-queue
+> but **env-blocked** (no JDK / no SAP install; desktop/QA-gated). **Step 3.5 competitiveness: NOT due**
+> (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 4 (needs:ace): no new human-only item** —
+> live queue **unchanged #975/#972/#969/#935/#915/#914/#897** (all verified open); NEEDS-ACE.md header +
+> CI line refreshed. Evidence in `.work/reviews/2026-06-20-0224-auto-review.md`. `develop` CI: HEAD
+> `5c5eba1` (#1041) **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 01:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #1038
 > mid-window (no Orc handoff needed) + team-Dev PR #1040 (#912) LANDED mid-cycle + Orc post-merge
 > handoff (#912 → status:done). develop not red, status:in-progress now empty, status:done = #912
 > (awaiting QA) + #972 (human-only), no abandoned work, no new issue (Rule 9), no new human-only item;
