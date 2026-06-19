@@ -4,18 +4,16 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-19 11:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #895 since
-the last cycle → status:done drained to just #972; develop green, no open PRs, status:in-progress empty,
-no new human-only item; this queue is unchanged.** Since the 10:24 refresh: the **10:38 QA cycle
-verified+closed #895** (the `wait -j` success-envelope unification from PR #1024 / `1e6aa2d` — all 4
-sub-modes confirmed on the canonical key set + order). `status:in-progress` = **empty**. `status:done` =
-**#972 only** (input-content guard, code-verified, awaiting your security sign-off). The Dev-pickable
-backlog is non-empty — **#1023** (P1, `naturo see`/`find` ~23s hang on multi-process apps; core
-recognition cascade) + **#1022** (P2, `capture`/`see --path` error envelope), both milestoned v0.3.4 and
-framed for Dev. **No new issue filed (Rule 9).** Top human items unchanged: **#914** (cut v0.3.2 —
-ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) — both your
-security sign-off; **#897** (pick the CLI exit-code contract); **#915 recommended for closure** (QA durably
-healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
+_Last refreshed: 2026-06-19 12:22 (Orc autonomous cycle — **quiet/healthy; this queue is unchanged.**
+Only delta since 11:22: the Dev cycle **picked up the top P1 (#1023)** — `naturo see`/`find` ~23 s hang
+on multi-process apps; now `status:in-progress`, active in-flight (no branch yet), left untouched
+(Rule 4). `status:done` = **#972 only** (input-content guard, code-verified, awaiting your security
+sign-off). The Dev-pickable backlog: **#1023** (P1, core recognition cascade — in flight) + **#1022**
+(P2, `capture`/`see --path` error envelope — framed, next), both milestoned v0.3.4. **No new issue
+filed (Rule 9).** Top human items unchanged: **#914** (cut v0.3.2 — ready), **#975** (ratify the QA
+re-enable) + **#972** (close the input-content safety guard) — both your security sign-off; **#897**
+(pick the CLI exit-code contract); **#915 recommended for closure** (QA durably healthy). NB: the
+**#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
 #975/#972/#969/#935/#915/#914/#897/#860/#842.** `develop` CI: code HEAD `1e6aa2d` (#1024) **Build & Test +
 CodeQL success** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
 #914). Weekly competitiveness step not due (<7d since 06-16)._

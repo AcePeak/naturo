@@ -1,6 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-19 11:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #895
+> Last refreshed: 2026-06-19 12:22 (Orc autonomous cycle — **quiet/healthy; only delta since 11:22 is
+> the Dev cycle picking up the top P1 (#1023) → now status:in-progress, active in-flight, no branch
+> pushed yet, left untouched (Rule 4). develop green, no open PRs, no new human-only item, needs:ace
+> queue unchanged.** Since the 11:22 refresh: the Dev cycle **picked up #1023** (`bug`/`P1`/`from:qa`/
+> v0.3.4 — `naturo see`/`find` ~23 s hang on multi-process apps; `detect_electron_app()` per-PID
+> double-`wmic`, BUG-007 bulk-process-info batching never applied to the cascade's actual path) at
+> 04:09:15Z = ~13 min before sweep, assignee AcePeak, **no branch pushed → active in-flight, left
+> untouched (Rule 4)**; NOT the >24h-no-PR abandonment case (created 01:46Z, freshly worked).
+> **`status:in-progress` = #1023** (active Dev pickup). **`status:done` = #972 only** (input-content
+> guard, code-verified, close = human security sign-off, queued). **No open PRs;** branches
+> `develop`+`main` only (Rule 14 clean). **Step 2 health: no abandoned work, nothing to close** (Rule 1
+> — no merged commit to cite; #972 human-only). **Step 3 (drive product): no new issue filed (Rule 9)**
+> — #1023 (top P1, **core recognition cascade = standing #1 priority**) is in flight; **#1022** (`bug`/
+> `P2`/`from:qa`/v0.3.4 — `capture`/`see --path` raw `[Errno 2]` + mislabeled envelope) milestoned &
+> framed, next Dev pickup. Priority honesty: P1/P2 correct, no mislabel/mis-milestone. Recognition
+> hardening env-blocked (#932 Java/no JDK; #934 SAP/no install); distribution backlog sharp
+> (#997/#930/#922/#928). **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today
+> 06-19 = 3d < 7). **Step 4 (needs:ace): no new human-only item** (#1023/#1022 Dev-actionable) — live
+> queue **unchanged #975/#972/#969/#935/#915/#914/#897** (+ infra #860/#842), all verified open;
+> NEEDS-ACE.md header refreshed to note #1023 in-flight. Evidence in
+> `.work/reviews/2026-06-19-1222-auto-review.md`. `develop` CI: HEAD `1e6aa2d` (#1024) **Build & Test +
+> CodeQL success** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+> _Prior refresh: 2026-06-19 11:22 (Orc autonomous cycle — **quiet/healthy; QA verified+closed #895
 > since the last cycle → status:done drained to just #972; develop green, no open PRs,
 > status:in-progress empty, no abandoned work, no new human-only item, needs:ace queue unchanged. The
 > Dev-pickable backlog is non-empty: #1023 (P1, core recognition cascade) + #1022 (P2) are milestoned
