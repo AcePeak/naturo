@@ -262,6 +262,94 @@ class TestWaitGone:
 
 
 # ---------------------------------------------------------------------------
+# Envelope consistency (#895)
+# ---------------------------------------------------------------------------
+
+# The single canonical success-envelope key set every ``wait`` sub-mode must
+# emit so a ``-j`` consumer never has to know which flags were passed.
+CANONICAL_WAIT_KEYS = {"success", "mode", "wait_time", "found", "warnings"}
+
+
+class TestWaitEnvelopeConsistency:
+    """All four sub-modes share one canonical ``-j`` success envelope (#895).
+
+    Duration mode previously emitted ``{success, mode, wait_time}`` while the
+    predicate modes emitted ``{success, found, wait_time, warnings}`` — no shared
+    shape and no ``mode`` discriminator on the predicate path. After the fix every
+    sub-mode carries ``{success, mode, wait_time, found, warnings}``, with the
+    predicate-only ``found`` present-but-null in duration mode.
+    """
+
+    @patch("naturo.cli.wait_cmd.time.sleep")
+    def test_duration_has_canonical_keys(self, mock_sleep, runner):
+        result = runner.invoke(wait, ["0.5", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["mode"] == "duration"
+        assert data["found"] is None
+        assert data["warnings"] == []
+
+    @patch("naturo.wait.wait_for_element")
+    def test_element_has_mode_discriminator(self, mock_wfe, runner, mock_wait_result):
+        mock_wfe.return_value = mock_wait_result
+        result = runner.invoke(wait, ["--element", "Button:Save", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["mode"] == "element"
+        assert data["found"] is True
+
+    @patch("naturo.wait.wait_for_window")
+    def test_window_has_mode_discriminator(self, mock_wfw, runner, mock_wait_result):
+        mock_wfw.return_value = mock_wait_result
+        result = runner.invoke(wait, ["--window", "Notepad", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["mode"] == "window"
+
+    @patch("naturo.wait.wait_until_gone")
+    def test_gone_has_mode_discriminator(self, mock_wug, runner, mock_wait_result):
+        mock_wug.return_value = mock_wait_result
+        result = runner.invoke(wait, ["--gone", "Dialog:Loading", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["mode"] == "gone"
+
+    @patch("naturo.wait.wait_for_element")
+    def test_not_found_keeps_canonical_keys(self, mock_wfe, runner):
+        result_obj = MagicMock()
+        result_obj.found = False
+        result_obj.wait_time = 1.0
+        result_obj.warnings = []
+        result_obj.element = None
+        mock_wfe.return_value = result_obj
+        result = runner.invoke(wait, ["--element", "X", "--json", "--timeout", "1"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["mode"] == "element"
+        assert data["found"] is False
+
+    @patch("naturo.cli.wait_cmd.time.sleep")
+    @patch("naturo.wait.wait_for_element")
+    def test_duration_and_predicate_share_key_set(
+        self, mock_wfe, mock_sleep, runner, mock_wait_result
+    ):
+        """The duration and predicate envelopes expose the same canonical keys."""
+        duration = json.loads(runner.invoke(wait, ["0.5", "--json"]).output)
+        mock_wfe.return_value = mock_wait_result
+        predicate = json.loads(
+            runner.invoke(wait, ["--element", "Button:Save", "--json"]).output
+        )
+        assert CANONICAL_WAIT_KEYS <= set(duration)
+        assert CANONICAL_WAIT_KEYS <= set(predicate)
+        assert CANONICAL_WAIT_KEYS <= (set(duration) & set(predicate))
+
+
+# ---------------------------------------------------------------------------
 # Help
 # ---------------------------------------------------------------------------
 

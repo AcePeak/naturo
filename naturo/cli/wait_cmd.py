@@ -84,10 +84,16 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
 
         time.sleep(duration)
         if json_output:
+            # Canonical success envelope shared with the predicate sub-modes
+            # (#895): the predicate-only ``found``/``warnings`` keys are present
+            # but carry their empty values so a ``-j`` consumer never has to know
+            # which sub-mode ran to parse the result.
             click.echo(json_dumps({
                 "success": True,
                 "mode": "duration",
                 "wait_time": round(duration, 3),
+                "found": None,
+                "warnings": [],
             }, indent=2))
         else:
             click.echo(f"Waited {duration:.1f}s")
@@ -161,11 +167,15 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
         sys.exit(1)
         return
 
+    # Discriminator for the canonical envelope, matching the dispatch above (#895).
+    mode = "element" if element else "gone" if gone else "window"
+
     if json_output:
         output = {
             "success": result.found,
-            "found": result.found,
+            "mode": mode,
             "wait_time": round(result.wait_time, 3),
+            "found": result.found,
             "warnings": result.warnings,
         }
         if result.element:
