@@ -63,6 +63,17 @@ import pytest
 
 from naturo.cli import main
 
+# The ``mcp`` package requires Python >= 3.10, so it is absent on the 3.9 CI
+# lane.  Detect it once at import time and skip the MCP-enumeration test there,
+# mirroring ``test_no_desktop_guard_885.py``.  The CLI coverage and the
+# data-only behavioral cross-check do not need ``mcp`` and always run.
+try:
+    from naturo.mcp_server import create_server as _create_server
+
+    _MCP_AVAILABLE = True
+except ImportError:  # pragma: no cover - mcp optional, absent on Python 3.9
+    _MCP_AVAILABLE = False
+
 
 # ── Runtime surface enumeration ──────────────────────────────────────────────
 
@@ -128,9 +139,7 @@ def _all_mcp_tools() -> set[str]:
     """
     import asyncio
 
-    from naturo.mcp_server import create_server
-
-    server = create_server()
+    server = _create_server()
     loop = asyncio.new_event_loop()
     try:
         tools = loop.run_until_complete(server.list_tools())
@@ -266,6 +275,7 @@ def test_cli_classification_sets_are_disjoint() -> None:
     assert not overlap, f"CLI commands classified both ways: {sorted(overlap)}"
 
 
+@pytest.mark.skipif(not _MCP_AVAILABLE, reason="mcp package not installed")
 def test_every_mcp_tool_is_classified() -> None:
     """Every MCP tool is classified; desktop-required = all minus the allow-list.
 
