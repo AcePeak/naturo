@@ -1,0 +1,7 @@
+{
+  "orders": [
+    { "id": 1001, "item": "Wireless Mouse", "total": 24.99 },
+    { "id": 1002, "item": "Mechanical Keyboard", "total": 89.50 },
+    { "id": 1003, "item": "USB-C Hub", "total": 41.00 }
+  ]
+}

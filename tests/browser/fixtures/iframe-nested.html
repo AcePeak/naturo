@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: iframe-nested</title>
+</head>
+<body>
+  <h1 id="main-heading">Nested iframes (2 levels)</h1>
+  <p id="intro">A form lives two iframe levels deep, for frame-switching tests.</p>
+
+  <!-- Exercises: iframe switching. Top -> frame-level1 -> frame-level2 -> form.
+       Children are served as real files so a frame-switch by name/src works. -->
+  <iframe id="frame-level1" name="frame-level1" src="iframe-level1.html"
+          title="level 1" width="500" height="300"></iframe>
+</body>
+</html>

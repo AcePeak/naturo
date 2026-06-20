@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: iframe-level2</title>
+</head>
+<body>
+  <h3 id="level2-heading">Level 2 frame</h3>
+
+  <!-- The deeply-nested form a frame-switching test must reach and fill. -->
+  <form id="deep-form" method="post" action="submit">
+    <label>Deep field
+      <input type="text" name="deep" id="deep-input" value="">
+    </label>
+    <button type="submit" id="deep-submit">Send</button>
+  </form>
+  <p id="deep-status" data-submitted="false">Not submitted.</p>
+
+  <script>
+    document.getElementById("deep-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      var status = document.getElementById("deep-status");
+      status.textContent = "Submitted: " + document.getElementById("deep-input").value;
+      status.setAttribute("data-submitted", "true");
+    });
+  </script>
+</body>
+</html>

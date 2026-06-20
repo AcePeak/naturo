@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: hover-menu</title>
+  <style>
+    #menu-dropdown { display: none; list-style: none; margin: 0; padding: 0; }
+    #menu-trigger:hover + #menu-dropdown,
+    #menu-dropdown:hover { display: block; }
+    .menu-item { padding: 6px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1 id="main-heading">Hover Menu</h1>
+
+  <!-- Exercises: hover interaction. The dropdown is hidden until the trigger
+       is hovered; only then can its items be clicked. -->
+  <div id="menu-bar">
+    <button id="menu-trigger">Menu &#9662;</button>
+    <ul id="menu-dropdown">
+      <li class="menu-item" id="menu-item-profile">Profile</li>
+      <li class="menu-item" id="menu-item-settings">Settings</li>
+      <li class="menu-item" id="menu-item-logout">Log out</li>
+    </ul>
+  </div>
+
+  <p id="menu-status" data-selected="">No item selected.</p>
+
+  <script>
+    document.getElementById("menu-dropdown").addEventListener("click", function (event) {
+      var item = event.target.closest(".menu-item");
+      if (!item) { return; }
+      var status = document.getElementById("menu-status");
+      status.textContent = "Selected: " + item.textContent;
+      status.setAttribute("data-selected", item.id);
+    });
+  </script>
+</body>
+</html>

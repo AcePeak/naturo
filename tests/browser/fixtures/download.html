@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: download</title>
+</head>
+<body>
+  <h1 id="main-heading">File Download</h1>
+  <p>The link below downloads a fixed file for download-management tests.</p>
+
+  <!-- Exercises: download management. The anchor's download attribute saves a
+       deterministic served file (download-payload.txt), so a polling/SHA256
+       check has a known target. -->
+  <a id="download-link" href="download-payload.txt" download="report.txt">
+    Download report.txt
+  </a>
+
+  <p id="download-note" data-size="42">Expected size: 42 bytes.</p>
+</body>
+</html>
