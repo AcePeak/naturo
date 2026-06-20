@@ -407,6 +407,8 @@ Click on a UI element, text, or coordinates.
 | `--on` | text | Target element (eN ref or text label) |
 | `--id` | text | Automation element ID |
 | `--coords` | integer | X Y coordinates |
+| `--image` | path | Locate a template image (PNG/JPG) on the target window or screen and click the center of the best match (see `naturo find --image`) |
+| `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
 | `--double` | boolean | Double-click |
 | `--right` | boolean | Right-click |
 | `--app` | text | Target application (name or partial match) |
@@ -432,9 +434,17 @@ Click on a UI element, text, or coordinates.
 naturo click --coords 500 300
 naturo click --coords 500 300 --right
 naturo click --id "button_ok"
+naturo click --image submit.png                   # click the center of a template match
+naturo click --image icon.png --app Notepad --threshold 0.85  # match within an app
 naturo click e42 --paste
 naturo click e42 --copy
 ```
+
+`--image` reuses the `naturo find --image` matcher: it captures the target
+window (when `--app`/`--window`/`--hwnd`/`--pid` is given) or the screen, locates
+the best template match above `--threshold`, and clicks its center. When no match
+clears the threshold it returns `ELEMENT_NOT_FOUND` and clicks nothing rather than
+guessing a location.
 
 ## `naturo drag`
 

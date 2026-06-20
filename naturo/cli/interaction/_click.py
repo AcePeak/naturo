@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import click
@@ -39,6 +40,12 @@ def _get_screen_bound() -> int:
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
+@click.option("--image", "image_template", type=click.Path(), default=None,
+              help="Locate a template image (PNG/JPG) on the target window or "
+                   "screen and click the center of the best match "
+                   "(see 'naturo find --image').")
+@click.option("--threshold", type=float, default=0.9, show_default=True,
+              help="Minimum match score in [0.0, 1.0] for --image (higher is stricter)")
 @click.option("--double", is_flag=True, help="Double-click")
 @click.option("--right", is_flag=True, help="Right-click")
 @click.option("--app", help="Target application (name or partial match)")
@@ -66,7 +73,8 @@ def _get_screen_bound() -> int:
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
-              element_id: str | None, coords: tuple[int, int] | None, double: bool,
+              element_id: str | None, coords: tuple[int, int] | None,
+              image_template: str | None, threshold: float, double: bool,
               right: bool, app: str | None, pid: int | None,
               window_title: str | None, hwnd: int | None, wait_for: float | None,
               input_mode: str, method: str, selector: str | None, app_id: str | None,
@@ -93,6 +101,8 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
       naturo click --coords 500 300
       naturo click --coords 500 300 --right
       naturo click --id "button_ok"
+      naturo click --image submit.png
+      naturo click --image icon.png --app Notepad --threshold 0.85
       naturo click e42 --paste
       naturo click e42 --copy
     """
@@ -108,6 +118,56 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
     backend = _common._get_backend(json_output)
 
     button = "right" if right else "left"
+
+    # Image-match targeting (#1059): locate a template on the window/screen and
+    # click the center of the best match. --image is its own targeting strategy,
+    # so it is mutually exclusive with the text/coords/ref/selector targets; the
+    # window-scoping flags (--app/--window/--hwnd/--pid) still apply — they choose
+    # the capture source, exactly as in `naturo find --image`. Matching is pure
+    # computation (no input injection): it resolves coordinates that then flow
+    # through the standard coordinate-click path below.
+    _image_match_info: dict[str, Any] | None = None
+    if image_template is not None:
+        from naturo.cli.core._find import _ImageMatchError, _resolve_image_matches
+        _conflict = (
+            "--coords" if coords else
+            "--id" if element_id else
+            "--selector" if selector else
+            "--on/QUERY" if (on_text or query) else
+            None
+        )
+        if _conflict is not None:
+            _common._json_err(
+                f"{_conflict} cannot be combined with --image; --image is its own "
+                "targeting strategy (it clicks the matched template's center).",
+                json_output, code="INVALID_INPUT",
+            )
+            return
+        try:
+            _matches, _ox, _oy, _thwnd, _hw, _hh = _resolve_image_matches(
+                image_template, threshold, False,
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                screenshot=None, limit=1, json_output=json_output,
+            )
+        except _ImageMatchError as exc:
+            _common._json_err(exc.message, json_output, code=exc.code)
+            return
+        if not _matches:
+            _common._json_err(
+                f"No match for template '{os.path.basename(image_template)}' "
+                f"(threshold {threshold}). Lower --threshold or verify the template "
+                "is visible on the target.",
+                json_output, code="ELEMENT_NOT_FOUND",
+            )
+            return
+        _m = _matches[0]
+        # Center the click on the match, translating haystack coordinates to
+        # screen-absolute via the captured window/monitor origin.
+        coords = (_ox + _m.x + _m.width // 2, _oy + _m.y + _m.height // 2)
+        _image_match_info = {
+            "template": os.path.basename(image_template),
+            "score": round(_m.score, 4),
+        }
 
     # Resolve target coordinates or element_id
     # Priority: --selector (semantic) > --coords > --id > --on/query (#103)
@@ -399,6 +459,8 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data: dict[str, Any] = {"action": action, "target": str(loc), "button": button}
+    if _image_match_info is not None:
+        result_data["image_match"] = _image_match_info
     if _clipboard_action:
         result_data["clipboard_action"] = _clipboard_action
     # (#248) Indicate UIA click was used for UWP apps

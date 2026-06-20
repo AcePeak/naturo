@@ -85,6 +85,16 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "the screen resolution and verify the target position.",
         False,
     ),
+    "INVALID_TEMPLATE": (
+        "The --image template file exists but could not be decoded. Check that it "
+        "is a valid PNG/JPG image smaller than the target window/screen.",
+        False,
+    ),
+    "INVALID_SCREENSHOT": (
+        "The --screenshot file exists but could not be decoded. Check that it is a "
+        "valid PNG/JPG screenshot to match against.",
+        False,
+    ),
     "APP_NOT_FOUND": (
         "The application is not running. Use 'naturo app list' to see running apps, "
         "or 'naturo app launch <name>' to start it.",
