@@ -4,27 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 13:55Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+_Last refreshed: 2026-06-20 14:24Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
 #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-13:22Z cycle: **Dev** landed team PR **#1090** (`tab-management` Before/After equivalence, **part of #766**,
-`bcda034`) — all-green auto-merge, fixed a dead `tabs.html` fixture, correctly kept umbrella #766 OPEN; and while
-writing the network-interception slice **filed a never-lie doc bug** (**#1088**) instead of papering over it.
-**QA** filed **#1089** (P2) — `naturo wait` appear-mode timeout (`-j`) omits the standard `error` block (success:false
-with no code/category/message); proven root cause `wait_cmd.py:173-194`. **Step 1 PR sweep:** no open team-Dev PR
-(all #766 slices self-landed); only open PR = community **#1055** (already queued
+13:55Z cycle: **Dev** landed team PR **#1091** (`image-captcha click-offset` Before/After equivalence + fix dead
+`captcha-image.html` fixture, **part of #766**, `a14a46d`) — all-green auto-merge SQUASH, correctly kept umbrella
+#766 OPEN (`closingIssues` empty, no `status:done` flip owed). No new QA/Dev-filed issue this cycle. **Step 1 PR
+sweep:** no other open team-Dev PR; only open PR = community **#1055** (already queued
 **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did **not**
 comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress` = empty;
 `status:done` open = **#972** only (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3:**
-triaged the two new QA/Dev-filed bugs — **#1089 → v0.3.3** (error-envelope leg, keeps v0.3.2 scope clean; root
-cause confirmed in code) and **#1088 → v0.3.2** (migration-guide never-lie, same class as #1082; doc-down is the
-unambiguous Dev fix, the response-body-capture *feature* is separable and left to you under #765/#809 — not
-decided here). No other unmilestoned non-queue actionable except parked Linux help-wanted → no new issue (Rule 9).
-**Step 3.6 (evolve the team): no change — no new evidence** (the only recurring class, error-envelope completeness,
-was just covered by the 13:22Z Error-code-registration rule; both Dev #1090 + QA #1089 exemplary; a 2nd adjacent
-rule 30 min later would over-fit — Step 3.6 forbids; #1089 logged as reinforcing evidence). **Live needs:ace
-queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: prior HEAD `9fa3183` full **SUCCESS** (Build
-& Test + CodeQL); `bcda034` (#1090) CI in-progress, no failure → **develop NOT red.** v0.3.2 ship-gate unchanged
-(FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+no new issue filed since 13:55Z; top-updated issues all already triaged; milestones intact; no unmilestoned
+non-queue actionable except parked Linux help-wanted → no new issue (Rule 9). **Step 3.6 (evolve the team): no
+change — no new evidence** (the only signal is Dev's #1091 land, which again found+fixed a dead fixture — 3rd
+consecutive #766 slice to do so, #1085/#1090/#1091 — exemplary, not a weakness; the 13:22Z Error-code rule is
+<2h old → a rule on an exemplary cycle would over-fit, Step 3.6 forbids). **Live needs:ace queue
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `a14a46d` (#1091) full **SUCCESS** (Build &
+Test + CodeQL) → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
+competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -62,7 +58,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `847dc99`/#1076 (HEAD) → **not red.** Recent team-Dev lands: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `a14a46d`/#1091 (HEAD) → **not red.** Recent team-Dev lands (#766 migration-equivalence matrix): **#1091** (`image-captcha click-offset` + fix dead `captcha-image.html` fixture → `a14a46d`), **#1090** (`tab-management` + dead `tabs.html` fixture → `bcda034`), **#1087** (`network interception` → `9fa3183`). Earlier: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

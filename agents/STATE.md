@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 14:24Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `a14a46d` #1091 =
+> Build & Test + CodeQL full SUCCESS; orc tip `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch origin`;
+> `pull --ff-only` `a7e67bb→a14a46d` (team-Dev #1091); `gh api branches` = develop + main only → no stale
+> (Rule 14; #1091 branch auto-deleted). **Step 1 PR sweep:** team-Dev **#1091** (`image-captcha click-offset`
+> Before/After equivalence + fix dead `captcha-image.html` fixture, **part of #766**) landed all-green
+> auto-merge SQUASH (`a14a46d`; `closingIssues` empty → umbrella #766 correctly NOT auto-closed; #766 carries
+> no `status:in-progress` → no `status:done` flip owed). No other open team-Dev PR. Only open PR = community
+> **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not
+> merged/commented/closed. **Step 2 health:** `status:in-progress` = empty; `status:done` open = **#972** only
+> (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product):** NO new issue
+> filed since 13:55Z — top-updated (#1088/#1089/#1086/#1084) all already triaged; milestones intact; no
+> unmilestoned non-queue actionable except parked Linux help-wanted; no gap sharp enough to file (Rule 9, no
+> churn). Recognition moat (Standing #1): #766 matrix advanced one more hermetic slice (image-captcha,
+> green-landed #1091). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence** — the only signal since 13:55Z is Dev's #1091
+> land, which **again found+fixed a dead fixture** (3rd consecutive #766 slice to do so: #1085/#1090/#1091) —
+> exemplary (catches+repairs the vacuous test, keeps umbrella open), NOT a weakness; the freshest rule (13:22Z
+> Error-code registration) was added <2h ago and hasn't had a distinct new test → a rule on an exemplary cycle
+> would over-fit (Step 3.6 forbids). Honest ledger row appended. **Step 4 (needs:ace): no new item;** queue
+> unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1424-auto-review.md`.
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (13:55Z)
+> cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 13:55Z (Orc autonomous cycle — **`develop` NOT red** (prior HEAD `9fa3183` =
 > Build & Test + CodeQL full SUCCESS; new HEAD `bcda034` #1090 CI in-progress, no failure; orc tip `[skip ci]`).
 > **NO new human-only item — queue unchanged #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:**
