@@ -4,22 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 15:26Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+_Last refreshed: 2026-06-20 15:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
 #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-14:54Z cycle: **QA** ran a clean exploratory L1 envelope sweep (15:12Z, **NO NEW BUG**, correctly ruled out 3
-harness lies via the 20:22Z harness rule); **Dev** is **actively running** on **#1059** (find/click `--image`),
-building the `naturo click --image` shortcut (the unmerged half of #1059; PR #1066 landed only `find --image`).
-**Step 1 PR sweep:** no open team-Dev PR; only open PR = community **#1055** (already queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did **not**
-comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress` = **#1059**
-only (active Dev cycle — Orc left the label + `naturo-dev` worktree untouched, Rule 4; legitimate in-scope
-continuation, not abandoned); `status:done` open = **#972** only (human-only security, queued). Nothing for Orc
-to close (Rule 1). **Step 3:** no new untriaged issue; top-updated issues all already triaged; milestones intact →
-no new issue (Rule 9). **Step 3.6 (evolve the team): no change — no new evidence** — only completed signal is an
-exemplary QA cycle; the #1059 re-claim was investigated and ruled NOT a weakness (in-scope multi-PR progress);
-over-fit ban → honest ledger row. **Live needs:ace queue
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `afc6dde` (#1092) full **SUCCESS** (Build &
-Test + CodeQL); orc tip `5292cf7` `[skip ci]` → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET —
+15:26Z cycle: team-Dev landed **PR #1093** (`naturo click --image` template-match shortcut, *fixes #1059*,
+`f04b0d8`, all-green Build & Test + CodeQL, merged 15:33:59Z) — this completes #1059's second acceptance half
+(PR #1066 landed `find --image` at 07:32Z). **Step 1 PR sweep:** no open team-Dev PR; only open PR = community
+**#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) —
+Orc did **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** Orc completed the
+missed post-merge handoff — flipped **#1059** `status:in-progress` → `status:done` (auto-merge landed ~2 min after
+the Dev cycle boundary so the in-cycle flip was skipped; both halves now landed, awaiting QA verify, **left open**
+per Rule 1). `status:in-progress` now = **#1088** only (docs migration-guide fix, **active Dev cycle running** —
+Orc left the label + `naturo-dev` worktree untouched, Rule 4). `status:done` open = **#972** (human-only security,
+queued) + **#1059** (awaiting QA). Nothing for Orc to close (Rule 1). **Step 3:** no new untriaged issue (QA
+15:42Z = **NO NEW BUG**); milestones intact → no new issue (Rule 9). **Step 3.6 (evolve the team): no rule
+change** — the 14:54Z post-merge-handoff flag **recurred** (#1059/#1093) but is confirmed **benign**: the orch
+flip-on-merge is the *designed* absorber and caught it within this cycle both times; a Dev "set label at
+auto-merge-enable" rule would conflict with the deliberate premature-`status:done`-on-red protection → flag
+resolved, no churn (honest ledger row). **Live needs:ace queue
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `f04b0d8` (#1093) full **SUCCESS** (Build &
+Test + CodeQL); orc tip `0d53bc8` `[skip ci]` → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET —
 release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions

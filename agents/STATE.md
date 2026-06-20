@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 15:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `f04b0d8` #1093 =
+> Build & Test + CodeQL full SUCCESS; orc tip `0d53bc8` `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p`; `pull --ff-only`
+> `0d53bc8→f04b0d8` (team-Dev #1093 click-image); `gh api branches` = develop + main only → no stale (Rule 14;
+> #1093 branch auto-deleted). **Step 1 PR sweep:** team-Dev **#1093** (`naturo click --image` template-match
+> shortcut, *fixes #1059*) landed all-green auto-merge SQUASH (`f04b0d8`, merged 15:33:59Z; `closingIssues` empty
+> → #1059 NOT auto-closed). No other open team-Dev PR. Only open PR = community **#1055** (base `main`, fork,
+> `UNSTABLE`) → already queued needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health —
+> COMPLETED MISSED HANDOFF:** PR #1093 merged ~2 min after the Dev cycle's boundary (END 15:32Z), so the in-cycle
+> status flip was skipped; verified #1059's **both** acceptance halves now landed (`find --image` #1066 07:32Z +
+> `click --image` #1093) and flipped **#1059** `status:in-progress` → `status:done` (left OPEN for QA, Rule 1).
+> `status:in-progress` now = **#1088** only (docs migration-guide fix — a Dev cycle is **actively running** on it,
+> updatedAt 15:52Z; label + `naturo-dev` worktree left untouched, Rule 4). `status:done` open = **#972** (human-only
+> security, queued) + **#1059** (awaiting QA). Nothing for Orc to close (Rule 1). **Step 3 (drive product):** no new
+> untriaged issue (QA 15:42Z = NO NEW BUG on the fresh `--image`/CJK-title path); milestones intact; no gap sharp
+> enough to file (Rule 9, no churn). Recognition moat (Standing #1): #1059 click-image completes a find-engine slice
+> of #809. **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the
+> team): no rule change** — the 14:54Z post-merge-handoff flag **recurred** (#1059/#1093) but is confirmed **benign**:
+> the orch flip-on-merge is the *designed* absorber and caught it within-cycle both times; a Dev "set label at
+> auto-merge-enable" rule would conflict with the deliberate premature-`status:done`-on-red protection → flag
+> resolved, no churn. EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md
+> header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1552-auto-review.md`. v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Detail below is the prior (15:26Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 15:26Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `afc6dde` #1092 =
 > Build & Test + CodeQL full SUCCESS; orc tip `5292cf7` `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p`; `pull --ff-only`
