@@ -4,24 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 16:52Z (Orc autonomous cycle — **ONE new human-only item: #1097** (build/verify
-path for native-core moat fixes). Queue now **#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop`
-NOT red; nothing closed by Orc (Rule 1).** The 00:37Z Dev cycle attacked the **recognition moat (Standing #1)**
-HARDEST-FIRST on the provisioned JDK 21 + JAB desktop and filed **P0 [#1096](https://github.com/AcePeak/naturo/issues/1096)** —
-naturo's Java Access Bridge **never attaches** on a correctly-provisioned desktop (`jab_ensure_init` fires
-`Windows_run()` once + pumps a fixed 1s then caches `initialized=true`, so the async JVM handshake never
-completes on a loaded desktop → `naturo_jab_get_element_tree` rc=-6; proven by same-process A/B where a 2nd
-direct `Windows_run()` attaches in ~0.4s). Consequence: the **public `docs/RECOGNITION.md` JAB "+40" moat
-headline + matrix ✅ do not reproduce** (never-lie; the cited `test_jab_recognition_932.py` is red on a real
-desktop). The native fix can't be built locally (no MSVC/cmake) and is JAB-verifiable only on the real desktop
-→ filed **#1097** (needs:ace, below) + **#1098** (P1 docs — interim honesty caveat, Dev-actionable headless;
-#1096 restores the verified number). **Step 1:** no open team-Dev PR; only open PR = community **#1055** (queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — not touched. **Step 2:**
-`status:in-progress` empty; `status:done` open = **#972** only (queued). Nothing to close (Rule 1). **Step 3.5**
-competitiveness not due (<7d since 06-16). **Step 3.6** no rule change (exemplary Dev + QA cycles; the new
-blocker is infra/process → queued #1097, flag-to-watch first instance). `develop` CI: HEAD `b3cbfe3` (#1095)
-full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your
-call, #914)._
+_Last refreshed: 2026-06-20 17:31Z (Orc autonomous cycle — **NO new human-only item — queue unchanged
+**#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
+**Step 1:** no open team-Dev PR; the prior cycle's team-Dev **#1099** (*fixes #1086* — eN stale-ref errors now
+use the registered `STALE_SNAPSHOT_CACHE` envelope) landed all-green SQUASH auto-merge (`3d30438`, 17:18:52Z;
+branch auto-deleted). Only open PR = community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**,
+base `main`, UNSTABLE) — not touched. **Step 2:** `status:in-progress` empty; `status:done` open = **#1086**
+(Dev set in-cycle, awaiting QA) + **#972** only (queued). Nothing to close (Rule 1). **Step 3 (recognition moat,
+Standing #1):** moat backlog sharp — P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never
+attaches; build-blocked → #1097 below) tops it, with the never-lie interim **#1098** (P1, `RECOGNITION.md` JAB
+caveat) filed and Dev-actionable. Backlog hygiene: milestoned orphaned **#1101** (P2 error-envelope contract) →
+v0.3.3 alongside its sibling #1086. **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** no rule
+change — Dev self-caught a cross-platform first-CI-red on #1086 (the #1070/#1072 platform-order class already
+covered by a <1-day-old `dev-cycle.md` rule) and self-corrected; QA exemplary (filed #1101, no false bug). `develop`
+CI: HEAD `3d30438` (#1099) full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate unchanged
+(FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 17:31Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `3d30438` #1099
+> *fixes #1086* = Build & Test + CodeQL full SUCCESS, merged 17:18:52Z; orc tip `0802376` `[skip ci]`).
+> **NO new human-only item — queue unchanged #1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+> **Step 0:** `git config` Orc; `git fetch -p` (pruned merged `fix/issue-1086-stale-ref-envelope`);
+> `pull --ff-only` `0802376→3d30438` (team-Dev #1099); `gh api branches` = develop+main only → no stale
+> (Rule 14; #1099 branch auto-deleted). **Step 1 PR sweep:** NO open team-Dev PR; only open PR = community
+> **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not merged/
+> commented/closed. **Step 2 health:** `status:in-progress` = **EMPTY**; `status:done` open = **#1086**
+> (Dev set it **in-cycle** before the PR merged → no Orc handoff owed; awaiting QA) + **#972** (human-only
+> security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product — recognition moat, Standing
+> #1):** the moat backlog is sharp and ready — **P0 #1096** (JAB never attaches; build-blocked → needs:ace
+> #1097) sits top, and the never-lie interim **#1098** (P1, add `RECOGNITION.md` JAB caveat pending #1096)
+> is filed, milestoned v0.3.2, Dev-actionable headless — the right next moat move. Backlog hygiene this
+> cycle: **milestoned orphaned #1101** (P2 error-envelope contract, from:qa — 9 `ErrorCode` members miss
+> `_ERROR_CATEGORIES`) → **v0.3.3**, the same milestone as its sibling #1086 error-envelope contract fix,
+> keeping that contract lane coherent. No new untriaged gap sharp enough to file (Rule 9, no churn). **Step
+> 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20/21 = 5d < 7). **Step 3.6 (evolve the
+> team): no rule change — reinforcing evidence, not a new weakness.** Dev (01:25Z) shipped #1086 green and
+> **self-caught a cross-platform first-CI-red** (`capture --element` `PLATFORM_ERROR` on Linux/macOS — the
+> #1070/#1072 platform-order class **already covered by `dev-cycle.md:121-127`**, a rule <1 day old), self-
+> corrected within-cycle → logged as the rule's first post-adoption exercise, not a new gap (a 2nd platform
+> rule a day later would over-fit, Step 3.6 forbids). QA (01:20Z) exemplary: NO false bug, ruled out a CJK
+> harness artifact, filed #1101 with root cause. EVOLUTION.md row appended. **Step 4 (needs:ace): no new
+> item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-1731-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's
+> call, #914). Detail below is the prior (16:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 16:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b3cbfe3` #1095 =
 > Build & Test + CodeQL full SUCCESS; orc tip `681f3c9` `[skip ci]`). **ONE new human-only item: #1097**
 > (build/verify path for native-core moat fixes) → **queue now #1097/#1077/#1057/#975/#972/#969/#935/#915/
