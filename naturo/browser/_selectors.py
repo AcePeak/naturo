@@ -126,6 +126,11 @@ _HTML_TAGS = frozenset({
 })
 
 
+def _escape_js_string(value: str) -> str:
+    """Escape a string for embedding inside a single-quoted JS literal."""
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 def to_cdp_expression(parsed: ParsedSelector) -> str:
     """Convert a parsed selector to a JavaScript expression for CDP evaluation.
 
@@ -139,18 +144,18 @@ def to_cdp_expression(parsed: ParsedSelector) -> str:
         JavaScript expression string.
     """
     if parsed.type == SelectorType.CSS:
-        escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+        escaped = _escape_js_string(parsed.expression)
         return f"document.querySelector('{escaped}')"
 
     if parsed.type == SelectorType.XPATH:
-        escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+        escaped = _escape_js_string(parsed.expression)
         return (
             f"document.evaluate('{escaped}', document, null, "
             f"XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue"
         )
 
     # Text search via TreeWalker
-    escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+    escaped = _escape_js_string(parsed.expression)
     return (
         f"(function() {{"
         f"  var tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);"
@@ -174,11 +179,11 @@ def to_cdp_expression_all(parsed: ParsedSelector) -> str:
         JavaScript expression string returning an Array of elements.
     """
     if parsed.type == SelectorType.CSS:
-        escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+        escaped = _escape_js_string(parsed.expression)
         return f"Array.from(document.querySelectorAll('{escaped}'))"
 
     if parsed.type == SelectorType.XPATH:
-        escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+        escaped = _escape_js_string(parsed.expression)
         return (
             f"(function() {{"
             f"  var r = document.evaluate('{escaped}', document, null, "
@@ -189,7 +194,7 @@ def to_cdp_expression_all(parsed: ParsedSelector) -> str:
         )
 
     # Text search — return all matches
-    escaped = parsed.expression.replace("\\", "\\\\").replace("'", "\\'")
+    escaped = _escape_js_string(parsed.expression)
     return (
         f"(function() {{"
         f"  var tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);"
@@ -202,4 +207,99 @@ def to_cdp_expression_all(parsed: ParsedSelector) -> str:
         f"  }}"
         f"  return results;"
         f"}})()"
+    )
+
+
+def to_scoped_function(parsed: ParsedSelector) -> str:
+    """Build a JS function that finds the first match *within* a context element.
+
+    The returned source is a function declaration suitable for CDP
+    ``Runtime.callFunctionOn`` with ``this`` bound to the parent DOM node, so the
+    search is scoped to that node's subtree rather than the whole document. This
+    is what makes ``element.find(...)`` honour the parent (e.g. the DrissionPage
+    ``item.ele("xpath:.//span")`` per-card scrape pattern), instead of silently
+    returning the document's first global match.
+
+    XPath is evaluated with the parent as the context node, so a relative
+    expression (``.//span``) resolves against the parent. Text search walks only
+    the parent's text nodes. CSS uses the parent's ``querySelector``.
+
+    Args:
+        parsed: A parsed selector.
+
+    Returns:
+        JavaScript function-declaration source returning the first matching
+        element, or ``null``.
+    """
+    escaped = _escape_js_string(parsed.expression)
+
+    if parsed.type == SelectorType.CSS:
+        return f"function() {{ return this.querySelector('{escaped}'); }}"
+
+    if parsed.type == SelectorType.XPATH:
+        return (
+            f"function() {{"
+            f"  return document.evaluate('{escaped}', this, null, "
+            f"XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;"
+            f"}}"
+        )
+
+    # Text search via a TreeWalker rooted at the context element.
+    return (
+        f"function() {{"
+        f"  var tw = document.createTreeWalker(this, NodeFilter.SHOW_TEXT);"
+        f"  while (tw.nextNode()) {{"
+        f"    if (tw.currentNode.textContent.includes('{escaped}')) {{"
+        f"      return tw.currentNode.parentElement;"
+        f"    }}"
+        f"  }}"
+        f"  return null;"
+        f"}}"
+    )
+
+
+def to_scoped_function_all(parsed: ParsedSelector) -> str:
+    """Build a JS function that finds all matches *within* a context element.
+
+    The array counterpart of :func:`to_scoped_function`: a function declaration
+    for CDP ``Runtime.callFunctionOn`` (``this`` = parent node) returning every
+    descendant match in document order, scoped to the parent's subtree.
+
+    Args:
+        parsed: A parsed selector.
+
+    Returns:
+        JavaScript function-declaration source returning an ``Array`` of
+        matching elements.
+    """
+    escaped = _escape_js_string(parsed.expression)
+
+    if parsed.type == SelectorType.CSS:
+        return (
+            f"function() {{ return Array.from(this.querySelectorAll('{escaped}')); }}"
+        )
+
+    if parsed.type == SelectorType.XPATH:
+        return (
+            f"function() {{"
+            f"  var r = document.evaluate('{escaped}', this, null, "
+            f"XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);"
+            f"  var a = []; for (var i = 0; i < r.snapshotLength; i++) a.push(r.snapshotItem(i));"
+            f"  return a;"
+            f"}}"
+        )
+
+    # Text search via a TreeWalker rooted at the context element.
+    return (
+        f"function() {{"
+        f"  var tw = document.createTreeWalker(this, NodeFilter.SHOW_TEXT);"
+        f"  var results = [];"
+        f"  while (tw.nextNode()) {{"
+        f"    if (tw.currentNode.textContent.includes('{escaped}')) {{"
+        f"      var el = tw.currentNode.parentElement;"
+        f"      if (el && results.indexOf(el) === -1) results.push(el);"
+        f"    }}"
+        f"  }}"
+        f"  return results;"
+        f"}}"
     )
