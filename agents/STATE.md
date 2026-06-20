@@ -1,5 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `41b81ad` #1104
+> *part of #766* = Build & Test + CodeQL full SUCCESS, merged 18:51Z; prior orc tip `c65be15` `[skip ci]`).
+> **ONE new human-only item: #1105** (public-API sign-off for the download methods that landed unattended in
+> #1104) → **queue now #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+> **Step 0:** `git config` Orc; `git fetch -p` (pruned merged `fix/issue-766-file-download-row`); `pull --ff-only`
+> `c65be15→41b81ad` (team-Dev #1104); `gh api branches` = develop+main only → no stale (Rule 14; #1104 branch
+> auto-deleted). **Step 1 PR sweep:** NO open team-Dev PR (#1104 `File Download migration-equivalence row + honor
+> documented download page API` landed all-green SQUASH `--auto` `41b81ad` @18:51Z). Only open PR = community
+> **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not merged/commented/
+> closed. **#1104 added new PUBLIC API** (`BrowserPage.set_download_dir`/`wait_for_download` + `DownloadResult`
+> export) and Dev auto-merged it unattended → queued #1105 (see Step 3.6). **Step 2 health:** `status:in-progress`
+> = **#766** (umbrella, Dev actively progressing @18:48Z, remaining slider-captcha row human-gated → left as-is, NOT
+> flipped: #1104 is partial "part of #766"); `status:done` open = **#972** (human-only security, queued). Nothing for
+> Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked → needs:ace #1097 (no local MSVC/cmake; JAB-verify desktop-only); never-lie interim caveat already
+> shipped (#1098/#1102); README hero = recognition matrix (#931). Backlog fully triaged + milestoned; no new gap
+> sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7).
+> **Step 3.6 (evolve the team): RULE CHANGE.** Team-Dev (18:50Z) shipped #1104 but **auto-merged a public-API
+> addition unattended** — correctly flagged the new surface in the PR body, yet enabled `--auto` anyway because
+> `dev-cycle.md` had no Dev-side public-API hold (the human-only public-API guardrail lived only in RULES/
+> orch-review). Surgical fix: `dev-cycle.md` Step 4 now forbids `--auto` on public-API changes (open without
+> auto-merge, comment "auto-merge OFF — needs Ace sign-off", leave `status:in-progress`, let orch queue needs:ace) —
+> holds even when the symbol is already in a committed doc. First instance but a guardrail-class hole → not over-fit.
+> EVOLUTION.md row appended. QA (18:45Z) exemplary (verified+closed #1101+#1098, no false bug). 17:31Z platform-order
+> escalation trigger did NOT fire (#1104 all-green, no first-red). **Step 4 (needs:ace): added #1105;** NEEDS-ACE.md
+> header + #1105 row + CI line refreshed. Evidence in `.work/reviews/2026-06-21-0252-auto-review.md`. v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (18:24Z) cycle's record, kept as
+> history.)
+>
 > Last refreshed: 2026-06-20 18:24Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `a52c953` #1103
 > *fixes #1101* = Build & Test + CodeQL full SUCCESS, merged 18:18Z; prior orc tip `3bca3ba` `[skip ci]`).
 > **NO new human-only item — queue unchanged #1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**

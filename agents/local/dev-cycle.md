@@ -149,6 +149,14 @@ gh pr create --repo AcePeak/naturo --base develop \
 gh pr merge --repo AcePeak/naturo --squash --auto --delete-branch
 gh issue comment N --repo AcePeak/naturo --body "**[Dev-Sirius]** PR #<num> opened, auto-merge pending CI. <summary>"
 ```
+**Public-API guardrail — do NOT `--auto` a public-surface change.** If the PR adds or alters public API
+(a new exported symbol / public method / CLI flag or contract) it is a **human-only sign-off** (RULES;
+orch-review human-only list) — open the PR **without** `--auto`, comment "PR #<num> open, auto-merge OFF —
+public-API change, needs Ace sign-off", leave the issue `status:in-progress`, and let orch queue it
+`needs:ace`. This holds **even when the symbol is already promised in a committed doc**: closing a
+doc-vs-code gap by *shrinking the doc* is a real alternative that is Ace's call, so don't pre-decide it by
+landing the surface unattended (the #1104 download-methods case — flagged-but-auto-merged anyway).
+
 **Do NOT mark `status:done` at PR-open time.** Local tests passing ≠ CI green — CI runs Linux/macOS
 and a cross-platform/collection break (e.g. a top-level import not on CI's `sys.path`, like #936) only
 shows there. So:
