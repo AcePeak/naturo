@@ -1,5 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `90fadde` #1107
+> *part of #766* = Build & Test + CodeQL full SUCCESS, merged 19:19Z; prior orc tip `ca4b523` `[skip ci]`).
+> **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+> **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` `ca4b523→90fadde` (team-Dev #1107); branch
+> `test/issue-766-js-eval-equivalence` auto-deleted+verified gone by Dev in-cycle (Rule 14) → remote develop+main
+> only, no stale. **Step 1 PR sweep:** NO open team-Dev PR (#1107 `JS Execution eval equivalence row`, test-only
+> 1-file +60, landed all-green SQUASH `--auto` `90fadde`@19:19Z; **no public API → Dev's `--auto` correct under the
+> new public-API hold — its first post-adoption exercise, fired right**). Only open PR = community **#1055** (base
+> `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not merged/commented/closed. **Step 2
+> health:** `status:in-progress` = **#766** (umbrella, partial #1107 → NOT flipped; remaining rows + slider-captcha
+> human-gated; suite 10→11 rows); `status:done` open = **#972** (human-only security, queued). Nothing for Orc to
+> close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked
+> → needs:ace #1097 (Dev re-probed toolchain LIVE this cycle: `where cl cmake ninja msbuild` all absent → #1096
+> unbuildable headless, correctly gated not skipped); README hero = recognition matrix (#931). **Backlog hygiene —
+> triaged orphaned #1106** (Dev-filed: migration guide documents `browser cookies` family + `click --js` that don't
+> exist) → **P1/documentation/v0.3.2**, matching sibling never-lie doc-gap #1098; added Orc note on the resolution
+> split (Dev-actionable never-lie caveat interim per #1098 precedent vs human-only implement-vs-prune final). NOT
+> queued needs:ace (interim needs no Ace). No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness:
+> NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.**
+> Dev (#1107) exemplary — applied the <1-day-old public-API hold correctly (no surface → `--auto` permitted),
+> HARDEST-FIRST live toolchain probe, filed #1106 instead of silently implementing undocumented API; QA exemplary
+> (no false bug, ruled out gbk/`/tmp` harness artifacts, re-verified #1050 live). Recurring migration-guide doc-drift
+> (#1104→#1107→#1106) is a **product** class Dev is correctly catching, not an operating weakness; a 2nd guardrail
+> tweak one cycle after the public-API hold would over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4
+> (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0322-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (18:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `41b81ad` #1104
 > *part of #766* = Build & Test + CodeQL full SUCCESS, merged 18:51Z; prior orc tip `c65be15` `[skip ci]`).
 > **ONE new human-only item: #1105** (public-API sign-off for the download methods that landed unattended in

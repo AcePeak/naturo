@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **ONE new human-only item: #1105** (public-API sign-off
-for the download methods that landed unattended in #1104) → **queue now #1105/#1097/#1077/#1057/#975/#972/#969/#935/
-#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-**Step 1:** no open team-Dev PR; the prior cycle's team-Dev **#1104** (*part of #766* — File Download migration-
-equivalence row + honor the documented download page API) landed all-green SQUASH auto-merge (`41b81ad`, 18:51Z;
-branch auto-deleted). Only open PR = community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**,
-base `main`, UNSTABLE) — not touched. **Step 2:** `status:in-progress` = **#766** (umbrella, Dev actively progressing,
-remaining slider-captcha row human-gated); `status:done` open = **#972** (queued). Nothing to close (Rule 1).
-**Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never
-attaches) remains build-blocked → #1097 below; the never-lie interim caveat already shipped (#1098/#1102). Backlog
-all triaged + milestoned; no new gap sharp enough (Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since
-06-16). **Step 3.6** **rule change** — Dev (18:50Z) shipped #1104 but **auto-merged a public-API addition unattended**
-(new `BrowserPage` download methods + `DownloadResult` export); it correctly flagged the surface but enabled `--auto`
-anyway because `dev-cycle.md` had no Dev-side public-API hold. Surgical fix added to `dev-cycle.md` Step 4 (no `--auto`
-on public-API changes → hold for sign-off); EVOLUTION row logged; the landed surface queued as **#1105** below.
-`develop` CI: HEAD `41b81ad` (#1104) full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914)._
+_Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
+**Step 1:** no open team-Dev PR; the prior cycle's team-Dev **#1107** (*part of #766* — JavaScript Execution eval
+equivalence row, **test-only** +60) landed all-green SQUASH auto-merge (`90fadde`, 19:19Z; branch auto-deleted). No
+public API → Dev's `--auto` was correct under the new public-API hold (its first post-adoption exercise). Only open PR
+= community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — not
+touched. **Step 2:** `status:in-progress` = **#766** (umbrella, partial #1107 → not flipped; suite 10→11 rows);
+`status:done` open = **#972** (queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
+**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked → #1097 below
+(Dev re-probed the toolchain LIVE this cycle — `cl`/`cmake`/`ninja`/`msbuild` all absent → unbuildable headless, gated
+not skipped); never-lie interim caveat already shipped (#1098/#1102). **Backlog hygiene:** triaged orphaned **#1106**
+(migration guide documents `browser cookies` family + `click --js` that don't exist) → P1/documentation/v0.3.2,
+matching sibling #1098; Dev-actionable never-lie caveat interim vs human-only implement-vs-prune final noted on the
+issue (not queued — interim needs no Ace). No new gap sharp enough (Rule 9, no churn). **Step 3.5** competitiveness not
+due (<7d since 06-16). **Step 3.6** **no change — no new evidence** (Dev applied the <1-day-old public-API hold
+correctly on #1107; QA exemplary; a 2nd tweak would over-fit). `develop` CI: HEAD `90fadde` (#1107) full **SUCCESS**
+(Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
