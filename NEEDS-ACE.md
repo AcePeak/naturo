@@ -4,24 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 19:55Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-20 20:24Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-Quiet, healthy cycle ~33 min after 19:22Z. **Step 1:** one open team-Dev PR **#1108** (*fixes #1063* — scopes
-element-level `find`/`find_all` to the parent subtree via CDP `Runtime.callFunctionOn`; was resolving XPath/text
-against the whole document → first card's title for every card, never-lie). **No public API** (new builders in the
-private `_selectors` module) → Dev's SQUASH `--auto` correct under the public-API hold; all REQUIRED checks GREEN
-→ **lands itself, not touched by Orc.** Only other open PR = community **#1055** (queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — not touched. **Step 2:**
-`status:in-progress` = **#766** (umbrella, active) + **#1063** (Dev flipped to `status:done` in-cycle as #1108
-auto-merges → no Orc handoff owed); `status:done` open = **#1063** (awaiting merge+QA) + **#972** (queued). Nothing
-to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
-**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked → #1097 below;
-README hero = recognition matrix (#931). Backlog fully triaged + milestoned; no new gap sharp enough (Rule 9, no
-churn — full gap analysis 33 min after 19:22Z would be noise). **Step 3.5** competitiveness not due (<7d since
-06-16). **Step 3.6** **no change — no new evidence** (Dev #1108 exemplary never-lie scoped-find fix, proved both
-ways, off public surface; QA exemplary read-only exploratory; freshest rules <2d old → a tweak would over-fit).
-`develop` CI: HEAD `e9e9002`; #1108 auto-merging all-green → **not red.** v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914)._
+Quiet, healthy cycle. **Step 1:** NO open team-Dev PR — **#1109** (*fixes #1106* — caveat unimplemented `browser
+cookies` family + JS-click in the migration guide; docs + bidirectional hermetic guard test) landed all-green
+SQUASH `--auto` (`8cd1831`); **no public surface** → `--auto` correct under the public-API hold (#1098 precedent);
+branch auto-deleted. Only open PR = community **#1055** (queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, fork, UNSTABLE) — not touched. **Step 2:**
+`status:in-progress` = **#766** (migration-guide equivalence umbrella, active); `status:done` open = **#1106**
+(fixed by #1109, awaiting QA verify — no Orc handoff owed) + **#972** (queued). Nothing to close (Rule 1). **Step 3
+(recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never
+attaches) remains build-blocked (toolchain re-proved absent 04:20Z) → #1097 below; README hero = recognition matrix
+(#931). The live recurring class — migration-guide doc-drift (#1098→#1104→#1106) — is **already the systematic
+sweep umbrella #766 performs row-by-row**; a separate audit issue would duplicate it. No new gap sharp enough
+(Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** **no change — no new
+evidence** (Dev #1109 exemplary HARDEST-FIRST + caveat-not-prune + hermetic guard, off public surface; QA exemplary
+— verified+closed #1063 with genuine headless-Chrome evidence; doc-drift recurrence re-evaluated = product class,
+not an operating weakness; a tweak ~1.5d after the public-API hold would over-fit). `develop` CI: HEAD `8cd1831`
+Build & Test incl. CI Gate SUCCESS → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
+#914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

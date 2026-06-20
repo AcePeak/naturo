@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 20:24Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `8cd1831` #1109
+> *fixes #1106* = Build & Test incl. CI Gate SUCCESS; CodeQL umbrella still finishing, non-blocking; prior orc
+> tip `6955e4c` `[skip ci]`). **NO new human-only item — queue unchanged
+> #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`;
+> `pull --ff-only` `6955e4c→8cd1831` (team-Dev #1109); branches = develop+main only (Rule 14; #1109 branch
+> auto-deleted). **Step 1 PR sweep:** NO open team-Dev PR (#1109 `caveat unimplemented browser cookies + JS-click
+> in migration guide`, docs+hermetic test, **no public surface** → SQUASH `--auto` correct under the public-API
+> hold, #1098 precedent; landed all-green `8cd1831`). Only open PR = community **#1055** (base `main`, fork,
+> `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched. **Step 2 health:** `status:in-progress`
+> = **#766** (migration-guide equivalence umbrella, active, updated 19:16Z < 24h); `status:done` open = **#1106**
+> (fixed by #1109, awaiting QA verify — Dev set it in-cycle, no Orc handoff owed) + **#972** (human-only security,
+> queued). Nothing abandoned; nothing for Orc to close (Rule 1 — #1106 has no `verified` label). **Step 3
+> (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked (toolchain re-proved
+> absent 04:20Z) → needs:ace #1097; README hero = recognition matrix (#931). Gap analysis: the live recurring
+> class is migration-guide doc-drift (#1098→#1104→#1106), which is **already the systematic sweep umbrella #766
+> performs row-by-row** — a separate audit issue would duplicate #766. No new gap sharp enough (Rule 9, no churn).
+> Backlog fully triaged + milestoned. **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 =
+> 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.** Dev (#1109) exemplary (HARDEST-FIRST
+> toolchain re-probe → hardest actionable; derived real surface at runtime; caveat-not-prune; bidirectional
+> hermetic guard; `--auto` correct off public surface); QA exemplary (04:10Z verified+closed #1063 with genuine
+> headless-Chrome evidence; 03:40Z clean read-only exploratory, 0 false bugs). Doc-drift recurrence re-evaluated
+> = product class Dev catches via never-lie, not an operating weakness; a tweak ~1.5d after the public-API hold
+> would over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue
+> unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-21-0424-auto-review.md`.
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (19:55Z)
+> cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 19:55Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `e9e9002` =
 > prior orc `[skip ci]` tip; #1108 below auto-merging all-green). **NO new human-only item — queue
 > unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle ~33 min
