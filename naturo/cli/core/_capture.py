@@ -131,6 +131,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
 
         # ── Element / region crop (issue #160) ───────────────────────────────
         crop_box = None  # (left, top, right, bottom) in image coordinates
+        # The user's raw --region request (x, y, w, h), kept so an off-screen
+        # error can echo what the user typed rather than the clamped PIL box
+        # (issue #1050).  None for the --element path.
+        requested_region: tuple[int, int, int, int] | None = None
 
         # Track whether the capture is window-relative (for element crop offset)
         _is_window_capture = bool(hwnd or app or window_title or pid)
@@ -213,6 +217,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 if len(parts) != 4:
                     raise ValueError("need 4 values")
                 rx, ry, rw, rh = parts
+                requested_region = (rx, ry, rw, rh)
                 crop_box = (
                     max(0, rx - padding),
                     max(0, ry - padding),
@@ -239,9 +244,41 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 right = min(iw, crop_box[2])
                 bottom = min(ih, crop_box[3])
                 if right <= left or bottom <= top:
-                    msg = f"Crop region ({left},{top},{right},{bottom}) has zero size."
+                    # Echo the user's *requested* region, not the clamped PIL
+                    # crop box — the clamped (left, top, right, bottom) reads
+                    # like an X,Y,W,H the user never typed (issue #1050).
+                    if requested_region is not None:
+                        rx, ry, rw, rh = requested_region
+                        if rw <= 0 or rh <= 0:
+                            msg = (
+                                f"Crop region X,Y,W,H ({rx},{ry},{rw},{rh}) has "
+                                "non-positive width/height; W and H must both be > 0."
+                            )
+                        else:
+                            msg = (
+                                f"Crop region X,Y,W,H ({rx},{ry},{rw},{rh}) is entirely "
+                                f"outside the captured image bounds ({iw}x{ih}). "
+                                "Reduce X/Y or W/H so the region overlaps the screen."
+                            )
+                        context = {
+                            "requested_region": [rx, ry, rw, rh],
+                            "image_size": [iw, ih],
+                        }
+                    else:
+                        # --element path: the resolved bounds fall outside the
+                        # captured image after the window-origin offset.
+                        msg = (
+                            f"Crop bounds fall entirely outside the captured image "
+                            f"bounds ({iw}x{ih}); the element may be off-screen."
+                        )
+                        context = {
+                            "clamped_crop_box": [left, top, right, bottom],
+                            "image_size": [iw, ih],
+                        }
                     if json_output:
-                        click.echo(_common._json_error_str("INVALID_INPUT", msg))
+                        click.echo(
+                            _common._json_error_str("INVALID_INPUT", msg, context=context)
+                        )
                     else:
                         click.echo(f"Error: {msg}", err=True)
                     raise SystemExit(1)
