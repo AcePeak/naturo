@@ -112,6 +112,17 @@ git checkout -b fix/issue-N-short-desc origin/develop
    gate on CI). (Evidence: the #1070 fix first ran the GUI-platform gate ahead of `--screenshot` validation →
    on Linux/macOS CI the reject/not-found tests got `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND`
    (#1072), green on the Windows desktop, red on CI.)
+   **Test hermeticity (mock every host-dependent call on the path you force):** when a test mocks
+   dependencies to drive a specific code path, it must neutralize **every** host/environment-dependent
+   call that path can reach — not just the obvious ones — so the assertion reflects the *code*, not the
+   runner's desktop state. A test whose pass/fail flips depending on whether the desktop has windows open
+   (or any ambient host condition) is a false-confidence gate: green in headless CI, red on a real desktop,
+   masking regressions and reddening `@desktop`-capable Dev/QA runs. After mocking, trace the forced path
+   and confirm no un-mocked call still consults the live environment. (Evidence: the #1068 JAB auto-cascade
+   test mocked `_ensure_core`/`_resolve_hwnd`/`enumerate_child_windows` but **not** `enumerate_hybrid_tree`,
+   which the `auto` path calls on an empty UIA tree → headless `hwnd=0` returned nothing so the JAB fallback
+   ran and the test passed, but a desktop with open windows returned real windows so the fallback was skipped
+   and the test failed → QA filed #1069, fixed by #1074.)
 5. Update `README.md` / docs if behavior or CLI changed.
 
 ## Step 4 — Commit, PR, auto-merge

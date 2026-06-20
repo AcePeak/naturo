@@ -1,8 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 09:22Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 09:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1), no new
-> issue (Rule 9), no new team-evolution change (no new evidence — honest ledger row).**
+> issue (Rule 9). Step 3.6: ONE surgical team-evolution change — Test hermeticity rule from #1069/#1074.**
+> **Step 0:** `git config` Orc; `git fetch -p` pruned `origin/fix/issue-1069-jab-test-determinism` (auto-deleted
+> at #1074 merge); `git pull --ff-only` fast-forwarded `f7ab61a → 832a1ac` (pulled `tests/test_jab.py` +15/−2);
+> authoritative `gh api .../branches` = **develop + main only** → Rule 14 clean.
+> **Step 1 PR sweep:** **no open team-Dev PRs.** Since 09:22Z, team-Dev **#1074** (`make JAB auto-fallback test
+> desktop-deterministic`, fixes #1069, `832a1ac` = HEAD, all-green auto-merge SQUASH) landed → flipped its issue
+> **#1069 → status:done** (Dev already flipped; awaiting QA — Rule 1, NOT closed). Only open PR = community
+> **#1055** (base `main`, contributor fork, MERGEABLE/UNSTABLE) → already queued needs:ace #1057; human-only → Orc
+> did **not** merge/comment/take-over/close.
+> **Step 2 health:** `status:in-progress` = **empty** (no abandoned work). `status:done` (open) = **#1069**
+> (JAB-test determinism, awaiting QA) + **#972** (input-content guard, human security sign-off, queued). **Nothing
+> to close** (Rule 1 — #1069 needs QA `verified`; #972 human-only).
+> **Step 3 (drive product):** backlog fully triaged — `no:milestone` (minus needs:ace + help-wanted) = **zero
+> actionable unmilestoned issues** (only parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66). Recognition
+> moat (Standing #1) progressing; no gap sharp enough to file (Rule 9 — no churn). v0.3.2 = earliest open milestone
+> (ship-gate FULLY MET).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): ONE surgical change.** #1074 (fixes #1069), landed since the 09:22Z cycle, is
+> fresh evidence of a **new class**: the #1068 JAB auto-cascade test mocked `_ensure_core`/`_resolve_hwnd`/
+> `enumerate_child_windows` but **not** `enumerate_hybrid_tree`, which the `auto` path still calls on an empty UIA
+> tree → green headless CI / red on a real desktop with open windows (a false-confidence gate on the moat). Not
+> covered by any existing self-review rule (error codes, options, platform-gate ordering). Added a **Test
+> hermeticity** rule to `dev-cycle.md` Step 3 item 4 (a test that mocks to force a path must neutralize *every*
+> host/env-dependent call that path reaches; trace the forced path post-mock) + EVOLUTION.md ledger row — distinct
+> from, and building on, the 08:52 Platform-invariant validation-order row (its inverse: a logic-path test that
+> must mock all host calls, vs a platform-contract test that deliberately does not).
+> **Step 4 (needs:ace): no new human-only item** — live queue **unchanged #1057/#975/#972/#969/#935/#915/#914/#897**;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1752-auto-review.md`. `develop`
+> CI: HEAD `832a1ac` (#1074) **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Detail below is the prior (09:22Z) cycle's record, kept as history.)
 > **Step 0:** `git config` Orc; `git fetch -p` pruned `origin/feat/issue-1062-browser-fixtures` (auto-deleted at
 > #1073 merge); `git checkout develop`; `git pull --ff-only` fast-forwarded `5755494 → f56a760`; authoritative
 > `gh api .../branches` = **develop + main only** → Rule 14 clean.

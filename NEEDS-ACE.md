@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 09:22Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+_Last refreshed: 2026-06-20 09:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
 unchanged #1057/#975/#972/#969/#935/#915/#914/#897.** develop NOT red, nothing closed by Orc (Rule 1), no new
-issue (Rule 9). **No open team-Dev PRs** — both this morning's moat PRs landed and were verified: #1072
-(`find --image --screenshot` offline matching, `91ce240`) → QA PASS×2 + verified/closed #1070 & #1067 at 17:10Z;
-team-Dev #1073 (`build offline browser migration fixtures`, part of #766, `f56a760` = HEAD, all-green auto-merge)
-flipped its issue **#1062 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community
-**#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc
-did **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
-empty (no abandoned work); `status:done` open = **#1062** (awaiting QA) + **#972** (human-only security, queued).
-Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned actionable issues; recognition
-moat progressing well, no gap sharp enough to file (Rule 9 — no churn). **Step 3.6 (evolve the team):** no new
-evidence — two substantive evolution rows shipped <1h earlier (Option coverage 08:26 + Platform-invariant
-validation order 08:52); the clean Dev #1062 + QA #1070/#1067 cycles since surfaced no new operating weakness →
-honest "no change" ledger row (avoid over-fit/churn per Step 3.6). **Live needs:ace queue
-#1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `f56a760` (#1073) **Build & Test +
-CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
-Weekly competitiveness step not due (<7d since 06-16)._
+issue (Rule 9). **No open team-Dev PRs** — since the 09:22Z cycle, team-Dev **#1074** (`make JAB auto-fallback
+test desktop-deterministic`, fixes #1069, `832a1ac` = HEAD, all-green auto-merge SQUASH) landed and flipped its
+issue **#1069 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community **#1055**
+(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
+**not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
+empty (no abandoned work); `status:done` open = **#1069** (awaiting QA) + **#972** (human-only security, queued).
+Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned actionable issues (only parked
+Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing, no gap sharp enough to file
+(Rule 9 — no churn). **Step 3.6 (evolve the team): ONE surgical change** — #1074 (fixes #1069) is fresh evidence
+of a new class: a Dev test that mocked to force a path but left an env-dependent call (`enumerate_hybrid_tree`)
+un-mocked → green headless CI / red on a real desktop. Added a **Test hermeticity** self-review rule to
+`dev-cycle.md` + EVOLUTION.md ledger row. **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897
+(unchanged).** `develop` CI: HEAD `832a1ac` (#1074) **Build & Test + CodeQL SUCCESS** → **develop not red.**
+v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due
+(<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
