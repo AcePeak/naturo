@@ -1,5 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 05:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `093d68d` = prior orc
+> `[skip ci]`; last real run `818b707` #1110 Build & Test + CodeQL SUCCESS). **NO new human-only item — queue
+> unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle. **Step 0:** `git
+> config` Orc; `git fetch`; `pull --ff-only` already up to date (`093d68d`); operated only in main checkout (Rule
+> 4/10). **Step 1 PR sweep:** ONE open team-Dev PR **#1113** (`fix: detect display:none/zero-area elements in browser
+> wait_for`, *part of #766*) — proves the guide's **Waiting** row and fixes a real never-lie bug (`wait_for` decided
+> visibility via `_get_click_point()` → all-zeros point for unrendered nodes, so `--state hidden` never fired for
+> `display:none` and `--state visible` wrongly passed); fix is private `_is_displayed()`, **click path untouched (no
+> #1083 preempt), no new public symbol/flag** → Dev's SQUASH `--auto` correct under the public-API hold; CI still
+> running (Lint&Type + C++ + author/version checks green, Python matrix pending) → **lands itself when green, no Orc
+> action**. Only other open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057,
+> human-only → not touched. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active, updated 21:21Z <
+> 24h); `status:done` open = **#972** only (human-only input-safety security, queued). Nothing abandoned; nothing for
+> Orc to close (Rule 1). **Triage:** Dev-filed never-lie doc gap **#1112** (Waiting-section APIs that don't match the
+> shipped surface) → labeled **P1 + v0.3.2** to match its sibling class #1106 (Step 3 hygiene; Dev-actionable caveat,
+> not human-only). QA-filed **#1111** (P1, `naturo type` dropped from `record`) well-labeled, in the backlog. **Step 3
+> (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked (toolchain re-proved absent
+> 04:48Z) → needs:ace #1097; README hero = recognition matrix (#931). Live recurring class = migration-guide doc-drift
+> — **already the row-by-row sweep umbrella #766** (now also surfacing real `wait_for` bugs); a separate audit would
+> duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16,
+> today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.** Dev (#1113) exemplary
+> (HARDEST-FIRST #766 row that exposed+fixed a real never-lie `wait_for` bug; private surface so `--auto` correct;
+> filed adjacent doc gap #1112 rather than papering over); QA (#1111, 05:13Z) exemplary (real P1 never-lie bug with 3
+> independent evidence lines, cleaned up probe recordings, foreground-confirmed safe input). The 19:22Z watch-flag
+> (2nd auto-merge PR red in its own modified module) did NOT trigger — #1113's units passed locally. Freshest rules
+> <2d, exercised cleanly → a tweak would over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace):
+> no new item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0522-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (20:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 20:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `818b707` #1110
 > *prove Scroll equivalence row, part of #766* = Build & Test SUCCESS; latest run conclusion `success`). **NO new
 > human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy
