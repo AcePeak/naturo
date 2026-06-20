@@ -413,8 +413,9 @@ def _find_with_image(
 
     try:
         from PIL import Image
-    except ImportError as e:  # pragma: no cover - Pillow is a hard dependency
-        msg = f"Pillow is required for --image matching: {e}"
+    except ImportError as e:  # pragma: no cover - exercised only without Pillow
+        msg = (f"Pillow is required for --image matching: {e}. "
+               "Install it with 'pip install naturo[annotate]'.")
         if json_output:
             click.echo(_common._json_error_str("MISSING_DEPENDENCY", msg))
         else:

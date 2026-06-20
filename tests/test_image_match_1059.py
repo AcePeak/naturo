@@ -14,12 +14,18 @@ import json
 
 import pytest
 
-from click.testing import CliRunner
-from PIL import Image
-from unittest.mock import MagicMock, patch
+# Pillow backs the matcher; skip the whole module where it is unavailable (it is
+# an optional dependency, absent on some minimal CI environments) rather than
+# erroring at collection time. Must precede the naturo imports below, which load
+# Pillow transitively.
+pytest.importorskip("PIL")
 
-from naturo.cli.core import find_cmd
-from naturo.image_match import ImageMatch, match_template
+from click.testing import CliRunner  # noqa: E402
+from PIL import Image  # noqa: E402
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+from naturo.cli.core import find_cmd  # noqa: E402
+from naturo.image_match import ImageMatch, match_template  # noqa: E402
 
 
 def _solid(width: int, height: int, color: int) -> Image.Image:
