@@ -56,6 +56,45 @@ def _detect_backend_for_class(cls_name: str) -> str:
     return "uia"
 
 
+def _is_java_window(hwnd: int) -> bool:
+    """Return ``True`` if ``hwnd`` (or a direct child) is a Java Swing/AWT window.
+
+    Detection uses the Win32 class name (``SunAwt*`` / ``javax.swing*``) — the
+    same signal :func:`build_hybrid_tree` uses to route Java windows to the Java
+    Access Bridge provider.  Top-level Swing frames carry the class on the root
+    window; some embedded layouts carry it on a direct child, so both are
+    checked.  This is a cheap pure-Win32 probe (no JAB attach), so the ``auto``
+    cascade can gate the more expensive JAB element walk on it.
+
+    Args:
+        hwnd: Window handle to inspect.
+
+    Returns:
+        ``True`` if a Java Access Bridge window is detected, else ``False``
+        (always ``False`` on non-Windows platforms).
+    """
+    import platform as _plat
+    if _plat.system() != "Windows":
+        return False
+
+    # A real window handle is a positive integer; reject anything else so a
+    # non-resolved/placeholder handle can never reach the Win32 layer.
+    if not isinstance(hwnd, int) or isinstance(hwnd, bool) or hwnd <= 0:
+        return False
+
+    import ctypes
+
+    user32 = ctypes.windll.user32
+    cls_buf = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, cls_buf, 256)
+    if _detect_backend_for_class(cls_buf.value) == "jab":
+        return True
+    for _child, cls_name, _title, _bounds in _get_hwnd_children_with_class(hwnd):
+        if _detect_backend_for_class(cls_name) == "jab":
+            return True
+    return False
+
+
 def _get_hwnd_children_with_class(hwnd: int) -> list[tuple[int, str, str, tuple[int, int, int, int]]]:
     """Enumerate direct child HWNDs with class name and bounds.
 

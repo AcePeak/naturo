@@ -367,6 +367,63 @@ def run_cascade(
                     status="skipped" if debug_port is None else "no_elements"
                 ))
 
+    # ── Provider 2b: Java Access Bridge (Swing/AWT apps) ─────────────────────
+    # The primary provider loop above stops at the first non-empty accessibility
+    # tree.  For a Java window that tree is the UIA *window chrome* (title bar,
+    # system buttons) — the actual Swing controls live below a SunAwtFrame that
+    # UIA collapses into one opaque node, so the loop never reaches the "jab"
+    # provider and the moat is silently lost on the default ``auto`` path (it
+    # only worked via an explicit ``--backend jab``).  Detect a Java window and
+    # merge its JAB elements here, mirroring the additive CDP provider above, so
+    # ``naturo see --backend auto`` actually delivers Java recognition (#932).
+    already_have_jab = any(
+        p.name == "jab" and p.status == "ok" for p in stats.providers
+    )
+    if backend_name == "auto" and root_tree is not None and not already_have_jab:
+        resolved_hwnd = hwnd
+        if resolved_hwnd is None:
+            try:
+                resolved_hwnd = backend._resolve_hwnd(
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                )
+            except Exception as exc:
+                logger.debug("Auto cascade: HWND resolution for JAB failed: %s", exc)
+                resolved_hwnd = None
+
+        if resolved_hwnd is not None and _get_cascade_pkg()._is_java_window(
+            resolved_hwnd
+        ):
+            t0 = time.monotonic()
+            jab_tree: Optional[ElementInfo] = None
+            try:
+                jab_tree = backend.get_element_tree(
+                    hwnd=resolved_hwnd, depth=depth, backend="jab",
+                )
+            except Exception as exc:
+                logger.debug("Auto cascade: JAB probe failed: %s", exc)
+            elapsed = (time.monotonic() - t0) * 1000
+
+            # Attach the JAB controls (the children below the JAB window root)
+            # to the UIA root so callers actually receive them, and count them
+            # the same way the primary/CDP providers are counted.
+            jab_added: List[ElementInfo] = []
+            if jab_tree is not None:
+                tagged_jab = _tag_source(jab_tree, "jab")
+                for child in tagged_jab.children:
+                    root_tree.children.append(child)
+                    jab_added.extend(_flatten(child))
+
+            if jab_added:
+                merged_elements.extend(jab_added)
+                stats.providers.append(ProviderStat(
+                    name="jab", elements=len(jab_added),
+                    elapsed_ms=elapsed, status="ok",
+                ))
+            else:
+                stats.providers.append(ProviderStat(
+                    name="jab", elapsed_ms=elapsed, status="no_elements",
+                ))
+
     # ── Shallow tree detection (issue #275) ────────────────────────────────
     # When the UIA tree is too shallow (few elements, mostly invalid bounds),
     # automatically enable AI vision fallback even without --fill-gaps.

@@ -15,8 +15,10 @@ from naturo.cascade._build import (
     _detect_backend_for_class,
     _find_node_by_bounds,
     _get_hwnd_children_with_class,
+    _is_java_window,
     build_hybrid_tree,
 )
+from naturo.cascade._coverage import _flatten
 from naturo.cascade._run import (
     _run_cdp_only,
     run_cascade,
@@ -153,6 +155,17 @@ class TestGetHwndChildrenNonWindows:
         assert result == []
 
 
+# ── _is_java_window ──────────────────────────────────────────────────────────
+
+class TestIsJavaWindow:
+
+    def test_returns_false_on_non_windows(self):
+        """Off Windows there is no Win32 class to read, so detection is False."""
+        import platform
+        with patch.object(platform, "system", return_value="Linux"):
+            assert _is_java_window(12345) is False
+
+
 # ── build_hybrid_tree ────────────────────────────────────────────────────────
 
 class TestBuildHybridTree:
@@ -200,6 +213,92 @@ class TestBuildHybridTree:
 
         assert tree is not None
         assert stats.total_elements >= 2  # root + at least the CDP element
+
+
+# ── run_cascade auto-mode Java Access Bridge fusion (#932) ────────────────────
+
+class TestAutoCascadeJabMerge:
+    """The ``auto`` cascade must fuse JAB for Java windows.
+
+    UIA returns only the window chrome for a ``SunAwtFrame``; the primary
+    provider loop stops there, so without an explicit additive JAB step the
+    Swing controls are lost on the default path.  These tests lock the fix.
+    """
+
+    def _java_backend(self, uia_tree, jab_tree):
+        """Backend whose ``get_element_tree`` is per-backend aware.
+
+        Returns ``uia_tree`` for the ``uia`` provider and ``jab_tree`` for the
+        ``jab`` provider; every other accessibility provider returns ``None``
+        so the primary loop settles on UIA (as it does for a real Java window).
+        """
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = 4242
+
+        def _get_tree(*_args, **kwargs):
+            requested = kwargs.get("backend")
+            if requested == "jab":
+                return jab_tree
+            if requested == "uia":
+                return uia_tree
+            return None
+
+        backend.get_element_tree.side_effect = _get_tree
+        return backend
+
+    def test_java_window_merges_jab_controls_into_tree(self):
+        """A Java window's JAB controls are merged and tagged, with a delta."""
+        uia_tree = _el("frame", role="Window", x=0, y=0, w=400, h=400, children=[
+            _el("TitleBar", role="TitleBar", x=0, y=0, w=400, h=30),
+        ])
+        jab_tree = _el("jroot", role="Window", x=0, y=0, w=400, h=400, children=[
+            _el("Submit Order", role="Button", x=10, y=40, w=100, h=30),
+            _el("Customer Name", role="Edit", x=10, y=80, w=200, h=30),
+        ])
+        backend = self._java_backend(uia_tree, jab_tree)
+        with patch("naturo.cascade._run._get_cascade_pkg") as mock_pkg:
+            mock_pkg.return_value.find_cdp_port.return_value = None
+            mock_pkg.return_value._is_java_window.return_value = True
+            result = run_cascade(backend, hwnd=4242, backend_name="auto")
+
+        jab_stats = [p for p in result.stats.providers if p.name == "jab"]
+        assert jab_stats and jab_stats[0].status == "ok"
+        assert jab_stats[0].elements == 2
+
+        names = {e.name for e in _flatten(result.tree)}
+        assert {"Submit Order", "Customer Name"} <= names
+        sources = {(e.properties or {}).get("source") for e in _flatten(result.tree)}
+        assert "jab" in sources
+
+    def test_non_java_window_does_not_probe_jab(self):
+        """A non-Java window must not gain a JAB provider (no regression)."""
+        uia_tree = _el("frame", role="Window", x=0, y=0, w=400, h=400, children=[
+            _el("btn", role="Button", x=10, y=10, w=80, h=30),
+        ])
+        backend = self._java_backend(uia_tree, jab_tree=None)
+        with patch("naturo.cascade._run._get_cascade_pkg") as mock_pkg:
+            mock_pkg.return_value.find_cdp_port.return_value = None
+            mock_pkg.return_value._is_java_window.return_value = False
+            result = run_cascade(backend, hwnd=99, backend_name="auto")
+
+        assert not any(p.name == "jab" and p.status == "ok"
+                       for p in result.stats.providers)
+
+    def test_uia_only_baseline_never_probes_jab(self):
+        """The ``uia`` baseline (what a UIA-only rival sees) excludes JAB."""
+        uia_tree = _el("frame", role="Window", x=0, y=0, w=400, h=400, children=[
+            _el("TitleBar", role="TitleBar", x=0, y=0, w=400, h=30),
+        ])
+        jab_tree = _el("jroot", role="Window", x=0, y=0, w=400, h=400, children=[
+            _el("Submit Order", role="Button", x=10, y=40, w=100, h=30),
+        ])
+        backend = self._java_backend(uia_tree, jab_tree)
+        with patch("naturo.cascade._run._get_cascade_pkg") as mock_pkg:
+            mock_pkg.return_value.find_cdp_port.return_value = None
+            mock_pkg.return_value._is_java_window.return_value = True
+            result = run_cascade(backend, hwnd=4242, backend_name="uia")
+
+        assert not any(p.name == "jab" for p in result.stats.providers)
 
 
 # ── run_cascade ──────────────────────────────────────────────────────────────

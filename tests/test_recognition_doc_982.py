@@ -52,8 +52,11 @@ def test_doc_carries_benchmark_numbers_without_fabrication() -> None:
     """The measured #931 results table and an honest-gap note must be present."""
     text = _doc_text()
     assert "Measured benchmark" in text
-    # Honest about the frameworks that could not be measured live on the host.
-    assert "no Java app" in text or "could not be measured" in text
+    # Honest about the frameworks that still cannot be measured live on the host
+    # (SAP, and mature external Java apps) — the gaps section must persist so no
+    # fabricated row can be slipped in for an unmeasured framework.
+    assert "Documented gaps" in text
+    assert "not available in this environment" in text or "not installed" in text
 
 
 def test_doc_has_owned_fixture_copy_paste_example() -> None:
