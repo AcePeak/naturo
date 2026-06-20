@@ -25,6 +25,7 @@ import shutil
 import socket
 import subprocess
 import tempfile
+import time
 from contextlib import contextmanager
 from typing import Iterator
 
@@ -353,3 +354,103 @@ def test_network_mock_response_equivalence(
     rows = page.find_all(".order-row")
     assert [row.text for row in rows] == ["9001: Mocked Widget ($7.5)"]
     assert page.find("#api-status").text == "Loaded 1 orders."
+
+
+def _wait_for_tab(page: BrowserPage, url_substring: str, timeout: float = 8.0) -> str:
+    """Poll ``page.tabs()`` until a tab whose URL contains *url_substring* appears.
+
+    A ``window.open`` target registers with the browser asynchronously, slightly
+    after the click handler that triggered it returns, so the new tab is not
+    guaranteed to be enumerable on the first ``tabs()`` call. This polls until it
+    is, mirroring the *Before* code's ``len(browser.get_tabs()) > old_count``
+    guard loop.
+
+    Args:
+        page: The connected browser page to enumerate tabs on.
+        url_substring: Substring the target tab's URL must contain.
+        timeout: Maximum seconds to wait before failing.
+
+    Returns:
+        The ``id`` of the first matching tab.
+
+    Raises:
+        AssertionError: If no matching tab appears within *timeout*.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        for tab in page.tabs():
+            if url_substring in tab["url"]:
+                return tab["id"]
+        time.sleep(0.05)
+    raise AssertionError(
+        f"No tab matching {url_substring!r} appeared within {timeout}s; "
+        f"open tabs: {[t['url'] for t in page.tabs()]}"
+    )
+
+
+def test_tab_management_equivalence(
+    isolated_browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage multi-tab publishing flow via naturo.
+
+    Mirrors the migration guide's "Tab Management" section: the *Before*
+    DrissionPage code records ``len(browser.get_tabs())``, performs an action
+    that spawns a new tab via ``window.open``, detects the tab count growing, and
+    grabs ``browser.latest_tab`` to drive the new context. The *After* surface is
+    :meth:`BrowserPage.tabs` + :meth:`BrowserPage.switch_tab`.
+
+    Driven against ``tabs.html`` -- whose buttons each ``window.open`` another
+    fixture into a named browsing context -- naturo must enumerate every spawned
+    tab, switch the active connection to a chosen one, and drive content inside
+    it. Per naturo's never-lie contract (SOUL.md) the flow is cross-checked two
+    ways: the opener page's own ``data-opened`` counter must advance once per
+    real click (proving the click landed, not just that a tab appeared), and the
+    switched-to tab's content must be readable/writable through the same page
+    object (proving ``switch_tab`` truly rebound the CDP connection).
+
+    This test uses :func:`isolated_browser_page` because opening tabs and
+    ``switch_tab`` mutate connection-wide target state that must not leak into the
+    module-shared read-only browser.
+    """
+    page = isolated_browser_page
+    page.navigate(f"{fixtures_server}/tabs.html")
+
+    # Before: old_tab_count = len(browser.get_tabs())  -> only the opener exists.
+    initial_tabs = page.tabs()
+    assert len(initial_tabs) == 1
+    assert page.find("#tab-status").attr("data-opened") == "0"
+
+    # Before: an action opens a new tab -> After: a real click spawns window.open.
+    # never-lie: wait on the page's own counter so we know the click handler ran
+    # (not merely that some tab materialised), then confirm the tab enumerates.
+    page.find("#open-basic").click()
+    page.wait_for_function(
+        "document.getElementById('tab-status').getAttribute('data-opened') === '1'",
+        timeout=5.0,
+    )
+    basic_tab_id = _wait_for_tab(page, "basic.html")
+    assert len(page.tabs()) == 2  # Before: len(get_tabs()) > old_tab_count
+
+    # A second spawned tab -> the count grows deterministically, one per click.
+    page.find("#open-form").click()
+    page.wait_for_function(
+        "document.getElementById('tab-status').getAttribute('data-opened') === '2'",
+        timeout=5.0,
+    )
+    form_tab_id = _wait_for_tab(page, "form.html")
+    assert len(page.tabs()) == 3
+    assert page.find("#tab-status").text == "Opened 2 tab(s)."
+
+    # Before: new_tab = browser.latest_tab  -> After: switch_tab to the spawned
+    # tab and read its content through the now-rebound connection.
+    page.switch_tab(basic_tab_id)
+    assert page.find("#intro").text == (
+        "A deterministic page for element finding and text extraction."
+    )
+
+    # never-lie: switching to another tab and *writing* into it proves the CDP
+    # connection genuinely rebound -- a stale connection would type into the old
+    # document (or fail to find the field) instead of mutating the form tab.
+    page.switch_tab(form_tab_id)
+    page.find("#username").type("carol", clear_first=True)
+    assert page.find("#username").value == "carol"

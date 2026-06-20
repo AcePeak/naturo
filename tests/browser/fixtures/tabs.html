@@ -20,14 +20,21 @@
   <p id="tab-status" data-opened="0">No tabs opened.</p>
 
   <script>
-    var opened = 0;
-    var status = document.getElementById("tab-status");
+    // NOTE: the status element must NOT be held in a global named `status`.
+    // `var status` at the top level aliases the special `window.status`
+    // property, which string-coerces whatever is assigned to it -- the element
+    // reference silently becomes "[object HTMLParagraphElement]" and the
+    // counter update below throws, leaving `data-opened` frozen at 0 (a dead
+    // never-lie counter). Use a non-colliding name. Same class of bug as the
+    // dead scroll fixture fixed in b7a488d.
+    var openedCount = 0;
+    var tabStatus = document.getElementById("tab-status");
     var buttons = document.querySelectorAll(".open-tab");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function () {
-        opened += 1;
-        status.textContent = "Opened " + opened + " tab(s).";
-        status.setAttribute("data-opened", String(opened));
+        openedCount += 1;
+        tabStatus.textContent = "Opened " + openedCount + " tab(s).";
+        tabStatus.setAttribute("data-opened", String(openedCount));
       });
     }
   </script>
