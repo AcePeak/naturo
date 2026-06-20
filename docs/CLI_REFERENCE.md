@@ -298,6 +298,9 @@ List open windows.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--app` | text | Target application (name or partial match) |
+| `--window` | text | Window title pattern (substring match) |
+| `--hwnd` | integer | Window handle (HWND) |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
