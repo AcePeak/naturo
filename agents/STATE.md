@@ -1,5 +1,39 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 18:22Z (Orc autonomous cycle — **ONE new human-only item #1077 (OCR engine choice
+> for #1060); queue now #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc
+> (Rule 1). Step 3.6: no change — no new evidence (exemplary Dev/QA signals, no recurring operating weakness).**
+> **Step 0:** `git config` Orc; `git fetch -p` pruned `origin/fix/issue-1075-browser-launch-allow-origins`
+> (auto-deleted at #1076 merge); `git pull --ff-only` fast-forwarded `fc908f7 → 847dc99` (pulled
+> `naturo/browser/_launcher.py` +4 / `tests/test_browser_launcher.py` +67); authoritative `gh api .../branches`
+> = **develop + main only** → Rule 14 clean.
+> **Step 1 PR sweep:** **no open team-Dev PRs.** Since the 09:52Z cycle, team-Dev **#1076** (`add
+> --remote-allow-origins to browser launch so CDP can connect`, fixes #1075, `847dc99` = HEAD, all-green
+> auto-merge SQUASH) landed → flipped its issue **#1075 → status:done** (awaiting QA — Rule 1, NOT closed).
+> Develop CI on `847dc99` = **Build & Test + CodeQL SUCCESS** (confirmed before the flip). Only open PR =
+> community **#1055** (base `main`, contributor fork, MERGEABLE/UNSTABLE) → already queued needs:ace #1057;
+> human-only → Orc did **not** merge/comment/take-over/close.
+> **Step 2 health:** `status:in-progress` = **empty** (no abandoned work); `status:done` (open) = **#1075**
+> (browser CDP fix, awaiting QA) + **#972** (input-content guard, human security sign-off, queued). **Nothing
+> to close** (Rule 1).
+> **Step 3 (drive product):** backlog fully triaged — `no:milestone` (minus needs:ace + Linux help-wanted) =
+> **zero actionable unmilestoned issues**. v0.3.2 = earliest open milestone (16 open; ship-gate FULLY MET).
+> Recognition moat (Standing #1) progressing — find-engine slices #1059/#1061 done, #1075 browser-CDP blocker
+> found+fixed by Dev while scoping #1063; **#1060 (OCR) is the last find slice → unblockable via new #1077**.
+> No gap sharp enough to file beyond #1077 (Rule 9 — no churn).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence.** The two operating signals since 09:52Z were both
+> exemplary, not weaknesses: Dev found+fixed a real deeper browser-CDP blocker (#1075/#1076) while scoping #1063
+> (opposite of 避实就虚); QA verified+closed #1069 with a real-desktop windows-open repro + non-vacuous pre/post
+> proof. #1075 is a single product-bug incident on pre-existing code, not a recurring *operating* weakness — a
+> new rule would over-fit (Step 3.6 forbids). Four substantive rows shipped in the prior ~10h; freshest (Test
+> hermeticity) not yet exercised. Honest "no change" ledger row added.
+> **Step 4 (needs:ace): ONE new item #1077** (OCR engine = bundling/licensing/distribution decision, Orc must
+> not pick a packaging path unattended; recommended Windows.Media.Ocr behind a thin interface). Live queue now
+> **#1077/#1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header + table + CI line refreshed. Evidence
+> in `.work/reviews/2026-06-20-1822-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's
+> call, #914). Detail below is the prior (09:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 09:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1), no new
 > issue (Rule 9). Step 3.6: ONE surgical team-evolution change — Test hermeticity rule from #1069/#1074.**

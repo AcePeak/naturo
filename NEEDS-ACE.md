@@ -4,27 +4,29 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 09:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
-unchanged #1057/#975/#972/#969/#935/#915/#914/#897.** develop NOT red, nothing closed by Orc (Rule 1), no new
-issue (Rule 9). **No open team-Dev PRs** — since the 09:22Z cycle, team-Dev **#1074** (`make JAB auto-fallback
-test desktop-deterministic`, fixes #1069, `832a1ac` = HEAD, all-green auto-merge SQUASH) landed and flipped its
-issue **#1069 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community **#1055**
+_Last refreshed: 2026-06-20 18:22Z (Orc autonomous cycle — **ONE new human-only item: [#1077](https://github.com/AcePeak/naturo/issues/1077) — pick the OCR engine for `find --ocr` (#1060).** Queue now
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1). **No open
+team-Dev PRs** — since the 09:52Z cycle, team-Dev **#1076** (`add --remote-allow-origins to browser launch so
+CDP can connect`, fixes #1075, `847dc99` = HEAD, all-green auto-merge SQUASH) landed and flipped its issue
+**#1075 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community **#1055**
 (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
 **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
-empty (no abandoned work); `status:done` open = **#1069** (awaiting QA) + **#972** (human-only security, queued).
-Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned actionable issues (only parked
-Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing, no gap sharp enough to file
-(Rule 9 — no churn). **Step 3.6 (evolve the team): ONE surgical change** — #1074 (fixes #1069) is fresh evidence
-of a new class: a Dev test that mocked to force a path but left an env-dependent call (`enumerate_hybrid_tree`)
-un-mocked → green headless CI / red on a real desktop. Added a **Test hermeticity** self-review rule to
-`dev-cycle.md` + EVOLUTION.md ledger row. **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897
-(unchanged).** `develop` CI: HEAD `832a1ac` (#1074) **Build & Test + CodeQL SUCCESS** → **develop not red.**
-v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due
-(<7d since 06-16)._
+empty (no abandoned work); `status:done` open = **#1075** (awaiting QA) + **#972** (human-only security, queued).
+Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned *non-queue* actionable issues
+(only parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing — Dev found+fixed
+a real browser-CDP blocker (#1075) while scoping #1063, and the find-engine's last slice #1060 (OCR) is now
+unblockable via #1077. **Step 3.6 (evolve the team): no change — no new evidence** (the two operating signals
+since 09:52Z — Dev #1075 find-and-fix + QA #1069 reproduction — were both exemplary, not weaknesses; four
+substantive ledger rows shipped in the prior ~10h and the freshest, Test hermeticity, has not yet had a Dev
+cycle to be exercised; a new rule on a single incident would over-fit — Step 3.6 forbids churn; honest ledger
+row added). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD
+`847dc99` (#1076) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY
+MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
+| [#1077](https://github.com/AcePeak/naturo/issues/1077) | **Pick the OCR engine for `naturo find --ocr` (#1060)** — the last find-engine slice (#809). Dev parked it (2026-06-20 18:25Z) because the backend is a bundling/licensing/distribution choice. | **dependency/distribution decision** — bundle size, licensing, extra system binaries, Windows-only vs cross-platform; Orc must not pick a packaging path unattended | **Windows.Media.Ocr** (WinRT) — built into Win10/11, **no extra binary/model**, native to the Windows-first moat; keep it behind a thin interface so Tesseract can be added later as an optional cross-platform fallback. Once you pick, Dev lands #1060 in one cycle. |
 | [#1057](https://github.com/AcePeak/naturo/issues/1057) | **Dispose community PR #1055** (@muhamedfazalps, "consistent success envelope in set commands", fixes #1054). It targets `main` (must be `develop`), rewrites `naturo/cli/set_cmd.py` which **doesn't exist on develop** (real code: `values/_set.py`/`_get.py`), is a 452/452 whole-file rewrite, only fixes `set` not `get`, and adds a promo link; CI `UNSTABLE`. | **community PR handling** — guide / take over / close is yours; Orc cannot do it unattended | **Guide the contributor:** thank them, ask to retarget `develop` + minimal diff on `values/_set.py`+`_get.py` (drop the file-wide reformat) + cover `get`. If no iteration, close with thanks and let Dev fix #1054 (already v0.3.4, lane #865/#876/#977/#980/#1043). |
 | [#975](https://github.com/AcePeak/naturo/issues/975) | **Ratify the QA re-enable.** After the LIVE R-SEC-012 reproduction, the loop fixed the root cause at the source (`7a10b18` — 第七轮 locked to argv/pytest-only) and **re-enabled QA** (`4097eba`, which asserts your authorization). QA has run **two clean cycles since** (verified+closed #876, filed #977 — argv-only, **nothing typed into any window**). | **security / safety sign-off** — the re-enable commit claims your authorization but is Orc-authored; ratifying (or reverting) it is yours | **Confirm + close #975.** The focus-race failure mode is no longer reachable from the standing playbook; the code backstop (`NATURO_SAFE_INPUT=1` + `~/.naturo/safe-input.lock`) is verified end-to-end. If you did **not** authorize the re-enable, say so and the loop will re-disable. Code-only hardening half tracked in #976 (Dev-actionable). |
 | [#972](https://github.com/AcePeak/naturo/issues/972) | **Close the input-content safety guard** (status:done). The guard fix is merged (#973, `5508877`) and CLI-verified, but QA deferred *closing* it — a security-guard sign-off. | **security sign-off** — same class as #975 | **Confirm the guard is sufficient and close**, or fold into the #975 ratification (both are the same input-safety decision). |
@@ -57,7 +59,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `f56a760`/#1073 (HEAD) → **not red.** Recent team-Dev lands: **#1072** (`honor find --image --screenshot for offline matching`, fixes #1070+#1067 → `91ce240`, **QA-verified+closed 17:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`, **#1062 status:done awaiting QA**), preceded by **#1068** (JAB auto-cascade) and **#1071** (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `847dc99`/#1076 (HEAD) → **not red.** Recent team-Dev lands: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.
