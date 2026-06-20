@@ -95,6 +95,15 @@ git checkout -b fix/issue-N-short-desc origin/develop
    twice with mis-attributed codes that QA caught after merge — #1047 missing window/app → `UNKNOWN_ERROR`
    from a broad `except`; #1067 bad template file → `CAPTURE_FAILED` because `Image.open(template)` sat in the
    capture `try`.)
+   **Option coverage (new mode of a multi-mode command):** when you add a mode to a command that already
+   has several modes + shared options (e.g. `find` with `--ai`/`--image`/`--selector`/`--ocr` and the shared
+   `--screenshot`), every documented option your new mode could touch must be **explicitly honored or
+   explicitly rejected** — never silently ignored so the code falls back to its default path and returns
+   *confidently-wrong* output. Your end-to-end check must walk the **non-default** option path, not just the
+   one you naturally reach for, pinned by a test. (Evidence: `find --image` silently ignored the documented
+   `--screenshot` and captured the live screen → returned `score 1.0` at the **wrong** coordinates; #1070.
+   The #1066 "verified end-to-end on a real desktop" check only exercised the live-capture path, so the
+   `--screenshot` path was never run.)
 5. Update `README.md` / docs if behavior or CLI changed.
 
 ## Step 4 — Commit, PR, auto-merge

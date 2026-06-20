@@ -1,6 +1,57 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 16:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 08:26Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop GREEN, not red, nothing closed by Orc (Rule 1),
+> no new issue (Rule 9). Since 16:22 TWO more recognition-moat slices LANDED clean: team-Dev PR #1068 + PR #1071.
+> Two priority-honesty triages this cycle (#1070 → v0.3.2 + P2→P1; #1069 → v0.3.2). One Step 3.6 team-evolution
+> change shipped (Option-coverage self-review rule).**
+> **Step 0:** `git config` Orc identity; `git fetch origin -p` pruned `origin/feat/issue-1061-find-selector` +
+> `origin/fix/issue-932-recognition-md` (both auto-deleted at merge); `git checkout develop`; `git pull --ff-only`
+> fast-forwarded `1e834fc → 17cc5f1` (pulled `naturo/cli/core/_find.py` +215, `naturo/cascade/*` JAB fusion,
+> `docs/RECOGNITION.md`/`CLI_REFERENCE.md`, +tests); authoritative `gh api .../branches` = **develop + main only**
+> → Rule 14 clean. **Step 1 PR sweep:** **two team-Dev PRs landed since 16:22** — **PR #1068** (`fix: fuse Java
+> Access Bridge into the auto cascade + land JAB benchmark row (part of #932)`, `4144f44`, CI SUCCESS) wires JAB
+> into the auto UIA→IA2→JAB→MSAA cascade + records the JAB recognition-coverage benchmark row; **PR #1071**
+> (`feat: naturo find --selector path resolution (part of #809)`, `17cc5f1` = HEAD) adds the `--selector` mode to
+> the unified `find` engine (cascade build/run, +208-line test). `git merge-base --is-ancestor` = YES for both →
+> Rule 1 clean; both source branches auto-deleted → Rule 14 clean. **#1071's issue #1061 OPEN + `status:done`**
+> (Dev flipped on merge, awaiting QA — Rule 1: no merged-close commit closing it, stays open); #932 multi-part →
+> stays OPEN, `status:in-progress` now **empty** → **no Orc handoff needed**. **One open PR — community #1055**
+> (`fix: use consistent success envelope in set commands`, @muhamedfazalps, base `main`/head `main`,
+> MERGEABLE/UNSTABLE, unchanged 04:56Z) — **already queued needs:ace #1057**; community-PR handling is human-only
+> → Orc did **not** merge/comment/take-over/close. **Step 2 health:** `status:in-progress` = **empty** → no
+> in-flight pickup, no abandoned work. `status:done` (open) = **#1061** (find-selector, awaiting QA) **+ #972**
+> (input-content guard, human security sign-off, queued). **Nothing to close** (Rule 1 — #1061 needs QA
+> `verified`; #972 human-only). **Step 3 (drive product): TWO priority-honesty triages** — QA filed two clean
+> Dev-actionable bugs on the freshly-landed code, both **unmilestoned**: **#1070** (`find --image` silently
+> ignores the documented `--screenshot` option — `_find.py:34` threads it only into the `--ai` path, the image
+> template path always captures the live screen → returns `score 1.0` at the **WRONG** coordinates = silent
+> correctness failure; `click eN` after a `--image` match clicks the wrong place) → **Orc milestoned v0.3.2 +
+> bumped P2→P1** (worse than a wrong error code; headline recognition feature) + Dev fix-site comment; **#1069**
+> (the new JAB auto-cascade test `test_jab.py:75` is green in headless CI but red on a real desktop with open
+> windows — a false-confidence gate on the v0.3.2 moat that QA verifies on the desktop) → **Orc milestoned
+> v0.3.2** + a hermetic-test ask. Both not human-only (no public-API/CLI change). **No new issue (Rule 9)** — both
+> gaps already had sharp QA issues; post-triage `no:milestone` actionable = zero (only needs:ace human-only
+> #1057/#975/#969/#935/#915 + parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66). **Standing #1 priority**
+> (recognition supremacy #920/#931/#932/#934): TWO moat slices shipped this cycle (JAB cascade fusion #1068 +
+> find `--selector` #1071) → moat work leading hard. **Step 3.5 competitiveness: NOT due** (tracker baseline
+> 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):** #1070 is **new** evidence of an uncovered
+> class — a new mode (`--image`) of a multi-mode command (`find`) **silently ignored a documented option**
+> (`--screenshot`) and fell back to its default path → *confidently-wrong* output (score 1.0, wrong coords),
+> despite #1066's "verified end-to-end on a real desktop" claim — because Dev's verification only walked the
+> live-capture path it defaulted to, never the `--screenshot` path. Distinct from the prior error-attribution
+> row (#1067/#1047 = wrong error *code*, already fixed); this is wrong *output* from an unhandled option →
+> added a surgical **Option coverage** rule to `dev-cycle.md` Step 3 self-review item 4 (a new mode must
+> explicitly honor or explicitly reject every documented option it could touch; end-to-end check must walk the
+> non-default option path, pinned by a test) + ledger row in `agents/EVOLUTION.md` (builds on, does not undo,
+> the parity + error-attribution rows). **Step 4 (needs:ace): no new human-only item** — live queue **unchanged
+> #1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-0826-auto-review.md`. `develop` CI: HEAD `17cc5f1` (#1071) **Build & Test + CodeQL
+> SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 16:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged #1057/#975/#972/#969/#935/#915/#914/#897). The next recognition-moat slice LANDED — team-Dev
 > PR #1066 (`feat: naturo find --image template matching`) merged clean as `19c6852`. develop NOT red,
 > nothing closed by Orc (Rule 1), no new issue (Rule 9), one priority-honesty triage (#1067 → v0.3.2), one
