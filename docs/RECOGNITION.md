@@ -62,19 +62,28 @@ elements naturo recognizes two ways:
 The delta is the multi-framework advantage; `Extra via` shows which provider
 found the elements UIA alone could not.
 
-### Results (Windows 11, 2026-06-16)
+### Results (Windows 11; Electron rows 2026-06-16, Java Swing row 2026-06-20)
 
 | App | Framework | UIA-only | Cascade | Delta | Extra via |
 | --- | --- | ---: | ---: | ---: | --- |
 | Chrome (local web/Electron-class app) | Electron/CDP | 52 | 89 | **+37** | cdp (+34) |
 | Owned Electron fixture (real Electron app) | Electron/CDP | 83 | 113 | **+30** | cdp (+30) |
+| Owned Java Swing fixture (real Swing app) | Java Access Bridge | 6 | 46 | **+40** | jab (+40) |
+
+The Java Swing row is reproduced by
+`python -m benchmarks.recognition.run_benchmark --markdown` on a desktop with a
+JDK (`JAVA_HOME`) and Java Access Bridge enabled (`jabswitch -enable`,
+`WindowsAccessBridge-64.dll` on `PATH`); the runner compiles and launches the
+owned fixture (`benchmarks/recognition/fixtures/java/SwingControlsFixture.java`)
+itself. Desktop regression: `tests/test_jab_recognition_932.py`.
 
 **Documented gaps (measured honestly — no fabrication):**
 
-- **JetBrains IDE / DBeaver (Java Access Bridge):** no Java app was installed on
-  the benchmark desktop, so the JAB row could not be measured live. The harness
-  supports it (`measure_running_app(..., title_substring="DBeaver")`); run it on
-  a machine with a Java Swing/SWT app open to populate this row.
+- **Mature external Java apps (JetBrains IDE / DBeaver):** the owned-fixture JAB
+  row above is measured live, but the larger external Java apps are not installed
+  on the benchmark desktop. The harness supports them
+  (`measure_running_app(..., title_substring="DBeaver")`); QA tracks measuring
+  them in #935.
 - **SAP GUI:** not available in this environment — planned (`SAP scripting/COM`
   provider).
 
@@ -99,6 +108,16 @@ deployments table) that the Windows UIA tree collapses into one opaque node.
 > Chromium content layer and expose the same CDP endpoint, so the Chrome row and
 > the owned-Electron row measure the same recognition gap two ways — the gap a
 > UIA-only tool hits on VS Code, Slack, or Feishu.
+
+The third row is the **literal Java/Swing case**: naturo's own Swing fixture is a
+real JVM window whose controls live below a `SunAwtFrame`. The UIA-only baseline
+recognized **6** elements — all of them window chrome (the title bar and its
+system buttons); **none** were the app's *Submit Order / Cancel Order / Customer
+Name / Express Shipping* controls. The cascade's **Java Access Bridge** provider
+recovered **40** elements UIA is structurally blind to. Crucially this delta now
+appears on the default `--backend auto` path: the cascade detects the Java window
+and fuses JAB automatically, so `naturo see`/`find`/`click` reach Swing controls
+without the caller having to know to pass `--backend jab`.
 
 ## Reproduce it
 
