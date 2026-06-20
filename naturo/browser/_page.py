@@ -7,11 +7,13 @@ browser automation: navigate, find elements, click, type, wait, etc.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from naturo.browser._download import DownloadResult
     from naturo.browser._frame import BrowserFrame
     from naturo.browser._network import NetworkMonitor
 
@@ -624,6 +626,66 @@ class BrowserPage:
         """
         el = self.find(selector)
         el.scroll_into_view()
+
+    # ── Downloads ─────────────────────────────────────────────────────────
+
+    def set_download_dir(self, directory: str) -> None:
+        """Route browser downloads to *directory* without a save dialog.
+
+        The naturo equivalent of DrissionPage's
+        ``co.set_pref("download.default_directory", ...)`` plus
+        ``download.prompt_for_download = False`` (see the migration guide's
+        *File Download* section): issues the CDP ``Browser.setDownloadBehavior``
+        command so files are saved to *directory* automatically, and remembers
+        the path so :meth:`wait_for_download` knows where to poll.
+
+        Args:
+            directory: Path to an existing directory to save downloads in.
+
+        Raises:
+            ValueError: If *directory* does not exist.
+        """
+        from naturo.browser._download import set_download_dir
+
+        set_download_dir(self, directory)
+        self._download_dir = os.path.abspath(directory)
+
+    def wait_for_download(
+        self,
+        timeout: float = 60.0,
+        poll_interval: float = 0.5,
+    ) -> "DownloadResult":
+        """Block until a download started on this page finishes.
+
+        The naturo equivalent of the DrissionPage/Selenium "click the link,
+        then poll the filesystem for the file" pattern: after a click triggers
+        a download, this waits until the file in the configured download
+        directory has fully landed (no Chrome ``.crdownload`` partial remains)
+        and returns it. :meth:`set_download_dir` must be called first.
+
+        Args:
+            timeout: Maximum seconds to wait for the download to complete.
+            poll_interval: Seconds between directory polls.
+
+        Returns:
+            A :class:`~naturo.browser._download.DownloadResult` whose ``path``
+            is the absolute path to the completed file.
+
+        Raises:
+            RuntimeError: If :meth:`set_download_dir` was not called first.
+            TimeoutError: If no download completes within *timeout*.
+        """
+        from naturo.browser._download import DownloadResult, wait_for_download
+
+        download_dir = getattr(self, "_download_dir", None)
+        if download_dir is None:
+            raise RuntimeError(
+                "set_download_dir() must be called before wait_for_download()"
+            )
+        path = wait_for_download(
+            download_dir, timeout=timeout, poll_interval=poll_interval
+        )
+        return DownloadResult(path=path)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 

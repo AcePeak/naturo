@@ -21,12 +21,14 @@ so concurrent desktop runs (e.g. Dev + QA) never share a Chrome profile.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
 import subprocess
 import tempfile
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Iterator
 
 import pytest
@@ -571,3 +573,67 @@ def test_tab_management_equivalence(
     page.switch_tab(form_tab_id)
     page.find("#username").type("carol", clear_first=True)
     assert page.find("#username").value == "carol"
+
+
+def test_file_download_equivalence(
+    isolated_browser_page: BrowserPage,
+    fixtures_server: str,
+    fixtures_dir: Path,
+) -> None:
+    """Reproduce the DrissionPage download-prefs + filesystem-poll pattern via naturo.
+
+    Mirrors the migration guide's "File Download" section: the *Before* code
+    sets ``co.set_pref("download.default_directory", dir)`` (plus
+    ``download.prompt_for_download = False``), clicks the export link, then
+    spins ``while not os.path.exists(expected_file): time.sleep(1)`` until the
+    file lands. The *After* surface is :meth:`BrowserPage.set_download_dir`
+    followed by :meth:`BrowserPage.wait_for_download`, exactly as the guide
+    documents (``download.path`` / ``download.name``).
+
+    Driven against ``download.html`` -- whose ``#download-link`` anchor carries
+    ``download="report.txt"`` and points at the deterministic 42-byte
+    ``download-payload.txt`` -- naturo must route the download to the configured
+    directory and block until it completes. Per naturo's never-lie contract
+    (SOUL.md) the equivalence is proven on the *bytes that landed on disk*: the
+    downloaded file's content must be byte-for-byte the served payload (the same
+    content/size check the Before code performs after polling), proving a real,
+    completed download rather than a partial ``.crdownload`` or a placeholder.
+
+    This test uses :func:`isolated_browser_page` because
+    ``Browser.setDownloadBehavior`` installs connection-wide download state that
+    must not leak into the module-shared read-only browser.
+    """
+    page = isolated_browser_page
+    # A throwaway download directory (matching this module's tempfile.mkdtemp
+    # style for browser temp dirs, so concurrent desktop runs never collide).
+    download_dir = tempfile.mkdtemp(prefix="naturo_download_")
+    try:
+        # Before: co.set_pref("download.default_directory", dir) + prompt suppression
+        #  ->  After: page.set_download_dir(dir).
+        page.set_download_dir(download_dir)
+
+        page.navigate(f"{fixtures_server}/download.html")
+
+        # never-lie (precondition): nothing has been saved yet, so a passing
+        # assertion below can only come from a download this test triggered.
+        assert os.listdir(download_dir) == []
+
+        # Before: click the export link, then `while not os.path.exists(f): sleep(1)`
+        #  ->  After: click() + wait_for_download() polling until no partial remains.
+        page.find("#download-link").click()
+        result = page.wait_for_download(timeout=20.0)
+
+        # The anchor's download="report.txt" attribute names the saved file.
+        assert result.name == "report.txt"
+        assert os.path.basename(result.path) == "report.txt"
+        assert os.path.isfile(result.path)
+
+        # never-lie: the bytes on disk are exactly the served payload -- the same
+        # content/size equivalence the Before code verifies after its poll loop,
+        # proving the download completed rather than leaving a partial file.
+        served = (fixtures_dir / "download-payload.txt").read_bytes()
+        downloaded = Path(result.path).read_bytes()
+        assert downloaded == served
+        assert result.size == len(served) == 42
+    finally:
+        shutil.rmtree(download_dir, ignore_errors=True)
