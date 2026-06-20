@@ -101,10 +101,26 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.MENU_NOT_FOUND: ErrorCategory.AUTOMATION,
     ErrorCode.SNAPSHOT_NOT_FOUND: ErrorCategory.SESSION,
     ErrorCode.STALE_SNAPSHOT_CACHE: ErrorCategory.SESSION,
+    # Named, naturo-managed artifacts the user saves and recalls by name — the
+    # same family as snapshots, hence ``session`` (see #1101).
+    ErrorCode.SELECTOR_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.BASELINE_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.RECORDING_NOT_FOUND: ErrorCategory.SESSION,
     ErrorCode.FILE_NOT_FOUND: ErrorCategory.IO,
     ErrorCode.CAPTURE_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.INTERACTION_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
+    # Cancellation is an operation-lifecycle outcome, like ``TIMEOUT`` (#1101).
+    ErrorCode.CANCELLED: ErrorCategory.AUTOMATION,
+    # Locating a tray icon / taskbar item is UI-element lookup, like
+    # app/window/element-not-found (#1101).
+    ErrorCode.TRAY_ICON_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.TASKBAR_ITEM_NOT_FOUND: ErrorCategory.AUTOMATION,
+    # The Windows registry is a persistent key-value store — registry failures
+    # are I/O against it (#1101).
+    ErrorCode.REGISTRY_NOT_FOUND: ErrorCategory.IO,
+    ErrorCode.REGISTRY_ERROR: ErrorCategory.IO,
+    ErrorCode.REGISTRY_HAS_SUBKEYS: ErrorCategory.IO,
     ErrorCode.INVALID_INPUT: ErrorCategory.VALIDATION,
     ErrorCode.INVALID_COORDINATES: ErrorCategory.VALIDATION,
     # Image-matching codes (#1059): a template/screenshot the user supplied that
