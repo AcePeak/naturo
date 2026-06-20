@@ -23,9 +23,10 @@ from naturo.cli._app._common import (
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
+def app_focus(ctx, name, app_name, window_title, hwnd, pid, json_output) -> None:
     """Focus an application window (bring to foreground).
 
     \b
@@ -33,8 +34,8 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
       naturo app focus feishu
       naturo app focus --app feishu
       naturo app focus feishu --window "Chat"
-      naturo app focus --app feishu
       naturo app focus --hwnd 12345
+      naturo app focus --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
     # --app flag overrides positional NAME when both absent
@@ -52,13 +53,13 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        backend.focus_window(**_resolve_window_target(name, window_title, hwnd))
+        backend.focus_window(**_resolve_window_target(backend, name, window_title, hwnd, pid))
         if json_output:
             click.echo(json_dumps({"success": True, "action": "focus"}))
         else:
@@ -74,10 +75,11 @@ def app_focus(ctx, name, app_name, window_title, hwnd, json_output) -> None:
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--force", is_flag=True, help="Force terminate the process")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> None:
+def app_close(ctx, name, app_name, window_title, hwnd, pid, force, json_output) -> None:
     """Close an application window (graceful or forced).
 
     \b
@@ -86,6 +88,7 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> No
       naturo app close --app notepad
       naturo app close feishu --window "Chat"
       naturo app close --hwnd 12345 --force
+      naturo app close --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
     if not name and app_name:
@@ -102,13 +105,13 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> No
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        kwargs = _resolve_window_target(name, window_title, hwnd)
+        kwargs = _resolve_window_target(backend, name, window_title, hwnd, pid)
         kwargs["force"] = force
         backend.close_window(**kwargs)
         if json_output:
@@ -123,19 +126,25 @@ def app_close(ctx, name, app_name, window_title, hwnd, force, json_output) -> No
 
 @click.command("minimize")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
+def app_minimize(ctx, name, app_name, window_title, hwnd, pid, json_output) -> None:
     """Minimize an application window.
 
     \b
     Examples:
       naturo app minimize feishu
+      naturo app minimize --app feishu
       naturo app minimize --hwnd 12345
+      naturo app minimize --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
 
     # (#776) Resolve app ID (a1, a2, …) to window handle
     entry = _resolve_app_id(name, json_output)
@@ -148,13 +157,13 @@ def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        backend.minimize_window(**_resolve_window_target(name, window_title, hwnd))
+        backend.minimize_window(**_resolve_window_target(backend, name, window_title, hwnd, pid))
         if json_output:
             click.echo(json_dumps({"success": True, "action": "minimize"}))
         else:
@@ -167,19 +176,25 @@ def app_minimize(ctx, name, window_title, hwnd, json_output) -> None:
 
 @click.command("maximize")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
+def app_maximize(ctx, name, app_name, window_title, hwnd, pid, json_output) -> None:
     """Maximize an application window.
 
     \b
     Examples:
       naturo app maximize feishu
+      naturo app maximize --app feishu
       naturo app maximize --hwnd 12345
+      naturo app maximize --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
 
     # (#776) Resolve app ID (a1, a2, …) to window handle
     entry = _resolve_app_id(name, json_output)
@@ -192,13 +207,13 @@ def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        backend.maximize_window(**_resolve_window_target(name, window_title, hwnd))
+        backend.maximize_window(**_resolve_window_target(backend, name, window_title, hwnd, pid))
         if json_output:
             click.echo(json_dumps({"success": True, "action": "maximize"}))
         else:
@@ -211,19 +226,25 @@ def app_maximize(ctx, name, window_title, hwnd, json_output) -> None:
 
 @click.command("restore")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
+def app_restore(ctx, name, app_name, window_title, hwnd, pid, json_output) -> None:
     """Restore a minimized or maximized window to normal state.
 
     \b
     Examples:
       naturo app restore feishu
+      naturo app restore --app feishu
       naturo app restore --hwnd 12345
+      naturo app restore --pid 1234
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
 
     # (#776) Resolve app ID (a1, a2, …) to window handle
     entry = _resolve_app_id(name, json_output)
@@ -236,13 +257,13 @@ def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        backend.restore_window(**_resolve_window_target(name, window_title, hwnd))
+        backend.restore_window(**_resolve_window_target(backend, name, window_title, hwnd, pid))
         if json_output:
             click.echo(json_dumps({"success": True, "action": "restore"}))
         else:
@@ -255,15 +276,17 @@ def app_restore(ctx, name, window_title, hwnd, json_output) -> None:
 
 @click.command("move")
 @click.argument("name", required=False, default=None)
+@click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--pid", type=int, default=None, help="Process ID")
 @click.option("--x", type=int, default=None, help="Target X position")
 @click.option("--y", type=int, default=None, help="Target Y position")
 @click.option("--width", type=int, default=None, help="New width in pixels (optional)")
 @click.option("--height", type=int, default=None, help="New height in pixels (optional)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) -> None:
+def app_move(ctx, name, app_name, window_title, hwnd, pid, x, y, width, height, json_output) -> None:
     """Move and/or resize an application window.
 
     Combines move, resize, and set-bounds into one command.
@@ -273,9 +296,11 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) ->
     Examples:
       naturo app move feishu --x 100 --y 100
       naturo app move feishu --x 100 --y 100 --width 800 --height 600
-      naturo app move feishu --width 800 --height 600
+      naturo app move --pid 1234 --width 800 --height 600
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+    if not name and app_name:
+        name = app_name
 
     # (#776) Resolve app ID (a1, a2, …) to window handle
     entry = _resolve_app_id(name, json_output)
@@ -288,7 +313,7 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) ->
 
     from naturo.errors import NaturoError
 
-    if not _require_target(name, window_title, hwnd, json_output):
+    if not _require_target(name, window_title, hwnd, pid, json_output):
         return
 
     has_position = x is not None and y is not None
@@ -335,7 +360,7 @@ def app_move(ctx, name, window_title, hwnd, x, y, width, height, json_output) ->
     try:
         from naturo.backends.base import get_backend
         backend = get_backend()
-        kwargs = _resolve_window_target(name, window_title, hwnd)
+        kwargs = _resolve_window_target(backend, name, window_title, hwnd, pid)
 
         if has_position and has_size:
             backend.set_bounds(x=x, y=y, width=width, height=height, **kwargs)
