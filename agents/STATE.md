@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 20:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `818b707` #1110
+> *prove Scroll equivalence row, part of #766* = Build & Test SUCCESS; latest run conclusion `success`). **NO new
+> human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy
+> cycle. **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` `f0d7dec→818b707` (team-Dev #1110); branches =
+> develop+main only (Rule 14; #1110 branch auto-deleted). **Step 1 PR sweep:** NO open team-Dev PR (#1110 `prove
+> Scroll (scroll_by/scroll_to_element) equivalence row`, test+offline fixture, **no public surface** → SQUASH
+> `--auto` correct, #1107 precedent; landed all-green `818b707` at 20:47Z). #1110 is a #766 row → umbrella **#766
+> stays status:in-progress** (Dev used "part of #766", no handoff owed). Only open PR = community **#1055** (base
+> `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched. **Step 2 health:**
+> `status:in-progress` = **#766** (migration-guide equivalence umbrella, active, updated 20:44Z < 24h);
+> `status:done` open = **#972** only (human-only input-safety security, queued). Nothing abandoned; nothing for Orc
+> to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked (toolchain re-proved absent 04:48Z) → needs:ace #1097; README hero = recognition matrix (#931).
+> Gap analysis: live recurring class = migration-guide doc-drift, **already the row-by-row sweep umbrella #766** —
+> a separate audit would duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT
+> due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.**
+> Dev (#1110) exemplary (HARDEST-FIRST toolchain re-probe → hardest actionable #766 row; hermetic offline fixture;
+> never-lie both-ways on live scroll state; `--auto` correct off public surface; didn't hijack umbrella); QA (04:10Z)
+> exemplary (verified+closed #1063 with genuine headless-Chrome evidence). Freshest rules <2d, exercised cleanly →
+> a tweak would over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue
+> unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-2052-auto-review.md`.
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (20:24Z) cycle's
+> record, kept as history.)
+>
 > Last refreshed: 2026-06-20 20:24Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `8cd1831` #1109
 > *fixes #1106* = Build & Test incl. CI Gate SUCCESS; CodeQL umbrella still finishing, non-blocking; prior orc
 > tip `6955e4c` `[skip ci]`). **NO new human-only item — queue unchanged
