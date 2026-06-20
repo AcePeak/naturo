@@ -137,7 +137,7 @@ which engine found which element — just use `naturo click e42`.
 | `driver.execute_cdp_cmd(...)` | Built-in (stealth is default) | Built-in |
 | `driver.get_cookies()` | `naturo browser cookies save --path f.json` | `page.cookies.save(path)` |
 | `driver.add_cookie(c)` | `naturo browser cookies load --path f.json` | `page.cookies.load(path)` |
-| `driver.switch_to.frame(el)` | `naturo browser frame <selector>` | `page.frame(selector)` |
+| `driver.switch_to.frame(el)` | `naturo browser frame-find <frame> <selector>` | `page.frame(selector).find(...)` |
 | `options.set_capability('goog:loggingPrefs', ...)` | `naturo browser requests --pattern <glob>` | `page.network.capture_snapshot()` |
 
 ### pywinauto / uiautomation to naturo
@@ -749,28 +749,32 @@ slider = driver.find_element(*elements["slider"])
 driver.switch_to.default_content()
 ```
 
-**After**:
+**After** — naturo addresses each frame per command (a CSS selector, frame
+`name`, or URL substring), so there is no stateful "switch / switch back":
 ```bash
-# Switch into the iframe
-naturo browser frame "xpath://*[@id='loginForm-slide-container']/iframe"
+# List every frame on the page (main frame + nested iframes)
+naturo browser frames
 
-# Interact with elements inside iframe
-naturo browser find ".secsdk-captcha-drag-icon"
+# Find an element scoped to a specific iframe, identified by a CSS selector
+# for the <iframe> element (the captcha lives inside the login iframe):
+naturo browser frame-find "#loginForm-slide-container iframe" ".secsdk-captcha-drag-icon"
 # ... drag slider ...
 
-# Switch back to main document
-naturo browser frame --top
+# Or address the frame by its name / URL instead of a selector:
+naturo browser frame-find "captcha" "input" --by-name
+naturo browser frame-eval "payment.example.com" "document.title" --by-url
 ```
 
 ```python
-# Context manager — auto-restores frame on exit
-with page.in_frame("xpath://*[@id='loginForm-slide-container']/iframe"):
-    slider = page.find(".secsdk-captcha-drag-icon")
-    # ... drag slider ...
-# Automatically back to main document here
+# page.frame() returns a BrowserFrame scoped to the iframe; find/find_all/
+# evaluate run inside it. Identify the frame by selector=, name=, or url=.
+frame = page.frame(selector="#loginForm-slide-container iframe")
+slider = frame.find(".secsdk-captcha-drag-icon")
+# ... drag slider ...
 
-# Or find across all frames without switching
-element = page.find("#deep-element", all_frames=True)
+# Nested iframes chain via .frame() on the parent frame:
+inner = frame.frame(name="captcha-level2")
+inner.find("#deep-element")
 ```
 
 ### Network Request Interception
@@ -1896,8 +1900,7 @@ naturo browser wait "#my-element" --timeout 10000
 
 # Check if element is in an iframe
 naturo browser frames
-naturo browser frame "#content-iframe"
-naturo browser find "#my-element"
+naturo browser frame-find "#content-iframe" "#my-element"
 
 # Use naturo see for visual debugging — shows ALL elements including AI-detected ones
 naturo see --app chrome
