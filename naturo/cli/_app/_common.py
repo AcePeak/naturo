@@ -86,34 +86,48 @@ def _resolve_app_id(name, json_output):
     return entry
 
 
-def _resolve_window_target(name, window_title=None, hwnd=None):
+def _resolve_window_target(backend, name, window_title=None, hwnd=None, pid=None):
     """Build keyword arguments for backend window methods.
 
-    Accepts the unified app command style: positional NAME with optional
-    --window title filter and --hwnd.
+    Accepts the unified window-targeting flag set: positional NAME / ``--app``
+    (*name*), ``--window`` (*window_title*), ``--hwnd``, and ``--pid``.
+
+    When ``--pid`` is supplied without an explicit ``--hwnd``, the PID is
+    resolved to a concrete window handle through the backend's canonical
+    ``_resolve_hwnd`` resolver — the same path ``see``/``capture``/``click``
+    use — so PID targeting works without a backend method-signature change
+    (#871).  *name*/*window_title* further narrow the PID match when supplied
+    alongside it.  An explicit ``--hwnd`` always wins (most specific target).
 
     Args:
-        name: Application/process name (positional).
+        backend: Active backend instance (provides ``_resolve_hwnd``).
+        name: Application/process name (positional NAME or ``--app``).
         window_title: Optional title substring to pick a specific window.
-        hwnd: Optional direct window handle.
+        hwnd: Optional direct window handle (takes priority over *pid*).
+        pid: Optional process ID to target.
 
     Returns:
-        Dict with title and/or hwnd keys for backend calls.
+        Dict with ``title`` and/or ``hwnd`` keys for backend calls.
+
+    Raises:
+        WindowNotFoundError: When *pid* matches no resolvable window
+            (propagated from ``_resolve_hwnd``).
     """
-    effective_title = name
-    if window_title:
-        effective_title = window_title
+    if pid is not None and hwnd is None and hasattr(backend, "_resolve_hwnd"):
+        hwnd = backend._resolve_hwnd(app=name, window_title=window_title, pid=pid)
+        return {"title": None, "hwnd": hwnd}
+    effective_title = window_title or name
     return {"title": effective_title, "hwnd": hwnd}
 
 
-def _require_target(name, window_title, hwnd, json_output):
+def _require_target(name, window_title, hwnd, pid, json_output):
     """Validate that at least one target identifier is provided.
 
     Returns:
         True if valid, False if error was emitted.
     """
-    if not name and not window_title and not hwnd:
-        msg = "Specify an app name, --window, or --hwnd"
+    if not name and not window_title and not hwnd and not pid:
+        msg = "Specify an app name, --window, --hwnd, or --pid"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:

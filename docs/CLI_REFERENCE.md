@@ -680,6 +680,7 @@ Close an application window (graceful or forced).
 | `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--force` | boolean | Force terminate the process |
 | `--json`, `-j` | boolean | JSON output |
 
@@ -690,6 +691,7 @@ naturo app close notepad
 naturo app close --app notepad
 naturo app close feishu --window "Chat"
 naturo app close --hwnd 12345 --force
+naturo app close --pid 1234
 ```
 
 ### `naturo app find`
@@ -726,6 +728,7 @@ Focus an application window (bring to foreground).
 | `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -734,8 +737,8 @@ Focus an application window (bring to foreground).
 naturo app focus feishu
 naturo app focus --app feishu
 naturo app focus feishu --window "Chat"
-naturo app focus --app feishu
 naturo app focus --hwnd 12345
+naturo app focus --pid 1234
 ```
 
 ### `naturo app inspect`
@@ -815,15 +818,19 @@ Maximize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app maximize feishu
+naturo app maximize --app feishu
 naturo app maximize --hwnd 12345
+naturo app maximize --pid 1234
 ```
 
 ### `naturo app minimize`
@@ -840,15 +847,19 @@ Minimize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app minimize feishu
+naturo app minimize --app feishu
 naturo app minimize --hwnd 12345
+naturo app minimize --pid 1234
 ```
 
 ### `naturo app move`
@@ -865,8 +876,10 @@ Move and/or resize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--x` | integer | Target X position |
 | `--y` | integer | Target Y position |
 | `--width` | integer | New width in pixels (optional) |
@@ -878,7 +891,7 @@ Move and/or resize an application window.
 ```bash
 naturo app move feishu --x 100 --y 100
 naturo app move feishu --x 100 --y 100 --width 800 --height 600
-naturo app move feishu --width 800 --height 600
+naturo app move --pid 1234 --width 800 --height 600
 ```
 
 ### `naturo app quit`
@@ -942,15 +955,19 @@ Restore a minimized or maximized window to normal state.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app restore feishu
+naturo app restore --app feishu
 naturo app restore --hwnd 12345
+naturo app restore --pid 1234
 ```
 
 ### `naturo app windows`
