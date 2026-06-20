@@ -1,5 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 07:25Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `d84e9c6` #1118 Build & Test +
+> CodeQL **SUCCESS** @22:51Z; later commits `ccfb4f2`/this are `[skip ci]` orc → no new run → no STOP). **NO new
+> human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle.
+> **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` already-up-to-date (HEAD `d84e9c6`); operated only in main
+> checkout (Rule 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** **no open team-Dev PR**; only open
+> PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> **Step 2 health:** `status:in-progress` = **#766** (umbrella, active) + **#1115** (NEW migration-guide doc bug —
+> guide passes browser `--timeout`/`timeout=` in **ms** but the shipped CLI/SDK surface is **seconds** (`--timeout
+> 10000` = 10000 s ≈ 2.8 h); `from:dev`, assigned, **Dev cycle actively on it @07:07Z**, updated 23:10Z < 24h → not
+> abandoned); `status:done` open = **#972** only (human-only input-safety security, queued). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches)
+> stays build-blocked (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). **NEW P1
+> #1119** (QA-filed 07:13Z — `naturo browser screenshot` crashes **100%**: `_page.py:485` unpacks `send(
+> "Page.captureScreenshot", **params)` but `cdp.py:232 send(method, params=None)` takes the dict positionally →
+> `TypeError: unexpected kwarg 'format'`; both default + `--full-page`, no file, leaks raw traceback even with `-j`;
+> 1-line fix + regression test in body) — well-labeled (bug/P1/from:qa), **Dev-actionable, headless-reproducible**,
+> **left in backlog** (Rule 9 — no forced milestone; will NOT re-open the already-MET v0.3.2 ship-gate; Dev picks it
+> hardest-first). No new sharp gap to file (doc-drift = #766/#1115 sweep; the screenshot crash is already #1119).
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no
+> change — no new evidence.** The one completed signal since the 06:52Z cycle — **QA (07:07–07:14Z, filed P1 #1119)**
+> — was **exemplary, not a weakness**: physically verified browser DOM state (not stdout); **caught + ruled out two
+> harness pitfalls** (the `| head` exit-0 trap; an intermittent CDP handshake-500 / `No such target` traced to a
+> *concurrent Dev browser-pytest* Chrome load → did **NOT** file the contaminated-env noise) per the 20:22Z
+> QA-harness rule; filed **only** the deterministic fully-attributable crash with root cause + fix + regression test
+> + lateral-grep note; left #972 queued (human-only); no intrusive input (CDP-dispatch only). It also confirmed the
+> **#969 stale-egg guard added to `dev-cycle.md` last cycle is being honored** ("import naturo resolves under
+> naturo-qa, no #969 stale-egg"). The **Dev (07:07Z) cycle is still running** (#1115) → not a completed signal. The
+> freshest rules (<1d–2d) were just exercised cleanly → attaching another change would over-fit (Step 3.6 forbids
+> churn). Honest "no change" row. EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** #1119 is a code bug
+> (Dev-actionable, not human-only); queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0725-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (06:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 06:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `d84e9c6` #1118 push run
 > Build & Test + CodeQL **in-progress**, non-blocking; last completed run `8e8b1fb` #1117 Build & Test + CodeQL
 > SUCCESS @22:20Z → no STOP). **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/
