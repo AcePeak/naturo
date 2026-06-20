@@ -342,19 +342,45 @@ class BrowserElement:
     def _get_click_point(
         self, offset_x: int = 0, offset_y: int = 0
     ) -> Optional[tuple[float, float]]:
-        """Get the click coordinates for this element.
+        """Get the click coordinates for this element, in top-document space.
 
-        Scrolls into view and uses getBoundingClientRect to determine position.
+        Scrolls the element into view, then resolves its position with CDP
+        ``DOM.getContentQuads``, whose vertices are in **top-level viewport** CSS
+        pixels at any iframe depth — the same coordinate space
+        ``Input.dispatchMouseEvent`` uses. This is what lets a click/hover land
+        on an element nested inside one or more iframes; a JS
+        ``getBoundingClientRect`` is frame-relative and would point at the wrong
+        spot in the top document (#1080).
+
+        Falls back to ``getBoundingClientRect`` only when the node exposes no
+        content quad (e.g. an unrendered or zero-area box) — that path is
+        already correct for top-level elements and is the best available
+        estimate when no layout box exists.
 
         Args:
             offset_x: X offset from top-left (0 = center).
             offset_y: Y offset from top-left (0 = center).
 
         Returns:
-            (x, y) screen coordinates, or None if box model unavailable.
+            (x, y) top-document coordinates, or None if no box model is
+            available at all.
         """
         self.scroll_into_view()
 
+        quad = self._content_quad()
+        if quad is not None:
+            xs = quad[0::2]
+            ys = quad[1::2]
+            if offset_x == 0 and offset_y == 0:
+                return (sum(xs) / 4.0, sum(ys) / 4.0)
+            # Offsets are measured from the element's top-left corner, which is
+            # the first quad vertex (top-left, top-right, bottom-right,
+            # bottom-left order per the CDP spec).
+            return (xs[0] + offset_x, ys[0] + offset_y)
+
+        # Fallback: no content quad (unrendered/zero-area). getBoundingClientRect
+        # is frame-relative, but for a top-level element it coincides with the
+        # dispatch coordinate space, and it is the only estimate left here.
         box = self._call_function(
             "function() {"
             "  var r = this.getBoundingClientRect();"
@@ -372,6 +398,32 @@ class BrowserElement:
             y = box["y"] + offset_y
 
         return (x, y)
+
+    def _content_quad(self) -> Optional[List[float]]:
+        """Return this element's first content quad in top-document CSS pixels.
+
+        Uses CDP ``DOM.getContentQuads``, which reports quad vertices relative
+        to the top-level viewport regardless of how deeply the node is nested in
+        iframes — so the result is directly usable as
+        ``Input.dispatchMouseEvent`` coordinates.
+
+        Returns:
+            The first quad as ``[x1, y1, x2, y2, x3, y3, x4, y4]``, or ``None``
+            when the node has no layout box (CDP raises) or returns no quads.
+        """
+        try:
+            result = self._page._cdp.send(
+                "DOM.getContentQuads", {"objectId": self._object_id}
+            )
+        except Exception as exc:
+            # No layout box (display:none, detached, zero-area) — CDP raises
+            # "could not compute content quads". Caller falls back gracefully.
+            logger.debug("getContentQuads failed for %r: %s", self, exc)
+            return None
+        quads = result.get("quads") or []
+        if not quads:
+            return None
+        return [float(v) for v in quads[0]]
 
     def __repr__(self) -> str:
         desc = self._description or self._object_id[:20]

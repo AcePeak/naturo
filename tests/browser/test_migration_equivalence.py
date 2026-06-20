@@ -134,3 +134,45 @@ def test_form_interaction_equivalence(
     status = browser_page.find("#form-status")
     assert status.text == "Submitted: alice"
     assert status.attr("data-submitted") == "true"
+
+
+def test_iframe_switching_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Selenium ``switch_to.frame`` captcha/login flow via naturo.
+
+    Mirrors the migration guide's "iframe Handling" section: the *Before* code
+    chains ``driver.switch_to.frame(...)`` to reach an element nested two iframe
+    levels deep, then fills and submits a form inside it. The *After* surface is
+    the scoped :meth:`BrowserPage.frame` / :meth:`BrowserFrame.frame` objects.
+
+    Driven against ``iframe-nested.html`` (top -> ``frame-level1`` ->
+    ``frame-level2`` -> ``#deep-form``), this proves both that frame scoping
+    resolves the deeply-nested element *and* — per naturo's never-lie contract
+    (SOUL.md) — that a frame-scoped ``click`` actually lands on its target and
+    fires the form submit, rather than silently missing because the element's
+    frame-relative coordinates were dispatched in the top document (#1080).
+    """
+    browser_page.navigate(f"{fixtures_server}/iframe-nested.html")
+
+    # Before: driver.switch_to.frame(level1); driver.switch_to.frame(level2)
+    #  ->  After: page.frame(name=...).frame(name=...)
+    level2 = browser_page.frame(name="frame-level1").frame(name="frame-level2")
+
+    # The nested frame's own content is reachable through the scoped object.
+    assert level2.find("#level2-heading").text == "Level 2 frame"
+
+    # Before: ele.input(...)  ->  After: frame.find(...).type(...)
+    level2.find("#deep-input").type("nested-ok", clear_first=True)
+    assert level2.find("#deep-input").value == "nested-ok"
+
+    # Before: ele.click() inside the switched frame
+    #  ->  After: frame.find(...).click(). This is the #1080 regression guard:
+    # the click point must be resolved in top-document coordinates so the event
+    # lands inside the (doubly-nested) iframe instead of the top-level page.
+    level2.find("#deep-submit").click()
+
+    # never-lie: the in-frame submit handler must have actually run.
+    deep_status = level2.find("#deep-status")
+    assert deep_status.text == "Submitted: nested-ok"
+    assert deep_status.attr("data-submitted") == "true"

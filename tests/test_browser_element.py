@@ -116,10 +116,11 @@ class TestBrowserElementClick:
 
     def test_click_dispatches_mouse_events(self):
         el, page, cdp = _make_element()
-        # First call: scrollIntoView, second: getBoundingClientRect
+        # scrollIntoView, then DOM.getContentQuads (top-document coords, #1080).
+        # Quad vertices: TL(100,200) TR(150,200) BR(150,230) BL(100,230).
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
-            {"result": {"value": {"x": 100, "y": 200, "width": 50, "height": 30}}},
+            {"quads": [[100, 200, 150, 200, 150, 230, 100, 230]]},
             {},  # mousePressed
             {},  # mouseReleased
         ]
@@ -136,7 +137,7 @@ class TestBrowserElementClick:
         assert mouse_calls[0][0][1]["type"] == "mousePressed"
         assert mouse_calls[1][0][1]["type"] == "mouseReleased"
 
-        # Click should be at center: 100 + 25, 200 + 15
+        # Click should be at the quad centroid: (100+150)/2, (200+230)/2
         assert mouse_calls[0][0][1]["x"] == 125.0
         assert mouse_calls[0][0][1]["y"] == 215.0
 
@@ -144,7 +145,7 @@ class TestBrowserElementClick:
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
-            {"result": {"value": {"x": 100, "y": 200, "width": 50, "height": 30}}},
+            {"quads": [[100, 200, 150, 200, 150, 230, 100, 230]]},
             {},  # mousePressed
             {},  # mouseReleased
         ]
@@ -155,14 +156,49 @@ class TestBrowserElementClick:
             c for c in cdp.send.call_args_list
             if c[0][0] == "Input.dispatchMouseEvent"
         ]
-        # With offset: x + offset_x, y + offset_y
+        # Offsets are from the top-left quad vertex: 100 + 10, 200 + 5
         assert mouse_calls[0][0][1]["x"] == 110
         assert mouse_calls[0][0][1]["y"] == 205
+
+    def test_click_falls_back_to_bounding_rect_without_quad(self):
+        el, page, cdp = _make_element()
+        # No content quad (unrendered/zero-area) -> getBoundingClientRect path.
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # getContentQuads: no quad
+            {"result": {"value": {"x": 100, "y": 200, "width": 50, "height": 30}}},
+            {},  # mousePressed
+            {},  # mouseReleased
+        ]
+
+        el.click()
+
+        mouse_calls = [
+            c for c in cdp.send.call_args_list
+            if c[0][0] == "Input.dispatchMouseEvent"
+        ]
+        assert mouse_calls[0][0][1]["x"] == 125.0  # 100 + 25
+        assert mouse_calls[0][0][1]["y"] == 215.0  # 200 + 15
 
     def test_click_raises_when_no_position(self):
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # getContentQuads: no quad
+            {"result": {"value": None}},  # getBoundingClientRect returns None
+        ]
+
+        with pytest.raises(RuntimeError, match="Cannot determine element position"):
+            el.click()
+
+    def test_click_raises_when_quad_computation_errors(self):
+        el, page, cdp = _make_element()
+        # getContentQuads can raise (CDP "could not compute content quads"); the
+        # fallback then also finds no box -> click must raise, never silently
+        # no-op (never-lie, #1080).
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            RuntimeError("could not compute content quads"),
             {"result": {"value": None}},  # getBoundingClientRect returns None
         ]
 
@@ -180,9 +216,10 @@ class TestBrowserElementHover:
 
     def test_hover_dispatches_mouse_moved(self):
         el, page, cdp = _make_element()
+        # Quad TL(50,60) TR(70,60) BR(70,70) BL(50,70) -> centroid (60,65).
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
-            {"result": {"value": {"x": 50, "y": 60, "width": 20, "height": 10}}},
+            {"quads": [[50, 60, 70, 60, 70, 70, 50, 70]]},
             {},  # mouseMoved
         ]
 
@@ -195,13 +232,14 @@ class TestBrowserElementHover:
         ]
         assert len(mouse_calls) == 1
         assert mouse_calls[0][0][1]["type"] == "mouseMoved"
-        assert mouse_calls[0][0][1]["x"] == 60.0  # 50 + 10
-        assert mouse_calls[0][0][1]["y"] == 65.0  # 60 + 5
+        assert mouse_calls[0][0][1]["x"] == 60.0  # quad centroid x
+        assert mouse_calls[0][0][1]["y"] == 65.0  # quad centroid y
 
     def test_hover_raises_when_no_position(self):
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # getContentQuads: no quad
             {"result": {"value": None}},  # no bounding rect
         ]
 
@@ -357,30 +395,44 @@ class TestBrowserElementFind:
 
 
 class TestGetClickPoint:
-    """Bounding rect and coordinate calculation tests."""
+    """Content-quad and coordinate calculation tests (#1080)."""
 
-    def test_center_point(self):
+    def test_center_point_from_quad(self):
+        el, page, cdp = _make_element()
+        # Quad TL(10,20) TR(110,20) BR(110,70) BL(10,70) -> centroid (60,45).
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": [[10, 20, 110, 20, 110, 70, 10, 70]]},
+        ]
+        point = el._get_click_point()
+        assert point == (60.0, 45.0)
+
+    def test_offset_point_from_quad(self):
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
+            {"quads": [[10, 20, 110, 20, 110, 70, 10, 70]]},
+        ]
+        # Offset measured from the top-left quad vertex (10,20).
+        point = el._get_click_point(offset_x=5, offset_y=10)
+        assert point == (15, 30)
+
+    def test_falls_back_to_bounding_rect_without_quad(self):
+        el, page, cdp = _make_element()
+        # getContentQuads returns no quad -> getBoundingClientRect fallback.
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # no quad
             {"result": {"value": {"x": 10, "y": 20, "width": 100, "height": 50}}},
         ]
         point = el._get_click_point()
         assert point == (60.0, 45.0)  # 10+50, 20+25
 
-    def test_offset_point(self):
-        el, page, cdp = _make_element()
-        cdp.send.side_effect = [
-            {"result": {"value": None}},  # scrollIntoView
-            {"result": {"value": {"x": 10, "y": 20, "width": 100, "height": 50}}},
-        ]
-        point = el._get_click_point(offset_x=5, offset_y=10)
-        assert point == (15, 30)  # 10+5, 20+10
-
     def test_returns_none_when_no_box(self):
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # no quad
             {"result": {"value": None}},  # no rect
         ]
         assert el._get_click_point() is None
@@ -389,6 +441,7 @@ class TestGetClickPoint:
         el, page, cdp = _make_element()
         cdp.send.side_effect = [
             {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # no quad
             {"result": {"value": "not-a-dict"}},
         ]
         assert el._get_click_point() is None

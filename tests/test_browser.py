@@ -247,12 +247,12 @@ class TestBrowserElement:
 
     def test_click_dispatches_mouse_events(self):
         el = self._make_element()
-        # Mock getBoundingClientRect
+        # Mock DOM.getContentQuads (top-document coords, #1080)
         el._page._cdp.send.side_effect = [
             # scroll_into_view (callFunctionOn)
             {"result": {"value": None}},
-            # getBoundingClientRect (callFunctionOn)
-            {"result": {"value": {"x": 100, "y": 200, "width": 80, "height": 30}}},
+            # getContentQuads -> one quad: TL,TR,BR,BL
+            {"quads": [[100, 200, 180, 200, 180, 230, 100, 230]]},
             # mousePressed
             {},
             # mouseReleased
@@ -260,7 +260,7 @@ class TestBrowserElement:
         ]
         el.click()
         calls = el._page._cdp.send.call_args_list
-        # Should have 4 calls: scrollIntoView, getBoundingClientRect, mousePressed, mouseReleased
+        # Should have 4 calls: scrollIntoView, getContentQuads, mousePressed, mouseReleased
         assert len(calls) == 4
         # Params are passed as dict in second positional arg
         assert calls[2][0][1]["type"] == "mousePressed"
