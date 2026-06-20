@@ -417,6 +417,62 @@ def test_image_captcha_click_offset_equivalence(
     assert browser_page.find("#captcha-status").text == "Captcha passed."
 
 
+def test_hover_reveal_menu_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage ``ele.hover().click()`` reveal-then-click via naturo.
+
+    Mirrors the migration guide's "Hover" / "Dropdown" sections: the *Before*
+    DrissionPage code calls ``ele.hover().click()`` on a control whose menu items
+    only exist once the trigger is hovered (the upload-video / playlist-select
+    pattern). The *After* surface is :meth:`BrowserElement.hover` followed by
+    :meth:`BrowserElement.click`.
+
+    Driven against ``hover-menu.html`` -- a CSS ``:hover`` dropdown that is
+    ``display:none`` until ``#menu-trigger`` is hovered -- naturo must dispatch a
+    real mouse-move that activates the CSS hover state, reveal the menu, and then
+    click an item inside it. Per naturo's never-lie contract (SOUL.md) the reveal
+    is proven *both ways*: while the menu is hidden a click cannot reach an item
+    (no selection happens), and only after the hover dispatch makes the dropdown
+    visible does the click land and fire the selection handler. The negative leg
+    is essential -- it proves the ``hover()`` is genuinely required, not that the
+    item was clickable all along.
+    """
+    browser_page.navigate(f"{fixtures_server}/hover-menu.html")
+
+    # Before hover: the dropdown is display:none and nothing is selected.
+    assert (
+        browser_page.evaluate(
+            "getComputedStyle(document.getElementById('menu-dropdown')).display"
+        )
+        == "none"
+    )
+    assert browser_page.find("#menu-status").attr("data-selected") == ""
+
+    # never-lie (negative leg): a click while the menu is hidden cannot reach the
+    # item -- the hidden item has no layout box, so the click lands nowhere and
+    # the selection handler never fires. This proves the hover is required.
+    browser_page.find("#menu-item-settings").click()
+    assert browser_page.find("#menu-status").attr("data-selected") == ""
+
+    # Before: ele.hover()  ->  After: find("#menu-trigger").hover() dispatches a
+    # real CDP mouseMoved that activates the CSS :hover and reveals the dropdown.
+    browser_page.find("#menu-trigger").hover()
+    browser_page.wait_for_function(
+        "getComputedStyle(document.getElementById('menu-dropdown')).display === 'block'",
+        timeout=3.0,
+    )
+
+    # Before: .click() on the now-visible item  ->  After: find(item).click().
+    browser_page.find("#menu-item-settings").click()
+
+    # never-lie: the click landed on the revealed item and the selection handler
+    # actually ran -- the same authoritative page state the Before code reads back.
+    status = browser_page.find("#menu-status")
+    assert status.attr("data-selected") == "menu-item-settings"
+    assert status.text == "Selected: Settings"
+
+
 def _wait_for_tab(page: BrowserPage, url_substring: str, timeout: float = 8.0) -> str:
     """Poll ``page.tabs()`` until a tab whose URL contains *url_substring* appears.
 
