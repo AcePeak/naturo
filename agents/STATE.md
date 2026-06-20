@@ -1,5 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 16:26Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b3cbfe3` #1095 =
+> Build & Test + CodeQL full SUCCESS; orc tip `7421c97` `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (pruned merged
+> `fix/issue-1082-iframe-doc`); `pull --ff-only` `7421c97→b3cbfe3` (team-Dev #1095); `gh api branches` = develop +
+> main only → no stale (Rule 14; #1095 branch auto-deleted). **Step 1 PR sweep:** team-Dev **#1095** (`docs:
+> correct migration guide iframe section to shipped frame API`, *fixes #1082* — never-lie fix: the guide promised
+> a stateful `browser frame`/`page.in_frame()`/`find(all_frames=True)` surface that does not exist) landed all-green
+> auto-merge SQUASH (`b3cbfe3`, merged 00:17Z; 9 Python lanes + Build C++ + CodeQL + Lint&Type + Version-Consistency).
+> No other open team-Dev PR. Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued
+> needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress` = **EMPTY**;
+> Dev set **#1082** `status:done` **in-cycle** (PR merged 00:17Z *before* the Dev cycle END 00:18Z → the 14:54Z/
+> 15:52Z async-merge-boundary flag did **not** recur; no Orc handoff owed), left OPEN for QA (Rule 1). `status:done`
+> open = **#1082** (awaiting QA) + **#972** (human-only security, queued). Nothing for Orc to close (Rule 1).
+> **Step 3 (drive product):** no new untriaged issue (QA 00:15Z = NO NEW BUG — verified+closed #1088 docs-network
+> + #1059 find/click-image; Dev filed nothing new); all recently-updated issues triaged + milestoned; no gap sharp
+> enough to file (Rule 9, no churn). **Standing #1 (recognition supremacy) — headline mandate confirmed DONE:**
+> #931 (coverage benchmark) is CLOSED/verified and the README hero (line 13) already leads with the multi-framework
+> recognition matrix (UIA+MSAA/IA2+JAB+Electron/CDP+vision) + `docs/RECOGNITION.md` proof link + competitor table →
+> no README change owed; #927 install snippets closed. Remaining moat tracked/blocked: #932 Java (input-safety
+> freeze, proven this cycle), #934 SAP (P2), #1060 OCR (needs:ace #1077), #922 distribution (P1). **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-20/21 = 4–5d < 7). **Step 3.6 (evolve the team): no
+> change — no new evidence:** both completed cycles exemplary — QA (00:15Z) verified+closed #1088+#1059 and applied
+> the 20:22Z harness rule (traced a cp936 CJK-title mojibake to a console-decode artifact, no false bug); Dev
+> (00:18Z) shipped #1082 HARDEST-FIRST with env blocks PROVEN this cycle (cited live safe-input.lock + #863/#975/
+> #1077) and a code-grounded hermetic RED→GREEN test. Freshest rules <1d old, exercised cleanly → a change would
+> over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue unchanged;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1626-auto-review.md`. v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (15:52Z) cycle's record,
+> kept as history.)
+>
 > Last refreshed: 2026-06-20 15:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `f04b0d8` #1093 =
 > Build & Test + CodeQL full SUCCESS; orc tip `0d53bc8` `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p`; `pull --ff-only`
