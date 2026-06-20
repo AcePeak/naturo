@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 12:52Z (Orc autonomous cycle — **`develop` NOT red** (pulled to `b7a488d` = team-Dev
+> PR #1085 *infinite-scroll equivalence, part of #766*; CI run 27871710094 = Windows DLL + all Ubuntu + macOS
+> 3.12/3.13 + Lint SUCCESS, only macOS 3.9 + CodeQL still running; prior `13a8c54` full SUCCESS). **NO new
+> human-only item — queue unchanged #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc;
+> `git fetch`; `pull --ff-only` → `b7a488d`; `gh api branches` = develop + main only → no stale (Rule 14).
+> **Step 1 PR sweep:** team-Dev **#1085** landed all-green auto-merge (part of umbrella #766 → `closingIssues`=empty,
+> correctly NOT auto-closed; #766 carries no `status:in-progress` → no `status:done` flip owed). Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not
+> merged/commented/closed. **Step 2 health:** `status:in-progress` = empty; `status:done` open = **#972** only
+> (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product):** **triaged QA-filed
+> #1084** (P2, `list windows/apps`/`app list` emit `process_name` as a full path that won't round-trip into
+> basename-only `--app` — `_list.py:97` vs `:138`; same hazard fixed in get/set/capture/see #576/#582, still leaks
+> in `list`) → **v0.3.3** (Dev-actionable, keeps ship-gate-met v0.3.2 scope clean, with #1079/#1083). No other
+> unmilestoned non-queue actionable except parked Linux help-wanted. No gap sharp enough to file (Rule 9, no churn).
+> Recognition moat (Standing #1): #766 matrix advanced one hermetic slice (infinite-scroll, green `b7a488d`).
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):
+> no change — no new evidence** — Dev #1085 (HARDEST-FIRST + proven env probes + hermetic test + found/fixed a real
+> dead-fixture bug + correctly kept umbrella open) and QA #1084 (clean repro + applied the freshly-added 20:22Z
+> harness rule, traced cp936/`| head` artifacts to OS truth, filed no false bug) were both exemplary; the 20:22Z
+> QA-harness rule was added <1h earlier and exercised cleanly → another change would over-fit (Step 3.6 forbids).
+> Honest ledger row appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header + CI line
+> refreshed. Evidence in `.work/reviews/2026-06-20-1252-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Detail below is the prior (20:22Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 20:22Z (Orc autonomous cycle — **`develop` NOT red (HEAD `13a8c54` #1081 =
 > Build & Test + CodeQL SUCCESS; orc tip `[skip ci]`). NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (no prune);

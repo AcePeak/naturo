@@ -4,24 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 20:22Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+_Last refreshed: 2026-06-20 12:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
 #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-19:52Z cycle: **QA (20:20Z)** ran an exploratory cycle (no QA-verifiable `status:done` work — only #972, queued)
-and exercised exemplary integrity — it traced a scary-looking cp936 console mojibake / lone-surrogate output to
-its **own measurement harness** (correct UTF-8 from naturo, wrong downstream decode) and a `| head` exit-code
-artifact, and correctly filed **no** false bug. **Step 1 PR sweep:** the only open PR is community **#1055**
+20:22Z cycle: **Dev (20:50Z)** landed team PR **#1085** (`infinite-scroll` Before/After equivalence, **part of
+#766**) all-green auto-merge → `b7a488d` — HARDEST-FIRST with proven env probes, a hermetic CDP test, and a
+real dead-fixture bug found + fixed; correctly kept umbrella #766 open. **QA (20:50Z)** filed one genuine
+round-trip bug (**#1084**, P2) and, applying the freshly-added harness rule, traced a cp936 mojibake / `| head`
+exit-code artifact to OS ground truth → no false bug. **Step 1 PR sweep:** only open PR = community **#1055**
 (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
 **not** comment/take-over/close it (community-PR handling is yours); no team-Dev PR open. **Step 2 health:**
 `status:in-progress` = empty; `status:done` open = **#972** only (human-only security, queued). Nothing for Orc
-to close (Rule 1). **Step 3:** backlog healthy + fully triaged (v0.3.2 has 17 open Dev-actionable items incl.
-recognition moat #932/#920); no unmilestoned *non-queue* actionable except parked Linux help-wanted
-(#88/#87/#84/#77/#75/#74/#68/#66) → no new issue (Rule 9, no churn). **Step 3.6 (evolve the team): CHANGE** —
-added `qa-cycle.md` Step 2 item 4 (**rule out your own measurement harness before trusting a surprising
-defect**), backed by a recurring class (sibling-worktree stale-code false FAIL #963/#969; tonight's cp936 +
-`| head` near-misses). EVOLUTION.md row appended. **Live needs:ace queue
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `13a8c54` (#1081) **Build & Test + CodeQL
-SUCCESS** (orc tip is `[skip ci]`) → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
-your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+to close (Rule 1). **Step 3:** triaged QA-filed **#1084** → v0.3.3 (Dev-actionable, keeps v0.3.2 scope clean);
+backlog healthy + fully triaged (v0.3.2 has 17 open Dev-actionable items incl. recognition moat #932/#920); no
+other unmilestoned *non-queue* actionable except parked Linux help-wanted (#88/#87/#84/#77/#75/#74/#68/#66) → no
+new issue (Rule 9, no churn). **Step 3.6 (evolve the team): no change — no new evidence** (Dev #1085 + QA #1084
+both exemplary; the 20:22Z harness rule was exercised cleanly <1h after being added → another change would
+over-fit). EVOLUTION.md row appended. **Live needs:ace queue
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `b7a488d` (#1085) Windows DLL + all Ubuntu
++ macOS 3.12/3.13 + Lint **SUCCESS** (macOS 3.9 + CodeQL still running; prior `13a8c54` full SUCCESS) →
+**develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness
+step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
