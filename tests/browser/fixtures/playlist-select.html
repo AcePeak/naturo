@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: playlist-select</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    .playlist-select { padding: 12px; cursor: pointer; background: #eee; }
+    /* The dropdown list is hidden until the select control is opened, mirroring
+       the YouTube-publishing "open dropdown, then pick playlists" flow. */
+    #playlist-list { display: none; }
+    #playlist-list.open { display: block; }
+    /* Tall items so the lower ones start well below any default headless
+       viewport, making the per-item scroll-into-view genuinely necessary
+       (not a no-op) to reach and click them. */
+    .playlist-item {
+      height: 400px;
+      box-sizing: border-box;
+      padding: 12px;
+      border-bottom: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .playlist-item[data-selected="true"] { background: #cfe8cf; }
+  </style>
+</head>
+<body>
+  <h1 id="main-heading">Playlist Selection</h1>
+
+  <!-- Exercises the migration guide's "Dropdown / Playlist Selection" section:
+       open a dropdown, then iterate the items and click only those whose text
+       matches a target set (multi-select-by-text), then confirm with Done. The
+       selectors match the guide verbatim (div.playlist-select / div.playlist-item
+       / button.done). -->
+  <div class="playlist-select" id="playlist-select">Choose playlists &#9662;</div>
+  <div id="playlist-list">
+    <div class="playlist-item" data-selected="false">My Playlist 1</div>
+    <div class="playlist-item" data-selected="false">My Playlist 2</div>
+    <div class="playlist-item" data-selected="false">My Playlist 3</div>
+    <div class="playlist-item" data-selected="false">Travel Vlogs</div>
+    <div class="playlist-item" data-selected="false">Cooking Channel</div>
+  </div>
+
+  <button class="done" id="done">Done</button>
+
+  <!-- The authoritative record of what the Done click finalized: a
+       comma-separated, document-order list of the selected playlist names.
+       The test reads this back rather than trusting the click sequence. -->
+  <p id="result" data-result="">Nothing confirmed.</p>
+
+  <script>
+    document.getElementById("playlist-select").addEventListener("click", function () {
+      document.getElementById("playlist-list").classList.add("open");
+    });
+
+    document.getElementById("playlist-list").addEventListener("click", function (event) {
+      var item = event.target.closest(".playlist-item");
+      if (!item) { return; }
+      // Toggle selection so a multi-select loop accumulates each matched item.
+      var selected = item.getAttribute("data-selected") === "true";
+      item.setAttribute("data-selected", selected ? "false" : "true");
+    });
+
+    document.getElementById("done").addEventListener("click", function () {
+      var names = Array.from(document.querySelectorAll('.playlist-item[data-selected="true"]'))
+        .map(function (el) { return el.textContent.trim(); });
+      var result = document.getElementById("result");
+      result.setAttribute("data-result", names.join(","));
+      result.textContent = names.length
+        ? "Confirmed: " + names.join(", ")
+        : "Nothing confirmed.";
+    });
+  </script>
+</body>
+</html>

@@ -114,7 +114,7 @@ which engine found which element — just use `naturo click e42`.
 | `ele.text` | `naturo browser text <selector>` | `element.text` |
 | `ele.attr("href")` | `naturo browser attr <selector> href` | `element.attr("href")` |
 | `ele.hover().click()` | `naturo browser hover <sel> && naturo browser click <sel>` | `element.hover(); element.click()` |
-| `ele.scroll.to_see()` | `naturo browser scroll --to-element <sel>` | `page.scroll_to_element(sel)` |
+| `ele.scroll.to_see()` | `naturo browser scroll --to-element <sel>` | `page.scroll_to_element(sel)` or `element.scroll_into_view()` |
 | `page.scroll.down(1000)` | `naturo browser scroll --by 1000` | `page.scroll_by(1000)` |
 | `page.wait.doc_loaded()` | `naturo browser navigate <url> --wait-until load` | `page.wait_for_load()` |
 | `page.get_screenshot(path)` | `naturo browser screenshot --path file.png` | `page.screenshot("file.png")` |
@@ -1682,7 +1682,7 @@ page.find("xpath://div[@class='playlist-select']").click()
 
 target_playlists = ["My Playlist 1", "My Playlist 2"]
 for item in page.find_all("xpath://div[@class='playlist-item']"):
-    page.scroll_to_element(item)
+    item.scroll_into_view()
     if item.text in target_playlists:
         item.click()
 
