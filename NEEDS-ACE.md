@@ -4,23 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 15:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
-unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9), no priority-honesty
-triage needed (zero unmilestoned actionable Dev work). Since the 14:52 cycle: **QA ran a 15:07Z exploratory
-cycle** that verified the **v0.3.2 recognition moat** end-to-end on live Calculator (`see` 56-element tree;
-`find` fuzzy NAME+role; `get --aid`/`--ref` round-trip — the historical eN-ref regression does NOT reproduce;
-consistent error envelopes) → **0 new bugs**, and correctly did **not** file duplicates of the known
-success-envelope gaps (#865 see / #1054 get-set). No Dev land since #1064 — the recognition moat (#932 JAB,
-LIVE) stands, and the next slice **#1059** (`find --image`, `status:in-progress`, fresh, no PR) is in active
-Dev pickup → left untouched (Rule 4). The one open PR is still community **#1055** (already queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE, unchanged) — Orc did
-**not** comment/take-over/close it. **Step 3.6 (evolve the team):** the freshest operating evidence
-(#1058/#1065 `--app` parity) was already addressed by the prior cycle's `dev-cycle.md` cross-command
-parity-test rule; the two QA cycles since behaved well (15:07 exemplary) and Dev #932 landed clean+verified →
-**no new recurring operating weakness** → logged "no change — no new evidence" in `agents/EVOLUTION.md` (no
-churn). **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD
-`866193e` (#1064) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY
-MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 16:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9). Since the 15:22 cycle:
+**the next recognition-moat slice LANDED** — team-Dev **PR #1066** (`feat: naturo find --image template
+matching`) merged clean as **`19c6852`** (pure Pillow+stdlib coarse-to-fine NCC locator, stable `eN` refs,
+JSON score/coords). #1059 is **multi-part** (the `click --image` input shortcut is deferred while input is
+safety-frozen, #863/#975) so it stays OPEN — Dev self-cleared its `status:in-progress` → pickable, no Orc
+handoff needed. QA immediately pressure-tested the new feature and filed **#1067** (bad/non-image template
+misreported as `CAPTURE_FAILED` instead of a template-specific error) — clean Dev-actionable error-honesty
+bug → **Orc milestoned it v0.3.2** (same lane as the feature) + posted the exact fix site; **not human-only**.
+The other moat follow-up **#932** (JAB numbers/click-type) was freshly re-picked by Dev (07:40Z, no PR) → left
+untouched (Rule 4). The one open PR is still community **#1055** (already queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE, unchanged 04:56Z) — Orc did
+**not** comment/take-over/close it. **Step 3.6 (evolve the team):** #1067 + the earlier #1047 are two `find`
+error-CODE mis-attributions (distinct failure sources sharing one `try`/broad `except` → wrong code) that both
+escaped Dev self-review → added a surgical **Error attribution** rule to `dev-cycle.md` self-review + ledger
+row in `agents/EVOLUTION.md`. **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).**
+`develop` CI: HEAD `19c6852` (#1066) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -57,7 +58,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `866193e`/#1064 (HEAD) → **not red.** Team-Dev **PR #1064 landed** (`fix: initialize Java Access Bridge via Windows_run + pumped settle (#932)`) — **the v0.3.2 recognition moat is now LIVE** (JAB recognition working + verified end-to-end against a CI-built DLL; Build C++ Core Windows green). #932 stays OPEN (multi-part: RECOGNITION.md numbers + JAB click/type follow-ups), Dev self-cleared `status:in-progress` → pickable; source branch auto-deleted (Rule 14 clean). One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). New QA bug **#1065** (`app … --app` matches title only, not process name) milestoned **v0.3.4** this cycle (sibling of #1058, #871 umbrella).
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `19c6852`/#1066 (HEAD) → **not red.** Team-Dev **PR #1066 landed** (`feat: naturo find --image template matching (part of #1059)`) — **the recognition-moat `find` engine gained an image-template locator** (pure Pillow+stdlib coarse-to-fine NCC, stable `eN` refs, JSON score/coords). #1059 stays OPEN (multi-part: `click --image` input shortcut deferred while input is safety-frozen, #863/#975), Dev self-cleared `status:in-progress` → pickable; source branch auto-deleted (Rule 14 clean). The earlier JAB moat (#932, `866193e`) remains LIVE; #932 is freshly re-picked by Dev for the numbers/click-type follow-up. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). New QA bug **#1067** (`find --image` bad template → misleading `CAPTURE_FAILED`) milestoned **v0.3.2** this cycle (same lane as the feature, error-honesty sibling of #1047/#980/#977/#876/#1043).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

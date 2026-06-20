@@ -88,6 +88,13 @@ git checkout -b fix/issue-N-short-desc origin/develop
    *accepted* is not enough if the *semantics* diverge. Pin the parity with a cross-command test. (Evidence:
    the #871 harmonization aligned the accepted flags but left `--app` = process-name in `see`/`capture`/`list
    windows` yet title-only in `app focus/move/…` → QA filed #1058 then #1065 in back-to-back cycles.)
+   **Error attribution:** when a code path has more than one distinct failure source (e.g. load a *template
+   file* AND *capture the screen*), give each its **own** `try`/`except` so the error CODE + message names the
+   real culprit — never let one operation's failure inherit a sibling's code via a shared `try` or a broad
+   catch-all `except`. Add a test that drives each failure source to its own code. (Evidence: `find` shipped
+   twice with mis-attributed codes that QA caught after merge — #1047 missing window/app → `UNKNOWN_ERROR`
+   from a broad `except`; #1067 bad template file → `CAPTURE_FAILED` because `Image.open(template)` sat in the
+   capture `try`.)
 5. Update `README.md` / docs if behavior or CLI changed.
 
 ## Step 4 — Commit, PR, auto-merge

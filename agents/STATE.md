@@ -1,6 +1,58 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 15:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 16:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged #1057/#975/#972/#969/#935/#915/#914/#897). The next recognition-moat slice LANDED — team-Dev
+> PR #1066 (`feat: naturo find --image template matching`) merged clean as `19c6852`. develop NOT red,
+> nothing closed by Orc (Rule 1), no new issue (Rule 9), one priority-honesty triage (#1067 → v0.3.2), one
+> Step 3.6 team-evolution change shipped (error-attribution self-review rule).**
+> **Step 0:** `git config` Orc identity; `git fetch origin -p` pruned `origin/fix/issue-1059-find-image`
+> (auto-deleted at #1066 merge); `git checkout develop`; `git pull --ff-only` fast-forwarded `cc28596 → 19c6852`
+> (pulled `naturo/image_match.py` + `tests/test_image_match_1059.py` +306 + `pyproject.toml`); authoritative
+> `gh api .../branches` = **develop + main only** → Rule 14 clean. **Step 1 PR sweep:** **team-Dev PR #1066
+> landed** (`feat: add naturo find --image template matching (part of #1059)`, merged 07:32:47Z = HEAD `19c6852`):
+> a pure Pillow+stdlib **coarse-to-fine normalized-cross-correlation** image-template locator on the unified
+> `find` engine (downsample factor capped at 4 to bound phase error, NMS dedup, full-res refine + exact re-score
+> vs `--threshold`, `--all` multi-match, stable `eN` refs so `click eN` works, JSON `x/y/center/score`); Dev
+> verified end-to-end on a real 1920×1080 desktop (5 self-crops all located at exact coords score 1.0; uniform
+> region → `ValueError`; absent template → 0, no false positives) + cross-platform unit/CLI tests (no DLL).
+> `git merge-base --is-ancestor 19c6852 origin/develop` = YES → Rule 1 clean; source branch auto-deleted → Rule
+> 14 clean. **#1059 is multi-part → stays OPEN** (the `click --image` input shortcut is deferred while input is
+> safety-frozen this headless session, #863/#975); Dev self-cleared `status:in-progress` (issue now label-less +
+> pickable, updated 07:34Z) → **no Orc handoff needed** (multi-part, not a fully-completing PR). **One open PR —
+> community #1055** (`fix: use consistent success envelope in set commands`, @muhamedfazalps, base `main`/head
+> `main`, MERGEABLE/UNSTABLE, last updated 04:56Z = unchanged) — **already queued needs:ace #1057** (targets
+> main, file absent on develop, whole-file rewrite, promo link); community-PR handling is human-only → Orc did
+> **not** merge/comment/take-over/close. **Step 2 health:** `status:in-progress` = **#932 only** (JAB
+> numbers/click-type follow-up, the other moat slice) — freshly re-picked by Dev 07:40:47Z (~after the #1066
+> merge), no PR yet → fresh in-flight, **NOT** the >24h abandonment case → left untouched (Rule 4).
+> `status:done` (open) = **#972 only** (input-content guard, close = human security sign-off, queued).
+> **Nothing to close** (Rule 1 — #1059/#932 in flight no merged-close commit; #972 human-only), no abandoned
+> work. **Step 3 (drive product): priority-honesty triage** — new QA bug **#1067** (`find --image` misreports a
+> bad/non-image template file as `CAPTURE_FAILED`/"Screen capture failed" because `Image.open(template)` sits in
+> the **same** `try` as the screen capture, inheriting its code; P2/bug/from:qa, created 07:41Z) was
+> **unmilestoned**. Clean error-honesty bug on the just-landed feature (precise root cause + fix in
+> `_find.py::_find_image_template` ~L452; emit a template-specific `INVALID_INPUT`; no public-API/CLI change) →
+> **not human-only** → **Orc milestoned #1067 → v0.3.2** (same milestone that ships the feature, error-honesty
+> sibling of #1047/#980/#977/#876/#1043) + a Dev triage comment with the exact fix site + test ask. **No new
+> issue (Rule 9)** — the gap already had a sharp issue (#1067); post-triage `no:milestone` actionable = zero
+> (only needs:ace human-only #1057/#975/#969/#935/#915 + parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/
+> #66). **Standing #1 priority** (recognition supremacy #920/#931/#932/#934): the `find --image` slice **shipped
+> this cycle (#1066)** and #932 JAB follow-up is in active Dev pickup → moat work leading. **Step 3.5
+> competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):**
+> read the recent Dev/QA log + PRs/findings — #1067 + the earlier **#1047** are **two `find` error-CODE
+> mis-attributions** (distinct failure sources folded into one `try`/broad `except` → wrong code → user debugs
+> the wrong subsystem), both escaping Dev self-review and caught by QA after merge; item-4's "helpful errors?"
+> was too vague to catch it → added a surgical **Error attribution** sub-rule to `dev-cycle.md` Step 3
+> self-review (each distinct failure source gets its own `try`/`except` so the code names the real culprit,
+> pinned by a per-source test) + ledger row in `agents/EVOLUTION.md` (cites both issues; builds on, does not
+> undo, the prior parity row). **Step 4 (needs:ace): no new human-only item** — live queue **unchanged
+> #1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-1622-auto-review.md`. `develop` CI: HEAD `19c6852` (#1066) **Build & Test + CodeQL
+> SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 15:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged). develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9), no priority-honesty
 > triage needed (zero unmilestoned actionable Dev work), Step 3.6 = no change/no new evidence (logged).**
 > **Step 0:** `git config` Orc identity; `git fetch origin -p` clean; `git pull --ff-only` = Already up to
