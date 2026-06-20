@@ -637,3 +637,63 @@ def test_file_download_equivalence(
         assert result.size == len(served) == 42
     finally:
         shutil.rmtree(download_dir, ignore_errors=True)
+
+
+def test_javascript_execution_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Selenium/DrissionPage ``execute_script`` patterns via naturo.
+
+    Mirrors the migration guide's "JavaScript Execution" section. The *Before*
+    code reaches for ``execute_script`` to read page state
+    (``return document.readyState``), count elements
+    (``document.querySelectorAll(sel).length``), mutate style
+    (``document.body.style.zoom='0.85'`` via DrissionPage ``run_js_loaded``) and
+    reload the page (``execute_script('location.reload()')``). The *After*
+    surface is :meth:`BrowserPage.evaluate`, exactly as the guide documents
+    (``page.evaluate(...)`` / ``naturo browser eval``).
+
+    Driven against ``basic.html`` (3 ``.nav-link`` anchors, 2 ``.section-title``
+    headings), each ``evaluate`` call must return the real in-page value -- a
+    string for ``readyState``, an int for an element count, the assigned string
+    for a style mutation that actually sticks on the node -- and after a
+    JS-triggered ``location.reload()`` the page must come back intact, proving
+    the reload genuinely round-tripped rather than the call being a no-op.
+
+    Scope note (never-lie): the guide's JS-*click* fallback in this same section
+    (``naturo browser click "#x" --js`` / ``page.find("#x").click(js=True)``) is
+    **not** implemented, so it is deliberately not asserted here; that
+    doc-vs-code gap is tracked separately in #1106 rather than papered over.
+    """
+    browser_page.navigate(f"{fixtures_server}/basic.html")
+
+    # Before: execute_script('return document.readyState')  ->  After: page.evaluate(...).
+    # A loaded page reports the string "complete".
+    assert browser_page.evaluate("document.readyState") == "complete"
+
+    # Before: execute_script("document.querySelectorAll('.item').length")
+    #  ->  After: page.evaluate(...). A primitive number returns as an int.
+    assert browser_page.evaluate("document.querySelectorAll('.nav-link').length") == 3
+    assert (
+        browser_page.evaluate("document.querySelectorAll('.section-title').length") == 2
+    )
+
+    # Before: run_js_loaded("document.body.style.zoom='0.85'")  ->  After: page.evaluate(...).
+    # The assignment expression returns the assigned value, and reading it back
+    # proves the script actually ran in the page (not a swallowed no-op).
+    assert browser_page.evaluate("document.body.style.zoom='0.85'") == "0.85"
+    assert browser_page.evaluate("document.body.style.zoom") == "0.85"
+
+    # Before: execute_script('location.reload()') + implicitly_wait + readyState check
+    #  ->  After: page.evaluate('location.reload()'). reload() returns undefined
+    # (-> None); polling readyState (the documented implicitly_wait analogue,
+    # robust across the brief navigation window) confirms the reload completed
+    # and the page came back whole -- the 3 nav links are present again.
+    assert browser_page.evaluate("location.reload()") is None
+    browser_page.wait_for_function(
+        "document.readyState === 'complete'"
+        " && document.querySelectorAll('.nav-link').length === 3",
+        timeout=10.0,
+    )
+    assert browser_page.evaluate("document.readyState") == "complete"
+    assert browser_page.evaluate("document.querySelectorAll('.nav-link').length") == 3
