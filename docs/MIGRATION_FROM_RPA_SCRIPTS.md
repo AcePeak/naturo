@@ -138,7 +138,7 @@ which engine found which element — just use `naturo click e42`.
 | `driver.get_cookies()` | `naturo browser cookies save --path f.json` | `page.cookies.save(path)` |
 | `driver.add_cookie(c)` | `naturo browser cookies load --path f.json` | `page.cookies.load(path)` |
 | `driver.switch_to.frame(el)` | `naturo browser frame <selector>` | `page.frame(selector)` |
-| `options.set_capability('goog:loggingPrefs', ...)` | `naturo browser listen <pattern>` | `page.listen(pattern)` |
+| `options.set_capability('goog:loggingPrefs', ...)` | `naturo browser requests --pattern <glob>` | `page.network.capture_snapshot()` |
 
 ### pywinauto / uiautomation to naturo
 
@@ -793,42 +793,48 @@ for log in logs:
             data = json.loads(body["body"])
 ```
 
-**After** — first-class network listening:
+**After** — observe request metadata and intercept (block / mock) requests:
 ```bash
-# Listen for API responses matching a pattern
-naturo browser listen "*/api/v1/live/data*" --count 1 --timeout 10000
-
-# Navigate to trigger the request
+# Navigate to trigger the requests
 naturo browser navigate "https://dashboard.example.com/live"
 
-# Capture responses to a file
-naturo browser listen "*/api/v1/*" --output responses.jsonl --count 5
+# List the requests the page made (URL, type, size, duration)
+naturo browser requests
+naturo browser requests --pattern "*/api/v1/*" --json
 
 # Block unwanted requests (ads, analytics)
-naturo browser intercept --block "*.doubleclick.net/*"
-naturo browser intercept --block "*/analytics/*"
+naturo browser intercept "*.doubleclick.net/*" --action abort
+naturo browser intercept "*/analytics/*" --action abort
+
+# Mock a response for matching requests
+naturo browser intercept "*/api/v1/config*" --action fulfill \
+    --body '{"debug": true}' --status 200
 ```
 
 ```python
-# Wait for a specific API response
+# Observe the requests the page has made (metadata via the Performance API)
 page.navigate("https://dashboard.example.com/live")
-response = page.wait_for_response("*/api/v1/live/data*", timeout=10000)
-data = response.json()  # parsed response body
+requests = page.network.capture_snapshot()
+api_requests = page.network.find_requests("*/api/v1/*")
 
-# Collect multiple responses
-responses = page.collect_responses("*/api/v1/*", count=5, timeout=30000)
+# Block unwanted requests
+page.network.abort_pattern("*.doubleclick.net/*")
 
-# Listen with callback
-def on_data(resp):
-    save_to_db(resp.json())
-
-page.listen("*/api/v1/live/data*", callback=on_data)
-page.navigate("https://dashboard.example.com/live")
+# Mock a response for matching requests
+page.network.mock_response("*/api/v1/config*", body='{"debug": true}', status_code=200)
 ```
 
-This replaces 15+ lines of performance log parsing with one line. The old Selenium
-approach requires parsing raw CDP events from a log buffer; naturo handles the CDP
-subscription and response body fetching internally.
+This replaces the boilerplate of enabling performance logging and parsing raw CDP
+events from a log buffer: naturo manages the CDP subscription and exposes request
+metadata and interception directly.
+
+> **Not yet supported:** reading a captured response **body** (the Selenium
+> `Network.getResponseBody` step shown above). `naturo browser requests` reports
+> request *metadata* only (URL, type, size, timing); use `intercept --action
+> fulfill` to supply a *mock* body. Capturing a real response body (await a
+> response and parse its JSON, or stream responses via a callback) is tracked as
+> a future enhancement — see
+> [#1088](https://github.com/AcePeak/naturo/issues/1088).
 
 ---
 
