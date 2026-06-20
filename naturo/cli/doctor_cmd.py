@@ -410,6 +410,35 @@ def _emit_human(checks: list[Check], success: bool) -> None:
         )
 
 
+def _run_doctor(ctx, check_updates: bool, json_output: bool) -> None:
+    """Gather the diagnostics, emit the report, and exit with the status code.
+
+    Shared by the ``doctor`` command and its ``info`` alias so the two stay
+    byte-for-byte identical (same report, same JSON envelope, same exit code).
+
+    Args:
+        ctx: The Click context, used to inherit the group-level ``--json`` flag.
+        check_updates: Whether to query PyPI for a newer release.
+        json_output: Whether the command-level ``-j`` flag was passed.
+    """
+    json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    checks = _gather_checks(check_updates)
+    success = not any(c.status == STATUS_FAIL and c.required for c in checks)
+
+    if json_output:
+        payload = {
+            "success": success,
+            "checks": [c.to_dict() for c in checks],
+            "count": len(checks),
+        }
+        click.echo(json_dumps(payload, indent=2))
+    else:
+        _emit_human(checks, success)
+
+    sys.exit(0 if success else 1)
+
+
 @click.command("doctor")
 @click.option(
     "--check-updates",
@@ -432,19 +461,24 @@ def doctor(ctx, check_updates: bool, json_output: bool) -> None:
       naturo doctor -j
       naturo doctor --check-updates
     """
-    json_output = json_output or (ctx.obj or {}).get("json", False)
+    _run_doctor(ctx, check_updates, json_output)
 
-    checks = _gather_checks(check_updates)
-    success = not any(c.status == STATUS_FAIL and c.required for c in checks)
 
-    if json_output:
-        payload = {
-            "success": success,
-            "checks": [c.to_dict() for c in checks],
-            "count": len(checks),
-        }
-        click.echo(json_dumps(payload, indent=2))
-    else:
-        _emit_human(checks, success)
+@click.command("info", hidden=True)
+@click.option(
+    "--check-updates",
+    is_flag=True,
+    help="Query PyPI to report whether a newer naturo release is available.",
+)
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.pass_context
+def info(ctx, check_updates: bool, json_output: bool) -> None:
+    """Alias for ``naturo doctor`` — run the environment self-check.
 
-    sys.exit(0 if success else 1)
+    A first-time user following the docs or the #898 proposal naturally reaches
+    for ``naturo info``; this alias makes it behave identically to
+    ``naturo doctor`` (same report, same ``-j`` envelope, same ``--check-updates``
+    flag) instead of failing with "no such command". Hidden from the top-level
+    help so ``doctor`` stays the single advertised name.
+    """
+    _run_doctor(ctx, check_updates, json_output)

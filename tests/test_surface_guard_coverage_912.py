@@ -204,8 +204,9 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         # Diagnostic self-check -- probes session/DPI/deps defensively and
         # reports availability (e.g. "Desktop session: no") instead of
         # acquiring the desktop backend, so it never routes through
-        # require_desktop_session / the guarded _get_backend.
-        "doctor",
+        # require_desktop_session / the guarded _get_backend. ``info`` is a
+        # hidden alias of ``doctor`` (#1048) sharing the same code path.
+        "doctor", "info",
         # Excel COM automation -- its own backend, not desktop UIA.
         "excel info", "excel list-sheets", "excel open", "excel read",
         "excel run-macro", "excel write",

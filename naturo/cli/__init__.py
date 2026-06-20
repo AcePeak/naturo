@@ -49,7 +49,7 @@ from naturo.cli.selector_cmd import selector
 from naturo.cli.visual_cmd import visual
 from naturo.cli.recording_cmd import record
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
-from naturo.cli.doctor_cmd import doctor
+from naturo.cli.doctor_cmd import doctor, info
 
 
 # Accept ``-h`` as the POSIX synonym for ``--help`` (#899). Declaring it on the
@@ -222,6 +222,7 @@ main.add_command(browser)
 
 # ── Diagnostics ────────────────────────────────
 main.add_command(doctor)
+main.add_command(info)  # hidden alias for `doctor` (#1048)
 
 
 
