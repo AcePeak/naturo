@@ -163,6 +163,8 @@ Search for UI elements matching a query.
 | `--depth`, `-d` | integer | Maximum tree depth (default 20; use lower values for performance) |
 | `--limit` | integer | Maximum number of results (default: `50`) |
 | `--ai` | boolean | Use AI vision to find element by natural language |
+| `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
+| `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
 | `--screenshot` | path | Use existing screenshot (for --ai mode) |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
@@ -184,7 +186,15 @@ naturo find "the save button" --ai       # AI vision search
 naturo find "Save" --app "Notepad"              # search in specific app
 naturo find "search field" --ai --app "Chrome"  # AI + specific app
 naturo find "OK" --backend msaa          # MSAA for legacy apps
+naturo find --image submit.png           # template match on the screen
+naturo find --image icon.png --app Notepad --all  # all matches in an app
+naturo find --image btn.png --threshold 0.85      # looser match threshold
 ```
+
+Found matches get `eN` refs in the snapshot (like a normal `find`), so you can
+follow up with `naturo click e<N>`. With `--image` the reported `x,y` are the
+match's screen-absolute top-left; the JSON envelope also includes `center_x`,
+`center_y`, and the NCC `score`.
 
 ## `naturo get`
 

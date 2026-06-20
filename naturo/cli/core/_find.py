@@ -20,6 +20,11 @@ import naturo.cli.core._common as _common
 @click.option("--depth", "-d", type=int, default=20, help="Maximum tree depth (default 20; use lower values for performance)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
 @click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
+@click.option("--image", "image_template", type=click.Path(), default=None,
+              help="Locate a template image (PNG/JPG) on the target window or screen "
+                   "via normalized cross-correlation (no UIA tree needed)")
+@click.option("--threshold", type=float, default=0.9, show_default=True,
+              help="Minimum match score in [0.0, 1.0] for --image (higher is stricter)")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Use existing screenshot (for --ai mode)")
 @click.option("--app", default=None, help="Target app window")
@@ -45,6 +50,7 @@ import naturo.cli.core._common as _common
               help="AI provider API key (overrides env var)")
 def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str | None,
              actionable: bool, depth: int, limit: int, ai: bool,
+             image_template: str | None, threshold: float,
              ai_provider: str, ai_model: str | None, ai_api_key: str | None,
              screenshot: str | None, app: str | None, app_id: str | None,
              window_title: str | None, hwnd: int | None, pid: int | None,
@@ -67,6 +73,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find "Save" --app "Notepad"              # search in specific app
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
+        naturo find --image submit.png           # template match on screen
+        naturo find --image icon.png --app Notepad --all  # all matches in app
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -86,6 +94,32 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
         hwnd = entry.handle
+
+    # Image template matching mode — locate a picture on the window/screen.
+    # Dispatched before query resolution since --image needs no text query
+    # (and reuses --all to mean "every occurrence").
+    if image_template is not None:
+        if ai:
+            msg = "--image and --ai are mutually exclusive; choose one find strategy."
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        if query is not None or query_opt is not None:
+            msg = ("--image takes no text query; it locates a template image, "
+                   "not a named element.")
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        _find_with_image(
+            image_template, threshold, find_all,
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            limit=limit, json_output=json_output,
+        )
+        return
 
     # Resolve query: --all flag → wildcard, --query option → override positional
     if find_all:
@@ -263,6 +297,265 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         else:
             click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+
+
+def _window_origin(target_hwnd: int | None) -> tuple[int, int]:
+    """Return the screen-space top-left of a captured window.
+
+    ``capture_window`` produces a window-relative image (origin 0,0); adding
+    this offset converts match coordinates back to screen-absolute coordinates
+    so the results are directly clickable.
+
+    Args:
+        target_hwnd: Window handle, or 0/None for the foreground window.
+
+    Returns:
+        ``(left, top)`` in screen pixels; ``(0, 0)`` when the rect cannot be
+        queried (e.g. non-Windows) so coordinates stay window-relative rather
+        than failing.
+    """
+    import platform as _plat
+    if _plat.system() != "Windows":
+        return 0, 0
+    try:
+        import ctypes
+        import ctypes.wintypes as wt
+        handle = target_hwnd or ctypes.windll.user32.GetForegroundWindow()  # type: ignore[attr-defined]
+        rect = wt.RECT()
+        if handle and ctypes.windll.user32.GetWindowRect(handle, ctypes.byref(rect)):  # type: ignore[attr-defined]
+            return rect.left, rect.top
+    except Exception as exc:
+        _common.logger.debug("Window rect lookup failed for hwnd %s: %s", target_hwnd, exc)
+    return 0, 0
+
+
+def _monitor_origin(backend: Any, screen_index: int) -> tuple[int, int]:
+    """Return the virtual-desktop top-left of a captured monitor.
+
+    Args:
+        backend: The active platform backend.
+        screen_index: Zero-based monitor index.
+
+    Returns:
+        ``(x, y)`` in virtual-desktop pixels; ``(0, 0)`` when monitor geometry
+        is unavailable.
+    """
+    try:
+        monitors = backend.list_monitors()
+        if 0 <= screen_index < len(monitors):
+            mon = monitors[screen_index]
+            return int(mon.x), int(mon.y)
+    except Exception as exc:
+        _common.logger.debug("Monitor origin lookup failed for screen %s: %s", screen_index, exc)
+    return 0, 0
+
+
+def _find_with_image(
+    template_path: str,
+    threshold: float,
+    find_all: bool,
+    *,
+    app: str | None,
+    window_title: str | None,
+    hwnd: int | None,
+    pid: int | None,
+    limit: int,
+    json_output: bool,
+) -> None:
+    """Locate a template image on the target window or screen (naturo find --image).
+
+    Captures the target (a specific window when any of app/window/hwnd/pid is
+    given, otherwise the primary screen), runs normalized cross-correlation, and
+    reports matches as snapshot elements with stable ``eN`` refs so they can be
+    acted on with ``naturo click eN``.
+
+    Args:
+        template_path: Path to the template image (PNG/JPG).
+        threshold: Minimum match score in ``[0.0, 1.0]``.
+        find_all: When True, report every non-overlapping match; otherwise the
+            single best.
+        app: Target app name/partial match.
+        window_title: Target window title substring.
+        hwnd: Target window handle.
+        pid: Target process ID.
+        limit: Maximum number of matches to return.
+        json_output: Whether to emit JSON.
+
+    Raises:
+        SystemExit: With status 1 on invalid input, missing file, platform
+            without GUI support, window-not-found, or capture failure.
+    """
+    import os
+
+    if not (0.0 <= threshold <= 1.0):
+        msg = f"--threshold must be between 0.0 and 1.0, got {threshold}"
+        if json_output:
+            click.echo(_common._json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    if not os.path.exists(template_path):
+        msg = f"Template image not found: {template_path}"
+        if json_output:
+            click.echo(_common._json_error_str("FILE_NOT_FOUND", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    if not _common._platform_supports_gui():
+        msg = _common._platform_error_msg("Image matching")
+        if json_output:
+            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    try:
+        from PIL import Image
+    except ImportError as e:  # pragma: no cover - exercised only without Pillow
+        msg = (f"Pillow is required for --image matching: {e}. "
+               "Install it with 'pip install naturo[annotate]'.")
+        if json_output:
+            click.echo(_common._json_error_str("MISSING_DEPENDENCY", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
+    from naturo.image_match import match_template
+
+    backend = _common._get_backend(json_output)
+    targeted = bool(hwnd or app or window_title or pid)
+
+    import tempfile
+    fd, capture_path = tempfile.mkstemp(suffix=".png")
+    os.close(fd)
+    target_hwnd = hwnd
+    try:
+        if targeted:
+            if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
+                target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
+            if not target_hwnd:
+                target = app or window_title or (f"pid={pid}" if pid else "target")
+                msg = f"Window not found: {target}"
+                if json_output:
+                    click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
+                else:
+                    click.echo(f"Error: {msg}", err=True)
+                raise SystemExit(1)
+            backend.capture_window(hwnd=target_hwnd, output_path=capture_path)
+            origin_x, origin_y = _window_origin(target_hwnd)
+        else:
+            backend.capture_screen(screen_index=0, output_path=capture_path)
+            origin_x, origin_y = _monitor_origin(backend, 0)
+
+        with Image.open(capture_path) as hay_src, Image.open(template_path) as tmpl_src:
+            haystack = hay_src.copy()
+            template = tmpl_src.copy()
+    except SystemExit:
+        raise
+    except Exception as e:
+        msg = f"Screen capture failed: {e}"
+        if json_output:
+            click.echo(_common._json_error_str("CAPTURE_FAILED", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+    finally:
+        try:
+            os.remove(capture_path)
+        except OSError:
+            pass
+
+    try:
+        matches = match_template(
+            haystack, template, threshold=threshold, find_all=find_all, max_results=limit,
+        )
+    except ValueError as e:
+        if json_output:
+            click.echo(_common._json_error_str("INVALID_INPUT", str(e)))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+    # Register matches as snapshot elements so `naturo click eN` works, mirroring
+    # the ref bookkeeping the text-search path uses.
+    from naturo.bridge import ElementInfo as BridgeElementInfo
+    from naturo.snapshot import get_snapshot_manager
+    from naturo.models.snapshot import UIElement
+    from naturo.refs import assign_stable_refs
+
+    template_name = os.path.basename(template_path)
+    children = [
+        BridgeElementInfo(
+            id=str(i),
+            role="Image",
+            name=template_name,
+            value=f"{m.score:.4f}",
+            x=origin_x + m.x,
+            y=origin_y + m.y,
+            width=m.width,
+            height=m.height,
+            parent_id="0",
+            hwnd=target_hwnd or 0,
+        )
+        for i, m in enumerate(matches, start=1)
+    ]
+    root = BridgeElementInfo(
+        id="0",
+        role="Pane",
+        name="image-match",
+        value=None,
+        x=origin_x,
+        y=origin_y,
+        width=haystack.width,
+        height=haystack.height,
+        children=children,
+        hwnd=target_hwnd or 0,
+    )
+
+    mgr = get_snapshot_manager()
+    snapshot_id = mgr.create_snapshot()
+    element_id_to_ref: dict[int, str] = {}
+    ui_map, ref_map = assign_stable_refs(root, UIElement, element_obj_to_ref=element_id_to_ref)
+    mgr.store_detection_result(snapshot_id, ui_map)
+    mgr.store_ref_map(snapshot_id, ref_map)
+
+    if json_output:
+        data = [
+            {
+                "ref": element_id_to_ref.get(id(child), child.id),
+                "role": child.role,
+                "name": child.name,
+                "x": child.x,
+                "y": child.y,
+                "width": child.width,
+                "height": child.height,
+                "center_x": child.x + child.width // 2,
+                "center_y": child.y + child.height // 2,
+                "score": round(m.score, 4),
+            }
+            for child, m in zip(children, matches)
+        ]
+        click.echo(json_dumps({
+            "success": True,
+            "elements": data,
+            "count": len(data),
+            "snapshot_id": snapshot_id,
+        }, indent=2))
+    else:
+        if not matches:
+            click.echo(f"No match for template '{template_name}' (threshold {threshold}).")
+            return
+        for child, m in zip(children, matches):
+            ref = element_id_to_ref.get(id(child), "?")
+            click.echo(
+                f"  {ref}. [Image] \"{template_name}\" "
+                f"({child.x},{child.y} {child.width}x{child.height}) score={m.score:.3f}"
+            )
+        click.echo(f"\n{len(matches)} match(es) found.")
+        click.echo(f"Snapshot: {snapshot_id}")
+        click.echo("Tip: use 'naturo click e<N>' to interact with a match.")
 
 
 def _find_with_ai(
