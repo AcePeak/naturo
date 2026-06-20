@@ -459,14 +459,6 @@ def _find_with_image(
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("Image matching")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
-
     try:
         from PIL import Image
     except ImportError as e:  # pragma: no cover - exercised only without Pillow
@@ -491,7 +483,9 @@ def _find_with_image(
     # search haystack, so the window-targeting flags do not apply.  Reject the
     # combination explicitly rather than silently ignoring it (the convention
     # the --ai path already follows) — silently discarding --screenshot and
-    # matching the live screen returns confidently-wrong coordinates.
+    # matching the live screen returns confidently-wrong coordinates.  Offline
+    # matching needs no live capture, so it is also exempt from the GUI-platform
+    # requirement that the live-capture path enforces (it runs headless).
     if screenshot is not None:
         if hwnd or app or window_title or pid:
             _emit(
@@ -503,6 +497,8 @@ def _find_with_image(
             )
         if not os.path.exists(screenshot):
             _emit("FILE_NOT_FOUND", f"Screenshot file not found: {screenshot}")
+    elif not _common._platform_supports_gui():
+        _emit("PLATFORM_ERROR", _common._platform_error_msg("Image matching"))
 
     # Load the template once, in its own try, so a template that exists but
     # cannot be decoded is attributed to the template — never mis-reported as a

@@ -136,6 +136,27 @@ class TestScreenshotOfflineMatching:
         assert payload["count"] == 0
         backend.capture_screen.assert_not_called()
 
+    def test_offline_matching_works_without_gui_support(self, runner, tmp_path) -> None:
+        """Offline matching against a screenshot needs no live capture, so it
+        runs even on a platform without GUI support (headless pipelines)."""
+        patch_img = _distinctive_patch()
+        shot = _haystack_with_patch((200, 160), patch_img, at=(40, 50))
+        shot_file = tmp_path / "shot.png"
+        shot.save(shot_file)
+        template_file = tmp_path / "tmpl.png"
+        patch_img.save(template_file)
+
+        with patch("naturo.cli.core._common._platform_supports_gui", return_value=False):
+            result = runner.invoke(
+                find_cmd,
+                ["--image", str(template_file), "--screenshot", str(shot_file), "--json"],
+            )
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["count"] == 1
+        assert payload["coordinate_frame"] == "screenshot"
+
     def test_screenshot_rejects_window_targeting_flags(self, runner, tmp_path) -> None:
         template_file = tmp_path / "tmpl.png"
         _distinctive_patch().save(template_file)
