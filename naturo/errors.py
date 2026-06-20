@@ -38,6 +38,12 @@ class ErrorCode:
     INVALID_INPUT = "INVALID_INPUT"
     INVALID_COORDINATES = "INVALID_COORDINATES"
 
+    # Image-matching errors (naturo find/click --image, #1059)
+    INVALID_TEMPLATE = "INVALID_TEMPLATE"
+    INVALID_SCREENSHOT = "INVALID_SCREENSHOT"
+    MISSING_DEPENDENCY = "MISSING_DEPENDENCY"
+    PLATFORM_ERROR = "PLATFORM_ERROR"
+
     # Dialog errors
     DIALOG_NOT_FOUND = "DIALOG_NOT_FOUND"
 
@@ -101,6 +107,13 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
     ErrorCode.INVALID_INPUT: ErrorCategory.VALIDATION,
     ErrorCode.INVALID_COORDINATES: ErrorCategory.VALIDATION,
+    # Image-matching codes (#1059): a template/screenshot the user supplied that
+    # cannot be decoded is a validation fault; a missing optional matcher
+    # dependency is configuration; a GUI-less platform is environment.
+    ErrorCode.INVALID_TEMPLATE: ErrorCategory.VALIDATION,
+    ErrorCode.INVALID_SCREENSHOT: ErrorCategory.VALIDATION,
+    ErrorCode.MISSING_DEPENDENCY: ErrorCategory.CONFIGURATION,
+    ErrorCode.PLATFORM_ERROR: ErrorCategory.ENVIRONMENT,
     ErrorCode.DIALOG_NOT_FOUND: ErrorCategory.AUTOMATION,
     ErrorCode.DEPENDENCY_MISSING: ErrorCategory.CONFIGURATION,
     ErrorCode.NO_DESKTOP_SESSION: ErrorCategory.ENVIRONMENT,
