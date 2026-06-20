@@ -4,30 +4,29 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 16:26Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-15:52Z cycle: team-Dev landed **PR #1095** (`docs: correct migration guide iframe section to shipped frame API`,
-*fixes #1082*, `b3cbfe3`, all-green — 9 Python lanes + Build C++ + CodeQL + Lint&Type + Version-Consistency,
-merged 00:17Z) — a never-lie doc fix (the iframe guide promised a `browser frame`/`page.in_frame()` surface that
-does not exist). **Step 1 PR sweep:** no open team-Dev PR; only open PR = community **#1055** (already queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did **not**
-comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress` = **empty**;
-Dev set **#1082** `status:done` **in-cycle** (PR merged before the cycle boundary, so the async-merge handoff
-flag did **not** recur — no Orc cleanup owed), **left open** for QA per Rule 1. `status:done` open = **#1082**
-(awaiting QA) + **#972** (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3:** no new
-untriaged issue (QA 00:15Z = **NO NEW BUG** — verified+closed #1088 + #1059); milestones intact → no new issue
-(Rule 9). Confirmed the **#931 recognition-headline mandate is already satisfied** — README hero already leads
-with the multi-framework recognition matrix + `docs/RECOGNITION.md` proof link → no README change owed.
-**Step 3.6 (evolve the team): no change — no new evidence** (both completed cycles exemplary — QA applied the
-20:22Z harness rule, Dev applied the HARDEST-FIRST proven-env-block rule; freshest rules <1d old, exercised
-cleanly → adding a change would over-fit; honest ledger row). **Live needs:ace queue
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `b3cbfe3` (#1095) full **SUCCESS** (Build &
-Test + CodeQL) → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
-Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 16:52Z (Orc autonomous cycle — **ONE new human-only item: #1097** (build/verify
+path for native-core moat fixes). Queue now **#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop`
+NOT red; nothing closed by Orc (Rule 1).** The 00:37Z Dev cycle attacked the **recognition moat (Standing #1)**
+HARDEST-FIRST on the provisioned JDK 21 + JAB desktop and filed **P0 [#1096](https://github.com/AcePeak/naturo/issues/1096)** —
+naturo's Java Access Bridge **never attaches** on a correctly-provisioned desktop (`jab_ensure_init` fires
+`Windows_run()` once + pumps a fixed 1s then caches `initialized=true`, so the async JVM handshake never
+completes on a loaded desktop → `naturo_jab_get_element_tree` rc=-6; proven by same-process A/B where a 2nd
+direct `Windows_run()` attaches in ~0.4s). Consequence: the **public `docs/RECOGNITION.md` JAB "+40" moat
+headline + matrix ✅ do not reproduce** (never-lie; the cited `test_jab_recognition_932.py` is red on a real
+desktop). The native fix can't be built locally (no MSVC/cmake) and is JAB-verifiable only on the real desktop
+→ filed **#1097** (needs:ace, below) + **#1098** (P1 docs — interim honesty caveat, Dev-actionable headless;
+#1096 restores the verified number). **Step 1:** no open team-Dev PR; only open PR = community **#1055** (queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — not touched. **Step 2:**
+`status:in-progress` empty; `status:done` open = **#972** only (queued). Nothing to close (Rule 1). **Step 3.5**
+competitiveness not due (<7d since 06-16). **Step 3.6** no rule change (exemplary Dev + QA cycles; the new
+blocker is infra/process → queued #1097, flag-to-watch first instance). `develop` CI: HEAD `b3cbfe3` (#1095)
+full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
+| [#1097](https://github.com/AcePeak/naturo/issues/1097) | **Pick the build+verify path for native-core moat fixes.** P0 **#1096** (JAB never attaches → the `RECOGNITION.md` "+40" moat headline doesn't reproduce, Standing #1) is a C++ core fix (`core/src/jab.cpp`) that **can't be built locally** (no MSVC/cmake) and is **JAB-verifiable only on the real desktop** (CI builds the DLL but has no interactive JAB desktop). | **infra/process decision** — build-env spend vs. a CI-artifact workflow; orch must not provision/spend or set a standing build process unattended | **(A) CI-build → local-desktop-verify (no spend):** CI uploads `naturo_core.dll` as an artifact; the local JAB desktop downloads it + runs `test_jab_recognition_932.py` before merge — unblocks **every** future native-core moat fix. Or (B) install MSVC+cmake locally, or (C) cloud build Dev. **Orc recommends (A).** Once picked, Dev lands #1096 + restores the verified `RECOGNITION.md` row. |
 | [#1077](https://github.com/AcePeak/naturo/issues/1077) | **Pick the OCR engine for `naturo find --ocr` (#1060)** — the last find-engine slice (#809). Dev parked it (2026-06-20 18:25Z) because the backend is a bundling/licensing/distribution choice. | **dependency/distribution decision** — bundle size, licensing, extra system binaries, Windows-only vs cross-platform; Orc must not pick a packaging path unattended | **Windows.Media.Ocr** (WinRT) — built into Win10/11, **no extra binary/model**, native to the Windows-first moat; keep it behind a thin interface so Tesseract can be added later as an optional cross-platform fallback. Once you pick, Dev lands #1060 in one cycle. |
 | [#1057](https://github.com/AcePeak/naturo/issues/1057) | **Dispose community PR #1055** (@muhamedfazalps, "consistent success envelope in set commands", fixes #1054). It targets `main` (must be `develop`), rewrites `naturo/cli/set_cmd.py` which **doesn't exist on develop** (real code: `values/_set.py`/`_get.py`), is a 452/452 whole-file rewrite, only fixes `set` not `get`, and adds a promo link; CI `UNSTABLE`. | **community PR handling** — guide / take over / close is yours; Orc cannot do it unattended | **Guide the contributor:** thank them, ask to retarget `develop` + minimal diff on `values/_set.py`+`_get.py` (drop the file-wide reformat) + cover `get`. If no iteration, close with thanks and let Dev fix #1054 (already v0.3.4, lane #865/#876/#977/#980/#1043). |
 | [#975](https://github.com/AcePeak/naturo/issues/975) | **Ratify the QA re-enable.** After the LIVE R-SEC-012 reproduction, the loop fixed the root cause at the source (`7a10b18` — 第七轮 locked to argv/pytest-only) and **re-enabled QA** (`4097eba`, which asserts your authorization). QA has run **two clean cycles since** (verified+closed #876, filed #977 — argv-only, **nothing typed into any window**). | **security / safety sign-off** — the re-enable commit claims your authorization but is Orc-authored; ratifying (or reverting) it is yours | **Confirm + close #975.** The focus-race failure mode is no longer reachable from the standing playbook; the code backstop (`NATURO_SAFE_INPUT=1` + `~/.naturo/safe-input.lock`) is verified end-to-end. If you did **not** authorize the re-enable, say so and the loop will re-disable. Code-only hardening half tracked in #976 (Dev-actionable). |

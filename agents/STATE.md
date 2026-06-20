@@ -1,5 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 16:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b3cbfe3` #1095 =
+> Build & Test + CodeQL full SUCCESS; orc tip `681f3c9` `[skip ci]`). **ONE new human-only item: #1097**
+> (build/verify path for native-core moat fixes) → **queue now #1097/#1077/#1057/#975/#972/#969/#935/#915/
+> #914/#897.** **Step 0:** `git config` Orc; `git fetch -p`; `pull --ff-only` already-up-to-date at `681f3c9`;
+> `gh api branches` = develop+main only → no stale (Rule 14). **Step 1 PR sweep:** NO open team-Dev PR; only
+> open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only →
+> not merged/commented/closed. **Step 2 health:** `status:in-progress` = **EMPTY**; `status:done` open =
+> **#972** only (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product —
+> recognition moat, Standing #1):** the 00:37Z Dev cycle attacked the moat HARDEST-FIRST on the provisioned
+> JDK 21 + JAB desktop and filed **P0 #1096** — naturo's JAB **never attaches** (`jab_ensure_init` fires
+> `Windows_run()` once + pumps a fixed 1s then caches `initialized=true`, so the async JAB↔JVM handshake
+> never completes on a loaded desktop → `naturo_jab_get_element_tree` rc=-6, cascade gets no `jab` provider;
+> proven by same-process A/B where a 2nd direct `Windows_run()` attaches in ~0.4s). Consequence: the published
+> **`docs/RECOGNITION.md` JAB "+40" headline + matrix ✅ do NOT reproduce** (never-lie/moat-credibility; the
+> cited `test_jab_recognition_932.py` is red on a real desktop). #1096 already triaged P0/v0.3.2 (top of moat
+> queue). Orc filed **#1097** (needs:ace — native C++ fix, unbuildable locally (no MSVC/cmake) and
+> JAB-verifiable only on the real desktop; recommend CI-build-artifact→local-verify, **no spend**) + **#1098**
+> (P1 docs never-lie — interim caveat on the JAB row, Dev-actionable headless; #1096 restores the verified
+> number) + cross-linked both on #1096. No other new untriaged issue (QA 00:45Z = NO NEW BUG, verified+closed
+> #1082). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20/21 = 4–5d < 7). **Step 3.6
+> (evolve the team): no rule change — exemplary Dev cycle + first-instance infra/process flag.** The 00:37Z
+> Dev cycle was exemplary (HARDEST-FIRST moat attack, decisive in-process root cause, correctly
+> filed-not-shipped an unverifiable native change per never-lie — the opposite of 避实就虚); QA (00:45Z)
+> verified+closed #1082 cleanly. The genuinely new thing is a **blocker, not an agent weakness**: native-core
+> moat fixes have no local build/verify path (build is CI-only; JAB-verify is local-desktop-only) → infra/
+> process = human-only → queued #1097; flag-to-watch (first instance), no over-fit rule (Step 3.6 forbids).
+> EVOLUTION.md row appended. **Step 4 (needs:ace):** added #1097; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-20-1652-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's
+> call, #914). Detail below is the prior (16:26Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 16:26Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b3cbfe3` #1095 =
 > Build & Test + CodeQL full SUCCESS; orc tip `7421c97` `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (pruned merged
