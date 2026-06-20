@@ -24,6 +24,8 @@ from naturo.browser._selectors import (
     parse_selector,
     to_cdp_expression,
     to_cdp_expression_all,
+    to_scoped_function,
+    to_scoped_function_all,
 )
 
 logger = logging.getLogger(__name__)
@@ -759,34 +761,43 @@ class BrowserPage:
     def _find_within(
         self, parent: BrowserElement, parsed: ParsedSelector
     ) -> Optional[BrowserElement]:
-        """Find an element within a parent's subtree.
+        """Find the first element within a parent's subtree.
 
-        Used for XPath/text selectors that need scoped evaluation.
+        Used for XPath/text selectors that need scoped evaluation. The search is
+        dispatched with ``this`` bound to *parent* (CDP ``Runtime.callFunctionOn``)
+        so the match is confined to that element's subtree — an XPath context
+        node, a TreeWalker rooted at the parent — rather than resolved against
+        the whole document. This is what makes ``element.find("xpath:.//span")``
+        return the parent's own descendant instead of the document's first global
+        match (the DrissionPage ``item.ele("xpath:.//span")`` scrape pattern,
+        #1063).
 
         Args:
             parent: The parent element to search within.
             parsed: Parsed selector.
 
         Returns:
-            BrowserElement or None.
+            BrowserElement for the first scoped match, or None.
         """
-        # For simplicity, evaluate in page context with DOM constraint
-        # A more complete implementation would scope the XPath/text search
-        return self._resolve_element(parsed)
+        return parent._call_function_returning_element(to_scoped_function(parsed))
 
     def _find_all_within(
         self, parent: BrowserElement, parsed: ParsedSelector
     ) -> List[BrowserElement]:
         """Find all elements within a parent's subtree.
 
+        The array counterpart of :meth:`_find_within`: evaluates the selector
+        with ``this`` bound to *parent* so every match is scoped to that
+        element's subtree, in document order.
+
         Args:
             parent: The parent element.
             parsed: Parsed selector.
 
         Returns:
-            List of BrowserElement instances.
+            List of scoped BrowserElement instances (possibly empty).
         """
-        return self._resolve_elements(parsed)
+        return parent._call_function_returning_elements(to_scoped_function_all(parsed))
 
     def _wait_for_event(
         self, event_name: str, timeout: Optional[float] = None

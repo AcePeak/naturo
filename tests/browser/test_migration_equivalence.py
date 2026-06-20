@@ -639,6 +639,67 @@ def test_file_download_equivalence(
         shutil.rmtree(download_dir, ignore_errors=True)
 
 
+def test_xpath_scoped_card_scrape_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the rpa-client-lingkehudong (小红书) per-card xpath scrape via naturo.
+
+    Mirrors the migration guide / #763 Phase-1 target: the DrissionPage *Before*
+    code enumerates feed cards and reads each card's OWN field with a relative
+    xpath scoped to that card::
+
+        items = page.eles("xpath://div[contains(@class,'note-item')]")
+        for item in items:
+            title = item.ele("xpath:.//span").text
+
+    The *After* surface is :meth:`BrowserPage.find_all` for the card list and the
+    element-scoped :meth:`BrowserElement.find` / :meth:`BrowserElement.find_all`
+    for each card's children. Driven against ``xhs-feed.html`` (four
+    ``.note-item`` cards, each with a distinct title + author span), naturo must
+    reproduce the scrape exactly: the same card count and, per card, that card's
+    own title text.
+
+    never-lie (SOUL.md): the scoping is proven, not assumed. A relative
+    ``xpath:.//span`` resolved against the whole document (the pre-#1063 bug)
+    would return the *first* card's title for *every* card, so the scrape would
+    confidently report four identical titles. The assertion therefore pins the
+    four distinct, per-card titles in document order — which only holds if
+    ``item.find(...)`` genuinely confines the search to that card's subtree.
+    """
+    browser_page.navigate(f"{fixtures_server}/xhs-feed.html")
+
+    # Before: page.eles("xpath://div[contains(@class,'note-item')]")
+    #  ->  After: page.find_all("xpath://div[contains(@class,'note-item')]").
+    cards = browser_page.find_all("xpath://div[contains(@class,'note-item')]")
+    assert len(cards) == 4
+
+    # Before: for item in items: title = item.ele("xpath:.//span").text
+    #  ->  After: card.find("xpath:.//span").text, scoped to each card. The first
+    # span in each card is its title, so the relative xpath must return that
+    # card's own title -- distinct per card, in document order.
+    titles = [card.find("xpath:.//span").text for card in cards]
+    assert titles == [
+        "城市夜景手机摄影技巧",
+        "十分钟快手早餐合集",
+        "通勤穿搭分享",
+        "阳台多肉养护笔记",
+    ]
+    # never-lie: every scraped title is distinct -- a document-scoped (unscoped)
+    # xpath would collapse all four to the first card's title.
+    assert len(set(titles)) == 4
+
+    # Scoped find_all: each card exposes exactly its own two spans (title,
+    # author), not the feed's eight, proving the array form is scoped too.
+    first_card_spans = cards[0].find_all("xpath:.//span")
+    assert [span.text for span in first_card_spans] == [
+        "城市夜景手机摄影技巧",
+        "@aurora",
+    ]
+
+    # A scoped CSS read resolves against the same card subtree as the xpath read.
+    assert cards[2].find(".note-author").text == "@mina"
+
+
 def test_javascript_execution_equivalence(
     browser_page: BrowserPage, fixtures_server: str
 ) -> None:

@@ -10,6 +10,8 @@ from naturo.browser._selectors import (
     parse_selector,
     to_cdp_expression,
     to_cdp_expression_all,
+    to_scoped_function,
+    to_scoped_function_all,
 )
 
 
@@ -236,3 +238,84 @@ class TestToCdpExpressionAll:
         parsed = ParsedSelector(SelectorType.TEXT, "it's")
         js = to_cdp_expression_all(parsed)
         assert "\\'" in js
+
+
+# ---------------------------------------------------------------------------
+# to_scoped_function — element-scoped single-match search (#1063)
+# ---------------------------------------------------------------------------
+
+
+class TestToScopedFunction:
+    """to_scoped_function returns a function scoped to the context element."""
+
+    def test_is_a_function_declaration(self) -> None:
+        # Must be a function declaration for Runtime.callFunctionOn, not a bare
+        # expression (the latter would be evaluated in global/document scope).
+        parsed = ParsedSelector(SelectorType.CSS, "span")
+        assert to_scoped_function(parsed).startswith("function()")
+
+    def test_css_uses_this_queryselector(self) -> None:
+        parsed = ParsedSelector(SelectorType.CSS, ".note-title")
+        js = to_scoped_function(parsed)
+        assert "this.querySelector(" in js
+        assert "document.querySelector(" not in js
+
+    def test_xpath_context_node_is_this_not_document(self) -> None:
+        # The #1063 fix: a relative xpath must resolve against the parent element
+        # (context node ``this``), not the whole document.
+        parsed = ParsedSelector(SelectorType.XPATH, ".//span")
+        js = to_scoped_function(parsed)
+        assert "document.evaluate('.//span', this, null" in js
+        assert "FIRST_ORDERED_NODE_TYPE" in js
+
+    def test_text_treewalker_rooted_at_this(self) -> None:
+        parsed = ParsedSelector(SelectorType.TEXT, "hello")
+        js = to_scoped_function(parsed)
+        assert "createTreeWalker(this," in js
+        assert "createTreeWalker(document.body" not in js
+
+    def test_xpath_escapes_quotes(self) -> None:
+        parsed = ParsedSelector(SelectorType.XPATH, ".//a[@href='x']")
+        assert "\\'" in to_scoped_function(parsed)
+
+
+# ---------------------------------------------------------------------------
+# to_scoped_function_all — element-scoped multi-match search (#1063)
+# ---------------------------------------------------------------------------
+
+
+class TestToScopedFunctionAll:
+    """to_scoped_function_all returns a scoped function yielding an array."""
+
+    def test_is_a_function_declaration(self) -> None:
+        parsed = ParsedSelector(SelectorType.CSS, "span")
+        assert to_scoped_function_all(parsed).startswith("function()")
+
+    def test_css_uses_this_queryselectorall(self) -> None:
+        parsed = ParsedSelector(SelectorType.CSS, "li.item")
+        js = to_scoped_function_all(parsed)
+        assert "this.querySelectorAll(" in js
+        assert "Array.from(" in js
+        assert "document.querySelectorAll(" not in js
+
+    def test_xpath_context_node_is_this_not_document(self) -> None:
+        parsed = ParsedSelector(SelectorType.XPATH, ".//span")
+        js = to_scoped_function_all(parsed)
+        assert "document.evaluate('.//span', this, null" in js
+        assert "ORDERED_NODE_SNAPSHOT_TYPE" in js
+        assert "snapshotLength" in js
+
+    def test_text_treewalker_rooted_at_this(self) -> None:
+        parsed = ParsedSelector(SelectorType.TEXT, "Item")
+        js = to_scoped_function_all(parsed)
+        assert "createTreeWalker(this," in js
+        assert "createTreeWalker(document.body" not in js
+
+    def test_text_deduplicates_parents(self) -> None:
+        parsed = ParsedSelector(SelectorType.TEXT, "dup")
+        js = to_scoped_function_all(parsed)
+        assert "indexOf(el) === -1" in js
+
+    def test_xpath_escapes_quotes(self) -> None:
+        parsed = ParsedSelector(SelectorType.XPATH, ".//a[@href='x']")
+        assert "\\'" in to_scoped_function_all(parsed)
