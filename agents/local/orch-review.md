@@ -96,6 +96,27 @@ for r in AcePeak/naturo mediar-ai/terminator CursorTouch/Windows-MCP microsoft/U
 
 This is how the project keeps score against the goal between Ace's check-ins — never let a week pass unmeasured.
 
+## Step 3.6 — Evolve the team (Dev & QA self-improvement — EVERY cycle)
+This is the **self-evolving** mandate: the loop must get better at *how it works*, not just ship features.
+Each cycle, spend real budget here — read the last ~8–12 Dev/QA entries in the state log + the recent merged
+PRs and QA findings, and hunt for a **concrete, recurring weakness in how Dev or QA OPERATES** (agent
+behavior/process — NOT a product bug). Examples: Dev avoiding the hardest task (避实就虚), a repeated CI-break
+class, thin self-review, a flaky gate; QA re-filing the same class, skipping a surface, false verdicts from a
+stale install, unsafe input habits.
+
+- **If you find one backed by evidence** (cite the cycles/PRs/issues): **implement a small, surgical fix** to
+  the relevant operating doc — `agents/local/dev-cycle.md`, `agents/local/qa-cycle.md`, `agents/dev/SOUL.md`,
+  `agents/qa/SOUL.md`, or `agents/RULES.md` — and commit it `[skip ci]`. **One change per cycle**, English,
+  surgical (never wholesale rewrites), and do not over-fit to a single incident.
+- **Always append a row to `agents/EVOLUTION.md`** (the evolution ledger): date · observed weakness (with
+  evidence) · the change · expected effect. This makes improvement trackable and stops you oscillating /
+  repeating. Read the recent ledger rows first so you build on them, not undo them.
+- **If there is genuinely no new evidence this cycle**, write one line in the ledger: "no change — no new
+  evidence" and move on. Don't churn the prompts for its own sake.
+
+The bar: a reader of `EVOLUTION.md` should see Dev and QA measurably sharpening over time. A week of pure
+PR-triage with zero team-evolution rows is a failure of this step.
+
 ## Step 4 — Maintain the needs:ace queue (Ace's 1–2 day check-in)
 For every human-only decision found this cycle, ensure a tracking issue exists:
 ```bash

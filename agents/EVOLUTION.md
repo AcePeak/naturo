@@ -1,0 +1,13 @@
+# EVOLUTION — Dev & QA team self-improvement ledger
+
+The Orchestrator updates this **every cycle** (Step 3.6 of `agents/local/orch-review.md`). Each row is one
+concrete improvement to *how Dev or QA operates* (their cycle prompts / SOUL / RULES), driven by observed
+evidence — or an explicit "no change — no new evidence" line. The goal: a reader should see Dev and QA
+measurably sharpening over time. Read the recent rows before adding one so you build on them, not undo them.
+
+| Date | Target | Observed weakness (evidence) | Change implemented | Expected effect |
+|------|--------|------------------------------|--------------------|-----------------|
+| 2026-06-16 | Dev + Orch | Dev marked issues `status:done` on PR-open; a cross-platform/collection break (#936) only surfaced on Linux CI → false "done" on a red PR | `dev-cycle.md`/`orch-review.md`: never `status:done` until CI green/MERGED; Orch flips done on merge + fixes red-CI PRs | No premature done; red PRs get fixed, not abandoned |
+| 2026-06-17 | QA | A LIVE R-SEC-012 reproduction typed `$(rm -rf /)` / `$(echo INJECTED)` into a real window (focus-race hazard); injection payloads were hardcoded in QA_AGENT.md 第七轮 | `qa-cycle.md` + `QA_AGENT.md`: injection/sanitization tests are argv/pytest-only, NEVER via live `naturo type`; benign-content-only rule; code guard backstop | No command-like keystrokes on the live desktop; injection safety is a pytest tripwire |
+| 2026-06-20 | Dev | Dev burned hourly cycles on small additive v0.3.4 bugs while the v0.3.2 recognition moat (#932) sat untouched — 避实就虚 | `dev-cycle.md`: **HARDEST-FIRST** core trait — pick the hardest release-blocking task of the current milestone first; decompose huge items into one-cycle slices; log WHY if skipping a hard one | Hard problems get attacked head-on → the version becomes a controllable release |
+| 2026-06-20 | Orch (meta) | Orch did pure PR-triage for days and never autonomously evolved Dev/QA — `orch-review.md` had no such mandate (Ace flagged it) | Added **Step 3.6 — Evolve the team** (every cycle) + this ledger | The loop now self-improves its own agents continuously, trackably |
