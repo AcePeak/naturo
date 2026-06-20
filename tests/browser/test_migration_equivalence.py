@@ -1034,3 +1034,116 @@ def test_anti_detection_equivalence(
         )
         == "true"
     )
+
+
+def test_dropdown_playlist_selection_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage dropdown multi-select-by-text flow via naturo.
+
+    Mirrors the migration guide's "Dropdown / Playlist Selection" section -- the
+    YouTube-publishing pattern where a dropdown is opened, then the script
+    iterates the items and clicks only those whose text matches a target set,
+    scrolling each into view first, and finally clicks Done. The *Before*
+    DrissionPage code is::
+
+        element = self.page.ele(self.elements['播放选择'])
+        element.scroll.to_center(); element.hover().click()
+        for element in self.page.eles(self.elements['播放列表']):
+            element.scroll.to_see()
+            if element.text in target_playlists:
+                element.click()
+        self.page.ele(self.elements['完成']).click()
+
+    The *After* surface is :meth:`BrowserPage.scroll_to_element` (selector form)
+    to reach the trigger, :meth:`BrowserElement.hover` + :meth:`BrowserElement.click`
+    to open it, then per item :meth:`BrowserElement.scroll_into_view` +
+    ``element.text`` + :meth:`BrowserElement.click`, then a final ``find().click()``.
+
+    Driven against ``playlist-select.html`` -- a closed dropdown whose five tall
+    items run well below the viewport fold -- this row proves the distinct part of
+    the pattern not covered by the hover/Tab rows: a **multi-select-by-text loop**
+    over off-screen items. Per naturo's never-lie contract (SOUL.md) the outcome is
+    read back from the page's authoritative ``Done``-finalized record rather than
+    trusting the click sequence, and three legs are checked:
+
+    * **Exactness:** only the items whose ``text`` is in the target set end up
+      selected -- in document order -- and non-matching items stay unselected (the
+      negative leg: a loop that clicked indiscriminately, or matched on the wrong
+      field, would select the wrong set).
+    * **Scroll is real, not a no-op:** the lowest target sits far below the fold,
+      so the per-item ``scroll_into_view`` must actually move the viewport
+      (``window.scrollY`` advances from 0) for the item to be reached.
+    * **Doc-fix guard:** :meth:`BrowserPage.scroll_to_element` takes a *selector
+      string*, not an element. The guide previously showed
+      ``page.scroll_to_element(item)`` (passing the in-hand element), which raises;
+      the element's own :meth:`~BrowserElement.scroll_into_view` is the correct
+      API and is what this row -- and the corrected guide -- uses.
+    """
+    target_playlists = ["My Playlist 1", "Cooking Channel"]
+    browser_page.navigate(f"{fixtures_server}/playlist-select.html")
+
+    # never-lie precondition: the dropdown starts closed (its list is hidden), so
+    # the open step below is genuinely required to reach the items.
+    assert (
+        browser_page.evaluate(
+            "getComputedStyle(document.getElementById('playlist-list')).display"
+        )
+        == "none"
+    )
+
+    # Before: element.scroll.to_center(); element.hover().click()  ->  After:
+    # scroll_to_element(selector) reaches the trigger, then hover()+click() open it.
+    browser_page.scroll_to_element("xpath://div[@class='playlist-select']")
+    browser_page.find("xpath://div[@class='playlist-select']").hover()
+    browser_page.find("xpath://div[@class='playlist-select']").click()
+    browser_page.wait_for_function(
+        "getComputedStyle(document.getElementById('playlist-list')).display === 'block'",
+        timeout=3.0,
+    )
+
+    # The dropdown items are all enumerable and carry their playlist names in
+    # document order (the `self.page.eles(...)` the Before loop walks).
+    items = browser_page.find_all("xpath://div[@class='playlist-item']")
+    assert [item.text for item in items] == [
+        "My Playlist 1",
+        "My Playlist 2",
+        "My Playlist 3",
+        "Travel Vlogs",
+        "Cooking Channel",
+    ]
+
+    # Doc-fix guard: scroll_to_element wants a selector string. Passing the in-hand
+    # element (the guide's old `page.scroll_to_element(item)`) raises; the element's
+    # own scroll_into_view() is the correct API the loop below uses.
+    with pytest.raises((AttributeError, TypeError)):
+        browser_page.scroll_to_element(items[0])  # type: ignore[arg-type]
+
+    # The page is still scrolled to the top before the select loop runs.
+    assert int(browser_page.evaluate("window.scrollY")) == 0
+
+    # Before: for element in eles(...): element.scroll.to_see(); if text in targets:
+    # element.click()  ->  After: per item scroll_into_view() + text match + click().
+    for item in items:
+        item.scroll_into_view()
+        if item.text in target_playlists:
+            item.click()
+
+    # Scroll is real, not a no-op: the lowest target ("Cooking Channel") sits far
+    # below the fold, so scroll_into_view must have moved the viewport to reach it.
+    assert int(browser_page.evaluate("window.scrollY")) > 0
+
+    # Before: self.page.ele('完成').click()  ->  After: find("button.done").click().
+    browser_page.find("xpath://button[@class='done']").click()
+
+    # never-lie: read the authoritative selection the Done handler finalized rather
+    # than trusting the clicks. Exactly the target set, in document order, is
+    # selected -- and nothing else.
+    assert (
+        browser_page.find("#result").attr("data-result")
+        == "My Playlist 1,Cooking Channel"
+    )
+    # Negative leg: every non-target item is still unselected.
+    for item in items:
+        expected = "true" if item.text in target_playlists else "false"
+        assert item.attr("data-selected") == expected
