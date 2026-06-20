@@ -116,7 +116,7 @@ which engine found which element — just use `naturo click e42`.
 | `ele.hover().click()` | `naturo browser hover <sel> && naturo browser click <sel>` | `element.hover(); element.click()` |
 | `ele.scroll.to_see()` | `naturo browser scroll --to-element <sel>` | `page.scroll_to_element(sel)` |
 | `page.scroll.down(1000)` | `naturo browser scroll --by 1000` | `page.scroll_by(1000)` |
-| `page.wait.doc_loaded()` | `naturo browser wait --load` | `page.wait_for_load()` |
+| `page.wait.doc_loaded()` | `naturo browser navigate <url> --wait-until load` | `page.wait_for_load()` |
 | `page.get_screenshot(path)` | `naturo browser screenshot --path file.png` | `page.screenshot("file.png")` |
 | `page.set.window.max()` | `naturo app maximize --app chrome` | N/A (use CLI) |
 | `page.run_js_loaded(js)` | `naturo browser eval <js>` | `page.evaluate(js)` |
@@ -138,7 +138,7 @@ which engine found which element — just use `naturo click e42`.
 | Selenium | naturo CLI | naturo Python SDK |
 |----------|-----------|-------------------|
 | `webdriver.Chrome(options=opts)` | `naturo browser launch` | `BrowserPage()` |
-| `WebDriverWait(d,t).until(EC.presence(...))` | `naturo browser wait <selector> --timeout <ms>` | `page.wait_for(selector, timeout=ms)` |
+| `WebDriverWait(d,t).until(EC.presence(...))` | `naturo browser wait <selector> --timeout <seconds>` | `page.wait_for(selector, timeout=seconds)` |
 | `driver.find_element(By.XPATH, '...')` | `naturo browser find "xpath://..."` | `page.find("xpath://...")` |
 | `driver.find_elements(By.XPATH, '...')` | `naturo browser find "xpath://..." --all` | `page.find_all("xpath://...")` |
 | `element.send_keys(text)` | `naturo browser type <sel> <text>` | `element.type(text)` |
@@ -263,12 +263,12 @@ if not page.ele(self.ele_dict["发布时间和发布地点"]):
 **After**:
 ```bash
 naturo browser navigate "https://ecom.example.com/dashboard/evaluation/poi"
-naturo browser wait --load --timeout 10000
+naturo browser wait-network-idle    # navigate already waits for load; settle dynamic content
 ```
 
 ```python
 page.navigate("https://ecom.example.com/dashboard/evaluation/poi")
-page.wait_for_load(timeout=10000)
+page.wait_for_network_idle()  # navigate already waits for load; settle dynamic content
 ```
 
 ### Element Finding
@@ -502,11 +502,11 @@ time.sleep(random.uniform(0.5, 1.5))  # scattered throughout every script
 
 **After** — event-driven waits, no guessing:
 ```bash
-# Page lifecycle
-naturo browser wait --load                          # Page fully loaded
-naturo browser wait --dom-ready                     # DOM content loaded
-naturo browser wait --network-idle                  # No network activity for 500ms
-naturo browser wait --network-idle --time 1000      # Custom idle threshold
+# Page lifecycle (load-waiting is built into `navigate --wait-until`)
+naturo browser navigate <url> --wait-until load             # Wait for the load event (default)
+naturo browser navigate <url> --wait-until domcontentloaded # Wait for DOMContentLoaded
+naturo browser wait-network-idle                            # No network activity for 0.5s
+naturo browser wait-network-idle --idle-time 1.0            # Custom idle threshold (seconds)
 
 # Element state
 naturo browser wait ".results" --timeout 10000               # Element exists in DOM
@@ -515,19 +515,20 @@ naturo browser wait ".spinner" --state hidden --timeout 30000   # Spinner gone
 naturo browser wait ".old-item" --state detached              # Element removed from DOM
 
 # Navigation
-naturo browser wait --navigate --url-contains "success"
+naturo browser wait-url "success"                            # Wait until the URL contains a substring
+naturo browser wait-navigation                              # Wait for the next navigation to complete
 
 # JS condition
-naturo browser wait --eval "window.dataLoaded === true" --timeout 5000
+naturo browser wait-function "window.dataLoaded === true" --timeout 5
 ```
 
 ```python
 page.wait_for_load()
-page.wait_for_network_idle(time=500)
+page.wait_for_network_idle(idle_time=0.5)
 page.wait_for(".results", state="visible", timeout=10000)
 page.wait_for(".spinner", state="hidden", timeout=30000)
-page.wait_for_navigation(url_contains="success")
-page.wait_for_eval("window.dataLoaded === true")
+page.wait_for_url("success")
+page.wait_for_function("window.dataLoaded === true")
 ```
 
 ### Screenshots
@@ -1067,7 +1068,7 @@ send_keys('{ENTER}')
 # === Part 1: Scrape Dianping (browser) ===
 naturo browser launch --profile dianping
 naturo browser navigate "https://ecom.example.com/dashboard/evaluation/poi"
-naturo browser wait --load
+naturo browser wait-network-idle
 
 naturo browser click "xpath://div[@class='tab-review']"
 naturo browser type "xpath://input[@class='store-search']" "My Store Name" --clear-first
@@ -1374,7 +1375,7 @@ for i in $(seq 1 10); do
   sleep 5
   naturo browser cookies load --path /tmp/cookies.json
   naturo browser eval "location.reload()"
-  naturo browser wait --load --timeout 10000
+  naturo browser wait-network-idle
 done
 ```
 
@@ -1388,14 +1389,14 @@ for _ in range(10):
     time.sleep(5)
     page.cookies.load("/tmp/cookies.json")
     page.evaluate("location.reload()")
-    page.wait_for_load(timeout=10000)
+    page.wait_for_network_idle()
 ```
 
 > **🚧 Not yet implemented:** the `naturo browser cookies …` / `page.cookies.…`
 > calls in this loop do **not** exist in the current build (see
 > [Cookie Management](#cookie-management)), so this cookie-cycling `After`
 > example is not yet runnable end-to-end. The title-check, `eval`, and
-> `wait --load` steps around them are real. Tracked in
+> `wait-network-idle` steps around them are real. Tracked in
 > [#1106](https://github.com/AcePeak/naturo/issues/1106).
 
 ---
@@ -1581,7 +1582,7 @@ for _ in range(80):
 # Or pure CLI for simpler extraction
 naturo browser launch --profile xhs-main
 naturo browser navigate "https://www.xiaohongshu.com/explore"
-naturo browser wait --load
+naturo browser wait-network-idle
 
 for i in $(seq 1 80); do
   naturo browser find "xpath://div[@class='note-item']//a[@class='note-link']" --all --json \
