@@ -108,7 +108,7 @@ which engine found which element — just use `naturo click e42`.
 | `page.ele("xpath://...")` | `naturo browser find "xpath://..."` | `page.find("xpath://...")` |
 | `page.eles("xpath://...")` | `naturo browser find "xpath://..." --all` | `page.find_all("xpath://...")` |
 | `ele.click()` | `naturo browser click <selector>` | `element.click()` |
-| `ele.click(by_js=True)` | `naturo browser click <selector> --js` | `element.click(js=True)` |
+| `ele.click(by_js=True)` | `naturo browser click <selector> --js` 🚧 | `element.click(js=True)` 🚧 |
 | `ele.input(text)` | `naturo browser type <selector> <text>` | `element.type(text)` |
 | `ele.input(text, True)` | `naturo browser type <selector> <text> --clear-first` | `element.type(text, clear_first=True)` |
 | `ele.text` | `naturo browser text <selector>` | `element.text` |
@@ -121,6 +121,17 @@ which engine found which element — just use `naturo click e42`.
 | `page.set.window.max()` | `naturo app maximize --app chrome` | N/A (use CLI) |
 | `page.run_js_loaded(js)` | `naturo browser eval <js>` | `page.evaluate(js)` |
 | `ele.click.to_upload(path)` | `naturo browser click <sel>` + `naturo dialog type <path>` + `naturo dialog accept` | see [File Upload](#file-upload) |
+
+> **🚧 Not yet implemented:** the JS-click fallback row above (`naturo browser
+> click <selector> --js` / `element.click(js=True)`) does **not** exist in the
+> current build — `browser click` accepts only `--offset-x`/`--offset-y`/`--json`
+> and `BrowserElement.click()` takes `offset_x`/`offset_y` only. Until it ships,
+> dispatch a JS click via the (working) `eval` path —
+> `naturo browser eval "document.querySelector('#sel').click()"` /
+> `page.evaluate("document.querySelector('#sel').click()")` — or use a regular
+> `click`. Whether to add a dedicated `--js`/`click(js=True)` path or prune it
+> from this guide is tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106).
 
 ### Selenium to naturo
 
@@ -135,10 +146,17 @@ which engine found which element — just use `naturo click e42`.
 | `ActionChains(d).click_and_hold(e).move_by_offset(x,y).release()` | `naturo drag --from-element <sel> --offset-x <x>` | see [Slider Captcha](#slider-captcha) |
 | `driver.execute_script(js)` | `naturo browser eval <js>` | `page.evaluate(js)` |
 | `driver.execute_cdp_cmd(...)` | Built-in (stealth is default) | Built-in |
-| `driver.get_cookies()` | `naturo browser cookies save --path f.json` | `page.cookies.save(path)` |
-| `driver.add_cookie(c)` | `naturo browser cookies load --path f.json` | `page.cookies.load(path)` |
+| `driver.get_cookies()` | `naturo browser cookies save --path f.json` 🚧 | `page.cookies.save(path)` 🚧 |
+| `driver.add_cookie(c)` | `naturo browser cookies load --path f.json` 🚧 | `page.cookies.load(path)` 🚧 |
 | `driver.switch_to.frame(el)` | `naturo browser frame-find <frame> <selector>` | `page.frame(selector).find(...)` |
 | `options.set_capability('goog:loggingPrefs', ...)` | `naturo browser requests --pattern <glob>` | `page.network.capture_snapshot()` |
+
+> **🚧 Not yet implemented:** the two cookie rows above (`naturo browser cookies
+> …` / `page.cookies.…`) do **not** exist in the current build — there is no
+> `cookies` command on the `browser` group and no `BrowserPage.cookies`
+> property. Tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106); see the
+> [Cookie Management](#cookie-management) caveat below.
 
 ### pywinauto / uiautomation to naturo
 
@@ -399,7 +417,12 @@ page.find("xpath://button[@class='upload-video']").hover()
 page.find("xpath://button[@class='upload-video']").click(js=True)
 ```
 
-### Scroll
+> **🚧 Not yet implemented:** the `--js` / `click(js=True)` calls above are the
+> JS-click fallback, which does **not** exist in the current build. Drop `--js`
+> for a normal click after the hover, or dispatch via the working `eval` path
+> (`naturo browser eval "document.querySelector('…').click()"`). Tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106). See the
+> [JavaScript Execution](#javascript-execution) caveat for details.
 
 **Before** — from a Xiaohongshu infinite-scroll project (DrissionPage):
 ```python
@@ -584,6 +607,14 @@ page.cookies.load("cookies.json")
 page.cookies.delete(domain=".douyin.com")
 ```
 
+> **🚧 Not yet implemented:** the `naturo browser cookies` command family
+> (`save`/`clear`/`load`/`delete`) and the `BrowserPage.cookies` property shown
+> in the `After` block do **not** exist in the current build, so the
+> cookie-cycling pattern has no shipped `After` equivalent yet. Whether to
+> implement these surfaces or prune them from this guide is tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106) — do not rely on the
+> commands above until it resolves.
+
 ### JavaScript Execution
 
 **Before** — from a Douyin project (Selenium, JS click fallback):
@@ -627,6 +658,15 @@ count = page.evaluate("document.querySelectorAll('.item').length")
 page.evaluate("document.body.style.zoom='0.85'")
 page.find("#login-btn").click(js=True)
 ```
+
+> **🚧 Not yet implemented:** `naturo browser eval` / `page.evaluate(...)` (the
+> `readyState`, `querySelectorAll`, `reload`, and `zoom` lines above) work today,
+> but the JS-click fallback on the last line of each block — `naturo browser
+> click "#login-btn" --js` / `page.find("#login-btn").click(js=True)` — does
+> **not** exist yet. Until it ships, click via the working `eval` path:
+> `naturo browser eval "document.querySelector('#login-btn').click()"` /
+> `page.evaluate("document.querySelector('#login-btn').click()")`. Tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106).
 
 ### Tab Management
 
@@ -1350,6 +1390,13 @@ for _ in range(10):
     page.evaluate("location.reload()")
     page.wait_for_load(timeout=10000)
 ```
+
+> **🚧 Not yet implemented:** the `naturo browser cookies …` / `page.cookies.…`
+> calls in this loop do **not** exist in the current build (see
+> [Cookie Management](#cookie-management)), so this cookie-cycling `After`
+> example is not yet runnable end-to-end. The title-check, `eval`, and
+> `wait --load` steps around them are real. Tracked in
+> [#1106](https://github.com/AcePeak/naturo/issues/1106).
 
 ---
 
