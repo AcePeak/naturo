@@ -296,6 +296,10 @@ def launch_chrome(
     args = [
         chrome_path,
         f"--remote-debugging-port={port}",
+        # Chrome 111+ rejects DevTools WebSocket upgrades whose Origin header is
+        # not explicitly allowed. Without this flag the browser we just launched
+        # refuses naturo's own CDP connection with a 403 handshake (#1075).
+        "--remote-allow-origins=*",
     ]
 
     if headless:

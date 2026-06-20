@@ -318,6 +318,23 @@ class TestLaunchChrome:
     @patch("naturo.browser._launcher._wait_for_cdp")
     @patch("subprocess.Popen")
     @patch("naturo.browser._launcher.find_chrome", return_value="/usr/bin/google-chrome")
+    def test_launch_allows_cdp_origin(self, mock_find, mock_popen, mock_wait):
+        """Regression #1075: the launch argv must allow the CDP WebSocket origin.
+
+        Since Chrome 111, the DevTools endpoint rejects WebSocket upgrades whose
+        ``Origin`` header is not explicitly allowed. Without
+        ``--remote-allow-origins``, naturo's own CDP client cannot connect to the
+        browser it just launched (403 Forbidden handshake), breaking every
+        subsequent browser command.
+        """
+        mock_popen.return_value = MagicMock(pid=100)
+        launch_chrome(port=9222)
+        args = mock_popen.call_args[0][0]
+        assert "--remote-allow-origins=*" in args
+
+    @patch("naturo.browser._launcher._wait_for_cdp")
+    @patch("subprocess.Popen")
+    @patch("naturo.browser._launcher.find_chrome", return_value="/usr/bin/google-chrome")
     def test_launch_headless(self, mock_find, mock_popen, mock_wait):
         mock_popen.return_value = MagicMock(pid=100)
         launch_chrome(headless=True)
@@ -409,6 +426,56 @@ class TestLaunchChrome:
         mock_popen.return_value = MagicMock(pid=100)
         result = launch_chrome(wait_ready=False)
         assert result.pid == 100
+
+
+# ---------------------------------------------------------------------------
+# launch_chrome — real-browser round trip (#1075)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.desktop
+class TestLaunchChromeEndToEnd:
+    """Prove a launched browser is actually connectable end-to-end.
+
+    The #1075 regression could not be caught by argv assertions alone — it
+    only manifests when naturo's CDP client opens a WebSocket against a real
+    Chrome 111+, which rejects a disallowed Origin with a 403 handshake. This
+    desktop test launches Chrome via :func:`launch_chrome`, connects, and
+    drives ``navigate``/``find`` against an inline page.
+    """
+
+    def test_launch_navigate_find_round_trip(self):
+        import shutil
+        import tempfile
+
+        from naturo.browser import BrowserPage
+
+        if find_chrome() is None:
+            pytest.skip("Chrome/Chromium/Edge not installed")
+
+        # A dedicated port + throwaway profile avoid clashing with any browser
+        # the desktop already has open on the default 9222.
+        port = 9533
+        profile_dir = tempfile.mkdtemp(prefix="naturo-launch-1075-")
+        chrome = None
+        page = None
+        try:
+            chrome = launch_chrome(
+                port=port,
+                headless=True,
+                user_data_dir=profile_dir,
+                timeout=30.0,
+            )
+            page = BrowserPage(port=port)
+            page.navigate("data:text/html,<h1 id='greeting'>Hello CDP</h1>")
+            element = page.find("#greeting")
+            assert element.text == "Hello CDP"
+        finally:
+            if page is not None:
+                page.close()
+            if chrome is not None:
+                chrome.terminate()
+            shutil.rmtree(profile_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
