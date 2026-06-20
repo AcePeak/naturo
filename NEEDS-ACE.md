@@ -4,27 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 05:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-21 06:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-Quiet, healthy cycle. **Step 1:** team-Dev **#1116** (*fixes #1112* — `docs: correct migration guide wait surface to
-shipped API`) **MERGED** `55fa4bc` @21:52Z (docs + a wait-surface guard test, **no public surface** → SQUASH `--auto`
-correct under the public-API hold); branch auto-deleted (Rule 14). Only open PR = community **#1055** (queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, fork, UNSTABLE) — not touched. **Step 2 +
-handoff:** #1116 merged to non-default `develop` so GitHub didn't auto-close #1112 → Orc **flipped #1112
-`status:done`** (merge-handoff, left OPEN for QA per Rule 1). `status:in-progress` = **#766** (umbrella, active,
-updated 21:21Z < 24h); `status:done` open = **#1112** (awaiting QA) + **#972** (human-only input-safety, queued).
-Nothing to close (Rule 1). QA-filed **#1114** (P2, failed `capture --region/--element` still writes the full PNG to
-`-o`) left in backlog — Dev-actionable, not progress-blocking. **Step 3 (recognition moat, Standing #1):** P0
-**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked → #1097 below;
-README hero = recognition matrix (#931). Live recurring class — migration-guide doc-drift — is **already the
-systematic sweep umbrella #766 performs row-by-row** (closed one more leg via #1112/#1116); a separate audit would
-duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since 06-16).
-**Step 3.6** **no change — no new evidence** (Dev #1116 exemplary — closed the #1112 never-lie doc gap with a
-surface-fix + hermetic guard, no-public-surface so `--auto` correct; QA #1114 exemplary — genuine P2 never-lie bug
-with pinpointed root cause + clean repro, lateral audit found no duplicate, no input simulated; freshest rules <2d
-exercised cleanly → a tweak would over-fit). `develop` CI: last completed run `701c98c` #1113 Build & Test + CodeQL
-SUCCESS; HEAD `55fa4bc` #1116 docs run in-progress (non-blocking) → **not red.** v0.3.2 ship-gate unchanged (FULLY
-MET — release is your call, #914)._
+Quiet, healthy cycle. **Step 1:** team-Dev **#1117** (*part of #766* — `test: prove Anti-Detection Before/After
+equivalence row`) **MERGED** `8e8b1fb` @22:20Z (test-only, +122/−0, **no public surface** → SQUASH `--auto` correct
+under the public-API hold); branch auto-deleted (Rule 14). It's a #766 row → umbrella **#766 stays
+status:in-progress**, no handoff owed. Only open PR = community **#1055** (queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, fork, UNSTABLE) — not touched. **Step 2:**
+**#1112** (the doc gap fixed last cycle) is now **CLOSED** — QA verified+closed it (`verified`+`status:done`, Rule 1
+satisfied by QA). `status:in-progress` = **#766** (umbrella, active, updated 22:17Z < 24h); `status:done` open =
+**#972** only (human-only input-safety, queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing
+#1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked
+(MSVC/cmake toolchain re-proved absent this cycle) → #1097 below; README hero = recognition matrix (#931). Live
+recurring class — migration-guide doc-drift — is **already the systematic sweep umbrella #766 performs row-by-row**
+(Dev's #1117 empirical probe found the Anti-Detection guide bullets already hold by default → filed NO false
+doc-gap); a separate audit would duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5**
+competitiveness not due (<7d since 06-16). **Step 3.6** **no change — no new evidence** (Dev #1117 exemplary —
+HARDEST-FIRST with moat blocks re-proven this cycle, never-lie empirical stealth probe filed no fabricated gap,
+hermetic raw-fingerprint test, caught the #969 stale-egg trap and forced PYTHONPATH; QA exemplary — verified+closed
+#1112 with merged commit, left #972 needs:ace, no intrusive input; freshest rules <2d exercised cleanly → a tweak
+would over-fit). `develop` CI: HEAD `8e8b1fb` #1117 CodeQL SUCCESS + Build & Test in-progress (non-blocking); last
+completed run `55fa4bc` #1116 Build & Test + CodeQL SUCCESS → **not red.** v0.3.2 ship-gate unchanged (FULLY MET —
+release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -64,7 +65,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `41b81ad`/#1104 (HEAD) → **not red.** Recent team-Dev lands: **#1104** (`File Download migration-equivalence row + honor documented download page API`, part of #766 → `41b81ad`; **added public API → needs:ace #1105**; umbrella **#766 still open**, status:in-progress, remaining slider-captcha row human-gated), **#1103** (`map 9 unmapped ErrorCode members to real categories`, *fixes #1101* → `a52c953`, **#1101 status:done awaiting QA**), **#1102** (`RECOGNITION.md` JAB never-lie interim caveat, *fixes #1098* → `9896664`, **#1098 status:done awaiting QA**), **#1099** (`eN stale-ref → registered STALE_SNAPSHOT_CACHE envelope`, *fixes #1086* → `3d30438`, **QA-verified+closed 01:45Z**), **#1095** (`iframe migration-guide → shipped frame API`, *fixes #1082* → `b3cbfe3`, **QA-verified+closed 00:45Z**), **#1094** (`migration-guide network section → shipped API`, *fixes #1088* → `5714587`, **QA-verified+closed 00:15Z**), **#1093** (`naturo click --image` shortcut, *fixes #1059* → `f04b0d8`, **QA-verified+closed 00:15Z**). Earlier (#766 migration-equivalence matrix): **#1092** (`hover-reveal-menu` → `afc6dde`), **#1091** (`image-captcha click-offset` + fix dead `captcha-image.html` fixture → `a14a46d`), **#1090** (`tab-management` + dead `tabs.html` fixture → `bcda034`), **#1087** (`network interception` → `9fa3183`). Earlier: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
+- `develop` CI: **not red** — HEAD `8e8b1fb`/#1117 CodeQL **SUCCESS** + Build & Test **in-progress** (non-blocking); last completed run `55fa4bc`/#1116 Build & Test + CodeQL **SUCCESS**. Recent team-Dev lands: **#1117** (`test: prove Anti-Detection Before/After equivalence row`, part of #766 → `8e8b1fb`; test-only, **no public surface**; umbrella **#766 still open**), **#1116** (`docs: correct migration guide wait surface to shipped API`, fixes #1112 → `55fa4bc`; **#1112 QA-verified+closed**), **#1104** (`File Download migration-equivalence row + honor documented download page API`, part of #766 → `41b81ad`; **added public API → needs:ace #1105**; umbrella **#766 still open**, status:in-progress, remaining slider-captcha row human-gated), **#1103** (`map 9 unmapped ErrorCode members to real categories`, *fixes #1101* → `a52c953`, **#1101 status:done awaiting QA**), **#1102** (`RECOGNITION.md` JAB never-lie interim caveat, *fixes #1098* → `9896664`, **#1098 status:done awaiting QA**), **#1099** (`eN stale-ref → registered STALE_SNAPSHOT_CACHE envelope`, *fixes #1086* → `3d30438`, **QA-verified+closed 01:45Z**), **#1095** (`iframe migration-guide → shipped frame API`, *fixes #1082* → `b3cbfe3`, **QA-verified+closed 00:45Z**), **#1094** (`migration-guide network section → shipped API`, *fixes #1088* → `5714587`, **QA-verified+closed 00:15Z**), **#1093** (`naturo click --image` shortcut, *fixes #1059* → `f04b0d8`, **QA-verified+closed 00:15Z**). Earlier (#766 migration-equivalence matrix): **#1092** (`hover-reveal-menu` → `afc6dde`), **#1091** (`image-captcha click-offset` + fix dead `captcha-image.html` fixture → `a14a46d`), **#1090** (`tab-management` + dead `tabs.html` fixture → `bcda034`), **#1087** (`network interception` → `9fa3183`). Earlier: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.
