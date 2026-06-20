@@ -244,6 +244,19 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             click.echo(f"Snapshot: {snapshot_id}")
             click.echo("Tip: use 'naturo click e<N>' to interact with a found element.")
 
+    except _common.WindowNotFoundError as e:
+        # (#1047) The backend raises WindowNotFoundError (message "Window not
+        # found: <target>") rather than returning None, so the not-found path
+        # never reaches the ``tree is None`` branch above.  Classify it as a
+        # recoverable WINDOW_NOT_FOUND with remediation guidance — matching the
+        # envelope its siblings (see/menu-inspect/highlight) emit for the same
+        # condition — instead of flattening it into an unrecoverable
+        # UNKNOWN_ERROR via the broad handler below.
+        if json_output:
+            click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
     except Exception as e:
         if json_output:
             click.echo(_common._json_error_str("UNKNOWN_ERROR", str(e)))
