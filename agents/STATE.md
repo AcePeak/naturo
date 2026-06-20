@@ -1,19 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 08:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 09:22Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1), no new
-> issue (Rule 9). THIS CYCLE: team-Dev PR #1072 (`fix: honor find --image --screenshot for offline matching,
-> fixes #1070, fixes #1067`) — first CI run went red on Linux/macOS (the `--screenshot` reject/not-found tests
-> returned `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND`: the GUI-platform gate ran ahead of arg
-> validation). Fix commit `b2b3c8c` reordered validation before the gate + exempted offline matching from the
-> GUI requirement → CI green → auto-merge LANDED it (squash, develop `91ce240`; branch auto-deleted, Rule 14).
-> Per the merge handoff: flipped #1070 `status:in-progress`→`status:done` and marked #1067 `status:done` (both
-> Dev-complete, awaiting QA — Rule 1: NOT closed, no `verified` yet). QA confirmed healthy (verified+closed #1061
-> @16:42Z). One Step 3.6 team-evolution change shipped: **Platform-invariant validation order** self-review rule
-> (`dev-cycle.md` + EVOLUTION.md) — env/platform gates must not precede input validation or the bad-input →
-> error-code contract drifts by OS (Windows-green/CI-red class). Step 3.5 competitiveness NOT due (<7d since
-> 06-16). v0.3.2 ship-gate unchanged: FULLY MET — release is Ace's call (#914).** Detail below is the prior
-> (08:26Z) cycle's record, kept as history.)
+> issue (Rule 9), no new team-evolution change (no new evidence — honest ledger row).**
+> **Step 0:** `git config` Orc; `git fetch -p` pruned `origin/feat/issue-1062-browser-fixtures` (auto-deleted at
+> #1073 merge); `git checkout develop`; `git pull --ff-only` fast-forwarded `5755494 → f56a760`; authoritative
+> `gh api .../branches` = **develop + main only** → Rule 14 clean.
+> **Step 1 PR sweep:** **no open team-Dev PRs.** Since the 08:52Z cycle, two moat PRs fully cleared: #1072
+> (`find --image --screenshot` offline matching, `91ce240`) → **QA verified+closed #1070 & #1067 @17:10Z**;
+> team-Dev **#1073** (`build offline browser migration fixtures`, part of #766, `f56a760` = HEAD, all-green
+> auto-merge SQUASH) → flipped its issue **#1062 → status:done** on merge (awaiting QA — Rule 1, NOT closed). The
+> only open PR is community **#1055** (base `main`, head `main` on contributor fork, MERGEABLE/UNSTABLE) —
+> **already queued needs:ace #1057**; community-PR handling is human-only → Orc did **not** merge/comment/take-over/close.
+> **Step 2 health:** `status:in-progress` = **empty** (no in-flight pickup, no abandoned work). `status:done`
+> (open) = **#1062** (browser fixtures, awaiting QA) + **#972** (input-content guard, human security sign-off,
+> queued). **Nothing to close** (Rule 1 — #1062 needs QA `verified`; #972 human-only).
+> **Step 3 (drive product):** backlog fully triaged — `gh issue list --search "no:milestone"` (minus needs:ace +
+> help-wanted) = **zero actionable unmilestoned issues**. Recognition moat (Standing #1) progressing well — find
+> `--image --screenshot` + browser migration fixtures landed since last cycle; no gap sharp enough to file
+> (Rule 9 — no churn). v0.3.2 = earliest milestone with open work (17 open, ship-gate FULLY MET).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence.** Two substantive rows shipped <1h earlier (08:26
+> Option coverage + 08:52 Platform-invariant validation order); the clean Dev #1062 land (HARDEST-FIRST, live env
+> probes, pre-empted 2 mypy findings, all-green) and exemplary QA #1070/#1067 PASS×2 (black-screenshot repro,
+> Rule-9-correct no duplicate) surfaced no new recurring *operating* weakness, and the fresh rules haven't had a
+> cycle to be exercised → honest "no change" ledger row to avoid over-fit/churn (Step 3.6's explicit allowance).
+> **Step 4 (needs:ace): no new human-only item** — live queue **unchanged #1057/#975/#972/#969/#935/#915/#914/#897**;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1722-auto-review.md`. `develop`
+> CI: HEAD `f56a760` (#1073) **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914).** Detail below is the prior (08:52Z) cycle's record, kept as history.)
 > **Step 0:** `git config` Orc identity; `git fetch origin -p` pruned `origin/feat/issue-1061-find-selector` +
 > `origin/fix/issue-932-recognition-md` (both auto-deleted at merge); `git checkout develop`; `git pull --ff-only`
 > fast-forwarded `1e834fc → 17cc5f1` (pulled `naturo/cli/core/_find.py` +215, `naturo/cascade/*` JAB fusion,

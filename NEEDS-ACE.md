@@ -4,24 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 08:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
-unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9). **In-flight team-Dev PR
-#1072** (`fix: honor find --image --screenshot for offline matching (fixes #1070, fixes #1067)` → `develop`,
-auto-merge SQUASH armed): its first CI run went red on Linux/macOS (the `--screenshot` reject/not-found tests
-returned `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND` — the GUI-platform gate ran ahead of arg
-validation). Fix commit `b2b3c8c` reorders validation before the gate and exempts offline matching from the
-GUI requirement; CI re-running, expected green → auto-merge will land it. Not human-only (internal fix, no
-public-API change) → handled in-loop, not queued. #1070 stays OPEN + `status:in-progress` (its PR not yet
-merged — correctly NOT flipped to done while red/in-flight). The one open PR otherwise is community **#1055**
-(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
-**not** comment/take-over/close it. **QA confirmed healthy** — verified+closed #1061 at 16:42Z (live Calculator,
-read-only), reinforcing that #915's "QA down ~5 days" era is over (still recommended for closure below).
-**Step 3.6 (evolve the team):** PR #1072's Windows-green/CI-red failure exposed a new class — an env/platform
-gate ordered ahead of input validation makes the bad-input → error-code contract platform-dependent → added a
-surgical **Platform-invariant validation order** rule to `dev-cycle.md` self-review + ledger row in
-`agents/EVOLUTION.md`. **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).**
-`develop` CI: HEAD `5379e98` **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 09:22Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+unchanged #1057/#975/#972/#969/#935/#915/#914/#897.** develop NOT red, nothing closed by Orc (Rule 1), no new
+issue (Rule 9). **No open team-Dev PRs** — both this morning's moat PRs landed and were verified: #1072
+(`find --image --screenshot` offline matching, `91ce240`) → QA PASS×2 + verified/closed #1070 & #1067 at 17:10Z;
+team-Dev #1073 (`build offline browser migration fixtures`, part of #766, `f56a760` = HEAD, all-green auto-merge)
+flipped its issue **#1062 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community
+**#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc
+did **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
+empty (no abandoned work); `status:done` open = **#1062** (awaiting QA) + **#972** (human-only security, queued).
+Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned actionable issues; recognition
+moat progressing well, no gap sharp enough to file (Rule 9 — no churn). **Step 3.6 (evolve the team):** no new
+evidence — two substantive evolution rows shipped <1h earlier (Option coverage 08:26 + Platform-invariant
+validation order 08:52); the clean Dev #1062 + QA #1070/#1067 cycles since surfaced no new operating weakness →
+honest "no change" ledger row (avoid over-fit/churn per Step 3.6). **Live needs:ace queue
+#1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `f56a760` (#1073) **Build & Test +
+CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
+Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -58,7 +57,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `17cc5f1`/#1071 (HEAD) → **not red.** Two team-Dev moat PRs landed since 16:22: **#1068** (`fuse JAB into the auto cascade + JAB benchmark row`, part of #932 → `4144f44`) and **#1071** (`naturo find --selector path resolution`, part of #809, closes issue #1061 → `17cc5f1`). Both Rule-1 ancestors; branches auto-deleted (Rule 14 clean). #1061 OPEN + `status:done` (awaiting QA); #932 stays OPEN (multi-part moat epic). The earlier `find --image` (#1066) + JAB init (#932/`866193e`) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). Two new QA bugs on the freshly-landed code milestoned **v0.3.2** this cycle: **#1070** (`find --image` ignores `--screenshot` → wrong coords; **P1**) and **#1069** (JAB auto-cascade test fragile on desktop).
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `f56a760`/#1073 (HEAD) → **not red.** Recent team-Dev lands: **#1072** (`honor find --image --screenshot for offline matching`, fixes #1070+#1067 → `91ce240`, **QA-verified+closed 17:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`, **#1062 status:done awaiting QA**), preceded by **#1068** (JAB auto-cascade) and **#1071** (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.
