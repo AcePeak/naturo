@@ -823,3 +823,92 @@ def test_javascript_execution_equivalence(
     )
     assert browser_page.evaluate("document.readyState") == "complete"
     assert browser_page.evaluate("document.querySelectorAll('.nav-link').length") == 3
+
+
+def test_wait_state_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage/Selenium event-driven element waits via naturo.
+
+    Mirrors the migration guide's "Waiting" section -- the core "no more
+    ``time.sleep(random.uniform(...))``" pitch. The *Before* code hand-rolls
+    polling: the Dianping ``for try_i in range(300): … if not page.ele("正在加载")``
+    loop waits for a spinner to disappear, and Selenium's
+    ``WebDriverWait(…).until(EC.presence_of_element_located(...))`` waits for a
+    result to appear. The *After* surface is :meth:`BrowserPage.wait_for` with
+    its documented states ``visible`` / ``hidden`` / ``detached`` (the same
+    ``naturo browser wait <selector> --state …`` the guide shows).
+
+    Driven against ``waits.html``, each state is proven independently on a fresh
+    load. Per naturo's never-lie contract (SOUL.md) the fixture starts in a fixed
+    state and only transitions when ``startTransitions(ms)`` is invoked *after*
+    the precondition is asserted, so the wait genuinely has to block for the
+    change: the test confirms the element is in the opposite state first, then
+    measures that ``wait_for`` did not return until the scheduled transition
+    landed (a no-op wait would return immediately and miss the lower bound), and
+    finally reads the page's own DOM state to confirm the target state holds.
+
+    Scope note (never-lie): the same guide section also documents
+    ``page.wait_for_eval(...)``, ``wait_for_navigation(url_contains=…)`` and
+    ``wait_for_network_idle(time=…)`` plus ``naturo browser wait --load/--eval/
+    --navigate`` flags, none of which match the shipped API
+    (``wait_for_function`` / ``wait_for_url`` / ``idle_time=`` and the separate
+    ``wait-navigation`` / ``wait-url`` / ``wait-function`` / ``wait-network-idle``
+    subcommands). That doc-vs-code drift is tracked separately in #1112 rather
+    than asserted here; this row proves only the faithfully-implemented
+    element-state waits.
+    """
+    # The scheduled delay before the page transitions, and a lower bound well
+    # below it: a wait that genuinely blocked for the transition must take at
+    # least this long, while a no-op wait would return near-instantly.
+    transition_delay_s = 0.5
+    min_blocked_s = 0.25
+
+    def _time_wait_for(selector: str, state: str) -> float:
+        """Schedule the transitions, then time ``wait_for`` reaching *state*.
+
+        Returns the wall-clock seconds ``wait_for`` blocked, so the caller can
+        assert it actually waited for the scheduled change rather than returning
+        immediately.
+        """
+        browser_page.evaluate(f"startTransitions({int(transition_delay_s * 1000)})")
+        start = time.monotonic()
+        browser_page.wait_for(selector, state=state, timeout=10.0)
+        return time.monotonic() - start
+
+    # ── state="visible": Selenium WebDriverWait(presence/visible) ─────────────
+    browser_page.navigate(f"{fixtures_server}/waits.html")
+    # never-lie precondition: the result does not exist yet, so a later "visible"
+    # can only come from the injection this test triggers.
+    assert browser_page.evaluate("document.getElementById('search-result') === null")
+    elapsed = _time_wait_for("#search-result", state="visible")
+    assert elapsed >= min_blocked_s  # the wait blocked for the injection
+    assert browser_page.find("#search-result").text == "result ready"
+    assert browser_page.evaluate(
+        "getComputedStyle(document.getElementById('search-result')).display"
+        " !== 'none'"
+    )
+
+    # ── state="hidden": the Dianping 300-iteration spinner poll loop ──────────
+    browser_page.navigate(f"{fixtures_server}/waits.html")
+    # never-lie precondition: the spinner is visible at load, so "hidden" must be
+    # the result of the transition, not the starting state.
+    assert browser_page.evaluate(
+        "getComputedStyle(document.getElementById('loading-spinner')).display"
+        " !== 'none'"
+    )
+    elapsed = _time_wait_for("#loading-spinner", state="hidden")
+    assert elapsed >= min_blocked_s  # the wait blocked until the spinner hid
+    assert browser_page.evaluate(
+        "getComputedStyle(document.getElementById('loading-spinner')).display"
+        " === 'none'"
+    )
+
+    # ── state="detached": wait for an element to leave the DOM ────────────────
+    browser_page.navigate(f"{fixtures_server}/waits.html")
+    # never-lie precondition: the element is in the DOM at load, so "detached"
+    # proves the removal happened rather than it never having existed.
+    assert browser_page.evaluate("!!document.getElementById('old-item')")
+    elapsed = _time_wait_for("#old-item", state="detached")
+    assert elapsed >= min_blocked_s  # the wait blocked until the node was removed
+    assert browser_page.evaluate("document.getElementById('old-item') === null")

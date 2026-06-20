@@ -245,8 +245,11 @@ class BrowserPage:
             element = self._resolve_element(parsed)
             if state in ("attached", "visible") and element is not None:
                 if state == "visible":
-                    box = element._get_click_point()
-                    if box is not None:
+                    # Visibility is decided by the element's rendered box, not by
+                    # _get_click_point (whose all-zeros fallback reports an
+                    # unrendered node as a valid (0,0) point — #1083 — and would
+                    # wrongly satisfy "visible" for a display:none element).
+                    if element._is_displayed():
                         return element
                 else:
                     return element
@@ -254,11 +257,14 @@ class BrowserPage:
                 # Return a dummy element since the element is gone
                 return BrowserElement(self, "", description="<detached>")
             elif state == "hidden":
-                if element is None:
-                    return BrowserElement(self, "", description="<hidden>")
-                box = element._get_click_point()
-                if box is None:
-                    return element
+                # Hidden = gone from the DOM, or present but not rendered. Using
+                # _is_displayed (not _get_click_point) lets a display:none /
+                # zero-area element — e.g. a spinner toggled off — satisfy the
+                # state, which the click-point check never could (#1083).
+                if element is None or not element._is_displayed():
+                    return element if element is not None else BrowserElement(
+                        self, "", description="<hidden>"
+                    )
 
             if time.monotonic() > deadline:
                 raise TimeoutError(

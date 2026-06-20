@@ -339,6 +339,34 @@ class BrowserElement:
                     ))
         return elements
 
+    def _is_displayed(self) -> bool:
+        """Return whether this element is currently rendered and visible.
+
+        Visibility here means the documented :meth:`BrowserPage.wait_for`
+        contract: the node is in the document, is not ``display:none`` /
+        ``visibility:hidden`` / ``visibility:collapse``, and has a non-zero
+        layout box. This deliberately does **not** reuse
+        :meth:`_get_click_point`, whose ``getBoundingClientRect`` fallback
+        returns a valid all-zeros point ``(0, 0)`` for an unrendered element
+        (the click-path quirk tracked in #1083) and so cannot distinguish a
+        hidden node from a visible one.
+
+        Returns:
+            True if the element is connected and visibly rendered, else False.
+        """
+        result = self._call_function(
+            "function() {"
+            "  if (!this.isConnected) { return false; }"
+            "  var style = window.getComputedStyle(this);"
+            "  if (style.display === 'none'"
+            "      || style.visibility === 'hidden'"
+            "      || style.visibility === 'collapse') { return false; }"
+            "  var rect = this.getBoundingClientRect();"
+            "  return rect.width > 0 && rect.height > 0;"
+            "}"
+        )
+        return bool(result)
+
     def _get_click_point(
         self, offset_x: int = 0, offset_y: int = 0
     ) -> Optional[tuple[float, float]]:
