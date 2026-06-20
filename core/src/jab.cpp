@@ -12,9 +12,10 @@
  * - IsJavaWindow(HWND) detects Java windows
  * - AccessibleContextInfo provides role, name, bounds, states etc.
  *
- * JAB must be initialized before use (initializeAccessBridge) and all
- * AccessibleContext handles must be released (ReleaseJavaObject) to
- * prevent memory leaks in the JVM.
+ * JAB must be started before use (Windows_run, the AT-side entry point the
+ * WindowsAccessBridge DLL actually exports) with its message queue pumped so
+ * the asynchronous JVM handshake completes, and all AccessibleContext handles
+ * must be released (ReleaseJavaObject) to prevent memory leaks in the JVM.
  */
 
 #ifdef _WIN32
@@ -62,7 +63,11 @@ typedef struct {
 
 /* ── JAB Function Pointer Types ───────────────────── */
 
-typedef BOOL  (__cdecl *FN_initializeAccessBridge)(void);
+// The assistive-technology entry point exported by the shipped
+// WindowsAccessBridge-<bits>.dll is `Windows_run` (declared
+// `void Windows_run(void)`), NOT `initializeAccessBridge` — that symbol is not
+// exported by the DLL, so looking it up returns NULL and JAB never starts.
+typedef void  (__cdecl *FN_Windows_run)(void);
 typedef BOOL  (__cdecl *FN_shutdownAccessBridge)(void);
 typedef BOOL  (__cdecl *FN_IsJavaWindow)(HWND window);
 typedef BOOL  (__cdecl *FN_GetAccessibleContextFromHWND)(HWND target, long* vmID, AccessibleContext* ac);
@@ -78,7 +83,7 @@ struct JABState {
     bool initialized = false;
     bool init_failed = false;
 
-    FN_initializeAccessBridge    pInitialize = nullptr;
+    FN_Windows_run               pInitialize = nullptr;
     FN_shutdownAccessBridge      pShutdown = nullptr;
     FN_IsJavaWindow              pIsJavaWindow = nullptr;
     FN_GetAccessibleContextFromHWND pGetContextFromHWND = nullptr;
@@ -89,6 +94,37 @@ struct JABState {
 };
 
 static JABState g_jab;
+
+/// Milliseconds to pump the message queue after starting the bridge, giving the
+/// asynchronous JVM-discovery handshake time to complete before the first query.
+static const DWORD JAB_INIT_SETTLE_MS = 1000;
+
+/**
+ * @brief Pump this thread's Windows message queue for up to @p budget_ms.
+ *
+ * The Java Access Bridge answers from the JVM are delivered as window messages
+ * to the assistive-technology thread and are only processed while that thread
+ * drains its message loop. A bare Sleep() blocks without draining the queue, so
+ * the bridge never finishes attaching and every subsequent query fails. This
+ * drains all pending messages in a bounded loop.
+ *
+ * @param budget_ms Maximum time to spend pumping, in milliseconds.
+ */
+static void jab_pump_messages(DWORD budget_ms) {
+    DWORD start = GetTickCount();
+    MSG msg;
+    for (;;) {
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+        // Unsigned subtraction is wrap-safe across the GetTickCount rollover.
+        if (GetTickCount() - start >= budget_ms) {
+            break;
+        }
+        Sleep(10);
+    }
+}
 
 /**
  * @brief Attempt to load and initialize the Java Access Bridge.
@@ -116,7 +152,7 @@ static bool jab_ensure_init() {
     }
 
     // Load function pointers
-    g_jab.pInitialize     = (FN_initializeAccessBridge)GetProcAddress(g_jab.dll, "initializeAccessBridge");
+    g_jab.pInitialize     = (FN_Windows_run)GetProcAddress(g_jab.dll, "Windows_run");
     g_jab.pShutdown       = (FN_shutdownAccessBridge)GetProcAddress(g_jab.dll, "shutdownAccessBridge");
     g_jab.pIsJavaWindow   = (FN_IsJavaWindow)GetProcAddress(g_jab.dll, "isJavaWindow");
     g_jab.pGetContextFromHWND = (FN_GetAccessibleContextFromHWND)GetProcAddress(g_jab.dll, "getAccessibleContextFromHWND");
@@ -135,17 +171,18 @@ static bool jab_ensure_init() {
         return false;
     }
 
-    // Initialize the bridge — this triggers message pump handshake with JVMs
-    BOOL ok = g_jab.pInitialize();
-    if (!ok) {
-        FreeLibrary(g_jab.dll);
-        g_jab.dll = nullptr;
-        g_jab.init_failed = true;
-        return false;
-    }
+    // Start the bridge. `Windows_run` registers this process as an assistive
+    // technology and kicks off JVM discovery; it returns void, so its result
+    // must not be treated as a success flag (the previous code did, gating
+    // initialization on indeterminate stack garbage).
+    g_jab.pInitialize();
 
-    // Give bridge time to discover JVMs (JAB uses async window messages)
-    Sleep(250);
+    // Discovery and every later accessibility query are answered
+    // asynchronously over window messages delivered to this thread, so the
+    // message queue must be pumped for the handshake to complete — a bare
+    // Sleep() starves it and isJavaWindow()/getAccessibleContextFromHWND()
+    // then always fail. Pump for a bounded settle window.
+    jab_pump_messages(JAB_INIT_SETTLE_MS);
 
     g_jab.initialized = true;
     return true;
