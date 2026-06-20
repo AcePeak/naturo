@@ -1,6 +1,45 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 13:24 (Orc autonomous cycle — **quiet/healthy; ONE new human-only item: community
+> Last refreshed: 2026-06-20 14:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged). The #1 recognition-moat task #932 (Java Access Bridge fixture+proof, P0/v0.3.2) is now in active
+> Dev pickup — HARDEST-FIRST is biting. develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty
+> triage (#1058 → v0.3.4), one Step 3.6 team-evolution change shipped.** **Step 0:** `git config` Orc identity;
+> `git fetch origin -p` clean; `git pull --ff-only` = Already up to date (HEAD `9d4b14b` = orch Step 3.6 doc
+> [skip ci]; code HEAD `503128a` = #1056); authoritative `gh api .../branches` = **develop + main only** →
+> Rule 14 clean. **Step 1:** **one open PR — community #1055** (`fix: use consistent success envelope in set
+> commands`, @muhamedfazalps, base `main`/head `main`, MERGEABLE/UNSTABLE) — **already queued needs:ace #1057**
+> last cycle (targets main, rewrites a file absent on develop, whole-file rewrite, promo link); community-PR
+> handling is human-only → Orc did **not** merge/comment/take-over/close. develop CI on `503128a` (#1056)
+> **Build & Test + CodeQL SUCCESS** → not red. No newly-merged team PR since 13:24 (last merge #1056
+> @05:25:48Z) → no post-merge handoff. **Step 2 health:** `status:in-progress` = **#932** (recognition-moat
+> Java JAB fixture+proof, P0/from:orc/competitiveness, milestone v0.3.2) — picked up by the 14:07Z Dev cycle,
+> assignee AcePeak, updated 06:20:43Z (fresh, no PR yet) → active in-flight, **NOT the >24h abandonment case** →
+> left untouched (Rule 4). `status:done` (open) = **#972 only** (input-content guard, close = human security
+> sign-off, queued). **Nothing to close** (Rule 1 — #932 in flight no merged commit; #972 human-only), no
+> abandoned work. **Step 3 (drive product): priority-honesty triage** — new QA bug **#1058** (`list windows
+> --app` help text says process/app-only but `_list.py:93-97` also substring-matches the window title;
+> P2/bug/from:qa, created 05:42Z) was **unmilestoned**. The title-match is **intentional + family-wide** (#671;
+> `window_cmd.py:576`, `mcp/_window.py`, `_app/window_ops.py:430`) so the defect is the inaccurate docstring the
+> #871 harmonization (`9f4d12b`/#1053) introduced; QA recommends option (A) doc-fix → **not human-only** →
+> **Orc milestoned #1058 → v0.3.4** (sits with the #871 window-targeting lane) + Dev triage comment pointing at
+> `_list.py:47-48`. **No new issue (Rule 9)** — gap already had a sharp issue (#1058); post-triage `no:milestone`
+> actionable = zero (only needs:ace human-only + parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66).
+> Standing #1 priority (recognition supremacy #920/#931/#932/#934) **now in active Dev pickup (#932)** — no
+> longer env-blocked (JDK 21 + JAB provisioned). **Step 3.5 competitiveness: NOT due** (tracker baseline
+> 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):** HARDEST-FIRST was in place yet the 05:26Z
+> Dev cycle skipped #932 citing "no JDK/SAP toolchain" — an **inherited/assumed** env block — while SPRINT FOCUS
+> + commit `e9ac590` had already stated JDK 21 + JAB were provisioned (#932 unblocked); the 14:07Z cycle then
+> picked it up. "Env-blocked" had become the new 避实就虚 loophole → **tightened `dev-cycle.md` HARDEST-FIRST:
+> an env/toolchain block must be PROVEN this cycle (live probe + cmd/output), never inherited from prior
+> STATE/log** (one surgical edit, builds on the prior row, does not undo it); ledger row appended to
+> `agents/EVOLUTION.md`. **Step 4 (needs:ace): no new human-only item** — live queue **unchanged
+> #1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-1422-auto-review.md`. `develop` CI: HEAD `503128a` (#1056) **Build & Test + CodeQL
+> SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 13:24 (Orc autonomous cycle — **quiet/healthy; ONE new human-only item: community
 > PR #1055 (queued #1057). develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
 > (#1054 → v0.3.4), #871 freshly re-picked by Dev, needs:ace queue grew by one.** **POST-MERGE UPDATE:**
 > team-Dev **PR #1056 landed mid-cycle as `503128a`** (@05:25:48Z — `feat: harmonize window-targeting flags

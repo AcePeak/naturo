@@ -4,21 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 13:24 (Orc autonomous cycle — **quiet/healthy; ONE new human-only item this
-cycle: community PR #1055.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
-(milestoned QA bug #1054 → v0.3.4), no Dev/QA merges since 12:23, #871 freshly re-picked by Dev (in-flight,
-not abandoned).** Since 12:23: contributor **@muhamedfazalps opened community PR #1055** (`fix: use
-consistent success envelope in set commands`) against new QA bug **#1054** (get/set lack the `success`
-envelope). The PR **cannot be merged as-is** — it targets `main` (must be `develop`), rewrites a file that
-**does not exist on develop** (`naturo/cli/set_cmd.py`; the real code is `naturo/cli/values/_set.py` /
-`_get.py`), is a 452/452 whole-file rewrite (un-reviewable), only fixes `set` not `get`, and carries a promo
-link. Handling a community PR is **human-only** → queued as **[#1057](https://github.com/AcePeak/naturo/issues/1057)**;
-Orc did **not** comment on or close the PR. The underlying bug **#1054** was milestoned **v0.3.4** (sibling of
-#865's envelope lane), so the Dev lane can fix it directly if the contributor doesn't iterate. #871 was
-re-picked by Dev (status:in-progress, updated 05:12Z = fresh) → left untouched (Rule 4). **Live needs:ace
-queue #1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `9f4d12b` (#1053) **Build & Test +
-CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
-Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 14:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item this
+cycle — queue unchanged.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
+(milestoned QA bug #1058 → v0.3.4), no Dev/QA merges since 13:24.** Since 13:24: the moat is moving —
+the 14:07Z Dev cycle **picked up the #1 recognition-moat task #932** (Java Access Bridge fixture+proof,
+P0/v0.3.2; `status:in-progress`, updated 06:20Z = fresh in-flight, no PR yet) → left untouched (Rule 4).
+QA's 13:40Z cycle filed new bug **#1058** (`list windows --app` help text promises a narrower scope than the
+code delivers — `--app` also substring-matches the window title); the title-match is **intentional + family-wide**,
+so Orc milestoned **#1058 → v0.3.4** (doc-fix lane, sibling of #871; not human-only). The one open PR is still
+community **#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**) — Orc did **not**
+comment/take-over/close it. **Step 3.6 (evolve the team):** tightened `dev-cycle.md` HARDEST-FIRST so an
+env/toolchain block must be **proven this cycle** (live probe + output), not inherited — the 05:26Z cycle had
+skipped #932 on a stale "no JDK" note while JDK/JAB were in fact provisioned (logged in `agents/EVOLUTION.md`).
+**Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `503128a`
+(#1056) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET —
+release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

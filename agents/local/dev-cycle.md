@@ -10,7 +10,11 @@ cherry-picking small safe wins and leaving the hard moat/features unfinished is 
 So within the earliest open milestone: attack the biggest moat / feature / deepest risk **that is actually
 actionable**, decomposing a huge item into a genuine one-cycle slice rather than skipping it. Only fall to
 easier items when every hard one is truly blocked (env / human-only / ambiguous) — and then **log WHY** in
-your report, no silent avoidance. (More Dev workers do NOT fix avoidance — this trait does.)
+your report, no silent avoidance. **An env/toolchain block must be PROVEN, not assumed:** before you skip a
+hard task citing "no JDK / no SAP / no MSVC / DLL missing", run the actual probe (`java -version`, `where javac`,
+the import, etc.) **this cycle** and paste the command + its output in your report. Do not inherit a block from a
+prior cycle's STATE/log — environments get provisioned (e.g. #932's JDK 21 + JAB are now installed); a stale
+"blocked" note is the avoidance loophole, not a reason. (More Dev workers do NOT fix avoidance — this trait does.)
 
 ## ⚡ SPRINT FOCUS (set 2026-06-20 — OSS rivals are moving fast, Ace wants speed)
 **The v0.3.2 recognition moat is the #1 priority and is now UNBLOCKED.** Pull these BEFORE any v0.3.4 bug:
