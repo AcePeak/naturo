@@ -166,7 +166,7 @@ Search for UI elements matching a query.
 | `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
 | `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
 | `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@name`) |
-| `--screenshot` | path | Use existing screenshot (for --ai mode) |
+| `--screenshot` | path | Match against this existing screenshot instead of capturing live (for `--ai` and `--image`). With `--image` the screenshot is the haystack, coordinates are screenshot-relative, and window-targeting flags are rejected |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
@@ -190,6 +190,7 @@ naturo find "OK" --backend msaa          # MSAA for legacy apps
 naturo find --image submit.png           # template match on the screen
 naturo find --image icon.png --app Notepad --all  # all matches in an app
 naturo find --image btn.png --threshold 0.85      # looser match threshold
+naturo find --image btn.png --screenshot saved.png  # match offline against a saved screenshot
 naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
 naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
 naturo find --selector @login-button --all        # every match of a saved selector
@@ -197,8 +198,13 @@ naturo find --selector @login-button --all        # every match of a saved selec
 
 Found matches get `eN` refs in the snapshot (like a normal `find`), so you can
 follow up with `naturo click e<N>`. With `--image` the reported `x,y` are the
-match's screen-absolute top-left; the JSON envelope also includes `center_x`,
-`center_y`, and the NCC `score`. With `--selector` the element is resolved the
+match's screen-absolute top-left (the JSON envelope's `coordinate_frame` is
+`screen`); the JSON envelope also includes `center_x`, `center_y`, and the NCC
+`score`. Passing `--screenshot <file>` matches offline against that image
+instead of capturing live — useful for replay, headless pipelines, and
+regression fixtures — and the coordinates are then relative to the screenshot
+(`coordinate_frame` is `screenshot`); window-targeting flags do not apply and
+are rejected. With `--selector` the element is resolved the
 same way `click`/`type` resolve it (URI / XML / `//` shorthand / `@named`, with
 flexible app-name matching), so a path that clicks will also `find`.
 

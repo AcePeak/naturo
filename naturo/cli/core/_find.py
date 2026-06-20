@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from naturo.cli._jsonio import json_dumps
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 
@@ -32,7 +32,10 @@ import naturo.cli.core._common as _common
                    'Short: //Edit[@name="Search"] (any app, descendant search). '
                    "Saved: @name. App names are flexible: chrome, chrome.exe, Chrome.")
 @click.option("--screenshot", type=click.Path(), default=None,
-              help="Use existing screenshot (for --ai mode)")
+              help="Match against this existing screenshot instead of capturing "
+                   "live (for --ai and --image modes). With --image the screenshot "
+                   "is the search haystack and reported coordinates are "
+                   "screenshot-relative; window-targeting flags do not apply.")
 @click.option("--app", default=None, help="Target app window")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
@@ -151,7 +154,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         _find_with_image(
             image_template, threshold, find_all,
             app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-            limit=limit, json_output=json_output,
+            screenshot=screenshot, limit=limit, json_output=json_output,
         )
         return
 
@@ -393,15 +396,30 @@ def _find_with_image(
     window_title: str | None,
     hwnd: int | None,
     pid: int | None,
+    screenshot: str | None,
     limit: int,
     json_output: bool,
 ) -> None:
-    """Locate a template image on the target window or screen (naturo find --image).
+    """Locate a template image on the target window, screen, or screenshot.
 
-    Captures the target (a specific window when any of app/window/hwnd/pid is
-    given, otherwise the primary screen), runs normalized cross-correlation, and
-    reports matches as snapshot elements with stable ``eN`` refs so they can be
-    acted on with ``naturo click eN``.
+    Backs ``naturo find --image``.  The haystack is, in order of precedence:
+
+    * the image at ``screenshot`` when given (offline/deterministic matching for
+      replay, headless pipelines, and regression fixtures — coordinates are
+      reported relative to the screenshot's top-left, origin ``(0, 0)``);
+    * a specific window when any of app/window/hwnd/pid is given;
+    * otherwise the primary screen.
+
+    It runs normalized cross-correlation and reports matches as snapshot
+    elements with stable ``eN`` refs so they can be acted on with
+    ``naturo click eN``.
+
+    Each distinct failure source carries its own error code rather than
+    inheriting a sibling's (#1067/#1070 error attribution): a template file that
+    cannot be decoded → ``INVALID_TEMPLATE`` (never the haystack's
+    ``CAPTURE_FAILED``); a missing screenshot → ``FILE_NOT_FOUND``; a screenshot
+    that cannot be decoded → ``INVALID_SCREENSHOT``; a live-capture fault →
+    ``CAPTURE_FAILED``.
 
     Args:
         template_path: Path to the template image (PNG/JPG).
@@ -412,12 +430,16 @@ def _find_with_image(
         window_title: Target window title substring.
         hwnd: Target window handle.
         pid: Target process ID.
+        screenshot: Optional path to an existing screenshot to match against
+            instead of capturing live.  Incompatible with the window-targeting
+            flags (app/window/hwnd/pid), which the function rejects rather than
+            silently ignoring (#1070), since the screenshot is the haystack.
         limit: Maximum number of matches to return.
         json_output: Whether to emit JSON.
 
     Raises:
-        SystemExit: With status 1 on invalid input, missing file, platform
-            without GUI support, window-not-found, or capture failure.
+        SystemExit: With status 1 on invalid input, missing/undecodable file,
+            platform without GUI support, window-not-found, or capture failure.
     """
     import os
 
@@ -437,14 +459,6 @@ def _find_with_image(
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("Image matching")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
-
     try:
         from PIL import Image
     except ImportError as e:  # pragma: no cover - exercised only without Pillow
@@ -458,48 +472,89 @@ def _find_with_image(
 
     from naturo.image_match import match_template
 
-    backend = _common._get_backend(json_output)
-    targeted = bool(hwnd or app or window_title or pid)
-
-    import tempfile
-    fd, capture_path = tempfile.mkstemp(suffix=".png")
-    os.close(fd)
-    target_hwnd = hwnd
-    try:
-        if targeted:
-            if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
-                target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
-            if not target_hwnd:
-                target = app or window_title or (f"pid={pid}" if pid else "target")
-                msg = f"Window not found: {target}"
-                if json_output:
-                    click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
-                else:
-                    click.echo(f"Error: {msg}", err=True)
-                raise SystemExit(1)
-            backend.capture_window(hwnd=target_hwnd, output_path=capture_path)
-            origin_x, origin_y = _window_origin(target_hwnd)
-        else:
-            backend.capture_screen(screen_index=0, output_path=capture_path)
-            origin_x, origin_y = _monitor_origin(backend, 0)
-
-        with Image.open(capture_path) as hay_src, Image.open(template_path) as tmpl_src:
-            haystack = hay_src.copy()
-            template = tmpl_src.copy()
-    except SystemExit:
-        raise
-    except Exception as e:
-        msg = f"Screen capture failed: {e}"
+    def _emit(code: str, message: str) -> NoReturn:
         if json_output:
-            click.echo(_common._json_error_str("CAPTURE_FAILED", msg))
+            click.echo(_common._json_error_str(code, message))
         else:
-            click.echo(f"Error: {msg}", err=True)
+            click.echo(f"Error: {message}", err=True)
         raise SystemExit(1)
-    finally:
+
+    # Offline mode (#1070): when --screenshot is given the screenshot IS the
+    # search haystack, so the window-targeting flags do not apply.  Reject the
+    # combination explicitly rather than silently ignoring it (the convention
+    # the --ai path already follows) — silently discarding --screenshot and
+    # matching the live screen returns confidently-wrong coordinates.  Offline
+    # matching needs no live capture, so it is also exempt from the GUI-platform
+    # requirement that the live-capture path enforces (it runs headless).
+    if screenshot is not None:
+        if hwnd or app or window_title or pid:
+            _emit(
+                "INVALID_INPUT",
+                "--screenshot matches against the supplied image, so "
+                "--app/--window/--hwnd/--pid do not apply; drop those flags to "
+                "match the screenshot, or drop --screenshot to capture a live "
+                "window.",
+            )
+        if not os.path.exists(screenshot):
+            _emit("FILE_NOT_FOUND", f"Screenshot file not found: {screenshot}")
+    elif not _common._platform_supports_gui():
+        _emit("PLATFORM_ERROR", _common._platform_error_msg("Image matching"))
+
+    # Load the template once, in its own try, so a template that exists but
+    # cannot be decoded is attributed to the template — never mis-reported as a
+    # haystack capture/load failure (#1067).
+    try:
+        with Image.open(template_path) as tmpl_src:
+            template = tmpl_src.copy()
+    except Exception as e:
+        _emit("INVALID_TEMPLATE",
+              f"Template image could not be loaded: {template_path} ({e})")
+
+    # Acquire the haystack: the supplied screenshot (offline) or a live capture.
+    target_hwnd = hwnd
+    if screenshot is not None:
         try:
-            os.remove(capture_path)
-        except OSError:
-            pass
+            with Image.open(screenshot) as hay_src:
+                haystack = hay_src.copy()
+        except Exception as e:
+            _emit("INVALID_SCREENSHOT",
+                  f"Screenshot could not be loaded: {screenshot} ({e})")
+        # Matches are located within the supplied screenshot, so coordinates are
+        # relative to its top-left rather than screen-absolute.
+        origin_x, origin_y = 0, 0
+        target_hwnd = None
+    else:
+        backend = _common._get_backend(json_output)
+        targeted = bool(hwnd or app or window_title or pid)
+
+        import tempfile
+        fd, capture_path = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        try:
+            if targeted:
+                if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
+                    target_hwnd = backend._resolve_hwnd(
+                        app=app, window_title=window_title, pid=pid)
+                if not target_hwnd:
+                    target = app or window_title or (f"pid={pid}" if pid else "target")
+                    _emit("WINDOW_NOT_FOUND", f"Window not found: {target}")
+                backend.capture_window(hwnd=target_hwnd, output_path=capture_path)
+                origin_x, origin_y = _window_origin(target_hwnd)
+            else:
+                backend.capture_screen(screen_index=0, output_path=capture_path)
+                origin_x, origin_y = _monitor_origin(backend, 0)
+
+            with Image.open(capture_path) as hay_src:
+                haystack = hay_src.copy()
+        except SystemExit:
+            raise
+        except Exception as e:
+            _emit("CAPTURE_FAILED", f"Screen capture failed: {e}")
+        finally:
+            try:
+                os.remove(capture_path)
+            except OSError:
+                pass
 
     try:
         matches = match_template(
@@ -576,6 +631,7 @@ def _find_with_image(
             "elements": data,
             "count": len(data),
             "snapshot_id": snapshot_id,
+            "coordinate_frame": "screenshot" if screenshot is not None else "screen",
         }, indent=2))
     else:
         if not matches:
@@ -589,6 +645,9 @@ def _find_with_image(
             )
         click.echo(f"\n{len(matches)} match(es) found.")
         click.echo(f"Snapshot: {snapshot_id}")
+        if screenshot is not None:
+            click.echo("Coordinates are relative to the supplied screenshot "
+                       "(not screen-absolute).")
         click.echo("Tip: use 'naturo click e<N>' to interact with a match.")
 
 
