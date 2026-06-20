@@ -54,7 +54,17 @@ testing** and file any NEW bug (`--label "bug,from:qa,P?"`) with steps / actual 
 1. Read the issue: the bug, the fix (find the merged PR), the acceptance criterion.
 2. **Confirm a merged commit exists** for the fix (RULES: never close without one).
 3. Reproduce with the naturo CLI from this worktree: `python -m naturo <cmd> ...` (observe where possible).
-4. Decide:
+4. **Rule out your own measurement harness before trusting a surprising defect.** A shocking result is
+   often QA's *tooling* lying, not naturo — and this class has bitten repeatedly: a shell **pipe** reporting
+   the wrong exit code (`naturo … | head` returns `head`'s status, not naturo's), a **terminal/locale**
+   mangling correct output (a cp936 console turning valid UTF-8 into mojibake / a lone surrogate that looks
+   like Unicode corruption), or an **editable install** resolving `import naturo` to a *sibling* worktree's
+   stale code (#969). Before you FAIL an issue or file a bug, re-run on the **cleanest path**: invoke naturo
+   directly (no pipe), redirect output to a file and decode as strict UTF-8, and confirm
+   `python -c "import naturo,sys;print(naturo.__file__)"` resolves under **this** worktree. Trust OS
+   ground-truth over your harness's rendering. If the signal vanishes on the clean path, it was the harness —
+   don't file.
+5. Decide:
    - **PASS** →
      ```bash
      gh issue edit N --repo AcePeak/naturo --add-label "verified"

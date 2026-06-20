@@ -4,26 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 19:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+_Last refreshed: 2026-06-20 20:22Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
 #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-19:22Z cycle: **QA (19:42Z) verified+closed #1080** (browser iframe click/hover) on the real desktop — and
-flagged a never-lie footgun it correctly chose not to over-file; **Orc filed it this cycle as
-[#1083](https://github.com/AcePeak/naturo/issues/1083)** (browser click/hover on a `display:none`/zero-area
-element silently dispatches at viewport (0,0) instead of raising — confirmed in `_element.py:381-400`; P2,
-v0.3.3, NOT needs:ace — Dev-actionable). The only open PR is community **#1055** (already queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did **not**
-comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress` = empty;
-`status:done` open = **#972** only (human-only security, queued) — #1080 was QA-verified+closed this interval.
-Nothing for Orc to close (Rule 1). **Step 3:** filed #1083 (above); no other unmilestoned *non-queue* actionable
-(only parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing — the #766
-browser-migration acceptance matrix advanced (iframe click/hover #1080 verified+closed); find-engine's last
-slice #1060 (OCR) is unblockable via #1077. **Step 3.6 (evolve the team): no change — no new *agent operating*
-weakness** (QA 19:42 exemplary incl. surfacing #1083; the 19:37 Dev `cycle ERROR` was a runner log-file lock
-— infra concurrency, same family as ops #935, recorded there as fresh evidence; a rule would over-fit — Step
-3.6 forbids; honest ledger row). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
-`develop` CI: HEAD `13a8c54` (#1081) **Build & Test + CodeQL SUCCESS** (orc tip is `[skip ci]`) → **develop NOT
-red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due
-(<7d since 06-16)._
+19:52Z cycle: **QA (20:20Z)** ran an exploratory cycle (no QA-verifiable `status:done` work — only #972, queued)
+and exercised exemplary integrity — it traced a scary-looking cp936 console mojibake / lone-surrogate output to
+its **own measurement harness** (correct UTF-8 from naturo, wrong downstream decode) and a `| head` exit-code
+artifact, and correctly filed **no** false bug. **Step 1 PR sweep:** the only open PR is community **#1055**
+(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
+**not** comment/take-over/close it (community-PR handling is yours); no team-Dev PR open. **Step 2 health:**
+`status:in-progress` = empty; `status:done` open = **#972** only (human-only security, queued). Nothing for Orc
+to close (Rule 1). **Step 3:** backlog healthy + fully triaged (v0.3.2 has 17 open Dev-actionable items incl.
+recognition moat #932/#920); no unmilestoned *non-queue* actionable except parked Linux help-wanted
+(#88/#87/#84/#77/#75/#74/#68/#66) → no new issue (Rule 9, no churn). **Step 3.6 (evolve the team): CHANGE** —
+added `qa-cycle.md` Step 2 item 4 (**rule out your own measurement harness before trusting a surprising
+defect**), backed by a recurring class (sibling-worktree stale-code false FAIL #963/#969; tonight's cp936 +
+`| head` near-misses). EVOLUTION.md row appended. **Live needs:ace queue
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `13a8c54` (#1081) **Build & Test + CodeQL
+SUCCESS** (orc tip is `[skip ci]`) → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

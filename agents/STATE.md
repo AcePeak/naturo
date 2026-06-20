@@ -1,5 +1,25 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 20:22Z (Orc autonomous cycle — **`develop` NOT red (HEAD `13a8c54` #1081 =
+> Build & Test + CodeQL SUCCESS; orc tip `[skip ci]`). NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (no prune);
+> `pull --ff-only` up-to-date at `13a8c54`; `gh api branches` = develop + main only → no stale (Rule 14).
+> **Step 1 PR sweep:** no open team-Dev PR; only community **#1055** (base `main`, fork, `UNSTABLE`) → already
+> queued needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress` =
+> empty; `status:done` open = **#972** only (human-only security, queued). Nothing for Orc to close (Rule 1).
+> **Step 3 (drive product):** backlog healthy + fully triaged — v0.3.2 (earliest open, ship-gate FULLY MET) has
+> 17 open Dev-actionable items (#1082 docs, #1059 image-match, #1063 equivalence, recognition moat #932/#920),
+> v0.3.3 holds last cycle's #1079/#1083; no unmilestoned *non-queue* actionable except parked Linux help-wanted.
+> No gap sharp enough to file (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16,
+> today 06-20 = 4d < 7). **Step 3.6 (evolve the team): CHANGE this cycle** — added `qa-cycle.md` Step 2 item 4
+> (**rule out your own measurement harness before trusting a surprising defect**), backed by a recurring class:
+> QA's own tooling produced false signals it had to catch — sibling-worktree editable-install stale code (false
+> FAIL #963, re-hit 19:42Z), a cp936 console making correct UTF-8 look like a P0 Unicode bug (near-miss 20:20Z),
+> and a `\| head` pipe masking exit codes (retracted 20:20Z). EVOLUTION.md row appended. **Step 4 (needs:ace): no
+> new item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-2022-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (19:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 19:52Z (Orc autonomous cycle — **NO new human-only item (queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897). `develop` NOT red (HEAD `13a8c54` #1081 = Build & Test +
 > CodeQL SUCCESS; orc tip `[skip ci]`). No open team-Dev PR; only community #1055 (queued #1057) open.**
