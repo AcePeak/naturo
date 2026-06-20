@@ -45,11 +45,13 @@ from naturo.browser._launcher import (
     list_profiles,
 )
 from naturo.browser._frame import BrowserFrame
+from naturo.browser._download import DownloadResult
 
 __all__ = [
     "BrowserPage",
     "BrowserElement",
     "BrowserFrame",
+    "DownloadResult",
     "SelectorType",
     "ParsedSelector",
     "parse_selector",

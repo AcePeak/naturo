@@ -714,15 +714,16 @@ naturo browser download --dir /path/to/downloads
 # Click download link
 naturo browser click "#export-btn"
 
-# Wait for download to complete — returns filename and path
-naturo browser download --wait --timeout 30000
+# Wait for download to complete — returns filename and path (timeout in seconds)
+naturo browser download --wait --timeout 30
 ```
 
 ```python
 page.set_download_dir("/path/to/downloads")
 page.find("#export-btn").click()
-download = page.wait_for_download(timeout=30000)
+download = page.wait_for_download(timeout=30)  # timeout in seconds
 print(download.path)  # /path/to/downloads/report.xlsx
+print(download.name)  # report.xlsx
 ```
 
 ### iframe Handling

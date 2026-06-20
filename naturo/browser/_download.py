@@ -25,10 +25,34 @@ from __future__ import annotations
 import logging
 import os
 import time
+from dataclasses import dataclass
+
 logger = logging.getLogger(__name__)
 
 # Chrome uses these extensions for partial downloads
 _PARTIAL_EXTENSIONS = frozenset({".crdownload", ".tmp", ".download", ".part"})
+
+
+@dataclass(frozen=True)
+class DownloadResult:
+    """A completed browser download.
+
+    Returned by :meth:`naturo.browser.BrowserPage.wait_for_download`. The
+    ``path`` attribute is the documented surface (see the migration guide's
+    *File Download* section); ``name`` and ``size`` are convenience accessors.
+    """
+
+    path: str
+
+    @property
+    def name(self) -> str:
+        """The downloaded file's basename, e.g. ``report.txt``."""
+        return os.path.basename(self.path)
+
+    @property
+    def size(self) -> int:
+        """The downloaded file's size in bytes."""
+        return os.path.getsize(self.path)
 
 
 def set_download_dir(page, directory: str) -> None:
