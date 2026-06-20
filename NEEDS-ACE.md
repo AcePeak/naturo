@@ -4,27 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 12:23 (Orc autonomous cycle — **quiet/healthy; since 11:22 QA verified+closed
-#1050 (`capture --region` off-screen message) and the Dev cycle opened PR #1053 (`feat: harmonize
-window-targeting filters on 'list windows' (#871)`) which **landed mid-cycle as `9f4d12b`** when CI went
-green. develop NOT red, status:in-progress now empty, status:done = #972 (human-only), nothing closed by Orc
-(Rule 1), one Orc post-merge handoff (#871 multi-part — cleared status:in-progress → pickable), no new issue
-(Rule 9), no new human-only item; queue unchanged.** Since 11:22: **#1050 verified+CLOSED by QA @03:38Z**
-(the zero-size error now echoes the user's requested `X,Y,W,H` + image bounds). **PR #1053** added
-`--window/--hwnd/--pid` to `naturo list windows`, the next slice of the multi-part #871 matrix (continuation
-of merged #1037 find/highlight/menu-inspect); merged @04:24:21Z, source branch auto-deleted (Rule 14 clean).
-#871 stays OPEN with `status:in-progress` cleared → pickable for the remaining rows (`get`/`set` & others).
-`no:milestone` open = **zero unmilestoned actionable Dev work**. **No new human-only item; queue unchanged.** Top human items unchanged: **#914**
-(cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content safety guard) —
-both your security sign-off; **#897** (pick the CLI exit-code contract); **#915 recommended for closure**
-(QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4). **Live needs:ace queue
-#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `7e068d6` (#1052) **Build & Test + CodeQL SUCCESS**
-→ **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly
-competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 13:24 (Orc autonomous cycle — **quiet/healthy; ONE new human-only item this
+cycle: community PR #1055.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
+(milestoned QA bug #1054 → v0.3.4), no Dev/QA merges since 12:23, #871 freshly re-picked by Dev (in-flight,
+not abandoned).** Since 12:23: contributor **@muhamedfazalps opened community PR #1055** (`fix: use
+consistent success envelope in set commands`) against new QA bug **#1054** (get/set lack the `success`
+envelope). The PR **cannot be merged as-is** — it targets `main` (must be `develop`), rewrites a file that
+**does not exist on develop** (`naturo/cli/set_cmd.py`; the real code is `naturo/cli/values/_set.py` /
+`_get.py`), is a 452/452 whole-file rewrite (un-reviewable), only fixes `set` not `get`, and carries a promo
+link. Handling a community PR is **human-only** → queued as **[#1057](https://github.com/AcePeak/naturo/issues/1057)**;
+Orc did **not** comment on or close the PR. The underlying bug **#1054** was milestoned **v0.3.4** (sibling of
+#865's envelope lane), so the Dev lane can fix it directly if the contributor doesn't iterate. #871 was
+re-picked by Dev (status:in-progress, updated 05:12Z = fresh) → left untouched (Rule 4). **Live needs:ace
+queue #1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `9f4d12b` (#1053) **Build & Test +
+CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
+Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
+| [#1057](https://github.com/AcePeak/naturo/issues/1057) | **Dispose community PR #1055** (@muhamedfazalps, "consistent success envelope in set commands", fixes #1054). It targets `main` (must be `develop`), rewrites `naturo/cli/set_cmd.py` which **doesn't exist on develop** (real code: `values/_set.py`/`_get.py`), is a 452/452 whole-file rewrite, only fixes `set` not `get`, and adds a promo link; CI `UNSTABLE`. | **community PR handling** — guide / take over / close is yours; Orc cannot do it unattended | **Guide the contributor:** thank them, ask to retarget `develop` + minimal diff on `values/_set.py`+`_get.py` (drop the file-wide reformat) + cover `get`. If no iteration, close with thanks and let Dev fix #1054 (already v0.3.4, lane #865/#876/#977/#980/#1043). |
 | [#975](https://github.com/AcePeak/naturo/issues/975) | **Ratify the QA re-enable.** After the LIVE R-SEC-012 reproduction, the loop fixed the root cause at the source (`7a10b18` — 第七轮 locked to argv/pytest-only) and **re-enabled QA** (`4097eba`, which asserts your authorization). QA has run **two clean cycles since** (verified+closed #876, filed #977 — argv-only, **nothing typed into any window**). | **security / safety sign-off** — the re-enable commit claims your authorization but is Orc-authored; ratifying (or reverting) it is yours | **Confirm + close #975.** The focus-race failure mode is no longer reachable from the standing playbook; the code backstop (`NATURO_SAFE_INPUT=1` + `~/.naturo/safe-input.lock`) is verified end-to-end. If you did **not** authorize the re-enable, say so and the loop will re-disable. Code-only hardening half tracked in #976 (Dev-actionable). |
 | [#972](https://github.com/AcePeak/naturo/issues/972) | **Close the input-content safety guard** (status:done). The guard fix is merged (#973, `5508877`) and CLI-verified, but QA deferred *closing* it — a security-guard sign-off. | **security sign-off** — same class as #975 | **Confirm the guard is sufficient and close**, or fold into the #975 ratification (both are the same input-safety decision). |
 | [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** | release / tag to `main` = PyPI publish | **READY TO CUT — this is now the top actionable item.** Both ship-gate requirements are met: req (1) (epic #885 cluster) verified+closed; req (2) **all 5 status:done bugs verified+closed** (#786/#788/#807/#840 @01:15Z + #843 @02:42Z). `develop` CI green on `d3cfe92`. **Cutting / tagging v0.3.2 (tag→main = PyPI publish) is your call — the loop cannot and will not do it (Rule 2).** |
@@ -56,7 +55,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** at sweep (Build & Test + CodeQL SUCCESS on `7e068d6`/#1052); post-merge CI on `9f4d12b` (#1053) running, all required checks green at merge → not red. **#1050 verified+closed by QA @03:38Z** (`capture --region` off-screen message — the zero-size error now echoes the user's requested `X,Y,W,H` + image bounds; Rule 1 clean). **PR #1053 landed** (`feat: harmonize window-targeting filters on 'list windows' (#871)`) as `9f4d12b` @04:24:21Z — added `--window/--hwnd/--pid` to `naturo list windows`; multi-part #871 → Orc cleared `status:in-progress` → pickable for the remaining rows (`get`/`set` & others), milestone v0.3.4 intact, source branch auto-deleted. No open PRs; branches `develop` + `main` only.
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `503128a`/#1056 (HEAD) → **not red.** Team-Dev **PR #1056 landed mid-cycle** (`feat: harmonize window-targeting flags on `app` window-state commands (#871)`) — the next #871 slice (`app focus/close/minimize/maximize/restore/move` → `{--app,--window,--hwnd,--pid}`); multi-part so **#871 stays OPEN** (`app quit` + `get`/`set` follow-ups), Dev self-cleared `status:in-progress` → pickable; source branch auto-deleted (Rule 14 clean). One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). New QA bug **#1054** (`get -j`/`set -j` lack the `success` envelope) milestoned **v0.3.4** this cycle.
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

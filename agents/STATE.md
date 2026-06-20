@@ -1,6 +1,51 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 12:23 (Orc autonomous cycle — **quiet/healthy; since 11:22 QA verified+closed
+> Last refreshed: 2026-06-20 13:24 (Orc autonomous cycle — **quiet/healthy; ONE new human-only item: community
+> PR #1055 (queued #1057). develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
+> (#1054 → v0.3.4), #871 freshly re-picked by Dev, needs:ace queue grew by one.** **POST-MERGE UPDATE:**
+> team-Dev **PR #1056 landed mid-cycle as `503128a`** (@05:25:48Z — `feat: harmonize window-targeting flags
+> on `app` window-state commands (#871)`; brings `app focus/close/minimize/maximize/restore/move` to the
+> `{--app,--window,--hwnd,--pid}` gold set via the shared `_resolve_window_target`→`_resolve_hwnd` path, no
+> backend-signature change, additive). This was the #871 in-flight slice seen as `status:in-progress` at
+> sweep. `git merge-base --is-ancestor 503128a origin/develop` = YES → Rule 1 clean; source branch
+> auto-deleted (remote = develop+main only) → Rule 14 clean. **Multi-part: PR "continues #871", issue stays
+> open** (`app quit` + `get`/`set` value-path remain follow-ups) — **Dev already self-cleared #871
+> `status:in-progress` at merge** (labels now bug/P2/from:qa, milestone v0.3.4 intact, updated 05:28:33Z) →
+> already OPEN + pickable, **no Orc handoff needed.** Post-merge develop CI on `503128a` **Build & Test +
+> CodeQL SUCCESS** → not red. _(Sweep snapshot below predates this land.)_ **Step 0:** `git config` Orc
+> identity; `git fetch origin -p` clean; `git
+> pull --ff-only` = Already up to date (tip `9e145f4` = orc 1223 [skip ci]; code HEAD `9f4d12b` = #1053);
+> authoritative `gh api .../branches` = **develop + main only** → Rule 14 clean (the one open PR #1055 lives
+> on a contributor fork, not an origin branch). **Step 1:** **one open PR — community #1055** (`fix: use
+> consistent success envelope in set commands`, @muhamedfazalps, base `main`/head `main`, `MERGEABLE`/
+> `UNSTABLE`) opened against new QA bug #1054. Assessed: **not mergeable as-is** — targets `main` not
+> `develop`; rewrites `naturo/cli/set_cmd.py` which **does not exist on develop** (real code:
+> `naturo/cli/values/_set.py:305,349,394,442` + `_get.py`; the PR is built off a stale `main` predating the
+> `values/` refactor); 452/452 whole-file rewrite (CRLF/reformat) = un-reviewable; only fixes `set` not `get`;
+> body cites the removed `clipboard` command + a "buy me a coffee" promo link; CI `UNSTABLE`. **Community-PR
+> handling is human-only** → Orc did **not** merge/comment/take-over/close; queued as **needs:ace #1057**
+> (guide-retarget-or-close). develop CI **Build & Test + CodeQL SUCCESS on `9f4d12b`** (#1053) → not red. No
+> newly-merged team PR since 12:23 → no post-merge handoff. **Step 2 health:** `status:done` (open) = **#972
+> only** (input-content guard, close = human security sign-off, queued). **#871** (`status:in-progress`,
+> window-targeting matrix) updated 05:12:56Z (~12 min before sweep) → fresh Dev re-pickup of the next slice
+> (no open PR yet), **NOT** the >24h abandonment case → left untouched (Rule 4). **Nothing to close** (Rule 1
+> — no merged commit; #972 human-only), no abandoned work. **Step 3 (drive product): priority-honesty
+> triage** — new QA bug **#1054** (`get -j`/`set -j` success responses lack the `success` envelope —
+> get→bare object/array, set→`status:ok`; P2/bug/from:qa, created 04:44Z) was **unmilestoned** while its
+> envelope-consistency siblings (#865 `see`, merged #876/#977/#980/#1043) are v0.3.4 → **Orc milestoned
+> #1054 → v0.3.4** (concrete source pointers, established lane, not human-only; also gives Dev a path to fix
+> it directly if the #1055 contributor doesn't iterate). **No new issue (Rule 9)** — the gap already had a
+> sharp issue (#1054). Standing #1 priority (recognition supremacy #920/#931/#932/#934) stays top-of-queue
+> but **env-blocked** (no JDK / no SAP install; desktop/QA-gated). **Step 3.5 competitiveness: NOT due**
+> (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 4 (needs:ace): one new human-only item #1057**
+> (community PR #1055) — live queue now **#1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header +
+> #1057 row + queue/CI lines refreshed. Evidence in `.work/reviews/2026-06-20-1324-auto-review.md`.
+> `develop` CI: HEAD `9f4d12b` (#1053) **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 12:23 (Orc autonomous cycle — **quiet/healthy; since 11:22 QA verified+closed
 > #1050 (`capture --region` off-screen message) and the Dev cycle picked up the next #871 slice and opened
 > PR #1053 (`feat: harmonize window-targeting filters on 'list windows'`) with auto-merge armed (self-landing,
 > no failed lanes — left untouched, Rule 4). develop NOT red, status:done = #972 (human-only), nothing
