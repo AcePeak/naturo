@@ -356,6 +356,67 @@ def test_network_mock_response_equivalence(
     assert page.find("#api-status").text == "Loaded 1 orders."
 
 
+def test_image_captcha_click_offset_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Chaojiying coordinate-click captcha solve via naturo.
+
+    Mirrors the migration guide's "Image Recognition Captcha" section: the
+    *Before* code screenshots the captcha image, submits it to a solver
+    (Chaojiying / ddddocr) which returns pixel coordinates *relative to the
+    captcha image element*, then drives
+    ``ActionChains.move_to_element_with_offset(img, x, y).click()`` for each
+    returned point. The *After* surface is
+    :meth:`BrowserElement.click` with ``offset_x`` / ``offset_y``.
+
+    Driven against ``captcha-image.html`` -- a deterministic 3x3 grid of 80px
+    cells (4px gap) whose target is the centre cell (index 4) -- a solver
+    coordinate must land on the exact cell, proving the click honours the
+    element-relative offset rather than silently defaulting to the element
+    centre. Per naturo's never-lie contract (SOUL.md) precision is proven
+    *both ways*: a deliberately wrong offset selects the wrong cell and does
+    NOT pass, and only the correct offset flips the page's own ``data-passed``
+    flag to ``true``.
+
+    Because the target *is* the grid centre, the negative leg is essential: an
+    offset-ignoring click would hit the centre cell and spuriously pass, so the
+    wrong-offset click landing on cell 0 (the grid's top-left) is what actually
+    proves the offset is respected.
+    """
+    browser_page.navigate(f"{fixtures_server}/captcha-image.html")
+    grid = browser_page.find("#captcha-grid")
+
+    # Cell geometry: 80px cells separated by a 4px gap, so each column/row
+    # advances by 84px. Cell N's centre, measured from the grid's top-left
+    # corner (the origin _get_click_point uses for offsets), is
+    # (col * 84 + 40, row * 84 + 40) with col = N % 3, row = N // 3.
+    def cell_center(index: int) -> tuple[int, int]:
+        col, row = index % 3, index // 3
+        return (col * 84 + 40, row * 84 + 40)
+
+    # never-lie (precision, negative leg): a wrong solver coordinate must land on
+    # the wrong cell. If the click ignored the offset it would hit the grid
+    # centre -- which happens to be the target cell -- and spuriously pass.
+    # Cell 0's centre (the grid's top-left) proves the offset is honoured.
+    wrong_x, wrong_y = cell_center(0)
+    grid.click(offset_x=wrong_x, offset_y=wrong_y)
+    assert browser_page.find(".captcha-cell.selected").attr("data-index") == "0"
+    assert browser_page.find("#captcha-status").attr("data-passed") == "false"
+
+    # Before: ActionChains.move_to_element_with_offset(img, x, y).click()
+    #  ->  After: find(captcha).click(offset_x=x, offset_y=y) at the solver coord.
+    target = int(grid.attr("data-target") or "")
+    target_x, target_y = cell_center(target)
+    grid.click(offset_x=target_x, offset_y=target_y)
+
+    # never-lie: the page's own pass flag flips only because the precise target
+    # cell was hit -- the same authoritative signal the Before code checks after
+    # clicking the solver-returned coordinate.
+    assert browser_page.find(".captcha-cell.selected").attr("data-index") == str(target)
+    assert browser_page.find("#captcha-status").attr("data-passed") == "true"
+    assert browser_page.find("#captcha-status").text == "Captcha passed."
+
+
 def _wait_for_tab(page: BrowserPage, url_substring: str, timeout: float = 8.0) -> str:
     """Poll ``page.tabs()`` until a tab whose URL contains *url_substring* appears.
 
