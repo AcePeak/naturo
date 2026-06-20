@@ -1,5 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 13:55Z (Orc autonomous cycle — **`develop` NOT red** (prior HEAD `9fa3183` =
+> Build & Test + CodeQL full SUCCESS; new HEAD `bcda034` #1090 CI in-progress, no failure; orc tip `[skip ci]`).
+> **NO new human-only item — queue unchanged #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:**
+> `git config` Orc; `git fetch -p` (pruned 3 merged `test/issue-766-*` branches); `pull --ff-only` `b5893d6→bcda034`;
+> `gh api branches` = develop + main only → no stale (Rule 14). **Step 1 PR sweep:** team-Dev **#1090**
+> (`tab-management` Before/After equivalence, **part of #766**) landed all-green auto-merge SQUASH (`closingIssues`
+> empty → umbrella #766 correctly NOT auto-closed; #766 carries no `status:in-progress` → no `status:done` flip
+> owed). No other open team-Dev PR. Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already
+> queued needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress` =
+> empty; `status:done` open = **#972** only (human-only security, queued). Nothing for Orc to close (Rule 1).
+> **Step 3 (drive product):** triaged the two new QA/Dev-filed bugs filed since 13:22Z — **#1089** (QA; P2,
+> `naturo wait` appear-mode timeout `-j` omits the standard `error` block — success:false with no
+> code/category/message; root cause confirmed in code `wait_cmd.py:173-194`, the JSON branch builds the envelope
+> and `sys.exit(1)` on `not result.found` without attaching `error`; slips the #1001 auto-enumeration contract
+> because it returns success:false *without raising*) → **v0.3.3** (with sibling #1086, keeps ship-gate-met v0.3.2
+> scope clean); **#1088** (Dev; migration guide documents non-existent `browser listen`/`page.wait_for_response`/
+> `collect_responses` network API — grep-confirmed absent — same never-lie class as #1082) → **v0.3.2**, scoped:
+> doc-down (rewrite *After* to the shipped `browser requests`/`intercept`/`mock_response` surface) is the
+> unambiguous Dev fix; the response-body-capture *feature* (Option 2, CDP `Network.getResponseBody`) is separable
+> and a product call left to Ace under #765/#809 — not decided here. No other unmilestoned non-queue actionable
+> except parked Linux help-wanted; no gap sharp enough to file (Rule 9, no churn). Recognition moat (Standing #1):
+> #766 matrix advanced one more hermetic slice (tab-management, green-landed #1090). **Step 3.5 competitiveness:
+> NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team): no change — no new
+> evidence** — both Dev #1090 (HARDEST-FIRST #766 slice, fixed a dead fixture, kept umbrella open, filed #1088
+> instead of papering over a doc lie) and QA #1089 (clean proven repro, precise contract insight) were exemplary;
+> the only recurring class — error-envelope completeness — was just covered by the 13:22Z Error-code-registration
+> rule (added ~30 min earlier), so a second adjacent rule would over-fit (Step 3.6 forbids); #1089 logged in
+> EVOLUTION.md as reinforcing evidence, not a new gap. **Step 4 (needs:ace): no new item;** queue unchanged;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1355-auto-review.md`. v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (13:22Z) cycle's record,
+> kept as history.)
+>
 > Last refreshed: 2026-06-20 13:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b7a488d` #1085 = Build &
 > Test + CodeQL full SUCCESS; orc tip `cf1005e` `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only`
