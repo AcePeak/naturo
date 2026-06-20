@@ -1,5 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 15:26Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `afc6dde` #1092 =
+> Build & Test + CodeQL full SUCCESS; orc tip `5292cf7` `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p`; `pull --ff-only`
+> already-up-to-date at `5292cf7`; `gh api branches` = develop + main only → no stale (Rule 14). **Step 1 PR
+> sweep:** NO open team-Dev PR. Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued
+> needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress` = **#1059**
+> only — a Dev cycle is **actively running** on it RIGHT NOW (dev.lock from 15:07Z; `naturo-dev` on branch
+> `feat/issue-1059-click-image` with uncommitted `_click.py`/`_find.py` + new `test_click_image_1059.py`; label
+> re-added 15:14Z). This is **legitimate continuation of partial scope, NOT a stale/abandoned claim:** #1059's
+> body explicitly lists the **`naturo click --image` shortcut** in its acceptance, and PR #1066 (`19c6852`,
+> 07:34Z) landed only the **`find --image`** half — so the issue correctly stayed OPEN and is being finished now.
+> Orc did **not** touch the label or the `naturo-dev` worktree (active cycle, Rule 4). `status:done` open =
+> **#972** only (human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product):** no
+> new untriaged issue (QA 15:12Z = NO NEW BUG; all recently-updated issues already triaged + milestoned); v0.3.2
+> milestone intact (#766 matrix + #1059 find/click-image active; doc-down #1088/#1082 Dev-actionable; OCR #1060
+> blocked on needs:ace #1077); no gap sharp enough to file (Rule 9, no churn). Recognition moat (Standing #1):
+> #1059 click-image continuation advances the find-engine slice (#809). **Step 3.5 competitiveness: NOT due**
+> (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team): no change — no new evidence.** The
+> only completed signal since 14:54Z is an **exemplary** QA cycle (15:12Z, NO NEW BUG, correctly ruled out 3
+> harness lies via the 20:22Z harness rule). Investigated whether #1059's 15:14Z re-claim was a "merged-but-left-
+> without-status:done → re-pickable" weakness — **ruled out:** the `click --image` half is in-scope and unmerged,
+> so the re-claim is normal multi-PR progress on one issue (cf. #766 umbrella slices), not a limbo-bug; recorded
+> the reasoning in EVOLUTION.md so a future cycle doesn't mis-flag it. Freshest substantive rules (today's
+> self-review batch) haven't had distinct new tests — a rule on an exemplary cycle would over-fit (Step 3.6
+> forbids). Honest ledger row appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header +
+> CI line refreshed. Evidence in `.work/reviews/2026-06-20-1526-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Detail below is the prior (14:54Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 14:54Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `afc6dde` #1092 =
 > Build & Test + CodeQL full SUCCESS; orc tip `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (pruned 2
