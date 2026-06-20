@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: infinite-scroll</title>
+  <style>
+    #feed { margin: 0; padding: 0; list-style: none; }
+    .note-card { height: 180px; border-bottom: 1px solid #ccc; padding: 8px; }
+    #sentinel { height: 1px; }
+  </style>
+</head>
+<body>
+  <h1 id="main-heading">Infinite Scroll Feed</h1>
+  <p id="status" data-loaded="0">Loaded 0 of 30 cards.</p>
+
+  <!-- Exercises: scraping loop + scroll. The feed deterministically grows to
+       a fixed total (30) as the page scrolls, so a scrape loop terminates. -->
+  <ul id="feed"></ul>
+  <div id="sentinel"></div>
+
+  <script>
+    var TOTAL = 30;
+    var BATCH = 6;
+    var loaded = 0;
+    var feed = document.getElementById("feed");
+    var status = document.getElementById("status");
+
+    function appendBatch() {
+      var remaining = Math.min(BATCH, TOTAL - loaded);
+      for (var i = 0; i < remaining; i++) {
+        var index = loaded + i;
+        var card = document.createElement("li");
+        card.className = "note-card";
+        card.id = "card-" + index;
+        card.setAttribute("data-index", String(index));
+        card.textContent = "Note card #" + index;
+        feed.appendChild(card);
+      }
+      loaded += remaining;
+      status.textContent = "Loaded " + loaded + " of " + TOTAL + " cards.";
+      status.setAttribute("data-loaded", String(loaded));
+    }
+
+    // First batch on load, then more each time the user nears the bottom.
+    appendBatch();
+    window.addEventListener("scroll", function () {
+      var nearBottom = window.innerHeight + window.scrollY >=
+        document.body.offsetHeight - 50;
+      if (nearBottom && loaded < TOTAL) {
+        appendBatch();
+      }
+    });
+  </script>
+</body>
+</html>

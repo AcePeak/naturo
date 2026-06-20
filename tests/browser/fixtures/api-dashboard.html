@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: api-dashboard</title>
+</head>
+<body>
+  <h1 id="main-heading">API Dashboard</h1>
+  <p>Order data is fetched via XHR from a local JSON endpoint.</p>
+
+  <!-- Exercises: network interception. The page issues a GET for
+       api-data.json; that request/response is what a listener captures. -->
+  <ul id="api-output" data-loaded="false"></ul>
+  <p id="api-status">Loading...</p>
+
+  <script>
+    fetch("api-data.json")
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        var list = document.getElementById("api-output");
+        data.orders.forEach(function (order) {
+          var item = document.createElement("li");
+          item.className = "order-row";
+          item.setAttribute("data-id", String(order.id));
+          item.textContent = order.id + ": " + order.item + " ($" + order.total + ")";
+          list.appendChild(item);
+        });
+        list.setAttribute("data-loaded", "true");
+        document.getElementById("api-status").textContent =
+          "Loaded " + data.orders.length + " orders.";
+      })
+      .catch(function (error) {
+        document.getElementById("api-status").textContent = "Error: " + error;
+      });
+  </script>
+</body>
+</html>

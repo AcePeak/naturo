@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: captcha-slider</title>
+  <style>
+    #slider-track {
+      position: relative; width: 300px; height: 40px;
+      border: 1px solid #888; background: #eee; user-select: none;
+    }
+    #slider-target {
+      position: absolute; left: 260px; top: 0; width: 40px; height: 40px;
+      background: rgba(0, 160, 0, 0.2);
+    }
+    #slider-handle {
+      position: absolute; left: 0; top: 0; width: 40px; height: 40px;
+      background: #1976d2; cursor: grab;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="main-heading">Slider Captcha</h1>
+
+  <!-- Exercises: slider drag trajectory. The handle must be dragged to within
+       a tolerance of the target offset (260px) to pass — deterministic, no
+       server round-trip. -->
+  <div id="slider-track">
+    <div id="slider-target"></div>
+    <div id="slider-handle" data-target="260" data-tolerance="8"></div>
+  </div>
+  <p id="slider-status" data-passed="false">Drag the handle to the target.</p>
+
+  <script>
+    var track = document.getElementById("slider-track");
+    var handle = document.getElementById("slider-handle");
+    var status = document.getElementById("slider-status");
+    var target = parseInt(handle.getAttribute("data-target"), 10);
+    var tolerance = parseInt(handle.getAttribute("data-tolerance"), 10);
+    var maxLeft = track.clientWidth - handle.offsetWidth;
+    var dragging = false;
+    var startX = 0;
+    var startLeft = 0;
+
+    function setLeft(px) {
+      var clamped = Math.max(0, Math.min(maxLeft, px));
+      handle.style.left = clamped + "px";
+      return clamped;
+    }
+
+    function validate(left) {
+      var passed = Math.abs(left - target) <= tolerance;
+      status.setAttribute("data-passed", String(passed));
+      status.textContent = passed ? "Captcha passed." : "Try again.";
+    }
+
+    handle.addEventListener("mousedown", function (event) {
+      dragging = true;
+      startX = event.clientX;
+      startLeft = parseInt(handle.style.left || "0", 10);
+      event.preventDefault();
+    });
+    document.addEventListener("mousemove", function (event) {
+      if (!dragging) { return; }
+      setLeft(startLeft + (event.clientX - startX));
+    });
+    document.addEventListener("mouseup", function () {
+      if (!dragging) { return; }
+      dragging = false;
+      validate(parseInt(handle.style.left || "0", 10));
+    });
+  </script>
+</body>
+</html>
