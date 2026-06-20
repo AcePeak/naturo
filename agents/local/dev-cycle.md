@@ -95,6 +95,20 @@ git checkout -b fix/issue-N-short-desc origin/develop
    twice with mis-attributed codes that QA caught after merge — #1047 missing window/app → `UNKNOWN_ERROR`
    from a broad `except`; #1067 bad template file → `CAPTURE_FAILED` because `Image.open(template)` sat in the
    capture `try`.)
+   **Error-code registration (every code you emit must be a real `ErrorCode`):** an error CODE is not just
+   a string — the envelope's *category / recoverable / recovery-hint* are derived from whether the code is a
+   registered `ErrorCode` enum member (`errors.py`) **and** has a `_RECOVERY_HINTS` entry (`error_helpers.py`).
+   Emitting a **bare string literal** code silently degrades it to category `unknown` / `recoverable:false` /
+   no hint, breaking the agent self-correction contract — even though the envelope *shape* looks fine. So:
+   never pass a raw string as a code; use an `ErrorCode` member, and if you need a new one, register it in the
+   enum + the category map + `_RECOVERY_HINTS` in the same diff. And when you **fix** a taxonomy/recovery bug,
+   sweep **every** callsite that emits that condition, not just the one path that was reported — a partial fix
+   leaves sibling commands leaking the off-taxonomy code. Pin it with a test asserting *category + recoverable*
+   (not just envelope shape) for each command that can emit the code. (Evidence: the eN snapshot-ref-not-found
+   path emitted bare `"REF_NOT_FOUND"` at 6 interaction callsites — `_click.py`/`_common.py`/`_mouse.py`×2/
+   `_press.py`/`_type.py` — absent from the enum + hints → `unknown`/`recoverable:false`, while `get`/`set` use
+   the registered `STALE_SNAPSHOT_CACHE`; #1004 fixed only the backend `ElementNotFoundError` path, leaving the
+   eN-resolve leg → QA filed #1086.)
    **Option coverage (new mode of a multi-mode command):** when you add a mode to a command that already
    has several modes + shared options (e.g. `find` with `--ai`/`--image`/`--selector`/`--ocr` and the shared
    `--screenshot`), every documented option your new mode could touch must be **explicitly honored or

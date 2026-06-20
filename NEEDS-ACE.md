@@ -4,26 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 12:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+_Last refreshed: 2026-06-20 13:22Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
 #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
-20:22Z cycle: **Dev (20:50Z)** landed team PR **#1085** (`infinite-scroll` Before/After equivalence, **part of
-#766**) all-green auto-merge → `b7a488d` — HARDEST-FIRST with proven env probes, a hermetic CDP test, and a
-real dead-fixture bug found + fixed; correctly kept umbrella #766 open. **QA (20:50Z)** filed one genuine
-round-trip bug (**#1084**, P2) and, applying the freshly-added harness rule, traced a cp936 mojibake / `| head`
-exit-code artifact to OS ground truth → no false bug. **Step 1 PR sweep:** only open PR = community **#1055**
-(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
-**not** comment/take-over/close it (community-PR handling is yours); no team-Dev PR open. **Step 2 health:**
-`status:in-progress` = empty; `status:done` open = **#972** only (human-only security, queued). Nothing for Orc
-to close (Rule 1). **Step 3:** triaged QA-filed **#1084** → v0.3.3 (Dev-actionable, keeps v0.3.2 scope clean);
-backlog healthy + fully triaged (v0.3.2 has 17 open Dev-actionable items incl. recognition moat #932/#920); no
-other unmilestoned *non-queue* actionable except parked Linux help-wanted (#88/#87/#84/#77/#75/#74/#68/#66) → no
-new issue (Rule 9, no churn). **Step 3.6 (evolve the team): no change — no new evidence** (Dev #1085 + QA #1084
-both exemplary; the 20:22Z harness rule was exercised cleanly <1h after being added → another change would
-over-fit). EVOLUTION.md row appended. **Live needs:ace queue
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `b7a488d` (#1085) Windows DLL + all Ubuntu
-+ macOS 3.12/3.13 + Lint **SUCCESS** (macOS 3.9 + CodeQL still running; prior `13a8c54` full SUCCESS) →
-**develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness
-step not due (<7d since 06-16)._
+12:52Z cycle: **QA (21:13Z)** filed one genuine bug (**#1086**, P2) — interaction commands' eN-ref error
+envelope degrades to off-taxonomy `REF_NOT_FOUND` → category `unknown`/`recoverable:false` (vs `get`/`set` which
+use the registered `STALE_SNAPSHOT_CACHE`); clean repro, ruled out pipe/locale artifacts, wrote no production
+code. **Dev** opened team PR **#1087** (`network interception` Before/After equivalence, **part of #766**) —
+auto-merge SQUASH enabled, all required CI green except macOS 3.9 still running → self-landing, not stuck.
+**Step 1 PR sweep:** team-Dev **#1087** healthy (auto-merge on, green) → no Orc action; only other open PR =
+community **#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`,
+UNSTABLE) — Orc did **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:**
+`status:in-progress` = **#766** only (umbrella, in-flight PR #1087); `status:done` open = **#972** only
+(human-only security, queued). Nothing for Orc to close (Rule 1). **Step 3:** triaged QA-filed **#1086** →
+v0.3.3 (Dev-actionable, keeps v0.3.2 scope clean; confirmed in code — 7 bare-string `REF_NOT_FOUND` callsites
+absent from enum + hints); no other unmilestoned *non-queue* actionable except parked Linux help-wanted → no new
+issue (Rule 9, no churn). **Step 3.6 (evolve the team): CHANGE this cycle** — added an **Error-code
+registration** self-review rule to `dev-cycle.md` (never emit a bare-string code; register new codes in enum +
+category map + `_RECOVERY_HINTS`; sweep all sibling callsites when fixing taxonomy bugs; test category+
+recoverable, not just shape), backed by #1086 + the partial #1004 fix; EVOLUTION.md row appended. **Live
+needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD `b7a488d` (#1085) full
+**SUCCESS** (Build & Test + CodeQL) → **develop NOT red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

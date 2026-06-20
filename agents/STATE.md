@@ -1,5 +1,36 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 13:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `b7a488d` #1085 = Build &
+> Test + CodeQL full SUCCESS; orc tip `cf1005e` `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only`
+> up-to-date at `cf1005e`; `gh api branches` = develop + main + `test/issue-766-network-interception` (PR #1087's
+> live branch) → no stale (Rule 14). **Step 1 PR sweep:** team-Dev **#1087** (`network interception` Before/After
+> equivalence, **part of #766**) — auto-merge SQUASH enabled (by Ace), all required CI green except macOS 3.9
+> still IN_PROGRESS → self-landing, not stuck → no Orc action (BLOCKED = pending required check, not a failure).
+> Only other open PR = community **#1055** (base `main`, fork, UNSTABLE) → already queued needs:ace #1057,
+> human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress` = **#766** only (umbrella,
+> in-flight PR #1087, updated 13:20Z — active, not abandoned); `status:done` open = **#972** only (human-only
+> security, queued). Nothing for Orc to close (Rule 1). **Step 3 (drive product):** triaged QA-filed **#1086**
+> (P2, interaction commands' eN-ref envelope degrades to off-taxonomy `REF_NOT_FOUND` → category
+> `unknown`/`recoverable:false`, vs `get`/`set`'s registered `STALE_SNAPSHOT_CACHE`) → **v0.3.3** (Dev-actionable,
+> keeps ship-gate-met v0.3.2 scope clean, with #1079/#1083/#1084). Confirmed in code: bare `"REF_NOT_FOUND"` at 7
+> callsites (`_click.py:210`/`_common.py:657`/`_mouse.py:269,318`/`_press.py:210`/`_type.py:246`/`_capture.py:153`),
+> absent from `errors.py` enum + `error_helpers.py::_RECOVERY_HINTS`; commented fix options + contract-test ask.
+> No other unmilestoned non-queue actionable except parked Linux help-wanted. No gap sharp enough to file (Rule 9,
+> no churn). Recognition moat (Standing #1): #766 matrix advancing one more hermetic slice (network interception,
+> PR #1087 self-landing). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): CHANGE this cycle** — added an **Error-code registration** rule to
+> `dev-cycle.md` Step 3 self-review item 4: never emit a bare-string error code (it degrades to
+> `unknown`/`recoverable:false`/no-hint, breaking the agent self-correction contract); use an `ErrorCode` member
+> and register any new code in the enum + category map + `_RECOVERY_HINTS` in the same diff; when fixing a
+> taxonomy/recovery bug, sweep **every** sibling callsite (not just the reported path); pin with a category+
+> recoverable test (not just envelope shape). Evidence: #1086 (verified — 7 bare `REF_NOT_FOUND` callsites
+> unregistered) + the partial #1004 fix (backend path only) = a recurring class distinct from the existing
+> error-attribution row. EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue unchanged;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1322-auto-review.md`. v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (12:52Z) cycle's record,
+> kept as history.)
+>
 > Last refreshed: 2026-06-20 12:52Z (Orc autonomous cycle — **`develop` NOT red** (pulled to `b7a488d` = team-Dev
 > PR #1085 *infinite-scroll equivalence, part of #766*; CI run 27871710094 = Windows DLL + all Ubuntu + macOS
 > 3.12/3.13 + Lint SUCCESS, only macOS 3.9 + CodeQL still running; prior `13a8c54` full SUCCESS). **NO new
