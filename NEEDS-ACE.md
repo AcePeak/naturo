@@ -4,28 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 14:52 (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
-unchanged.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage (milestoned QA bug
-#1065 → v0.3.4).** 🟢 **THE RECOGNITION MOAT IS LIVE:** since 14:22 the Dev cycle **landed #932 (Java Access
-Bridge) as `866193e`** (PR #1064) — root cause was a never-correct native init (`jab.cpp` resolved
-`initializeAccessBridge`, a symbol the shipped DLL never exported; real export is `Windows_run`) + a missing
-message-pump settle. Dev fixed it, **verified end-to-end** (UIA sees 0 Swing controls; `naturo see --backend
-jab` recovers Submit/Cancel buttons, Customer-Name edit, Express-Shipping checkbox, Catalog tree via a
-CI-built DLL), and **CI's Build C++ Core (Windows) passed**. #932 stays OPEN (multi-part: RECOGNITION.md
-numbers + click/type-via-JAB remain) — Dev self-cleared `status:in-progress`. This is the #1 standing
-priority (recognition supremacy) **shipped, not just unblocked.** The 14:37Z Dev cycle then picked up the
-next moat slice **#1059** (`find --image`, `status:in-progress`, fresh) → left untouched (Rule 4). QA's
-14:42Z cycle filed new bug **#1065** (`app focus/move/… --app` matches window title only, not process name —
-inconsistent with `see`/`capture`/`list windows`); sibling of #1058 under the #871 umbrella, a bug-fix toward
-consistency → Orc milestoned **#1065 → v0.3.4** (not human-only). The one open PR is still community **#1055**
-(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**) — Orc did **not** comment/take-over/
-close it. **Step 3.6 (evolve the team):** the #871 harmonization shipped surface-only parity (aligned which
-flags each command accepts, not what `--app` *resolves to*) → two QA bugs #1058+#1065 in back-to-back cycles;
-added a `dev-cycle.md` self-review rule requiring a **cross-command parity test** for shared flags vs the
-gold-standard command (logged in `agents/EVOLUTION.md`). **Live needs:ace queue
-#1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `866193e` (#1064)
-**Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
-your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 15:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9), no priority-honesty
+triage needed (zero unmilestoned actionable Dev work). Since the 14:52 cycle: **QA ran a 15:07Z exploratory
+cycle** that verified the **v0.3.2 recognition moat** end-to-end on live Calculator (`see` 56-element tree;
+`find` fuzzy NAME+role; `get --aid`/`--ref` round-trip — the historical eN-ref regression does NOT reproduce;
+consistent error envelopes) → **0 new bugs**, and correctly did **not** file duplicates of the known
+success-envelope gaps (#865 see / #1054 get-set). No Dev land since #1064 — the recognition moat (#932 JAB,
+LIVE) stands, and the next slice **#1059** (`find --image`, `status:in-progress`, fresh, no PR) is in active
+Dev pickup → left untouched (Rule 4). The one open PR is still community **#1055** (already queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE, unchanged) — Orc did
+**not** comment/take-over/close it. **Step 3.6 (evolve the team):** the freshest operating evidence
+(#1058/#1065 `--app` parity) was already addressed by the prior cycle's `dev-cycle.md` cross-command
+parity-test rule; the two QA cycles since behaved well (15:07 exemplary) and Dev #932 landed clean+verified →
+**no new recurring operating weakness** → logged "no change — no new evidence" in `agents/EVOLUTION.md` (no
+churn). **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD
+`866193e` (#1064) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY
+MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

@@ -1,6 +1,48 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 14:52 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 15:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged). develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9), no priority-honesty
+> triage needed (zero unmilestoned actionable Dev work), Step 3.6 = no change/no new evidence (logged).**
+> **Step 0:** `git config` Orc identity; `git fetch origin -p` clean; `git pull --ff-only` = Already up to
+> date (tip `3c5d607` = orc 1452 [skip ci]; code HEAD `866193e` = #1064); authoritative `gh api .../branches`
+> = **develop + main only** → Rule 14 clean. **Step 1 PR sweep:** **one open PR — community #1055** (`fix: use
+> consistent success envelope in set commands`, @muhamedfazalps, base `main`/head `main`, MERGEABLE/UNSTABLE,
+> last updated 04:56Z = unchanged) — **already queued needs:ace #1057** (targets main, file absent on develop,
+> whole-file rewrite, promo link); community-PR handling is human-only → Orc did **not** merge/comment/
+> take-over/close. **No team-Dev PRs**; no code merge into develop since 14:52 (`git log --since 06:50Z` =
+> only the orc review commit) → **no post-merge handoff. Since 14:52:** QA ran a **15:07Z exploratory cycle**
+> (no QA-actionable queue) — verified the **v0.3.2 recognition moat** end-to-end on live Calculator (zh-CN
+> 计算器, owned hwnd): `see --hwnd` 56-element tree (full NumberPad/operators/memory, 51 automation_ids);
+> `find` fuzzy NAME+role correct (locale non-matches are OS, not a defect); `get --aid`/`--ref` round-trip
+> works (historical eN-ref regression does NOT reproduce); error envelopes consistent (exit 1) → **0 new
+> bugs**, correctly did NOT file duplicates of the known success-envelope gaps (#865 see / #1054 get-set),
+> re-confirming both still reproduce on `3c5d607`. No Dev land since #1064. **Step 2 health:**
+> `status:in-progress` = **#1059** (`feat: naturo find --image template matching (part of #809)`, next moat
+> slice, P1/from:ace/v0.3.2) — updated 06:42:43Z (~40 min before sweep), assignee AcePeak, **no PR yet** →
+> fresh in-flight, **NOT** the >24h abandonment case → left untouched (Rule 4). `status:done` (open) = **#972
+> only** (input-content guard, close = human security sign-off, queued). **Nothing to close** (Rule 1 — #1059
+> in flight no merged commit; #972 human-only), no abandoned work. **Step 3 (drive product):** priority-honesty
+> scan — `no:milestone` open = only `needs:ace` human-only items (#1057/#975/#969/#935/#915) + the parked
+> Linux/cross-platform `help wanted` backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned actionable
+> Dev work**; all recently-created issues correctly milestoned (#1065→v0.3.4 last cycle; #809 find slices
+> #1059/#1060/#1061 + migration tests #1062/#1063 → v0.3.2). **No new issue (Rule 9)** — QA's 15:07Z cycle
+> filed 0 (moat solid; known gaps already tracked). **Standing #1 priority** (recognition supremacy
+> #920/#931/#932/#934): #932 JAB **LIVE** (`866193e`), next slice **#1059 find --image** in active Dev pickup
+> → moat work leading. **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d
+> < 7). **Step 3.6 (evolve the team):** read the last ~10 Dev/QA log entries + recent PRs/QA findings — the
+> freshest operating evidence (#1058/#1065 two `--app` parity bugs) was **already addressed by the prior
+> cycle's change** (an hour ago: `dev-cycle.md` cross-command parity-test self-review rule); the two QA cycles
+> since (14:42 filed #1065; 15:07 exemplary — moat verified, 0 dup filings) + the clean root-cause-deep,
+> end-to-end-verified Dev #932 land show **no new recurring operating weakness** → another doc change now
+> would over-fit/churn → **"no change — no new evidence"** row appended to `agents/EVOLUTION.md` (per Step 3.6).
+> **Step 4 (needs:ace): no new human-only item** — live queue **unchanged #1057/#975/#972/#969/#935/#915/
+> #914/#897**; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1522-auto-review.md`.
+> `develop` CI: HEAD `866193e` (#1064) **Build & Test + CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 14:52 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged). 🟢 THE v0.3.2 RECOGNITION MOAT IS LIVE — the 14:07–14:35Z Dev cycle LANDED #932 (Java Access
 > Bridge) as `866193e` (PR #1064). develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty
 > triage (#1065 → v0.3.4), one Step 3.6 team-evolution change shipped.** **Step 0:** `git config` Orc identity;
