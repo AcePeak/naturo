@@ -222,7 +222,7 @@ class TestElementRefCrop:
         result = self._run_with_element("e99", png_200x100, element=None)
         data = json.loads(result.output)
         assert data["success"] is False
-        assert "REF_NOT_FOUND" in data["error"]["code"]
+        assert data["error"]["code"] == "STALE_SNAPSHOT_CACHE"
 
     def test_element_ref_crops_image(self, png_200x100):
         el = UIElement(

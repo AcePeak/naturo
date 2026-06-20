@@ -150,7 +150,8 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                     "Run 'naturo see' first to create a snapshot."
                 )
                 if json_output:
-                    click.echo(_common._json_error_str("REF_NOT_FOUND", msg))
+                    click.echo(_common._json_error_str(
+                        "STALE_SNAPSHOT_CACHE", msg, context={"ref": element_ref}))
                 else:
                     click.echo(f"Error: {msg}", err=True)
                 raise SystemExit(1)

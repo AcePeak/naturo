@@ -266,7 +266,8 @@ def drag(from_text, from_coords, from_selector, from_element,
                 f"Source element ref '{from_text}' not found or has zero-size bounds. "
                 f"Run 'naturo see' first to capture a fresh snapshot.",
                 json_output,
-                code="REF_NOT_FOUND",
+                code="STALE_SNAPSHOT_CACHE",
+                context={"ref": from_text},
             )
             return
     else:
@@ -315,7 +316,8 @@ def drag(from_text, from_coords, from_selector, from_element,
                 f"Destination element ref '{to_text}' not found or has zero-size bounds. "
                 f"Run 'naturo see' first to capture a fresh snapshot.",
                 json_output,
-                code="REF_NOT_FOUND",
+                code="STALE_SNAPSHOT_CACHE",
+                context={"ref": to_text},
             )
             return
     else:

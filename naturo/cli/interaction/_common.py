@@ -627,10 +627,10 @@ def _resolve_text_or_ref_target(
     ``see`` snapshot; any other string is looked up by name/automation-id through
     the backend's element search and reduced to the matched element's centre.
 
-    On failure this emits the canonical error envelope — ``REF_NOT_FOUND`` for a
-    stale ``eN`` ref, ``ELEMENT_NOT_FOUND`` for a missing text/id target — and
-    terminates the process (via :func:`_json_err`), so callers treat a ``None``
-    return as "stop".
+    On failure this emits the canonical error envelope — ``STALE_SNAPSHOT_CACHE``
+    for a stale ``eN`` ref (matching ``get``/``set``), ``ELEMENT_NOT_FOUND`` for a
+    missing text/id target — and terminates the process (via :func:`_json_err`),
+    so callers treat a ``None`` return as "stop".
 
     Args:
         target_id: The element token — an ``eN`` snapshot ref, visible text, or
@@ -654,7 +654,8 @@ def _resolve_text_or_ref_target(
             f"Element ref '{target_id}' not found. Run 'naturo see' first to "
             f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
             json_output,
-            code="REF_NOT_FOUND",
+            code="STALE_SNAPSHOT_CACHE",
+            context={"ref": target_id},
         )
         return None
 
@@ -877,7 +878,8 @@ def _json_ok(data: dict, json_output: bool) -> None:
 
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
               code: str = "ACTION_ERROR", *,
-              exc: Optional[BaseException] = None) -> NoReturn:
+              exc: Optional[BaseException] = None,
+              context: Optional[dict] = None) -> NoReturn:
     """Emit error result as JSON or plain text, then exit.
 
     Includes agent-friendly recovery hints from the error_helpers registry.
@@ -902,6 +904,9 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
         code: Error code for the JSON envelope and the non-semantic fallback.
         exc: The original exception, when available, so a ``NaturoError``'s
             structured identity can be preserved.
+        context: Structured detail merged into the JSON envelope's ``context``
+            field (e.g. ``{"ref": "e7"}`` for a stale snapshot ref). Ignored on
+            the ``exc`` and plain-text paths.
     """
     from naturo.errors import NaturoError
     if isinstance(exc, NaturoError):
@@ -910,7 +915,7 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
                              exit_code=exit_code)
     if json_output:
         from naturo.cli.error_helpers import json_error
-        click.echo(json_error(code, msg))
+        click.echo(json_error(code, msg, context=context))
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(exit_code)

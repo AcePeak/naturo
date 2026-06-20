@@ -219,7 +219,7 @@ class TestElementCrop:
                 "-p", "/tmp/out.png", "--element", "e999", "--json", "--no-snapshot",
             ], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_element_zero_size_error(self, runner, mock_backend):
         mock_elem = MagicMock()

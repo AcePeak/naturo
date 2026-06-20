@@ -503,8 +503,8 @@ class TestMoveTargetResolution:
         assert args[0] == 333
         assert args[1] == 444
 
-    def test_move_stale_eN_ref_yields_ref_not_found(self, runner):
-        """A stale ``move --to eN`` ref yields REF_NOT_FOUND, not a move."""
+    def test_move_stale_eN_ref_yields_stale_snapshot_cache(self, runner):
+        """A stale ``move --to eN`` ref yields STALE_SNAPSHOT_CACHE, not a move."""
         from unittest.mock import patch, MagicMock
 
         mock_backend = MagicMock()
@@ -514,7 +514,7 @@ class TestMoveTargetResolution:
              patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
             result = runner.invoke(main, ["move", "--to", "e99", "-j"])
         assert result.exit_code != 0
-        assert json.loads(result.output)["error"]["code"] == "REF_NOT_FOUND"
+        assert json.loads(result.output)["error"]["code"] == "STALE_SNAPSHOT_CACHE"
         mock_backend.move_mouse.assert_not_called()
 
     def test_move_no_target_still_reports_invalid_input(self, runner):
