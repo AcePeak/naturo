@@ -138,7 +138,7 @@ class TestRefClick:
              patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
             result = runner.invoke(click_cmd, ["e999", "--json"], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_click_ref_zero_bounds_invokes_uia(self, runner, mock_backend):
         mock_elem = MagicMock()

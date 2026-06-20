@@ -272,7 +272,7 @@ class TestOnElement:
              patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
             result = runner.invoke(type_cmd, ["hello", "--on", "e999", "--json"], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_on_text_finds_element(self, runner, mock_backend):
         mock_elem = MagicMock()

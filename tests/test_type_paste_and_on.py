@@ -131,7 +131,7 @@ class TestTypeOnElement:
 
         data = json.loads(result.output)
         assert data["success"] is False
-        assert data["error"]["code"] == "REF_NOT_FOUND"
+        assert data["error"]["code"] == "STALE_SNAPSHOT_CACHE"
 
     @_win_only
     def test_type_on_with_paste_clicks_then_pastes(self, runner):

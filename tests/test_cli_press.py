@@ -536,7 +536,7 @@ class TestPressOnElement:
                 catch_exceptions=False,
             )
             assert result.exit_code != 0
-            assert "REF_NOT_FOUND" in result.output or "not found" in result.output.lower()
+            assert "STALE_SNAPSHOT_CACHE" in result.output or "not found" in result.output.lower()
 
     @patch("naturo.cli.interaction._common._auto_route", return_value=None)
     @patch("naturo.cli.interaction._common._get_backend")

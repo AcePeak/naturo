@@ -243,7 +243,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     f"Element ref '{on_element}' not found. Run 'naturo see' first to "
                     f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
                     json_output,
-                    code="REF_NOT_FOUND",
+                    code="STALE_SNAPSHOT_CACHE",
+                    context={"ref": on_element},
                 )
                 return
         else:

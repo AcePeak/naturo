@@ -267,7 +267,8 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                     f"Element ref '{target_id}' not found. Run 'naturo see' first to "
                     f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
                     json_output,
-                    code="REF_NOT_FOUND",
+                    code="STALE_SNAPSHOT_CACHE",
+                    context={"ref": target_id},
                 )
                 return
 

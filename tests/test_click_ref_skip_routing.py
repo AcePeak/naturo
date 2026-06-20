@@ -183,7 +183,7 @@ class TestClickRefSkipsRouting:
         # e999 doesn't exist in the snapshot
         result = runner.invoke(click_cmd, ["e999", "--no-verify"])
 
-        # Should have errored with REF_NOT_FOUND, not called auto_route
+        # Should have errored with STALE_SNAPSHOT_CACHE, not called auto_route
         mock_auto_route.assert_not_called()
 
     @patch("naturo.cli.interaction._common._auto_route")
