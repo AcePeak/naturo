@@ -369,9 +369,9 @@ if page.ele(self.ele_dict["输入查询结果"]):
 naturo browser click "xpath://div[@class='tab-review']"
 naturo browser click "xpath://div[@class='store-selector']"
 naturo browser type "xpath://input[@class='store-search']" "My Store Name" --clear-first
-naturo browser wait "xpath://div[@class='search-result']" --state visible --timeout 5000
+naturo browser wait "xpath://div[@class='search-result']" --state visible --timeout 5
 naturo browser click "xpath://div[@class='search-result']"
-naturo browser wait "xpath://div[@class='loading-spinner']" --state hidden --timeout 30000
+naturo browser wait "xpath://div[@class='loading-spinner']" --state hidden --timeout 30
 naturo browser click "xpath://button[@class='confirm-match']"
 naturo browser text "xpath://span[@class='store-score']"
 ```
@@ -380,9 +380,9 @@ naturo browser text "xpath://span[@class='store-score']"
 page.find("xpath://div[@class='tab-review']").click()
 page.find("xpath://div[@class='store-selector']").click()
 page.find("xpath://input[@class='store-search']").type("My Store Name", clear_first=True)
-page.wait_for("xpath://div[@class='search-result']", state="visible", timeout=5000)
+page.wait_for("xpath://div[@class='search-result']", state="visible", timeout=5)
 page.find("xpath://div[@class='search-result']").click()
-page.wait_for("xpath://div[@class='loading-spinner']", state="hidden", timeout=30000)
+page.wait_for("xpath://div[@class='loading-spinner']", state="hidden", timeout=30)
 page.find("xpath://button[@class='confirm-match']").click()
 score = page.find("xpath://span[@class='store-score']").text
 ```
@@ -509,9 +509,9 @@ naturo browser wait-network-idle                            # No network activit
 naturo browser wait-network-idle --idle-time 1.0            # Custom idle threshold (seconds)
 
 # Element state
-naturo browser wait ".results" --timeout 10000               # Element exists in DOM
-naturo browser wait ".results" --state visible --timeout 10000  # Element is visible
-naturo browser wait ".spinner" --state hidden --timeout 30000   # Spinner gone
+naturo browser wait ".results" --timeout 10               # Element exists in DOM
+naturo browser wait ".results" --state visible --timeout 10  # Element is visible
+naturo browser wait ".spinner" --state hidden --timeout 30   # Spinner gone
 naturo browser wait ".old-item" --state detached              # Element removed from DOM
 
 # Navigation
@@ -525,8 +525,8 @@ naturo browser wait-function "window.dataLoaded === true" --timeout 5
 ```python
 page.wait_for_load()
 page.wait_for_network_idle(idle_time=0.5)
-page.wait_for(".results", state="visible", timeout=10000)
-page.wait_for(".spinner", state="hidden", timeout=30000)
+page.wait_for(".results", state="visible", timeout=10)
+page.wait_for(".spinner", state="hidden", timeout=30)
 page.wait_for_url("success")
 page.wait_for_function("window.dataLoaded === true")
 ```
@@ -717,7 +717,7 @@ naturo browser click "xpath://input[@class='file-select']"
 naturo dialog type "/path/to/video.mp4"
 naturo dialog accept
 # Wait for upload to complete
-naturo browser wait ".upload-progress-done" --state visible --timeout 60000
+naturo browser wait ".upload-progress-done" --state visible --timeout 60
 
 # Thumbnail upload — scroll to element first
 naturo browser scroll --to-element "xpath://div[@class='thumbnail-upload']"
@@ -1072,9 +1072,9 @@ naturo browser wait-network-idle
 
 naturo browser click "xpath://div[@class='tab-review']"
 naturo browser type "xpath://input[@class='store-search']" "My Store Name" --clear-first
-naturo browser wait "xpath://div[@class='search-result']" --state visible --timeout 5000
+naturo browser wait "xpath://div[@class='search-result']" --state visible --timeout 5
 naturo browser click "xpath://div[@class='search-result']"
-naturo browser wait "xpath://div[@class='loading-spinner']" --state hidden --timeout 30000
+naturo browser wait "xpath://div[@class='loading-spinner']" --state hidden --timeout 30
 SCORE=$(naturo browser text "xpath://span[@class='store-score']")
 
 # === Part 2: Post to WeChat Video Channel (desktop) ===
@@ -1264,7 +1264,7 @@ naturo drag \
   --release-delay 80
 
 # Step 4: Verify success
-naturo browser wait ".captcha-success" --timeout 3000
+naturo browser wait ".captcha-success" --timeout 3
 ```
 
 What `--trajectory bezier --jitter 2 --overshoot 12` does internally:
@@ -1860,7 +1860,7 @@ for _ in range(80):
 results = []
 for note in notes:
     page.navigate(note["link"])
-    page.wait_for(selectors["publish_date"], timeout=10000)
+    page.wait_for(selectors["publish_date"], timeout=10)
     info = {"type": note["type"]}
     info["author"] = page.find(selectors["author"]).text
     info["user_id"] = page.find(selectors["user_id"]).text.split("：")[-1]
@@ -1945,7 +1945,7 @@ for try_i in range(300):
 **After**:
 ```bash
 # Wait for element with proper timeout (no polling loop needed)
-naturo browser wait "#my-element" --timeout 10000
+naturo browser wait "#my-element" --timeout 10
 
 # Check if element is in an iframe
 naturo browser frames
