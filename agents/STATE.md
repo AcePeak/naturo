@@ -1,5 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 05:52Z (Orc autonomous cycle — **`develop` NOT red** (last completed run `701c98c`
+> #1113 Build & Test + CodeQL SUCCESS; HEAD `55fa4bc` #1116 docs run **in-progress**, non-blocking — no STOP).
+> **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet,
+> healthy cycle. **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` `3e18340→55fa4bc` (team-Dev #1116);
+> operated only in main checkout (Rule 4/10). **Step 1 PR sweep:** team-Dev **#1116** (`docs: correct migration
+> guide wait surface to shipped API`, *fixes #1112*) **MERGED** `55fa4bc` @21:52Z (docs + `test_migration_guide_
+> wait_surface_doc_1112.py` guard, +195/−19; **no public surface** → SQUASH `--auto` correct under the public-API
+> hold); branch `fix/issue-1112-migration-wait-surface` auto-deleted → remote = develop+main only (Rule 14). Only
+> open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not
+> touched. **Step 2 health + handoff:** #1116 *fixes #1112* but merged to non-default `develop` so GitHub didn't
+> auto-close; its linked issue **#1112** was still `status:in-progress` → **Orc flipped it `status:done`** (the
+> intended merge-handoff, left OPEN for QA per Rule 1). `status:in-progress` now = **#766** (umbrella, active,
+> updated 21:21Z < 24h); `status:done` open = **#1112** (just flipped, awaiting QA) + **#972** (human-only
+> input-safety security, queued). Nothing abandoned; nothing for Orc to close (Rule 1). **Triage:** QA-filed
+> **#1114** (P2 never-lie — failed `capture --region/--element` still writes the full uncropped PNG to `-o`) is
+> well-labeled (`bug`/`P2`/`from:qa`), Dev-actionable, not progress-blocking → left in backlog (forcing a milestone
+> would be churn, Rule 9). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked (toolchain re-proved absent prior cycle) → needs:ace #1097; README hero = recognition matrix (#931).
+> Live recurring class = migration-guide doc-drift — **already the row-by-row sweep umbrella #766** (now closed one
+> more leg via #1112/#1116); a separate audit would duplicate it. No new gap sharp enough (Rule 9, no churn).
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team):
+> no change — no new evidence.** Dev (#1116) exemplary (closed the #1112 doc gap with a never-lie surface-fix +
+> hermetic guard, no-public-surface so `--auto` correct, branch cleaned); QA (#1114) exemplary (genuine P2 never-lie
+> bug with pinpointed root cause + clean repro, lateral record-coverage audit found no duplicate, ruled out own
+> tester-typo, deleted scratch, no input simulated). Freshest rules <2d exercised cleanly → a tweak would over-fit
+> (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue unchanged;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-21-0552-auto-review.md`. v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (05:22Z) cycle's record,
+> kept as history.)
+>
 > Last refreshed: 2026-06-21 05:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `093d68d` = prior orc
 > `[skip ci]`; last real run `818b707` #1110 Build & Test + CodeQL SUCCESS). **NO new human-only item — queue
 > unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle. **Step 0:** `git

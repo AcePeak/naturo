@@ -4,28 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 05:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-21 05:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-Quiet, healthy cycle. **Step 1:** ONE open team-Dev PR — **#1113** (*part of #766* — `fix: detect
-display:none/zero-area elements in browser wait_for`): proves the guide's **Waiting** row and fixes a real never-lie
-bug (`wait_for` decided visibility via `_get_click_point()` → all-zeros point for unrendered nodes, so `--state
-hidden` never fired for `display:none` and `--state visible` wrongly passed); fix is **private `_is_displayed()`,
-click path untouched, no new public symbol/flag** → Dev's SQUASH `--auto` correct under the public-API hold; CI
-running (Lint&Type + C++ + checks green, Python matrix pending) → **lands itself when green, no Orc action**. Only
-other open PR = community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`,
-fork, UNSTABLE) — not touched. **Step 2:** `status:in-progress` = **#766** (umbrella, active, updated 21:21Z < 24h);
-`status:done` open = **#972** only (human-only input-safety, queued). Nothing to close (Rule 1). Triaged Dev-filed
-doc gap **#1112** → P1 + v0.3.2 (sibling of #1106; Dev-actionable, not human-only). **Step 3 (recognition moat,
-Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains
-build-blocked (toolchain re-proved absent 04:48Z) → #1097 below; README hero = recognition matrix (#931). Live
-recurring class — migration-guide doc-drift — is **already the systematic sweep umbrella #766 performs row-by-row**
-(now also surfacing real `wait_for` bugs); a separate audit would duplicate it. No new gap sharp enough (Rule 9, no
-churn). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** **no change — no new evidence** (Dev
-#1113 exemplary — HARDEST-FIRST #766 row that exposed+fixed a real never-lie `wait_for` bug, private surface so
-`--auto` correct, filed adjacent doc gap #1112 rather than papering over; QA #1111 exemplary — real P1 never-lie bug
-with 3 independent evidence lines, foreground-confirmed safe input; freshest rules <2d exercised cleanly → a tweak
-would over-fit). `develop` CI: HEAD `093d68d` `[skip ci]`, last real run `818b707` Build & Test SUCCESS → **not
-red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+Quiet, healthy cycle. **Step 1:** team-Dev **#1116** (*fixes #1112* — `docs: correct migration guide wait surface to
+shipped API`) **MERGED** `55fa4bc` @21:52Z (docs + a wait-surface guard test, **no public surface** → SQUASH `--auto`
+correct under the public-API hold); branch auto-deleted (Rule 14). Only open PR = community **#1055** (queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, fork, UNSTABLE) — not touched. **Step 2 +
+handoff:** #1116 merged to non-default `develop` so GitHub didn't auto-close #1112 → Orc **flipped #1112
+`status:done`** (merge-handoff, left OPEN for QA per Rule 1). `status:in-progress` = **#766** (umbrella, active,
+updated 21:21Z < 24h); `status:done` open = **#1112** (awaiting QA) + **#972** (human-only input-safety, queued).
+Nothing to close (Rule 1). QA-filed **#1114** (P2, failed `capture --region/--element` still writes the full PNG to
+`-o`) left in backlog — Dev-actionable, not progress-blocking. **Step 3 (recognition moat, Standing #1):** P0
+**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked → #1097 below;
+README hero = recognition matrix (#931). Live recurring class — migration-guide doc-drift — is **already the
+systematic sweep umbrella #766 performs row-by-row** (closed one more leg via #1112/#1116); a separate audit would
+duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since 06-16).
+**Step 3.6** **no change — no new evidence** (Dev #1116 exemplary — closed the #1112 never-lie doc gap with a
+surface-fix + hermetic guard, no-public-surface so `--auto` correct; QA #1114 exemplary — genuine P2 never-lie bug
+with pinpointed root cause + clean repro, lateral audit found no duplicate, no input simulated; freshest rules <2d
+exercised cleanly → a tweak would over-fit). `develop` CI: last completed run `701c98c` #1113 Build & Test + CodeQL
+SUCCESS; HEAD `55fa4bc` #1116 docs run in-progress (non-blocking) → **not red.** v0.3.2 ship-gate unchanged (FULLY
+MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
