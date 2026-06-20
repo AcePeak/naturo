@@ -29,13 +29,24 @@ def apps(ctx, show_all, json_output) -> None:
 @list_cmd.command()
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--process-name", "app", default=None, hidden=True, help="")
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
+@click.option("--app-id", "app_id", default=None,
+              help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def windows(app, pid, json_output) -> None:
+def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
     process names, and dimensions.
+
+    Window-targeting filters (``--window``/``--hwnd``/``--app-id``) mirror the
+    flag family used by ``see``/``capture``/``click`` so a window can be
+    narrowed the same way everywhere. ``--app`` matches the application name or
+    process name; ``--window`` matches the window title only. Filters combine
+    with AND.
     """
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Window listing")
@@ -44,6 +55,25 @@ def windows(app, pid, json_output) -> None:
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
+
+    # Resolve --app-id to its window handle up front so an unresolvable ID fails
+    # loudly (INVALID_INPUT) instead of silently listing every window. This
+    # mirrors the foreground-fallback guard in see/capture (#361/#957).
+    app_id_handle: int | None = None
+    if app_id is not None:
+        from naturo.app_ids import get_app_id_map
+        entry = get_app_id_map().resolve(app_id)
+        if entry is None:
+            msg = (
+                f'App ID "{app_id}" not found or expired. '
+                'Run "naturo list windows" or "naturo app list" to refresh.'
+            )
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        app_id_handle = entry.handle
 
     try:
         backend = _common._get_backend(json_output)
@@ -59,12 +89,19 @@ def windows(app, pid, json_output) -> None:
         _parent_pid = os.getppid()
         win_list = [w for w in win_list if w.pid not in (_own_pid, _parent_pid)]
 
-        # Apply filters
+        # Apply filters (all combine with AND).
         if app:
             app_lower = app.lower()
             win_list = [w for w in win_list
                         if app_lower in w.title.lower()
                         or app_lower in ntpath.basename(w.process_name).lower()]
+        if window_title:
+            title_lower = window_title.lower()
+            win_list = [w for w in win_list if title_lower in w.title.lower()]
+        if hwnd:
+            win_list = [w for w in win_list if w.handle == hwnd]
+        if app_id_handle is not None:
+            win_list = [w for w in win_list if w.handle == app_id_handle]
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
