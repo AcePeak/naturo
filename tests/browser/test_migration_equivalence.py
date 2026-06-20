@@ -34,6 +34,7 @@ from typing import Iterator
 import pytest
 
 from naturo.browser import BrowserPage, launch_chrome
+from naturo.browser._stealth import apply_stealth_patches
 
 pytestmark = pytest.mark.desktop
 
@@ -912,3 +913,124 @@ def test_wait_state_equivalence(
     elapsed = _time_wait_for("#old-item", state="detached")
     assert elapsed >= min_blocked_s  # the wait blocked until the node was removed
     assert browser_page.evaluate("document.getElementById('old-item') === null")
+
+
+def test_anti_detection_equivalence(
+    isolated_browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Selenium anti-detection hardening via naturo, two ways.
+
+    Mirrors the migration guide's "Anti-Detection" section. The *Before* code is
+    the Douyin-messaging Selenium recipe the guide quotes verbatim: ~20 lines of
+    ``--disable-blink-features=AutomationControlled`` +
+    ``excludeSwitches=['enable-automation']`` + ``useAutomationExtension=False``
+    plus a CDP ``Object.defineProperty(navigator, 'webdriver', {get: () => undefined})``
+    injection -- all needed because a chromedriver-launched Chrome otherwise sets
+    ``navigator.webdriver = true`` and trips every bot check. The guide's headline
+    promise is that naturo gives the same clean fingerprint with **zero config**.
+
+    Driven against ``stealth-check.html`` -- which renders ``PASS``/``FAIL`` for the
+    four standard automation vectors (``navigator.webdriver``, ``window.chrome``,
+    ``cdc_`` injection, ``navigator.plugins`` length) -- this row proves both halves
+    of that section:
+
+    * **By default (the guide's "stealth ON by default, zero config" headline):** a
+      naturo browser launched with no stealth options at all already passes every
+      vector. naturo drives Chrome over CDP rather than through chromedriver, so the
+      ``navigator.webdriver`` flag and the ``cdc_`` globals that Selenium leaks are
+      simply never present -- the exact clean state Selenium reaches only after the
+      quoted hacks.
+    * **The opt-in mask surface (``naturo browser stealth`` /
+      :func:`apply_stealth_patches`) genuinely runs, not a no-op:** applying it to a
+      running page replaces the real fingerprint with the documented spoof --
+      ``navigator.webdriver`` becomes ``undefined``, ``navigator.plugins`` collapses
+      to the canonical 3-entry Chrome set, and ``navigator.languages`` becomes
+      ``['en-US', 'en']`` -- a measurable change from this host's live values, so a
+      stealth patch that silently did nothing would fail the assertions.
+
+    Per naturo's never-lie contract (SOUL.md) the vectors are read from the live
+    page's own ``navigator`` rather than trusting the fixture's self-report, and the
+    fixture is confirmed to have actually executed its checks (no cell left at the
+    ``"?"`` placeholder) before its rendered verdict is asserted -- a page whose
+    script never ran could not satisfy both.
+
+    Scope note: ``stealth-check.html`` covers the four vectors above; the richer
+    masks :func:`apply_stealth_patches` also installs (WebGL vendor, ``chrome.runtime``,
+    Notification permission) are out of this fixture's scope and are exercised by
+    ``naturo browser stealth-check`` / :func:`naturo.browser._stealth.check_stealth`.
+    """
+    page = isolated_browser_page
+
+    # ── By default: zero stealth config, yet every vector already passes ──────
+    # The page was launched by the shared helper with no stealth flags and no
+    # patches applied -- exactly what the migration guide tells users to use.
+    page.navigate(f"{fixtures_server}/stealth-check.html")
+
+    # never-lie precondition: the fixture's script actually ran. On load it
+    # rewrites every cell from the "?" placeholder to PASS/FAIL and stamps the
+    # summary; if it had not executed, the verdict assertions below would be
+    # reading stale placeholders rather than a real result.
+    assert page.evaluate(
+        "Array.from(document.querySelectorAll('td[id$=\"-result\"]'))"
+        ".every(function(c){return c.textContent !== '?';})"
+    )
+
+    # Read the real fingerprint directly from navigator (not the fixture's
+    # self-report). These are precisely the vectors Selenium fails without the
+    # quoted hacks: chromedriver sets navigator.webdriver = true and injects
+    # cdc_* globals, while naturo's CDP launch never does either.
+    assert page.evaluate("navigator.webdriver") is not True
+    assert page.evaluate("typeof window.chrome") != "undefined"
+    assert page.evaluate("navigator.plugins.length") > 0
+    assert page.evaluate(
+        "Object.keys(window).every(function(k){return k.indexOf('cdc_') !== 0;})"
+    )
+
+    # The fixture's own rendered verdict agrees: every vector PASS, summary green.
+    for cell_id in (
+        "webdriver-result",
+        "chrome-result",
+        "cdc-result",
+        "plugins-result",
+    ):
+        assert (
+            page.evaluate(
+                f"document.getElementById('{cell_id}').getAttribute('data-pass')"
+            )
+            == "true"
+        )
+    assert (
+        page.evaluate(
+            "document.getElementById('stealth-summary').getAttribute('data-passed')"
+        )
+        == "true"
+    )
+
+    # ── Opt-in mask: `naturo browser stealth` genuinely rewrites the fingerprint
+    # Capture the live values first so the post-patch change is provably real and
+    # not a value that happened to match on this host.
+    plugins_before = int(page.evaluate("navigator.plugins.length"))
+
+    apply_stealth_patches(page)
+    # Patches install via Page.addScriptToEvaluateOnNewDocument *and* run in the
+    # current context, so they take effect without a reload.
+    assert page.evaluate("navigator.webdriver === undefined")
+    assert page.evaluate("navigator.plugins.length") == 3
+    assert page.evaluate("navigator.plugins[0].name") == "Chrome PDF Plugin"
+    assert json.loads(page.evaluate("JSON.stringify(navigator.languages)")) == [
+        "en-US",
+        "en",
+    ]
+    # never-lie: the spoof measurably changed the fingerprint. This host launches
+    # with a real plugin set (length != 3), so collapsing to exactly 3 proves the
+    # patch ran rather than coinciding with the pre-existing value.
+    assert plugins_before != 3
+
+    # The masked browser still passes the fixture's verdict on a fresh evaluation.
+    page.navigate(f"{fixtures_server}/stealth-check.html")
+    assert (
+        page.evaluate(
+            "document.getElementById('stealth-summary').getAttribute('data-passed')"
+        )
+        == "true"
+    )
