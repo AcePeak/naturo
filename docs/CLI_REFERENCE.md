@@ -165,6 +165,7 @@ Search for UI elements matching a query.
 | `--ai` | boolean | Use AI vision to find element by natural language |
 | `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
 | `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
+| `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@name`) |
 | `--screenshot` | path | Use existing screenshot (for --ai mode) |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
@@ -189,12 +190,17 @@ naturo find "OK" --backend msaa          # MSAA for legacy apps
 naturo find --image submit.png           # template match on the screen
 naturo find --image icon.png --app Notepad --all  # all matches in an app
 naturo find --image btn.png --threshold 0.85      # looser match threshold
+naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
+naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
+naturo find --selector @login-button --all        # every match of a saved selector
 ```
 
 Found matches get `eN` refs in the snapshot (like a normal `find`), so you can
 follow up with `naturo click e<N>`. With `--image` the reported `x,y` are the
 match's screen-absolute top-left; the JSON envelope also includes `center_x`,
-`center_y`, and the NCC `score`.
+`center_y`, and the NCC `score`. With `--selector` the element is resolved the
+same way `click`/`type` resolve it (URI / XML / `//` shorthand / `@named`, with
+flexible app-name matching), so a path that clicks will also `find`.
 
 ## `naturo get`
 
