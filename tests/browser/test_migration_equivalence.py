@@ -700,6 +700,71 @@ def test_xpath_scoped_card_scrape_equivalence(
     assert cards[2].find(".note-author").text == "@mina"
 
 
+def test_scroll_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage scroll-by-pixels / scroll-into-view pattern via naturo.
+
+    Mirrors the migration guide's "Scroll" section / DrissionPage API mapping:
+    the *Before* code calls ``page.scroll.down(1000)`` to advance a feed (the
+    Xiaohongshu/Dianping scroll loops that motivate #763) and
+    ``ele.scroll.to_see()`` to bring an off-screen control into view before
+    acting on it. The *After* surface is :meth:`BrowserPage.scroll_by` and
+    :meth:`BrowserPage.scroll_to_element`.
+
+    Driven against ``scroll.html`` -- a page far taller than the viewport with a
+    ``#target`` row parked ~2000px below the fold -- naturo must genuinely move
+    the viewport. Per naturo's never-lie contract (SOUL.md) the movement is
+    proven on the page's own scroll state, both ways: the page opens at the top
+    (``scrollY`` 0, target below the fold), ``scroll_by`` advances ``scrollY`` by
+    the requested pixels, and ``scroll_to_element`` brings the previously
+    off-screen target into the viewport and centres it. A "scroll" that silently
+    left the viewport in place would fail every assertion -- ``scrollY`` and the
+    target's viewport-relative rect are the live, authoritative scroll position,
+    so they cannot report movement that did not happen.
+    """
+    browser_page.navigate(f"{fixtures_server}/scroll.html")
+
+    def scroll_y() -> int:
+        return int(browser_page.evaluate("Math.round(window.scrollY)"))
+
+    def target_top() -> float:
+        # The target's top edge, in viewport-relative CSS pixels (negative ->
+        # scrolled past it, >= innerHeight -> still below the fold).
+        return float(
+            browser_page.evaluate(
+                "document.getElementById('target').getBoundingClientRect().top"
+            )
+        )
+
+    viewport_height = int(browser_page.evaluate("window.innerHeight"))
+
+    # never-lie (precondition): the page opens at the top and the target is parked
+    # below the fold, so any later "in view" assertion can only come from a real
+    # scroll this test performed.
+    assert scroll_y() == 0
+    assert browser_page.find("#top-marker").text == "top"
+    assert target_top() > viewport_height  # target is below the visible viewport
+
+    # Before: page.scroll.down(1000)  ->  After: page.scroll_by(1000).
+    # never-lie: the viewport genuinely advanced by the requested pixels; a silent
+    # no-op would leave scrollY at 0.
+    browser_page.scroll_by(1000)
+    assert abs(scroll_y() - 1000) <= 2
+
+    # Before: ele.scroll.to_see()  ->  After: page.scroll_to_element("#target").
+    # never-lie: the previously off-screen target is now within the viewport and
+    # centred (scroll_into_view uses block:'center'), proving the scroll landed on
+    # the element rather than a top-aligned nudge or no-op.
+    browser_page.scroll_to_element("#target")
+    top_after = target_top()
+    assert 0 <= top_after < viewport_height  # target is now visible
+    # Centred, not merely top-aligned: block:'center' leaves clear space above the
+    # target (a block:'start' scroll would put its top at ~0). The fixture's
+    # trailing spacer guarantees there is room to centre.
+    assert top_after >= viewport_height * 0.2
+
+
 def test_javascript_execution_equivalence(
     browser_page: BrowserPage, fixtures_server: str
 ) -> None:

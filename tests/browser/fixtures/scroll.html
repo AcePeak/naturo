@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: scroll</title>
+  <style>
+    body { margin: 0; }
+    #top-marker { height: 40px; background: #cfe; }
+    .spacer { height: 2000px; background: #eee; }
+    #target { height: 60px; background: #fc9; }
+  </style>
+</head>
+<body>
+  <!-- Exercises: page scrolling. The page is far taller than any viewport, so a
+       "scroll into view" must perform a real scroll to reveal the target. -->
+  <div id="top-marker">top</div>
+
+  <!-- A spacer taller than any viewport parks #target ~2040px down, well below
+       the fold, so it is off-screen until the viewport actually moves. -->
+  <div class="spacer" id="spacer-top"></div>
+  <div id="target">target row</div>
+
+  <!-- Trailing space so block:'center' can fully center #target (it is not near
+       the document bottom), distinguishing a centered into-view scroll from a
+       top-aligned one. -->
+  <div class="spacer" id="spacer-bottom"></div>
+</body>
+</html>
