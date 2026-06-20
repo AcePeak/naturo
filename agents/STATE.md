@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 19:55Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `e9e9002` =
+> prior orc `[skip ci]` tip; #1108 below auto-merging all-green). **NO new human-only item — queue
+> unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle ~33 min
+> after 19:22Z. **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` = already up to date (`e9e9002`).
+> **Step 1 PR sweep:** ONE open team-Dev PR **#1108** (`fix/issue-1063-scoped-xpath-card-scrape` → `develop`,
+> *fixes #1063*): scopes element-level `find`/`find_all` to the parent subtree via CDP `Runtime.callFunctionOn`
+> (was resolving XPath/text against the whole document → first card's title for every card, never-lie). **No
+> public API** (new builders in private `_selectors`) → Dev's SQUASH `--auto` correct under the public-API
+> hold; all REQUIRED checks GREEN (Build&Test incl. CI Gate + CodeQL py/c-cpp success), UNSTABLE only on the
+> still-finishing CodeQL umbrella → **lands itself, no Orc action**; test proven both ways + hermetic unit
+> tests. Only other open PR = community **#1055** (base `main`, fork, UNSTABLE) → already queued needs:ace
+> #1057, human-only → not touched. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active) +
+> **#1063** (Dev flipped it to `status:done` in-cycle, live, while #1108 auto-merges → no Orc handoff owed,
+> matches #1101/#1086 precedent); `status:done` open = **#1063** (awaiting merge+QA) + **#972** (human-only
+> security, queued). Nothing abandoned (no PR-less idle >24h); nothing for Orc to close (Rule 1). **Step 3
+> (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked → needs:ace #1097;
+> README hero = recognition matrix (#931). Backlog fully triaged + milestoned; no new gap sharp enough — full
+> gap analysis 33 min after 19:22Z would be churn (Rule 9, no noise). **Step 3.5 competitiveness: NOT due**
+> (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.**
+> Dev (#1108) exemplary (never-lie scoped-find fix HARDEST-FIRST, proved both ways, off public surface so
+> `--auto` correct); QA (19:40Z) exemplary (clean read-only exploratory, no false bug, deferred human-only
+> #972, ruled out gbk/harness artifacts vs filing noise). Freshest rules <2d old, exercised cleanly → a tweak
+> would over-fit (Step 3.6 forbids). EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue
+> unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-21-0355-auto-review.md`.
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (19:22Z)
+> cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `90fadde` #1107
 > *part of #766* = Build & Test + CodeQL full SUCCESS, merged 19:19Z; prior orc tip `ca4b523` `[skip ci]`).
 > **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
