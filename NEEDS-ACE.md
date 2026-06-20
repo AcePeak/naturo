@@ -4,21 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 14:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item this
-cycle — queue unchanged.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage
-(milestoned QA bug #1058 → v0.3.4), no Dev/QA merges since 13:24.** Since 13:24: the moat is moving —
-the 14:07Z Dev cycle **picked up the #1 recognition-moat task #932** (Java Access Bridge fixture+proof,
-P0/v0.3.2; `status:in-progress`, updated 06:20Z = fresh in-flight, no PR yet) → left untouched (Rule 4).
-QA's 13:40Z cycle filed new bug **#1058** (`list windows --app` help text promises a narrower scope than the
-code delivers — `--app` also substring-matches the window title); the title-match is **intentional + family-wide**,
-so Orc milestoned **#1058 → v0.3.4** (doc-fix lane, sibling of #871; not human-only). The one open PR is still
-community **#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**) — Orc did **not**
-comment/take-over/close it. **Step 3.6 (evolve the team):** tightened `dev-cycle.md` HARDEST-FIRST so an
-env/toolchain block must be **proven this cycle** (live probe + output), not inherited — the 05:26Z cycle had
-skipped #932 on a stale "no JDK" note while JDK/JAB were in fact provisioned (logged in `agents/EVOLUTION.md`).
-**Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `503128a`
-(#1056) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 14:52 (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+unchanged.** develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty triage (milestoned QA bug
+#1065 → v0.3.4).** 🟢 **THE RECOGNITION MOAT IS LIVE:** since 14:22 the Dev cycle **landed #932 (Java Access
+Bridge) as `866193e`** (PR #1064) — root cause was a never-correct native init (`jab.cpp` resolved
+`initializeAccessBridge`, a symbol the shipped DLL never exported; real export is `Windows_run`) + a missing
+message-pump settle. Dev fixed it, **verified end-to-end** (UIA sees 0 Swing controls; `naturo see --backend
+jab` recovers Submit/Cancel buttons, Customer-Name edit, Express-Shipping checkbox, Catalog tree via a
+CI-built DLL), and **CI's Build C++ Core (Windows) passed**. #932 stays OPEN (multi-part: RECOGNITION.md
+numbers + click/type-via-JAB remain) — Dev self-cleared `status:in-progress`. This is the #1 standing
+priority (recognition supremacy) **shipped, not just unblocked.** The 14:37Z Dev cycle then picked up the
+next moat slice **#1059** (`find --image`, `status:in-progress`, fresh) → left untouched (Rule 4). QA's
+14:42Z cycle filed new bug **#1065** (`app focus/move/… --app` matches window title only, not process name —
+inconsistent with `see`/`capture`/`list windows`); sibling of #1058 under the #871 umbrella, a bug-fix toward
+consistency → Orc milestoned **#1065 → v0.3.4** (not human-only). The one open PR is still community **#1055**
+(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**) — Orc did **not** comment/take-over/
+close it. **Step 3.6 (evolve the team):** the #871 harmonization shipped surface-only parity (aligned which
+flags each command accepts, not what `--app` *resolves to*) → two QA bugs #1058+#1065 in back-to-back cycles;
+added a `dev-cycle.md` self-review rule requiring a **cross-command parity test** for shared flags vs the
+gold-standard command (logged in `agents/EVOLUTION.md`). **Live needs:ace queue
+#1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).** `develop` CI: HEAD `866193e` (#1064)
+**Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is
+your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -55,7 +62,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `503128a`/#1056 (HEAD) → **not red.** Team-Dev **PR #1056 landed mid-cycle** (`feat: harmonize window-targeting flags on `app` window-state commands (#871)`) — the next #871 slice (`app focus/close/minimize/maximize/restore/move` → `{--app,--window,--hwnd,--pid}`); multi-part so **#871 stays OPEN** (`app quit` + `get`/`set` follow-ups), Dev self-cleared `status:in-progress` → pickable; source branch auto-deleted (Rule 14 clean). One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). New QA bug **#1054** (`get -j`/`set -j` lack the `success` envelope) milestoned **v0.3.4** this cycle.
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `866193e`/#1064 (HEAD) → **not red.** Team-Dev **PR #1064 landed** (`fix: initialize Java Access Bridge via Windows_run + pumped settle (#932)`) — **the v0.3.2 recognition moat is now LIVE** (JAB recognition working + verified end-to-end against a CI-built DLL; Build C++ Core Windows green). #932 stays OPEN (multi-part: RECOGNITION.md numbers + JAB click/type follow-ups), Dev self-cleared `status:in-progress` → pickable; source branch auto-deleted (Rule 14 clean). One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork). New QA bug **#1065** (`app … --app` matches title only, not process name) milestoned **v0.3.4** this cycle (sibling of #1058, #871 umbrella).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

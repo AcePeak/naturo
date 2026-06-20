@@ -82,6 +82,12 @@ git checkout -b fix/issue-N-short-desc origin/develop
    python -m pytest tests/ -x -q --timeout=60     # add -m "not desktop" to skip UI tests
    ```
 4. **Self-review** `git diff`: scope tight? no regressions? helpful errors? complete docstrings? no TODO/HACK?
+   **Cross-command parity (family / "harmonization" work):** if the change touches a flag shared across a
+   command family (e.g. window-targeting `--app`/`--window`/`--hwnd`/`--pid`), assert that flag *resolves the
+   SAME way everywhere* as the family's gold-standard command (`see`/`capture`) — harmonizing which flags are
+   *accepted* is not enough if the *semantics* diverge. Pin the parity with a cross-command test. (Evidence:
+   the #871 harmonization aligned the accepted flags but left `--app` = process-name in `see`/`capture`/`list
+   windows` yet title-only in `app focus/move/…` → QA filed #1058 then #1065 in back-to-back cycles.)
 5. Update `README.md` / docs if behavior or CLI changed.
 
 ## Step 4 — Commit, PR, auto-merge

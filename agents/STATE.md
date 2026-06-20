@@ -1,6 +1,57 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 14:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> Last refreshed: 2026-06-20 14:52 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged). 🟢 THE v0.3.2 RECOGNITION MOAT IS LIVE — the 14:07–14:35Z Dev cycle LANDED #932 (Java Access
+> Bridge) as `866193e` (PR #1064). develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty
+> triage (#1065 → v0.3.4), one Step 3.6 team-evolution change shipped.** **Step 0:** `git config` Orc identity;
+> `git fetch origin -p` clean; `git checkout develop`; `git pull --ff-only` fast-forwarded `676f5e3 → 866193e`
+> (pulled `core/src/jab.cpp` + `benchmarks/recognition/fixtures/java/SwingControlsFixture.java` +
+> `JavaSwingFixtureApp` harness + `tests/test_jab_recognition_932.py`); authoritative `gh api .../branches` =
+> **develop + main only** → Rule 14 clean. **Step 1 PR sweep:** **one open PR — community #1055** (`fix: use
+> consistent success envelope in set commands`, @muhamedfazalps, base `main`/head `main`, MERGEABLE/UNSTABLE) —
+> **already queued needs:ace #1057** (targets main, rewrites a file absent on develop, whole-file rewrite, promo
+> link); community-PR handling is human-only → Orc did **not** merge/comment/take-over/close. **Team-Dev PR #1064
+> landed as `866193e`** (`fix: initialize Java Access Bridge via Windows_run + pumped settle (#932)`): the moat's
+> root cause was a never-correct native init — `jab.cpp:119` resolved `initializeAccessBridge`, a symbol the
+> shipped `WindowsAccessBridge-64.dll` never exported (real export = `Windows_run`) → init always failed → every
+> JAB call returned not-available; fixed by calling `Windows_run` + a bounded message-pump settle, plus an owned
+> `javac`-only Swing fixture + desktop test. Dev **verified end-to-end** against a CI-built DLL (UIA sees 0 Swing
+> controls; `naturo see --backend jab` recovers Submit/Cancel buttons, Customer-Name edit, Express-Shipping
+> checkbox, Catalog tree) and **CI's Build C++ Core (Windows) passed** — the key gate for an unrebuildable-locally
+> native change. `git merge-base --is-ancestor 866193e origin/develop` = YES → Rule 1 clean; source branch
+> auto-deleted → Rule 14 clean. #932 is **multi-part → stays OPEN** (RECOGNITION.md numbers + JAB click/type
+> follow-ups); Dev self-cleared `status:in-progress` + unassigned + posted the merged+verified note → **no Orc
+> handoff needed**. **Step 2 health:** `status:in-progress` = **#1059** (`feat: naturo find --image template
+> matching (part of #809)`, the next moat slice) — picked up by the 14:37Z Dev cycle, updated 06:42:43Z = fresh
+> in-flight, no PR yet → **NOT the >24h abandonment case** → left untouched (Rule 4). `status:done` (open) =
+> **#972 only** (input-content guard, close = human security sign-off, queued). **Nothing to close** (Rule 1 —
+> #932/#1059 in flight no merged-close commit; #972 human-only), no abandoned work. **Step 3 (drive product):
+> priority-honesty triage** — new QA bug **#1065** (`app focus/minimize/maximize/restore/move/close --app`
+> matches the window TITLE only, not the process name — inconsistent with `see`/`capture`/`list windows`;
+> P2/bug/from:qa, created 06:43Z) was **unmilestoned**. Root cause `naturo/cli/_app/_common.py::_resolve_window_target`
+> (~L116-120) collapses `name → raw title` for the non-`--pid` branch while `--pid` already routes through
+> `_resolve_hwnd(app=)`; it restores the documented primary form to the gold-standard behavior (a bug-fix toward
+> consistency, **not human-only**) → **Orc milestoned #1065 → v0.3.4** (window-targeting lane, sibling of #1058,
+> under the #871 umbrella) + a Dev triage comment with the exact fix site + regression-test ask. **No new issue
+> (Rule 9)** — the gap already had a sharp issue (#1065); post-triage `no:milestone` actionable = zero (only
+> needs:ace human-only #1057/#975/#969/#935/#915 + parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66).
+> Standing #1 priority (recognition supremacy #920/#931/#932/#934) **shipped a decisive slice this cycle (#932
+> JAB live)** + the next slice (#1059 find --image) is in active Dev pickup. **Step 3.5 competitiveness: NOT due**
+> (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):** the #871 window-targeting
+> "harmonization" lane (#1037/#1053/#1056) aligned *which* flags each command accepts but not their *resolution
+> semantics* — `--app` = process-name in `see`/`capture`/`list windows` yet title-only in `app focus/move/…` —
+> so QA filed **#1058 (13:40Z) then #1065 (14:42Z)**, two `--app` parity bugs in back-to-back cycles, both
+> escaping Dev self-review → added a `dev-cycle.md` Step 3 self-review rule: harmonization/family work must assert
+> a shared flag *resolves the same way everywhere* as the gold-standard command, pinned by a **cross-command
+> parity test** (one surgical edit, builds on the prior HARDEST-FIRST rows; ledger row appended to
+> `agents/EVOLUTION.md`). **Step 4 (needs:ace): no new human-only item** — live queue **unchanged
+> #1057/#975/#972/#969/#935/#915/#914/#897**; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-1452-auto-review.md`. `develop` CI: HEAD `866193e` (#1064) **Build & Test + CodeQL
+> SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 14:22 (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged). The #1 recognition-moat task #932 (Java Access Bridge fixture+proof, P0/v0.3.2) is now in active
 > Dev pickup — HARDEST-FIRST is biting. develop NOT red, nothing closed by Orc (Rule 1), one priority-honesty
 > triage (#1058 → v0.3.4), one Step 3.6 team-evolution change shipped.** **Step 0:** `git config` Orc identity;
