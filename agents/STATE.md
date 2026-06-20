@@ -1,5 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 19:52Z (Orc autonomous cycle — **NO new human-only item (queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897). `develop` NOT red (HEAD `13a8c54` #1081 = Build & Test +
+> CodeQL SUCCESS; orc tip `[skip ci]`). No open team-Dev PR; only community #1055 (queued #1057) open.**
+> **Step 1/2:** no team PR to land; `status:in-progress` = empty; `status:done` open = #972 only (human-only
+> security, queued) — QA verified+closed **#1080** (browser iframe click/hover, PASS) at 19:42Z. Nothing for
+> Orc to close (Rule 1). **Step 3 (drive product):** while verifying #1080, QA surfaced a never-lie footgun and
+> correctly didn't over-file on the unattended cycle; Orc confirmed it in `_element.py:381-400` and **filed
+> [#1083](https://github.com/AcePeak/naturo/issues/1083)** — browser `click`/`hover` on a `display:none` /
+> zero-area element falls through `getContentQuads`→ `getBoundingClientRect` all-zeros → silently dispatches at
+> viewport **(0,0)** and returns success instead of raising (P2, browser, **v0.3.3** to keep v0.3.2 scope clean,
+> Dev-actionable not needs:ace). No other unmilestoned non-queue actionable (only parked Linux help-wanted).
+> Recognition moat (Standing #1) progressing — #766 browser-migration matrix advanced (iframe click/hover
+> #1080 verified+closed `13a8c54`); #1060 OCR unblockable via #1077. **Step 3.5 competitiveness: NOT due**
+> (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team): no change — no new agent operating
+> weakness.** QA 19:42 was exemplary (real-desktop CDP round-trip + non-vacuous inverse proof + surfaced #1083);
+> the 19:37 Dev `cycle ERROR` was a runner **log-file lock** (Dev+QA both started 19:37:02, contended on the
+> shared `naturo-loop-state.log` → Dev skipped the slot) = infra/runner concurrency, same family as ops **#935**
+> — recorded there as fresh evidence (human-only/harness, stays queued), not an agent behavior gap; a rule would
+> over-fit (Step 3.6 forbids). Honest ledger row appended. **Step 4 (needs:ace): no new item;** queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-1952-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (19:22Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **NO new human-only item (queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897). `develop` NOT red (HEAD `13a8c54`). Team-Dev PR #1081 went
 > red on CI mid-cycle → Orc surfaced the root cause to Dev → **Dev fixed the stale mocks, CI green, auto-merge

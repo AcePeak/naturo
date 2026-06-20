@@ -4,25 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1), no new issue
-(Rule 9).** Team-Dev PR **#1081** (`land browser click/hover inside iframes`, fixes #1080) went **red on CI
-mid-cycle** (updated unit-test mocks too short for the new multi-call `_get_click_point`) — Orc surfaced the
-root cause to Dev; **Dev fixed it, CI went green, and auto-merge landed it (`13a8c54`) the same cycle** — all
-Dev-handled, no decision for you, nothing shipped red. The only community PR is **#1055**
-(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
-**not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
-= empty; `status:done` open = **#1080** (PR #1081 merged, awaiting QA) + **#972** (human-only security, queued).
-Nothing for Orc to close (Rule 1). **Step 3:** triaged QA-filed **#1079** (clipboard `get` misreports image/file
-content as "(empty)" + format:text) → **v0.3.3**; no other unmilestoned *non-queue* actionable (only parked
-Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing — the #766 browser-migration
-acceptance matrix is advancing one slice per cycle (iframe click/hover #1080/#1081 landed green this cycle); find-engine's last
-slice #1060 (OCR) is unblockable via #1077. **Step 3.6 (evolve the team): no change — not a rule gap** (#1081's
-red CI is a deterministic-test adherence miss already covered by `dev-cycle.md` Step 3.3's full-`pytest tests/`
-gate; a new rule would over-fit/churn — Step 3.6 forbids; honest ledger row + a "watch for recurrence" flag
-added). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
-`develop` CI: HEAD `13a8c54` (#1081) **Build & Test + CodeQL SUCCESS** → **develop NOT red.** v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+_Last refreshed: 2026-06-20 19:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1).** Since the
+19:22Z cycle: **QA (19:42Z) verified+closed #1080** (browser iframe click/hover) on the real desktop — and
+flagged a never-lie footgun it correctly chose not to over-file; **Orc filed it this cycle as
+[#1083](https://github.com/AcePeak/naturo/issues/1083)** (browser click/hover on a `display:none`/zero-area
+element silently dispatches at viewport (0,0) instead of raising — confirmed in `_element.py:381-400`; P2,
+v0.3.3, NOT needs:ace — Dev-actionable). The only open PR is community **#1055** (already queued
+**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did **not**
+comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress` = empty;
+`status:done` open = **#972** only (human-only security, queued) — #1080 was QA-verified+closed this interval.
+Nothing for Orc to close (Rule 1). **Step 3:** filed #1083 (above); no other unmilestoned *non-queue* actionable
+(only parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing — the #766
+browser-migration acceptance matrix advanced (iframe click/hover #1080 verified+closed); find-engine's last
+slice #1060 (OCR) is unblockable via #1077. **Step 3.6 (evolve the team): no change — no new *agent operating*
+weakness** (QA 19:42 exemplary incl. surfacing #1083; the 19:37 Dev `cycle ERROR` was a runner log-file lock
+— infra concurrency, same family as ops #935, recorded there as fresh evidence; a rule would over-fit — Step
+3.6 forbids; honest ledger row). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+`develop` CI: HEAD `13a8c54` (#1081) **Build & Test + CodeQL SUCCESS** (orc tip is `[skip ci]`) → **develop NOT
+red.** v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due
+(<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
