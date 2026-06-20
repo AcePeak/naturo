@@ -664,6 +664,215 @@ class ElectronFixtureApp:
         self.stop()
 
 
+def _find_java_tool(tool: str) -> Optional[str]:
+    """Locate a JDK tool (``java``/``javac``) via ``JAVA_HOME`` then ``PATH``.
+
+    Args:
+        tool: Bare tool name without extension (e.g. ``"javac"``).
+
+    Returns:
+        Absolute path to the executable, or ``None`` if it cannot be found.
+    """
+    import os
+    import shutil
+
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home:
+        candidate = Path(java_home) / "bin" / f"{tool}.exe"
+        if candidate.is_file():
+            return str(candidate)
+        candidate = Path(java_home) / "bin" / tool
+        if candidate.is_file():
+            return str(candidate)
+    return shutil.which(tool)
+
+
+class JavaSwingFixtureApp:
+    """Launch and control naturo's *owned* Java Swing recognition fixture.
+
+    This compiles ``fixtures/java/SwingControlsFixture.java`` with ``javac`` (no
+    Maven/Gradle) and runs it on the JVM.  The window's Swing controls
+    (buttons, a text field, a checkbox, a label, a table and a tree) are
+    invisible to the Windows UIA tree — which collapses the frame into opaque
+    window chrome — but fully recovered by naturo's Java Access Bridge (JAB)
+    provider.  The measured delta is therefore the literal Java/Swing case.
+
+    Java Access Bridge must be enabled in the JVM (``jabswitch -enable``) and
+    ``WindowsAccessBridge-64.dll`` must be on ``PATH`` (it ships in the JDK's
+    ``bin`` directory) for the JAB provider to recognize the controls.
+
+    Use as a context manager::
+
+        with JavaSwingFixtureApp() as app:
+            result = app.measure()
+    """
+
+    #: Window title set by ``SwingControlsFixture.java`` (used to find the HWND).
+    WINDOW_TITLE_SUBSTRING = "Naturo Swing Recognition Fixture"
+    #: Fully-qualified class name / source stem of the fixture.
+    MAIN_CLASS = "SwingControlsFixture"
+
+    def __init__(
+        self,
+        *,
+        javac_path: Optional[str] = None,
+        java_path: Optional[str] = None,
+    ) -> None:
+        """Initialise the controller.
+
+        Args:
+            javac_path: Override the auto-detected ``javac`` executable.
+            java_path: Override the auto-detected ``java`` executable.
+        """
+        self.app_dir = FIXTURES_DIR / "java"
+        self.source_path = self.app_dir / f"{self.MAIN_CLASS}.java"
+        self.javac_path = javac_path or _find_java_tool("javac")
+        self.java_path = java_path or _find_java_tool("java")
+        self._process: Optional[subprocess.Popen] = None
+
+    @property
+    def available(self) -> bool:
+        """Whether a JDK (``javac`` + ``java``) and the fixture source exist."""
+        return (
+            self.javac_path is not None
+            and self.java_path is not None
+            and self.source_path.is_file()
+        )
+
+    def _ensure_compiled(self) -> None:
+        """Compile the fixture with ``javac`` if the class file is missing or stale.
+
+        Raises:
+            RuntimeError: If ``javac`` is unavailable or compilation fails.
+        """
+        if self.javac_path is None:
+            raise RuntimeError("javac not found; install a JDK or set JAVA_HOME.")
+        class_path = self.app_dir / f"{self.MAIN_CLASS}.class"
+        if (
+            class_path.is_file()
+            and class_path.stat().st_mtime >= self.source_path.stat().st_mtime
+        ):
+            return
+        logger.info("Compiling Java fixture: %s", self.source_path)
+        result = subprocess.run(
+            [self.javac_path, self.source_path.name],
+            cwd=str(self.app_dir),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"javac failed for {self.source_path}:\n{result.stderr}"
+            )
+
+    def start(self, ready_timeout: float = 30.0) -> None:
+        """Compile, launch the Swing fixture, and wait for its window.
+
+        Args:
+            ready_timeout: Maximum seconds to wait for the fixture window to
+                appear after launching the JVM.
+
+        Raises:
+            RuntimeError: If the JDK is unavailable, or the window does not
+                appear within ``ready_timeout``.
+        """
+        if not self.available or self.java_path is None:
+            raise RuntimeError(
+                "Java Swing fixture unavailable: "
+                f"javac={self.javac_path!r}, java={self.java_path!r}, "
+                f"source={self.source_path!r}. Install a JDK (JAVA_HOME)."
+            )
+
+        self._ensure_compiled()
+        logger.info("Launching Java Swing fixture: %s", self.MAIN_CLASS)
+        self._process = subprocess.Popen(
+            [self.java_path, self.MAIN_CLASS],
+            cwd=str(self.app_dir),
+        )
+
+        deadline = time.monotonic() + ready_timeout
+        while time.monotonic() < deadline:
+            if self.find_window() is not None:
+                time.sleep(1.0)  # settle the render and the JAB attach
+                return
+            if self._process.poll() is not None:
+                self.stop()
+                raise RuntimeError(
+                    "Java fixture process exited before its window appeared."
+                )
+            time.sleep(0.5)
+        self.stop()
+        raise RuntimeError(
+            f"Java Swing fixture window did not appear within {ready_timeout:.0f}s."
+        )
+
+    def find_window(self):
+        """Find the Swing fixture window via the backend.
+
+        Returns:
+            A window-info object (with ``hwnd``/``pid``) for the fixture
+            window, or ``None`` if it cannot be located.
+        """
+        backend = get_backend()
+        for window in backend.list_windows():
+            if self.WINDOW_TITLE_SUBSTRING in (window.title or ""):
+                return window
+        return None
+
+    def measure(self, depth: int = 15) -> CoverageResult:
+        """Measure recognition coverage on the Swing fixture window.
+
+        Args:
+            depth: Maximum accessibility-tree depth to walk.
+
+        Returns:
+            A :class:`CoverageResult` for the owned Java Swing app.
+
+        Raises:
+            RuntimeError: If the fixture window cannot be found.
+        """
+        window = self.find_window()
+        if window is None:
+            raise RuntimeError(
+                "Could not locate the Java Swing fixture window. "
+                "Did the JVM launch and render the fixture?"
+            )
+        return measure_window(
+            app="Owned Java Swing fixture (real Swing app)",
+            framework="Java Access Bridge",
+            hwnd=window.hwnd,
+            pid=window.pid,
+            depth=depth,
+            notes=(
+                "A real Swing process: its buttons, text field, checkbox, "
+                "label, table and tree live below a SunAwtFrame that the UIA "
+                "tree collapses into opaque window chrome. Only the Java Access "
+                "Bridge provider recovers them — the literal Java/Swing case. "
+                "Requires JAB enabled and WindowsAccessBridge-64.dll on PATH."
+            ),
+        )
+
+    def stop(self) -> None:
+        """Terminate the JVM process."""
+        if self._process is not None:
+            try:
+                self._process.terminate()
+                self._process.wait(timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    self._process.kill()
+                except OSError:
+                    pass
+            self._process = None
+
+    def __enter__(self) -> "JavaSwingFixtureApp":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.stop()
+
+
 def measure_running_app(
     *,
     app: str,

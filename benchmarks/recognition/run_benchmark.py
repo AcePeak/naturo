@@ -35,6 +35,7 @@ from benchmarks.recognition.harness import (
     ChromiumFixtureApp,
     CoverageResult,
     ElectronFixtureApp,
+    JavaSwingFixtureApp,
     measure_running_app,
 )
 
@@ -93,7 +94,18 @@ def collect_results() -> tuple[List[CoverageResult], List[str]]:
             "install` in benchmarks/recognition/fixtures/electron/."
         )
 
-    # 3. Optional real desktop apps (included only when actually open).
+    # 3. Owned, real Java Swing fixture (the literal Java/Swing JAB case).
+    swing = JavaSwingFixtureApp()
+    if swing.available:
+        with swing:
+            results.append(swing.measure())
+    else:
+        gaps.append(
+            "Java Swing fixture skipped: no JDK found. Install a JDK (set "
+            "JAVA_HOME) and enable Java Access Bridge (`jabswitch -enable`)."
+        )
+
+    # 4. Optional real desktop apps (included only when actually open).
     for spec in OPTIONAL_APPS:
         result = measure_running_app(
             app=spec["app"],
@@ -108,7 +120,7 @@ def collect_results() -> tuple[List[CoverageResult], List[str]]:
                 f"desktop — no window titled '*{spec['title_substring']}*'."
             )
 
-    # 4. SAP GUI is not available in this environment.
+    # 5. SAP GUI is not available in this environment.
     gaps.append(
         "SAP GUI (SAP scripting/COM): not installed in this environment — "
         "future work."
