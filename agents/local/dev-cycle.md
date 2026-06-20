@@ -104,6 +104,14 @@ git checkout -b fix/issue-N-short-desc origin/develop
    `--screenshot` and captured the live screen → returned `score 1.0` at the **wrong** coordinates; #1070.
    The #1066 "verified end-to-end on a real desktop" check only exercised the live-capture path, so the
    `--screenshot` path was never run.)
+   **Platform-invariant validation order:** put argument/input validation (and the error CODE it raises)
+   **before** any platform/capability gate (`_platform_supports_gui()` etc.), so a given bad input yields the
+   **same** error code on every OS — and skip the gate entirely on paths that need no live capture. A gate
+   placed first makes the bad-input → code contract platform-dependent, and your Windows-desktop run passes
+   while Linux/macOS CI fails. Pin it with a test that does **not** mock the platform (so it runs the real
+   gate on CI). (Evidence: the #1070 fix first ran the GUI-platform gate ahead of `--screenshot` validation →
+   on Linux/macOS CI the reject/not-found tests got `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND`
+   (#1072), green on the Windows desktop, red on CI.)
 5. Update `README.md` / docs if behavior or CLI changed.
 
 ## Step 4 — Commit, PR, auto-merge

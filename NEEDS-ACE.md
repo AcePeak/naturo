@@ -4,25 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 08:26Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
-unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9). Since the 16:22 cycle
-**two more recognition-moat slices LANDED clean**: team-Dev **PR #1068** (`fix: fuse Java Access Bridge into
-the auto cascade + land JAB benchmark row (part of #932)` → `4144f44`) and **PR #1071** (`feat: naturo find
---selector path resolution (part of #809)` → `17cc5f1`, HEAD). Both are Rule-1 ancestors; branches auto-deleted
-(Rule 14 clean). #1061 (the find-selector issue) is OPEN + `status:done` (Dev flipped on merge, awaiting QA);
-#932 stays OPEN (multi-part moat epic), `status:in-progress` now empty → no in-flight/abandoned work. QA
-pressure-tested the freshly-landed code and filed two clean Dev-actionable bugs, both **unmilestoned** → Orc
-priority-honesty triage: **#1070** (`find --image` silently ignores `--screenshot`, captures live screen →
-`score 1.0` at WRONG coords — a silent-correctness failure on the headline feature) milestoned **v0.3.2** +
-**bumped P2→P1**; **#1069** (the new JAB auto-cascade test is green in CI but red on a real desktop) milestoned
-**v0.3.2** (a false-confidence gate on the moat). Both not human-only (no public-API change). The one open PR
-is still community **#1055** (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base
-`main`, UNSTABLE, unchanged 04:56Z) — Orc did **not** comment/take-over/close it. **Step 3.6 (evolve the
-team):** #1070 shows a new uncovered class — a new mode (`--image`) silently ignoring a documented option
-(`--screenshot`) → confidently-wrong output, despite a "verified end-to-end" claim that only walked the
-default path → added a surgical **Option coverage** rule to `dev-cycle.md` self-review + ledger row in
+_Last refreshed: 2026-06-20 08:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item — queue
+unchanged.** develop NOT red, nothing closed by Orc (Rule 1), no new issue (Rule 9). **In-flight team-Dev PR
+#1072** (`fix: honor find --image --screenshot for offline matching (fixes #1070, fixes #1067)` → `develop`,
+auto-merge SQUASH armed): its first CI run went red on Linux/macOS (the `--screenshot` reject/not-found tests
+returned `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND` — the GUI-platform gate ran ahead of arg
+validation). Fix commit `b2b3c8c` reorders validation before the gate and exempts offline matching from the
+GUI requirement; CI re-running, expected green → auto-merge will land it. Not human-only (internal fix, no
+public-API change) → handled in-loop, not queued. #1070 stays OPEN + `status:in-progress` (its PR not yet
+merged — correctly NOT flipped to done while red/in-flight). The one open PR otherwise is community **#1055**
+(already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
+**not** comment/take-over/close it. **QA confirmed healthy** — verified+closed #1061 at 16:42Z (live Calculator,
+read-only), reinforcing that #915's "QA down ~5 days" era is over (still recommended for closure below).
+**Step 3.6 (evolve the team):** PR #1072's Windows-green/CI-red failure exposed a new class — an env/platform
+gate ordered ahead of input validation makes the bad-input → error-code contract platform-dependent → added a
+surgical **Platform-invariant validation order** rule to `dev-cycle.md` self-review + ledger row in
 `agents/EVOLUTION.md`. **Live needs:ace queue #1057/#975/#972/#969/#935/#915/#914/#897 (unchanged).**
-`develop` CI: HEAD `17cc5f1` (#1071) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
+`develop` CI: HEAD `5379e98` **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
 unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions

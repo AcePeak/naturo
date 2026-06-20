@@ -1,10 +1,19 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 08:26Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
-> unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop GREEN, not red, nothing closed by Orc (Rule 1),
-> no new issue (Rule 9). Since 16:22 TWO more recognition-moat slices LANDED clean: team-Dev PR #1068 + PR #1071.
-> Two priority-honesty triages this cycle (#1070 → v0.3.2 + P2→P1; #1069 → v0.3.2). One Step 3.6 team-evolution
-> change shipped (Option-coverage self-review rule).**
+> Last refreshed: 2026-06-20 08:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged #1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1), no new
+> issue (Rule 9). THIS CYCLE: team-Dev PR #1072 (`fix: honor find --image --screenshot for offline matching,
+> fixes #1070, fixes #1067`) — first CI run went red on Linux/macOS (the `--screenshot` reject/not-found tests
+> returned `PLATFORM_ERROR` instead of `INVALID_INPUT`/`FILE_NOT_FOUND`: the GUI-platform gate ran ahead of arg
+> validation). Fix commit `b2b3c8c` reordered validation before the gate + exempted offline matching from the
+> GUI requirement → CI green → auto-merge LANDED it (squash, develop `91ce240`; branch auto-deleted, Rule 14).
+> Per the merge handoff: flipped #1070 `status:in-progress`→`status:done` and marked #1067 `status:done` (both
+> Dev-complete, awaiting QA — Rule 1: NOT closed, no `verified` yet). QA confirmed healthy (verified+closed #1061
+> @16:42Z). One Step 3.6 team-evolution change shipped: **Platform-invariant validation order** self-review rule
+> (`dev-cycle.md` + EVOLUTION.md) — env/platform gates must not precede input validation or the bad-input →
+> error-code contract drifts by OS (Windows-green/CI-red class). Step 3.5 competitiveness NOT due (<7d since
+> 06-16). v0.3.2 ship-gate unchanged: FULLY MET — release is Ace's call (#914).** Detail below is the prior
+> (08:26Z) cycle's record, kept as history.)
 > **Step 0:** `git config` Orc identity; `git fetch origin -p` pruned `origin/feat/issue-1061-find-selector` +
 > `origin/fix/issue-932-recognition-md` (both auto-deleted at merge); `git checkout develop`; `git pull --ff-only`
 > fast-forwarded `1e834fc → 17cc5f1` (pulled `naturo/cli/core/_find.py` +215, `naturo/cascade/*` JAB fusion,
