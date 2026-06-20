@@ -1,5 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 07:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `6297fac` #1120 Build &
+> Test + CodeQL **SUCCESS** @23:42Z; later `[skip ci]` orc commits → no new run → no STOP). **NO new human-only
+> item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config`
+> Orc; `git fetch`; `pull --ff-only` `014a12d→6297fac` (team-Dev #1120); operated only in main checkout (Rule
+> 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** team-Dev **#1120** (`docs: fix migration
+> guide browser timeouts from milliseconds to seconds`, *fixes #1115*) **MERGED** `6297fac` @23:42Z (docs + a
+> runtime-derived `test_migration_guide_timeout_units_doc_1115.py` regression guard; **no public surface** →
+> SQUASH `--auto` correct under the public-API hold); branch `fix/issue-1115-migration-timeout-seconds`
+> auto-deleted. Its linked **#1115** was still `status:in-progress` (merged to non-default `develop` → no
+> auto-close) → **Orc flipped it `status:done`** (the intended merge-handoff, left OPEN for QA per Rule 1, with a
+> handoff comment). Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace
+> #1057, human-only → not touched. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active, updated
+> 22:47Z < 24h); `status:done` open = **#1115** (just flipped, awaiting QA) + **#972** (human-only input-safety
+> security, queued). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing
+> #1):** P0 **#1096** (JAB never attaches) stays build-blocked (MSVC/cmake absent) → needs:ace #1097; README hero
+> = recognition matrix (#931). Open Dev-actionable QA bugs in backlog: **#1119** (P1 `browser screenshot` crash)
+> + **NEW #1121** (P2 `diff --snapshot` is a hard-coded "(not yet implemented)" placeholder though it's the first
+> documented diff example — root cause `diff_cmd.py:113-128` + feasibility proof in body) — both well-labeled,
+> headless-reproducible, **left in backlog** (Rule 9 — no forced milestone; do NOT re-open the already-MET v0.3.2
+> ship-gate; Dev picks hardest-first). Migration-guide doc-drift = the #766 sweep (one more leg closed via
+> #1115/#1120) — a separate audit would duplicate it; no new gap sharp enough (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change
+> — no new evidence.** Both completed signals since 07:25Z were **exemplary**: Dev #1120 (never-lie code-verified
+> ms→s fix, hermetic runtime-derived regression test, no public surface, correctly **resumed** the prior cycle's
+> half-done #1115 work) and QA #1121 (genuine P2 with feasibility proof + lateral note, applied the 20:22Z
+> QA-harness rule on a gbk mojibake, avoided the concurrent-Dev contaminated browser surface, no intrusive input).
+> Freshest rules <1d–2d exercised cleanly → another change would over-fit (Step 3.6 forbids churn). Neutral
+> first-instance note (no rule): the 07:07Z Dev cycle left #1115 uncommitted (likely budget/time cutoff) but
+> #1120 recovered it cleanly — safety net worked. EVOLUTION.md "no change" row appended. **Step 4 (needs:ace): no
+> new item;** #1121 is a code bug (Dev-actionable, not human-only); queue unchanged; NEEDS-ACE.md header + CI line
+> refreshed. Evidence in `.work/reviews/2026-06-21-0752-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Detail below is the prior (07:25Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 07:25Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `d84e9c6` #1118 Build & Test +
 > CodeQL **SUCCESS** @22:51Z; later commits `ccfb4f2`/this are `[skip ci]` orc → no new run → no STOP). **NO new
 > human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** Quiet, healthy cycle.
