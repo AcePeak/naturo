@@ -20,10 +20,12 @@ so concurrent desktop runs (e.g. Dev + QA) never share a Chrome profile.
 
 from __future__ import annotations
 
+import json
 import shutil
 import socket
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from typing import Iterator
 
 import pytest
@@ -40,13 +42,14 @@ def _free_tcp_port() -> int:
         return int(sock.getsockname()[1])
 
 
-@pytest.fixture(scope="module")
-def browser_page() -> Iterator[BrowserPage]:
-    """A headless Chrome connected via CDP, isolated in a temp profile.
+@contextmanager
+def _headless_chrome_page() -> Iterator[BrowserPage]:
+    """Yield a headless Chrome connected via CDP, isolated in a temp profile.
 
-    Launched once per module on a free port with a throwaway
-    ``user_data_dir`` so it never touches the real Chrome profile, and is
-    fully torn down afterwards.
+    Each browser runs on its own free port with a throwaway ``user_data_dir``
+    so it never touches the real Chrome profile and concurrent desktop runs
+    (e.g. Dev + QA) never share a profile. The process and its temp directory
+    are fully torn down on exit.
 
     Yields:
         A connected :class:`BrowserPage`.
@@ -70,6 +73,37 @@ def browser_page() -> Iterator[BrowserPage]:
         except subprocess.TimeoutExpired:
             chrome.kill()
         shutil.rmtree(user_data_dir, ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def browser_page() -> Iterator[BrowserPage]:
+    """A headless Chrome shared across the module's read-only equivalence tests.
+
+    Launched once per module; safe to share because these tests only navigate
+    and read. Tests that install connection-wide CDP state (e.g. network
+    interception) must use :func:`isolated_browser_page` instead.
+
+    Yields:
+        A connected :class:`BrowserPage`.
+    """
+    with _headless_chrome_page() as page:
+        yield page
+
+
+@pytest.fixture
+def isolated_browser_page() -> Iterator[BrowserPage]:
+    """A throwaway headless Chrome for tests that mutate connection-wide state.
+
+    Network request interception installs a CDP ``Fetch`` rule that persists for
+    the lifetime of the connection, so the mocking test runs against its own
+    browser rather than the module-shared :func:`browser_page` -- otherwise the
+    rule would leak into sibling tests and pause their matching requests.
+
+    Yields:
+        A connected :class:`BrowserPage`.
+    """
+    with _headless_chrome_page() as page:
+        yield page
 
 
 def test_element_finding_equivalence(
@@ -240,3 +274,82 @@ def test_infinite_scroll_scraping_equivalence(
     assert seen_indices == [str(i) for i in range(30)]
     # never-lie: the scrape's tally agrees with the page's own load counter.
     assert browser_page.find("#status").attr("data-loaded") == "30"
+
+
+def test_network_observe_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Selenium performance-log XHR capture via naturo.
+
+    Mirrors the migration guide's "Network Request Interception" section: the
+    *Before* Selenium code enables ``goog:loggingPrefs`` and scrapes
+    ``Network.responseReceived`` events out of the performance log to learn which
+    API calls a page made; the *After* surface is
+    :meth:`naturo.browser._network.NetworkMonitor.find_requests`.
+
+    Driven against ``api-dashboard.html`` -- which fetches ``api-data.json`` via
+    XHR and renders one ``.order-row`` per order -- naturo must both observe the
+    captured request and (per the never-lie contract, SOUL.md) see the real
+    response data flow into the DOM.
+
+    Scope note: the migration guide also documents a ``page.listen`` /
+    ``page.wait_for_response`` response-*body* streaming API that the shipped
+    surface does not implement (filed as a doc/impl gap). The implemented and
+    verified network surface is request observation here plus interception via
+    ``mock_response`` (see :func:`test_network_mock_response_equivalence`).
+    """
+    browser_page.navigate(f"{fixtures_server}/api-dashboard.html")
+    browser_page.wait_for_function(
+        "document.getElementById('api-output').getAttribute('data-loaded') === 'true'",
+        timeout=5.0,
+    )
+
+    # never-lie: the real on-disk response actually reached the DOM in order.
+    rows = browser_page.find_all(".order-row")
+    assert [row.text for row in rows] == [
+        "1001: Wireless Mouse ($24.99)",
+        "1002: Mechanical Keyboard ($89.5)",
+        "1003: USB-C Hub ($41)",
+    ]
+
+    # Before: parse Network.responseReceived out of the perf log to find the XHR.
+    #  ->  After: page.network.find_requests(pattern).
+    matches = browser_page.network.find_requests("*api-data.json*")
+    assert len(matches) == 1
+    assert matches[0]["name"].endswith("/api-data.json")
+    assert matches[0]["type"] == "fetch"
+
+
+def test_network_mock_response_equivalence(
+    isolated_browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce Selenium's CDP ``Fetch.fulfillRequest`` mocking via naturo.
+
+    Mirrors the request-interception promise from the other direction: rather
+    than only observing traffic, the *Before* Selenium code registers a
+    ``Fetch.enable`` + ``Fetch.fulfillRequest`` handler to feed a deterministic
+    response body; the *After* surface is
+    :meth:`naturo.browser._network.NetworkMonitor.mock_response`. The rule is
+    installed *before* navigation so it is in place when ``api-dashboard.html``
+    issues its XHR.
+
+    never-lie: the assertion is the rendered DOM, proving the page consumed the
+    mocked body instead of the on-disk ``api-data.json`` (which carries three
+    different orders) -- a real intercept, not a silent passthrough.
+    """
+    page = isolated_browser_page
+    mocked_body = json.dumps(
+        {"orders": [{"id": 9001, "item": "Mocked Widget", "total": 7.5}]}
+    )
+    page.network.mock_response("*api-data.json*", body=mocked_body)
+
+    page.navigate(f"{fixtures_server}/api-dashboard.html")
+    page.wait_for_function(
+        "document.getElementById('api-output').getAttribute('data-loaded') === 'true'",
+        timeout=5.0,
+    )
+
+    # The on-disk fixture serves three orders; the mock replaced them entirely.
+    rows = page.find_all(".order-row")
+    assert [row.text for row in rows] == ["9001: Mocked Widget ($7.5)"]
+    assert page.find("#api-status").text == "Loaded 1 orders."
