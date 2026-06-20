@@ -25,6 +25,12 @@ import naturo.cli.core._common as _common
                    "via normalized cross-correlation (no UIA tree needed)")
 @click.option("--threshold", type=float, default=0.9, show_default=True,
               help="Minimum match score in [0.0, 1.0] for --image (higher is stricter)")
+@click.option("--selector", default=None,
+              help="Resolve a unified selector path to an element (the strategy "
+                   "click/type use). "
+                   'URI: app://notepad.exe/Button[@name="Save"]. '
+                   'Short: //Edit[@name="Search"] (any app, descendant search). '
+                   "Saved: @name. App names are flexible: chrome, chrome.exe, Chrome.")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Use existing screenshot (for --ai mode)")
 @click.option("--app", default=None, help="Target app window")
@@ -50,7 +56,7 @@ import naturo.cli.core._common as _common
               help="AI provider API key (overrides env var)")
 def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str | None,
              actionable: bool, depth: int, limit: int, ai: bool,
-             image_template: str | None, threshold: float,
+             image_template: str | None, threshold: float, selector: str | None,
              ai_provider: str, ai_model: str | None, ai_api_key: str | None,
              screenshot: str | None, app: str | None, app_id: str | None,
              window_title: str | None, hwnd: int | None, pid: int | None,
@@ -75,6 +81,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find "OK" --backend msaa          # MSAA for legacy apps
         naturo find --image submit.png           # template match on screen
         naturo find --image icon.png --app Notepad --all  # all matches in app
+        naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
+        naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -94,6 +102,32 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
         hwnd = entry.handle
+
+    # Selector resolution mode — resolve a saved/inline selector path to an
+    # element (the third unified-find strategy, #1061 / #809).  Dispatched
+    # before query resolution since --selector carries its own target path, not
+    # a text query.
+    if selector is not None:
+        conflict = None
+        if ai:
+            conflict = "--selector and --ai are mutually exclusive; choose one find strategy."
+        elif image_template is not None:
+            conflict = "--selector and --image are mutually exclusive; choose one find strategy."
+        elif query is not None or query_opt is not None:
+            conflict = ("--selector takes no text query; it resolves a selector path, "
+                        "not a named element.")
+        if conflict is not None:
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", conflict))
+            else:
+                click.echo(f"Error: {conflict}", err=True)
+            raise SystemExit(1)
+        _find_with_selector(
+            selector, find_all,
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            limit=limit, json_output=json_output,
+        )
+        return
 
     # Image template matching mode — locate a picture on the window/screen.
     # Dispatched before query resolution since --image needs no text query
@@ -556,6 +590,185 @@ def _find_with_image(
         click.echo(f"\n{len(matches)} match(es) found.")
         click.echo(f"Snapshot: {snapshot_id}")
         click.echo("Tip: use 'naturo click e<N>' to interact with a match.")
+
+
+def _find_with_selector(
+    selector_str: str,
+    find_all: bool,
+    *,
+    app: str | None,
+    window_title: str | None,
+    hwnd: int | None,
+    pid: int | None,
+    limit: int,
+    json_output: bool,
+) -> None:
+    """Resolve a unified selector path to element(s) (naturo find --selector).
+
+    Mirrors the click/type family's ``_resolve_selector_target`` so the
+    ``--selector`` flag resolves the SAME way across commands — same selector
+    grammar, ``@named`` dereferencing, app-name normalization, and
+    ``SelectorResolver`` — then reports the match(es) as snapshot elements with
+    stable ``eN`` refs (the contract the text and image strategies share), so
+    they can be acted on with ``naturo click eN``.
+
+    Each distinct failure source carries its own error code (#1047/#1067 error
+    attribution): a bad ``@name`` ref → ``SELECTOR_REF_ERROR``, a malformed
+    selector → ``INVALID_SELECTOR``, a missing window → ``WINDOW_NOT_FOUND``, a
+    tree-fetch fault → ``TREE_ERROR``, and a no-match → ``SELECTOR_NOT_FOUND``.
+
+    Args:
+        selector_str: Selector path (URI / XML / ``//`` shorthand / ``@named``).
+        find_all: When True, return every exact match; otherwise the single best
+            (with the resolver's relaxed/fuzzy fallback).
+        app: Target app name/partial match (overridden by the selector's app
+            when not given explicitly).
+        window_title: Target window title substring.
+        hwnd: Target window handle.
+        pid: Target process ID.
+        limit: Maximum number of matches to return.
+        json_output: Whether to emit JSON.
+
+    Raises:
+        SystemExit: With status 1 on any of the failure sources above or on a
+            platform without GUI support.
+    """
+    from naturo.selector import (
+        parse, SelectorParseError, SelectorResolver, normalize_app_name,
+    )
+
+    def _emit_error(code: str, message: str) -> None:
+        if json_output:
+            click.echo(_common._json_error_str(code, message))
+        else:
+            click.echo(f"Error: {message}", err=True)
+        raise SystemExit(1)
+
+    # Dereference a saved @name selector to its stored path (#105), matching the
+    # click family's behavior exactly.
+    if selector_str.startswith("@"):
+        from naturo.cli.selector_cmd import resolve_named_selector
+        try:
+            selector_str = resolve_named_selector(selector_str)
+        except (KeyError, ValueError) as exc:
+            _emit_error("SELECTOR_REF_ERROR", str(exc))
+
+    try:
+        ast = parse(selector_str)
+    except SelectorParseError as exc:
+        _emit_error("INVALID_SELECTOR", f"Invalid selector: {exc}")
+
+    # The selector's app scopes the search when no explicit --app was given.
+    if ast.app and ast.app != "*" and not app:
+        app = normalize_app_name(ast.app)
+
+    if not _common._platform_supports_gui():
+        _emit_error("PLATFORM_ERROR", _common._platform_error_msg("Selector resolution"))
+
+    backend = _common._get_backend(json_output)
+
+    try:
+        tree = backend.get_element_tree(
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid, depth=20,
+        )
+    except _common.WindowNotFoundError as exc:
+        _emit_error("WINDOW_NOT_FOUND", str(exc))
+    except Exception as exc:
+        _emit_error("TREE_ERROR", f"Failed to get UI tree for selector resolution: {exc}")
+
+    if tree is None:
+        _emit_error(
+            "WINDOW_NOT_FOUND",
+            "No window found for selector resolution. Check that the target "
+            "application is running and visible.",
+        )
+
+    # Reuse the click family's ElementInfo→dict conversion so both commands feed
+    # the resolver an identically-shaped tree (no semantic drift).
+    from naturo.cli.interaction._common import _elementinfo_to_dict
+    tree_dict = [_elementinfo_to_dict(tree)]
+
+    resolver = SelectorResolver()
+    if find_all:
+        resolved = [r.element for r in resolver.resolve_all(ast, tree_dict)][:limit]
+    else:
+        result = resolver.resolve(ast, tree_dict)
+        resolved = [result.element] if result is not None else []
+
+    if not resolved:
+        _emit_error("SELECTOR_NOT_FOUND", f"Selector matched no elements: {selector_str}")
+
+    from naturo.bridge import ElementInfo as BridgeElementInfo
+    from naturo.snapshot import get_snapshot_manager
+    from naturo.models.snapshot import UIElement
+    from naturo.refs import assign_stable_refs
+
+    children = [
+        BridgeElementInfo(
+            id=str(i),
+            role=el.get("role", ""),
+            name=el.get("name", ""),
+            value=el.get("value", "") or None,
+            x=el.get("x", 0),
+            y=el.get("y", 0),
+            width=el.get("width", 0),
+            height=el.get("height", 0),
+            parent_id="0",
+            hwnd=hwnd or 0,
+        )
+        for i, el in enumerate(resolved, start=1)
+    ]
+    root = BridgeElementInfo(
+        id="0",
+        role="Pane",
+        name="selector-match",
+        value=None,
+        x=0,
+        y=0,
+        width=0,
+        height=0,
+        children=children,
+        hwnd=hwnd or 0,
+    )
+
+    mgr = get_snapshot_manager()
+    snapshot_id = mgr.create_snapshot()
+    element_id_to_ref: dict[int, str] = {}
+    ui_map, ref_map = assign_stable_refs(root, UIElement, element_obj_to_ref=element_id_to_ref)
+    mgr.store_detection_result(snapshot_id, ui_map)
+    mgr.store_ref_map(snapshot_id, ref_map)
+
+    if json_output:
+        data = [
+            {
+                "ref": element_id_to_ref.get(id(child), child.id),
+                "role": child.role,
+                "name": child.name,
+                "value": child.value,
+                "x": child.x,
+                "y": child.y,
+                "width": child.width,
+                "height": child.height,
+                "center_x": child.x + child.width // 2,
+                "center_y": child.y + child.height // 2,
+            }
+            for child in children
+        ]
+        click.echo(json_dumps({
+            "success": True,
+            "elements": data,
+            "count": len(data),
+            "snapshot_id": snapshot_id,
+        }, indent=2))
+    else:
+        for child in children:
+            ref = element_id_to_ref.get(id(child), "?")
+            name_str = f' "{child.name}"' if child.name else ""
+            pos_str = f"({child.x},{child.y} {child.width}x{child.height})"
+            click.echo(f"  {ref}. [{child.role}]{name_str} {pos_str}")
+        click.echo(f"\n{len(children)} element(s) found.")
+        click.echo(f"Snapshot: {snapshot_id}")
+        click.echo("Tip: use 'naturo click e<N>' to interact with a resolved element.")
 
 
 def _find_with_ai(
