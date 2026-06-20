@@ -4,28 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 06:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-Quiet, healthy cycle. **Step 1:** team-Dev **#1117** (*part of #766* — `test: prove Anti-Detection Before/After
-equivalence row`) **MERGED** `8e8b1fb` @22:20Z (test-only, +122/−0, **no public surface** → SQUASH `--auto` correct
-under the public-API hold); branch auto-deleted (Rule 14). It's a #766 row → umbrella **#766 stays
-status:in-progress**, no handoff owed. Only open PR = community **#1055** (queued
-**[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-**#1112** (the doc gap fixed last cycle) is now **CLOSED** — QA verified+closed it (`verified`+`status:done`, Rule 1
-satisfied by QA). `status:in-progress` = **#766** (umbrella, active, updated 22:17Z < 24h); `status:done` open =
-**#972** only (human-only input-safety, queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing
-#1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked
-(MSVC/cmake toolchain re-proved absent this cycle) → #1097 below; README hero = recognition matrix (#931). Live
-recurring class — migration-guide doc-drift — is **already the systematic sweep umbrella #766 performs row-by-row**
-(Dev's #1117 empirical probe found the Anti-Detection guide bullets already hold by default → filed NO false
-doc-gap); a separate audit would duplicate it. No new gap sharp enough (Rule 9, no churn). **Step 3.5**
-competitiveness not due (<7d since 06-16). **Step 3.6** **no change — no new evidence** (Dev #1117 exemplary —
-HARDEST-FIRST with moat blocks re-proven this cycle, never-lie empirical stealth probe filed no fabricated gap,
-hermetic raw-fingerprint test, caught the #969 stale-egg trap and forced PYTHONPATH; QA exemplary — verified+closed
-#1112 with merged commit, left #972 needs:ace, no intrusive input; freshest rules <2d exercised cleanly → a tweak
-would over-fit). `develop` CI: HEAD `8e8b1fb` #1117 CodeQL SUCCESS + Build & Test in-progress (non-blocking); last
-completed run `55fa4bc` #1116 Build & Test + CodeQL SUCCESS → **not red.** v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914)._
+_Last refreshed: 2026-06-21 06:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `d84e9c6` #1118 push run
+in-progress; last completed `8e8b1fb` #1117 Build & Test + CodeQL SUCCESS → no STOP); nothing closed by Orc (Rule 1).
+**Step 1:** team-Dev **#1118** (*part of #766* — `docs: fix migration guide dropdown scroll_to_element(element) →
+element.scroll_into_view()`) **MERGED** `d84e9c6` @22:51Z (docs + `test_dropdown_playlist_selection_equivalence`
+fixture; **no public surface**, `scroll_into_view` already public → SQUASH `--auto` correct); branch auto-deleted
+(Rule 14). #766 row → umbrella **#766 stays status:in-progress**, no handoff owed. Only open PR = community **#1055**
+([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
+`status:in-progress` = **#766** (umbrella, active, updated 22:47Z < 24h); `status:done` open = **#972** only
+(human-only input-safety, queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
+**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (MSVC/cmake
+re-proved absent this cycle @06:50Z) → #1097 below; README hero = recognition matrix (#931). No new gap sharp enough
+(Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** **CHANGE THIS CYCLE** — the #969
+stale-egg trap recurred (Dev #1117 + #1118 both hand-improvised `PYTHONPATH`); `dev-cycle.md` had no guard while
+`qa-cycle.md:62` did → added a #969 stale-egg guard to `dev-cycle.md` Step 0 (symmetric to QA's). v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

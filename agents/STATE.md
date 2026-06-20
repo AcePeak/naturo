@@ -1,5 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 06:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `d84e9c6` #1118 push run
+> Build & Test + CodeQL **in-progress**, non-blocking; last completed run `8e8b1fb` #1117 Build & Test + CodeQL
+> SUCCESS @22:20Z → no STOP). **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/
+> #935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` `0c0612f→d84e9c6` (team-Dev
+> #1118); operated only in main checkout (Rule 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:**
+> team-Dev **#1118** (`docs: fix migration guide dropdown scroll_to_element(element) → element.scroll_into_view()`,
+> *part of #766*) **MERGED** `d84e9c6` @22:51Z — docs + test (`test_dropdown_playlist_selection_equivalence` +
+> `playlist-select.html` fixture); **no public surface** (`scroll_into_view` already public) → SQUASH `--auto`
+> correct under the public-API hold; branch `fix/issue-766-playlist-select-scroll` auto-deleted. It's a #766 row
+> ("part of") → umbrella **#766 stays status:in-progress**, no handoff owed. Only open PR = community **#1055** (base
+> `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched. **Step 2 health:**
+> `status:in-progress` = **#766** (umbrella, active, updated 22:47Z < 24h); `status:done` open = **#972** only
+> (human-only input-safety security, queued). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3
+> (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked (MSVC/cmake re-proved
+> absent this cycle by Dev @06:50Z) → needs:ace #1097; README hero = recognition matrix (#931). Migration-guide
+> doc-drift = the row-by-row sweep umbrella **#766** (Dev's #1118 found + fixed a real `scroll_to_element(element)`
+> vs `element.scroll_into_view()` doc-vs-code gap) — a separate audit would duplicate it. No new gap sharp enough
+> (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6
+> (evolve the team): CHANGE THIS CYCLE.** The **#969 stale-egg trap recurred** — Dev **#1117** (06:19Z) *and*
+> **#1118** (06:50Z) **both** hand-improvised `PYTHONPATH=naturo-dev` because the editable install can resolve
+> `import naturo` to a sibling worktree's stale code, yet `dev-cycle.md` carried **no** guard (only `qa-cycle.md:62`
+> did). Two consecutive cycles improvising the same workaround = a recurring false-confidence risk → added a **#969
+> stale-egg guard to `dev-cycle.md` Step 0** (print `naturo.__file__`; if outside this worktree, force
+> `PYTHONPATH=$(pwd)` on every probe + pytest until #969 lands), symmetric to QA's. EVOLUTION.md row appended. **Step
+> 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0652-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (06:22Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 06:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `8e8b1fb` #1117
 > CodeQL SUCCESS, Build & Test in-progress non-blocking; last completed run `55fa4bc` #1116 Build & Test +
 > CodeQL SUCCESS). **NO new human-only item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/

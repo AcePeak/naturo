@@ -46,7 +46,12 @@ git fetch origin
 git checkout dev-work && git reset --hard origin/develop   # clean slate on latest develop
 # DLL is gitignored; ensure it exists (copy from the main checkout if missing):
 [ -f naturo/bin/naturo_core.dll ] || { mkdir -p naturo/bin; cp ../naturo/naturo/bin/naturo_core.dll naturo/bin/; }
+# #969 stale-egg guard: an editable install can resolve `import naturo` to a SIBLING worktree's stale code.
+python -c "import naturo,sys;print(naturo.__file__)"   # MUST resolve under THIS naturo-dev worktree
 ```
+If `naturo.__file__` resolves outside this worktree, force YOUR code to win for **every** probe and pytest run —
+`PYTHONPATH=$(pwd) python …` / `PYTHONPATH=$(pwd) pytest …` — until #969 lands. Otherwise you may green-light a
+fix while actually exercising stale sibling code (a silent false-confidence gate; QA carries the same guard).
 
 ## Step 1 — Pick ONE issue (strict priority order)
 ```bash
