@@ -1,5 +1,37 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
+> unchanged #1077/#1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1),
+> no new issue (Rule 9). Step 3.6: no change — no new evidence (both signals since 18:22Z exemplary).**
+> **Step 0:** `git config` Orc; `git fetch origin`; `git pull --ff-only` fast-forwarded `a5fb584 → 7d2b969`
+> (pulled `tests/browser/test_migration_equivalence.py` +136 = team-Dev PR #1078); `gh api .../branches`
+> = **develop + main only** → Rule 14 clean.
+> **Step 1 PR sweep:** **no open team-Dev PRs.** Since 18:22Z, team-Dev **#1078** (`prove browser migration
+> Before/After equivalence`, **part of #766**, `7d2b969` = HEAD, all-green auto-merge SQUASH) landed → it is a
+> multi-fixture umbrella slice, so Dev correctly used "part of #766" (NOT "fixes"), did NOT auto-close, removed
+> `status:in-progress`/self-assign and returned #766 to the pool with a remaining-fixture list (Rule 1). Develop
+> CI on `7d2b969` = **Build & Test + CodeQL SUCCESS**. Only open PR = community **#1055** (base `main`, fork,
+> MERGEABLE/UNSTABLE) → already queued needs:ace #1057; human-only → Orc did **not** merge/comment/take-over/close.
+> **Step 2 health:** `status:in-progress` = **empty** (no abandoned work); `status:done` (open) = **#972**
+> (input-content guard, human security sign-off, queued) only — #1075 was QA-verified+closed (18:42Z) since the
+> last cycle. **Nothing to close** (Rule 1).
+> **Step 3 (drive product):** backlog fully triaged — `no:milestone` (minus needs:ace + Linux help-wanted
+> #88/#87/#84/#77/#75/#74/#68/#66) = **zero actionable unmilestoned issues**. v0.3.2 = earliest open milestone
+> (ship-gate FULLY MET). Recognition moat (Standing #1) progressing — browser-migration acceptance matrix (#766)
+> advancing one hermetic fixture-slice per cycle; #1060 (OCR, last find slice) unblockable via #1077. No gap
+> sharp enough to file (Rule 9 — no churn).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence.** Both signals since 18:22Z were exemplary: Dev
+> #1078 (#766 slice) ran HARDEST-FIRST with live env probes, smoke-FIRST, **hermetic** tests (isolated
+> mkdtemp+port+teardown — applying the freshest Test-hermeticity rule) and correctly did not auto-close the
+> umbrella; QA verified+closed #1075 with a real-desktop CDP round-trip + non-vacuous inverse 403 proof. No
+> recurring *operating* weakness; a rule on exemplary cycles would over-fit (Step 3.6 forbids churn). Honest
+> ledger row added.
+> **Step 4 (needs:ace): no new item.** Live queue unchanged **#1077/#1057/#975/#972/#969/#935/#915/#914/#897**;
+> NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-20-1852-auto-review.md`. v0.3.2
+> ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (18:22Z) cycle's
+> record, kept as history.)
+>
 > Last refreshed: 2026-06-20 18:22Z (Orc autonomous cycle — **ONE new human-only item #1077 (OCR engine choice
 > for #1060); queue now #1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc
 > (Rule 1). Step 3.6: no change — no new evidence (exemplary Dev/QA signals, no recurring operating weakness).**

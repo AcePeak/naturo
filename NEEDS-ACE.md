@@ -4,24 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 18:22Z (Orc autonomous cycle — **ONE new human-only item: [#1077](https://github.com/AcePeak/naturo/issues/1077) — pick the OCR engine for `find --ocr` (#1060).** Queue now
-#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1). **No open
-team-Dev PRs** — since the 09:52Z cycle, team-Dev **#1076** (`add --remote-allow-origins to browser launch so
-CDP can connect`, fixes #1075, `847dc99` = HEAD, all-green auto-merge SQUASH) landed and flipped its issue
-**#1075 → status:done** (awaiting QA verify — Rule 1, NOT closed). The only open PR is community **#1055**
+_Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **NO new human-only item; queue unchanged
+#1077/#1057/#975/#972/#969/#935/#915/#914/#897. develop NOT red, nothing closed by Orc (Rule 1), no new issue
+(Rule 9).** **No open team-Dev PRs** — since the 18:22Z cycle, team-Dev **#1078** (`prove browser migration
+Before/After equivalence`, **part of #766**, `7d2b969` = HEAD, all-green auto-merge SQUASH) landed; it is a
+multi-fixture umbrella slice so Dev correctly used "part of #766" (NOT "fixes"), did NOT auto-close, and
+returned #766 to the pool with a remaining-fixture list (Rule 1). The only open PR is community **#1055**
 (already queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`, UNSTABLE) — Orc did
 **not** comment/take-over/close it (community-PR handling is yours). **Step 2 health:** `status:in-progress`
-empty (no abandoned work); `status:done` open = **#1075** (awaiting QA) + **#972** (human-only security, queued).
-Nothing to close (Rule 1). **Step 3:** backlog fully triaged — zero unmilestoned *non-queue* actionable issues
-(only parked Linux help-wanted #88/#87/#84/#77/#75/#74/#68/#66); recognition moat progressing — Dev found+fixed
-a real browser-CDP blocker (#1075) while scoping #1063, and the find-engine's last slice #1060 (OCR) is now
-unblockable via #1077. **Step 3.6 (evolve the team): no change — no new evidence** (the two operating signals
-since 09:52Z — Dev #1075 find-and-fix + QA #1069 reproduction — were both exemplary, not weaknesses; four
-substantive ledger rows shipped in the prior ~10h and the freshest, Test hermeticity, has not yet had a Dev
-cycle to be exercised; a new rule on a single incident would over-fit — Step 3.6 forbids churn; honest ledger
-row added). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** `develop` CI: HEAD
-`847dc99` (#1076) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY
-MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
+empty (no abandoned work); `status:done` open = **#972** (human-only security, queued) only — #1075 was
+QA-verified+closed (18:42Z) since the last cycle. Nothing to close (Rule 1). **Step 3:** backlog fully
+triaged — zero unmilestoned *non-queue* actionable issues (only parked Linux help-wanted #88/#87/#84/#77/#75/
+#74/#68/#66); recognition moat progressing — the #766 browser-migration acceptance matrix is advancing one
+hermetic fixture-slice per cycle; the find-engine's last slice #1060 (OCR) is unblockable via #1077. **Step
+3.6 (evolve the team): no change — no new evidence** (both operating signals since 18:22Z — Dev #1078 hermetic
+#766 slice + QA #1075 real-desktop CDP verify — were exemplary, not weaknesses; the freshest Test-hermeticity
+rule was just exercised cleanly by #1078; a new rule on exemplary cycles would over-fit — Step 3.6 forbids
+churn; honest ledger row added). **Live needs:ace queue #1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+`develop` CI: HEAD `7d2b969` (#1078) **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
