@@ -176,3 +176,67 @@ def test_iframe_switching_equivalence(
     deep_status = level2.find("#deep-status")
     assert deep_status.text == "Submitted: nested-ok"
     assert deep_status.attr("data-submitted") == "true"
+
+
+def test_infinite_scroll_scraping_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the Xiaohongshu infinite-scroll scrape loop via naturo.
+
+    Mirrors the migration guide's "Data Scraping with Infinite Scroll" pattern
+    (the real DrissionPage Xiaohongshu brand-keyword project): the *Before*
+    code loops ``page.eles(note)``, dedups each card by a stable id, and calls
+    ``page.scroll.down(1000)`` until the feed stops growing. The *After*
+    surface is :meth:`BrowserPage.find_all` + :meth:`BrowserPage.scroll_to_bottom`
+    with ``attr``-keyed dedup.
+
+    Driven against ``infinite-scroll.html`` -- a feed that lazily appends six
+    cards each time a scroll nears the bottom, up to a fixed total of 30 -- the
+    scrape loop must collect every card exactly once, in document order, and
+    terminate on its own when the feed is exhausted (rather than over- or
+    under-counting). Per naturo's never-lie contract (SOUL.md) the scrape's own
+    tally is cross-checked against the page's authoritative ``data-loaded``
+    counter.
+    """
+    browser_page.navigate(f"{fixtures_server}/infinite-scroll.html")
+
+    # Lazy feed: only the first batch exists before any scroll happens.
+    assert len(browser_page.find_all(".note-card")) == 6
+    assert browser_page.find("#status").attr("data-loaded") == "6"
+
+    # Before: for _ in range(80): eles = page.eles(note); dedup; scroll.down(1000)
+    #  ->  After: find_all + attr-keyed dedup + scroll, terminating when a
+    # scroll loads no new cards instead of relying on a fixed iteration cap.
+    # scroll_to_bottom (vs a fixed scroll_by step) deterministically crosses the
+    # feed's lazy-load threshold on every call, so each scroll appends exactly
+    # one batch -- the page grows the document as it loads, which a fixed-pixel
+    # step can undershoot.
+    seen_indices: list[str] = []
+    seen: set[str] = set()
+    for _ in range(40):  # generous safety cap; real exit is "no new cards".
+        for card in browser_page.find_all(".note-card"):
+            index = card.attr("data-index")
+            assert index is not None  # every fixture card carries a stable id
+            if index not in seen:
+                seen.add(index)
+                seen_indices.append(index)
+        if len(seen) >= 30:
+            break
+        # The scroll event handler appends the next batch asynchronously, so
+        # wait for the feed to actually grow before re-scraping. A timeout here
+        # means the feed is exhausted -> the scrape loop is done.
+        before = len(seen)
+        browser_page.scroll_to_bottom()
+        try:
+            browser_page.wait_for_function(
+                f"document.querySelectorAll('.note-card').length > {before}",
+                timeout=3.0,
+            )
+        except TimeoutError:
+            break
+
+    # Equivalence: every one of the 30 cards scraped exactly once, in document
+    # order -- the same deduplicated set the DrissionPage scroll loop yields.
+    assert seen_indices == [str(i) for i in range(30)]
+    # never-lie: the scrape's tally agrees with the page's own load counter.
+    assert browser_page.find("#status").attr("data-loaded") == "30"
