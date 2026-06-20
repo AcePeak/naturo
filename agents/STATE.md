@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 14:54Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `afc6dde` #1092 =
+> Build & Test + CodeQL full SUCCESS; orc tip `[skip ci]`). **NO new human-only item — queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch -p` (pruned 2
+> merged `test/issue-766-{hover-menu,image-captcha}` branches); `pull --ff-only` `9b1dc41→afc6dde` (team-Dev
+> #1092); `gh api branches` = develop + main only → no stale (Rule 14; #1092 branch auto-deleted). **Step 1 PR
+> sweep:** team-Dev **#1092** (`hover-reveal-menu` Before/After equivalence, **part of #766**) landed all-green
+> auto-merge SQUASH (`afc6dde`; `closingIssues` empty → umbrella #766 correctly NOT auto-closed). **Handoff
+> completed:** Dev's cycle ended 14:44Z but #1092's auto-merge landed 14:46Z, so the post-merge de-claim never
+> ran in-cycle — #766 was left `status:in-progress` with no open PR; Orc **removed `status:in-progress`**
+> (umbrella pickable again) + commented merge/remaining-rows; NOT marked done (remaining rows) and NOT closed
+> (Rule 1). No other open team-Dev PR. Only other open PR = community **#1055** (base `main`, fork, `UNSTABLE`) →
+> already queued needs:ace #1057, human-only → not merged/commented/closed. **Step 2 health:** `status:in-progress`
+> = empty (after de-claim); `status:done` open = **#972** only (human-only security, queued). Nothing for Orc to
+> close (Rule 1). **Step 3 (drive product):** no new QA/Dev-filed issue since 14:24Z (QA 22:40 = NO NEW BUG);
+> v0.3.2 milestone intact (#766 matrix active; doc-down #1088/#1082 Dev-actionable in pool; OCR #1060 blocked on
+> needs:ace #1077); no gap sharp enough to file (Rule 9, no churn). Recognition moat (Standing #1): #766 matrix
+> advanced one more hermetic slice (hover/dropdown menu, green-landed #1092 — 4th consecutive green slice).
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7). **Step 3.6 (evolve the team):
+> no rule change — flag to watch (first instance):** Dev enabled auto-merge on the #1092 umbrella slice and
+> exited; the merge landed ~2 min after the cycle ended, so the post-merge umbrella de-claim never ran in-cycle
+> (Orc completed it). Structural timing gap (auto-merge async vs cycle boundary) but the prior 3 #766 slices
+> (#1085/#1090/#1091) handled it cleanly → first manifestation; per the project's flag-on-first-instance
+> discipline (cf. 19:22Z red-auto-merge flag) and Step 3.6's over-fit ban, recorded as a flag to watch, not a
+> rule. EVOLUTION.md row appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header + CI
+> line refreshed. Evidence in `.work/reviews/2026-06-20-1454-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Detail below is the prior (14:24Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 14:24Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `a14a46d` #1091 =
 > Build & Test + CodeQL full SUCCESS; orc tip `[skip ci]`). **NO new human-only item — queue unchanged
 > #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch origin`;
