@@ -4,21 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 17:52Z (Orc autonomous cycle — **NO new human-only item — queue unchanged
+_Last refreshed: 2026-06-20 18:24Z (Orc autonomous cycle — **NO new human-only item — queue unchanged
 #1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red; nothing closed by Orc (Rule 1).**
-**Step 1:** no open team-Dev PR; the prior cycle's team-Dev **#1102** (*fixes #1098* — `RECOGNITION.md` JAB
-never-lie interim caveat) landed all-green SQUASH auto-merge (`9896664`, 17:45:48Z; branch auto-deleted). Only
-open PR = community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**, base `main`,
-UNSTABLE) — not touched. **Step 2:** `status:in-progress` empty; `status:done` open = **#1098** (Dev set in-cycle,
-awaiting QA) + **#972** only (queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
-the never-lie interim **#1098** (`RECOGNITION.md` JAB caveat) **shipped** (#1102) → the published "+40 via jab"
-headline no longer silently misleads until P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB
-never attaches; build-blocked → #1097 below) lands. Backlog all triaged + milestoned; no new gap sharp enough
-(Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** no rule change — two
-exemplary cycles: QA verified+closed #1086 (zero input dispatched, ruled out 2 harness artifacts, no false bug);
-Dev shipped #1098 HARDEST-FIRST (re-proved C++ toolchain block this cycle, swept all JAB claim sites, hermetic
-test). `develop` CI: HEAD `9896664` (#1102) full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2
-ship-gate unchanged (FULLY MET — release is your call, #914)._
+**Step 1:** no open team-Dev PR; the prior cycle's team-Dev **#1103** (*fixes #1101* — map 9 unmapped `ErrorCode`
+members to real categories) landed all-green SQUASH auto-merge (`a52c953`, 18:18Z; branch auto-deleted, `status:done`
+in-cycle). Only open PR = community **#1055** (queued **[#1057](https://github.com/AcePeak/naturo/issues/1057)**,
+base `main`, UNSTABLE) — not touched. **Step 2:** `status:in-progress` empty; `status:done` open = **#1101** + **#1098**
+(both awaiting QA) + **#972** (queued). Nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
+P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) remains build-blocked → #1097
+below; the never-lie interim caveat already shipped (#1098/#1102). Backlog all triaged + milestoned; no new gap
+sharp enough (Rule 9, no churn). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** no rule change —
+Dev (18:18Z) shipped #1101 HARDEST-FIRST (re-proved C++ toolchain absent this cycle → filed-not-shipped native
+#1096, fell to next-hardest actionable, hermetic drift-guard test); the only non-exemplary signal is QA's 02:07Z
+log-lock skip = known **#935-family** harness concurrency (queued, not an agent weakness). `develop` CI: HEAD
+`a52c953` (#1103) full **SUCCESS** (Build & Test + CodeQL) → **not red.** v0.3.2 ship-gate unchanged (FULLY MET —
+release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
@@ -57,7 +57,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `9896664`/#1102 (HEAD) → **not red.** Recent team-Dev lands: **#1102** (`RECOGNITION.md` JAB never-lie interim caveat, *fixes #1098* → `9896664`, **#1098 status:done awaiting QA**), **#1099** (`eN stale-ref → registered STALE_SNAPSHOT_CACHE envelope`, *fixes #1086* → `3d30438`, **QA-verified+closed 01:45Z**), **#1095** (`iframe migration-guide → shipped frame API`, *fixes #1082* → `b3cbfe3`, **QA-verified+closed 00:45Z**), **#1094** (`migration-guide network section → shipped API`, *fixes #1088* → `5714587`, **QA-verified+closed 00:15Z**), **#1093** (`naturo click --image` shortcut, *fixes #1059* → `f04b0d8`, **QA-verified+closed 00:15Z**). Earlier (#766 migration-equivalence matrix): **#1092** (`hover-reveal-menu` → `afc6dde`), **#1091** (`image-captcha click-offset` + fix dead `captcha-image.html` fixture → `a14a46d`), **#1090** (`tab-management` + dead `tabs.html` fixture → `bcda034`), **#1087** (`network interception` → `9fa3183`). Earlier: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
+- `develop` CI: **green** — Build & Test + CodeQL **SUCCESS** on `a52c953`/#1103 (HEAD) → **not red.** Recent team-Dev lands: **#1103** (`map 9 unmapped ErrorCode members to real categories`, *fixes #1101* → `a52c953`, **#1101 status:done awaiting QA**), **#1102** (`RECOGNITION.md` JAB never-lie interim caveat, *fixes #1098* → `9896664`, **#1098 status:done awaiting QA**), **#1099** (`eN stale-ref → registered STALE_SNAPSHOT_CACHE envelope`, *fixes #1086* → `3d30438`, **QA-verified+closed 01:45Z**), **#1095** (`iframe migration-guide → shipped frame API`, *fixes #1082* → `b3cbfe3`, **QA-verified+closed 00:45Z**), **#1094** (`migration-guide network section → shipped API`, *fixes #1088* → `5714587`, **QA-verified+closed 00:15Z**), **#1093** (`naturo click --image` shortcut, *fixes #1059* → `f04b0d8`, **QA-verified+closed 00:15Z**). Earlier (#766 migration-equivalence matrix): **#1092** (`hover-reveal-menu` → `afc6dde`), **#1091** (`image-captcha click-offset` + fix dead `captcha-image.html` fixture → `a14a46d`), **#1090** (`tab-management` + dead `tabs.html` fixture → `bcda034`), **#1087** (`network interception` → `9fa3183`). Earlier: **#1076** (`add --remote-allow-origins to browser launch so CDP can connect`, fixes #1075 → `847dc99`, **#1075 status:done awaiting QA**), **#1074** (`JAB auto-fallback test desktop-determinism`, fixes #1069 → `832a1ac`, **QA-verified+closed 18:10Z**), **#1073** (`offline browser migration fixtures`, part of #766 → `f56a760`), **#1072** (`honor find --image --screenshot` → `91ce240`, **QA-verified+closed 17:10Z**), preceded by #1068 (JAB auto-cascade) + #1071 (find `--selector`). All Rule-1 ancestors; branches auto-deleted (Rule 14 clean — `gh api branches` = develop + main only). The earlier `find --image` (#1066) + JAB init (#932) moats remain LIVE. One open PR: community **#1055** (base `main`, `UNSTABLE`) — queued as #1057, not merged/touched (its head lives on the contributor's fork).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.
