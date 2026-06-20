@@ -1,5 +1,44 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-20 19:22Z (Orc autonomous cycle — **NO new human-only item (queue unchanged
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897). `develop` NOT red (HEAD `13a8c54`). Team-Dev PR #1081 went
+> red on CI mid-cycle → Orc surfaced the root cause to Dev → **Dev fixed the stale mocks, CI green, auto-merge
+> merged `13a8c54` SAME cycle**; #1080 already flipped `status:done` by Dev (awaiting QA). Triaged QA bug
+> #1079 → v0.3.3. Nothing closed by Orc (Rule 1), no new issue (Rule 9). Step 3.6: no change — full-`pytest
+> tests/` gate already covers #1081's red episode (adherence miss, not a rule gap).**
+> **Step 0:** `git config` Orc; `git fetch -p` pruned `origin/test/issue-766-migration-equivalence` (gone at
+> #1078 merge); `git pull --ff-only` already up-to-date at `b0ad470`; `gh api .../branches` = develop + main +
+> `fix/issue-1080-iframe-click` (PR #1081's live branch) → no stale branch (Rule 14 OK).
+> **Step 1 PR sweep:** team-Dev **#1081** (`land browser click/hover inside iframes`, fixes #1080) — at cycle
+> start was **BLOCKED on red CI** (Python Tests Ubuntu 3.9/3.12 + macOS 3.9/3.12 + CI Gate FAILED; Windows DLL
+> green). Root cause (run 27869531249): updated mock stubs in `test_browser_element.py`/`test_browser.py` too
+> short for the new multi-call `_get_click_point` → deterministic `StopIteration` (`_element.py:272`) +
+> `RuntimeError: Cannot determine element position` (`:113`). Orc did **NOT** merge (red) and posted a
+> root-cause comment. **Mid-cycle Dev fixed the stale mocks → new run 27869757302 green → auto-merge SQUASH
+> fired → `13a8c54` on develop.** Dev already flipped **#1080 → status:done** (awaiting QA — Rule 1, NOT
+> closed); branch `fix/issue-1080-iframe-click` auto-deleted (`gh api branches` = develop + main → Rule 14
+> clean). develop CI on `13a8c54` = Build & Test + CodeQL SUCCESS → not red. Community **#1055** (base `main`,
+> fork, UNSTABLE) → already queued needs:ace #1057; human-only → not merged/commented/closed.
+> **Step 2 health:** `status:in-progress` = **empty** (no abandoned work); `status:done` open = **#1080** (PR
+> #1081 merged `13a8c54`, awaiting QA) + **#972** (human-only security, queued). Nothing for Orc to close
+> (Rule 1 — both await human/QA).
+> **Step 3 (drive product):** triaged QA-filed **#1079** (clipboard `get` misreports image/file content as
+> "(empty)" + format:text — P2 correctness/never-lie footgun) → **v0.3.3** (keeps ship-gate-met v0.3.2 scope
+> clean). Remaining unmilestoned = needs:ace/ops + parked Linux help-wanted only → zero other actionable.
+> v0.3.2 = earliest open milestone (ship-gate FULLY MET). Recognition moat (Standing #1) progressing — #766
+> matrix advancing (iframe click/hover slice #1080/#1081 landed green `13a8c54`); #1060 OCR unblockable via #1077. No gap sharp
+> enough to file (Rule 9, no churn).
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-20 = 4d < 7).
+> **Step 3.6 (evolve the team): no change — not a rule gap.** #1081's red CI = deterministic mock failures
+> that `dev-cycle.md` Step 3.3's `python -m pytest tests/ -x` already catches locally → adherence miss, not a
+> missing rule; a redundant "run your tests" rule would over-fit/churn (Step 3.6 forbids). Surfaced to Dev;
+> honest ledger row + a flag to watch (if a 2nd team PR auto-merges with its own modified module red, require
+> pasting the pytest summary in the PR report).
+> **Step 4 (needs:ace): no new item.** Queue unchanged **#1077/#1057/#975/#972/#969/#935/#915/#914/#897**;
+> NEEDS-ACE.md header + CI line refreshed (no open team PR — #1081 merged green this cycle). Evidence in
+> `.work/reviews/2026-06-20-1922-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's
+> call, #914). Detail below is the prior (18:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-20 18:52Z (Orc autonomous cycle — **quiet/healthy; NO new human-only item (queue
 > unchanged #1077/#1057/#975/#972/#969/#935/#915/#914/#897). develop NOT red, nothing closed by Orc (Rule 1),
 > no new issue (Rule 9). Step 3.6: no change — no new evidence (both signals since 18:22Z exemplary).**
