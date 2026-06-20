@@ -4,22 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-20 07:22 (Orc autonomous cycle — **quiet/healthy; since 06:24 QA verified+closed
-#898 (`naturo doctor`, via merged `fe175d0`) and the 07:07–07:15 Dev cycle picked up #1047 (fresh
-in-flight, no PR yet — left untouched, Rule 4). develop NOT red, no open PRs, status:in-progress = #1047,
-status:done = #972 (human-only), nothing closed by Orc (Rule 1), one priority-honesty triage
-(milestoned new QA gap #1048 → v0.3.4), no new issue (Rule 9), no new human-only item; queue
-unchanged.** Since 06:24: **#898 verified+CLOSED by QA** (live Win11 26200 runtime PASS, `pytest -k
-doctor` 21 passed; merged `fe175d0` → Rule 1 clean) and QA filed follow-up **#1048** (`feat: wire
-'naturo info' as an alias for 'naturo doctor'` — the alias was in the accepted #898 proposal but never
-wired). #1048 was unmilestoned → **Orc milestoned it v0.3.4** (additive, non-breaking CLI alias with a
-concrete Dev pointer; the name was already accepted in #898 → not human-only). #1047 (`find`
-UNKNOWN_ERROR vs siblings' recoverable WINDOW_NOT_FOUND/APP_NOT_FOUND) is a fresh Dev pickup
-(status:in-progress, no PR yet — not abandoned). **No new human-only item; queue unchanged.** Top human items unchanged:
+_Last refreshed: 2026-06-20 08:23 (Orc autonomous cycle — **quiet/healthy; the in-flight #1047 fix
+opened as PR #1049 and LANDED CLEAN as `c3da7e2`. develop NOT red, no open PRs, status:in-progress now
+empty, status:done = #1047 (awaiting QA) + #972 (human-only), nothing closed by Orc (Rule 1), no
+post-merge handoff needed (Dev self-flipped #1047 → status:done at merge), no abandoned work, no new
+issue (Rule 9), no new human-only item; queue unchanged.** Since 07:22: **PR #1049 landed** (`fix:
+classify find's missing window/app as recoverable WINDOW_NOT_FOUND`, fixes #1047 — `find` now returns
+the recoverable `WINDOW_NOT_FOUND`/`APP_NOT_FOUND` envelope like its siblings instead of an
+unrecoverable `UNKNOWN_ERROR`; Rule 1 + Rule 14 clean, source branch auto-deleted). #1047 awaits QA.
+Priority-honesty scan = **zero unmilestoned actionable Dev work**; the v0.3.4 backlog already carries
+**27 Dev-pickable** issues → loop healthy, not stalled. **No new human-only item; queue unchanged.** Top human items unchanged:
 **#914** (cut v0.3.2 — ready), **#975** (ratify the QA re-enable) + **#972** (close the input-content
 safety guard) — both your security sign-off; **#897** (pick the CLI exit-code contract); **#915
 recommended for closure** (QA durably healthy). NB: the **#969 env fix stays human-only** (Rule 4).
-**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: code HEAD `fe175d0` (#1046)
+**Live needs:ace queue #975/#972/#969/#935/#915/#914/#897.** `develop` CI: code HEAD `c3da7e2` (#1049)
 **Build & Test + CodeQL SUCCESS** → **develop not red.** v0.3.2 ship-gate unchanged (FULLY MET — release
 is your call, #914). Weekly competitiveness step not due (<7d since 06-16)._
 
@@ -57,7 +55,7 @@ _Resolved earlier: **#913** (dispose community PRs #892 / #904) — closed 2026-
   (closed #876, filed #977). #975 now awaits only Ace's *ratification* of the re-enable, not a re-enable.
 - **None blocking the ship-gate itself.** #843 (capture popup compositing) **verified+closed 2026-06-17
   02:42Z** — the last v0.3.2 ship-gate item is cleared. v0.3.2 awaits only Ace's release sign-off (#914).
-- `develop` CI: **green** (Build & Test + CodeQL SUCCESS on `fe175d0`/#1046). **PR #1046 landed** (`feat: add 'naturo doctor' environment self-check command`, fixes #898; the prior-cycle RED #912 surface-coverage failure was fixed by classifying the `doctor` leaf session-independent, then self-landed green; Rule 1 + Rule 14 clean). #898 flipped `status:in-progress` → `status:done` by Dev at merge (awaiting QA). No open PRs; branches `develop` + `main` only.
+- `develop` CI: **green** (Build & Test + CodeQL SUCCESS on `c3da7e2`/#1049). **PR #1049 landed** (`fix: classify find's missing window/app as recoverable WINDOW_NOT_FOUND`, fixes #1047; `find` now returns the recoverable `WINDOW_NOT_FOUND`/`APP_NOT_FOUND` envelope like see/menu-inspect/highlight instead of an unrecoverable `UNKNOWN_ERROR`; Rule 1 + Rule 14 clean, source branch auto-deleted). #1047 flipped `status:in-progress` → `status:done` by Dev at merge (awaiting QA). No open PRs; branches `develop` + `main` only.
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on
   NATUROBOT superseded the offline self-hosted runner (proven on the v0.3.2 ship-gate bugs); reopen only
   if per-PR pre-merge desktop CI gating becomes a hard requirement. No longer a human-decision block.

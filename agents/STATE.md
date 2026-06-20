@@ -1,6 +1,43 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-20 07:22 (Orc autonomous cycle — **quiet/healthy; since 06:24 QA verified+closed
+> Last refreshed: 2026-06-20 08:23 (Orc autonomous cycle — **quiet/healthy; the in-flight #1047 fix
+> opened as PR #1049 and LANDED CLEAN as `c3da7e2` (`fix: classify find's missing window/app as
+> recoverable WINDOW_NOT_FOUND (fixes #1047)`). develop NOT red, no open PRs, status:in-progress now
+> empty, status:done = #1047 (awaiting QA) + #972 (human-only), nothing closed by Orc (Rule 1), no
+> post-merge handoff needed (Dev self-flipped #1047 → status:done at merge), no abandoned work, no new
+> issue (Rule 9), no new human-only item; needs:ace queue unchanged.** **Step 0:** `git fetch origin -p`
+> pruned `origin/fix/issue-1047-find-window-not-found` (auto-deleted at #1049 merge); `git pull
+> --ff-only` fast-forwarded `12b2eac → c3da7e2` (pulled `naturo/cli/core/_find.py` +13 /
+> `tests/test_find_window_not_found_1047.py` +105); authoritative `gh api .../branches` = **develop +
+> main only** → **Rule 14 clean**. **Step 1:** **no open PRs** (`gh pr list --state open` = `[]`); **PR
+> #1049 landed** as `c3da7e2` (HEAD, **fixes #1047** — `find` raised inside `get_element_tree()` so the
+> dead `WINDOW_NOT_FOUND` branch never fired and the broad `except` emitted
+> `UNKNOWN_ERROR`/`recoverable:false`; fix classifies missing-target as the recoverable
+> `WINDOW_NOT_FOUND`/`APP_NOT_FOUND` envelope to match siblings see/menu-inspect/highlight; continuation
+> of the #980/#977/#876/#1043 honesty/consistency lane); `git merge-base --is-ancestor c3da7e2
+> origin/develop` = **YES** → **Rule 1 clean**; source branch auto-deleted → Rule 14 clean. develop CI on
+> `c3da7e2` **Build & Test + CodeQL SUCCESS** → not red. **Step 2 health:** **post-merge handoff: none
+> needed** — #1047 already flipped `status:in-progress` → `status:done` by Dev at merge (base `develop` ≠
+> default → no auto-close; verified #1047 OPEN + status:done + v0.3.4). `status:in-progress` now
+> **empty** → no in-flight pickup, no abandoned work; `status:done` (open) = **#1047** (`find`
+> error-envelope consistency, awaiting QA) **+ #972** (input-content guard, code-verified, close = human
+> security sign-off, queued). **Nothing to close** (Rule 1 — #1047 needs QA `verified`; #972 human-only).
+> **Step 3 (drive product): no new issue (Rule 9)** — priority-honesty scan (`no:milestone` open): only
+> the `needs:ace` human-only items (#975/#969/#935/#915) + the parked Linux/cross-platform `help wanted`
+> backlog (#88/#87/#84/#77/#75/#74/#68/#66) → **zero unmilestoned actionable Dev work**; #1047/#1048 (the
+> only issues created since the prior cycle) both correctly milestoned v0.3.4. The v0.3.4 backlog already
+> carries **27 Dev-pickable** issues (from:qa JSON/MCP envelope-consistency lane #1048/#900/#896/#886/
+> #882/#871/#865 …) → backlog sharp + deep, loop not stalled. Standing #1 priority (recognition supremacy
+> #920/#931/#932/#934) stays top-of-queue but **env-blocked** (no JDK / no SAP install; desktop/QA-gated).
+> **Step 3.5 competitiveness: NOT due** (tracker baseline 2026-06-16, today 06-20 = 4d < 7). **Step 4
+> (needs:ace): no new human-only item** — live queue **unchanged #975/#972/#969/#935/#915/#914/#897** (all
+> verified open); NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-20-0823-auto-review.md`. `develop` CI: HEAD `c3da7e2` (#1049) **Build & Test +
+> CodeQL SUCCESS** → **not red.** v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).)_
+>
+> ---
+>
+> _Prior refresh: 2026-06-20 07:22 (Orc autonomous cycle — **quiet/healthy; since 06:24 QA verified+closed
 > #898 (`naturo doctor`, via merged `fe175d0`) and the 07:07–07:15 Dev cycle picked up #1047 (fresh
 > in-flight, no PR yet — left untouched, Rule 4). develop NOT red, no open PRs, status:in-progress = #1047,
 > status:done = #972 (human-only), nothing closed by Orc (Rule 1), one priority-honesty triage
