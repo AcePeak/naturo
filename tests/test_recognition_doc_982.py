@@ -85,3 +85,29 @@ def test_documented_commands_are_real_cli_commands() -> None:
             f"docs/RECOGNITION.md references `naturo {command}`, which the CLI "
             f"must expose"
         )
+
+
+def test_jab_row_carries_interim_regression_caveat() -> None:
+    """The Java Access Bridge claims must flag the live regression (issue #1098).
+
+    #1096 proved on a correctly-provisioned desktop (JDK 21 + JAB enabled) that
+    naturo's JAB init never attaches, so the published ``+40 via jab`` headline
+    and the ``Java Swing / SWT (JAB) ✅`` matrix cell do **not** currently
+    reproduce. Per never-lie (SOUL.md), the doc must not assert that result
+    while the shipped code cannot produce it. This pins an interim honesty
+    caveat — explicitly tracking #1096 — so a future edit cannot silently
+    re-assert the unreproducible number without first removing the caveat (i.e.
+    after #1096 lands and ``test_jab_recognition_932.py`` is green again).
+    """
+    text = _doc_text()
+    assert "#1096" in text, (
+        "the JAB section must reference the tracking issue #1096 while the "
+        "moat row is under repair (issue #1098)"
+    )
+    # A recognizable known-regression marker must accompany the JAB claims so
+    # the public doc reads as 'under repair', not as a reproduced result.
+    lowered = text.lower()
+    assert "known regression" in lowered or "under repair" in lowered, (
+        "the JAB row/matrix cell must be marked as a known regression / under "
+        "repair while #1096 is open (issue #1098)"
+    )
