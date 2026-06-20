@@ -284,19 +284,34 @@ class TestBrowserPageWaitFor:
                 with pytest.raises(TimeoutError, match="Timeout waiting"):
                     page.wait_for("#never", timeout=1.0)
 
-    def test_wait_for_visible_checks_click_point(self):
+    def test_wait_for_visible_checks_displayed(self):
         page, cdp = _make_page()
         # _resolve_element returns element
         cdp.send.return_value = {
             "result": {"objectId": "obj-v", "description": "div"}
         }
-        # Patch BrowserElement._get_click_point to return coords
+        # Visibility is decided by _is_displayed (the element's rendered box),
+        # not _get_click_point — a display:none node yields a valid (0,0) point
+        # there and would wrongly satisfy "visible" (#1083).
         with patch(
-            "naturo.browser._element.BrowserElement._get_click_point",
-            return_value=(100, 200),
+            "naturo.browser._element.BrowserElement._is_displayed",
+            return_value=True,
         ):
             el = page.wait_for("#visible", timeout=1.0, state="visible")
             assert el.object_id == "obj-v"
+
+    def test_wait_for_hidden_returns_when_present_but_not_displayed(self):
+        page, cdp = _make_page()
+        # _resolve_element finds the element, but it is not rendered.
+        cdp.send.return_value = {
+            "result": {"objectId": "obj-h", "description": "div"}
+        }
+        with patch(
+            "naturo.browser._element.BrowserElement._is_displayed",
+            return_value=False,
+        ):
+            el = page.wait_for("#spinner", timeout=1.0, state="hidden")
+            assert el.object_id == "obj-h"
 
 
 # ═════════════════════════════════════════════════════════════════════════════
