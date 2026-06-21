@@ -393,6 +393,26 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         _common._json_err(str(exc), json_output, exc=exc)
         return
 
+    # (#1111) Capture this action as a recording step so `record play`
+    # reproduces the typing — `_type.py` previously never recorded, so a
+    # `type` performed during an active recording was silently dropped even
+    # though recording.py already replays a "type" step. Mirrors the
+    # `_record_action` calls in _click.py / _mouse.py / _press.py.
+    #
+    # Pasted text (text not None) replays as typed text: the same content
+    # ends up in the target, which preserves the recording's intent. A bare
+    # clipboard paste (text is None) carries no capturable content, so it is
+    # not recorded. Follow-up navigation keys are captured as `press` steps
+    # so a login flow (type → tab → type → return) replays faithfully.
+    if text is not None:
+        _common._record_action("type", {"text": text, "wpm": wpm})
+    if press_return:
+        _common._record_action("press", {"key": "enter", "count": 1})
+    if tab_count:
+        _common._record_action("press", {"key": "tab", "count": tab_count})
+    if escape:
+        _common._record_action("press", {"key": "escape", "count": 1})
+
     action = "pasted" if paste_mode else "typed"
     display_text = text if text is not None else "(clipboard)"
     display_len = len(text) if text is not None else 0
