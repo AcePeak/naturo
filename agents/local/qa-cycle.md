@@ -40,7 +40,14 @@ git config user.name "QA-Mariana"
 git config user.email "ace.busy@gmail.com"
 git fetch origin && git checkout qa-work && git reset --hard origin/develop
 [ -f naturo/bin/naturo_core.dll ] || { mkdir -p naturo/bin; cp ../naturo/naturo/bin/naturo_core.dll naturo/bin/; }
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8   # forestall the cp936/gbk console mojibake that has cost a re-run every cycle (Step 2.4)
 ```
+**Harness hygiene (preventive, not just reactive).** The two artifacts in Step 2.4 — a cp936/gbk console
+mangling valid UTF-8, and `naturo … | head` reporting the *pipe's* exit code instead of naturo's — recur
+every cycle and waste a re-run each time. Default the harness clean from the start: keep `PYTHONUTF8=1` set
+(above), and **never read naturo output through a pipe** when the exit code or exact bytes matter — redirect
+to a file (`naturo … > out.json; echo "rc=$?"`) and decode strict UTF-8. Step 2.4 stays the safety net for
+*surprising* results; this stops you re-deriving the same two known harness-lies before you even start.
 
 ## Step 1 — Find work
 ```bash

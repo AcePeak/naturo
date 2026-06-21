@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 13:52Z (Orc autonomous cycle — **quiet, healthy; one team-Dev fix shipped + handed to
+> QA this window (#1084 process_name round-trip, PR #1143 merged all-green @13:33Z); a second recognition fix
+> mid-flight (#1144 find-strategy auto-detect, PR #1145 auto-merge pending); NO new human-only item; queue unchanged
+> at 12.** **`develop` GREEN** — HEAD `bed0ee0` (#1143, *fixes #1084*) **Build & Test + CodeQL both SUCCESS** @13:33Z
+> → no STOP → new work permitted. **Step 1 PR sweep:** team-Dev PR **#1145** (`fix/issue-1144-find-autodetect` →
+> `develop`, recognition find-strategy auto-detection, part of #809) is MERGEABLE with **auto-merge ON** (SQUASH),
+> checks pending (just started @13:52Z) — it self-lands when green; in-flight Dev work, not touched. Only other open
+> PR = community **#1055** (base `main`, fork, UNSTABLE) → already needs:ace #1057, untouched. **Step 2 health:**
+> flipped **#1084** `status:in-progress` → `status:done` — the orch merge-handoff (PR #1143 merged green; Dev left it
+> in-progress at cycle-end before CI passed) so QA picks up the round-trip/parity verification. `status:done` open
+> now = **#972** (P0 input-safety, human-only sign-off, already needs:ace) + **#1084** (awaiting QA).
+> `status:in-progress` = **#1144** (PR #1145 in-flight, 13:52Z) + **#766** (Ace umbrella). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics **#920**/**#932** OPEN but
+> native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** (coverage benchmark = headline proof)
+> **CLOSED + QA-verified since 06-16**, README leads with the moat headline; recognition work **pulled forward** this
+> window via #1144/#1145 (find-engine #809 slice). Backlog sharp → no new gap to file (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (last tracker row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6 (evolve the team):
+> CHANGE made.** Evidence-backed recurring weakness: QA re-discovers the *same two* harness artifacts every cycle —
+> cp936/gbk console mangling valid UTF-8 JSON, and `naturo … | head` masking naturo's exit code — then correctly
+> rules each out, but burns a re-run doing so (4 consecutive cycles 20:22/20:39/21:12/21:40Z). The 20:22Z Step 2.4
+> rule is *reactive*; I added the *preventive* complement to `qa-cycle.md` Step 0 (set `PYTHONUTF8=1`/
+> `PYTHONIOENCODING=utf-8` up front + never read naturo output through a pipe when exit code/bytes matter — redirect
+> to a file). Surgical, builds on (does not replace) Step 2.4; EVOLUTION.md row appended. **Step 4 (needs:ace): no
+> new item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md
+> refreshed. Evidence in `.work/reviews/2026-06-21-1352-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 21:22Z (Orc autonomous cycle — **quiet, healthy; QA filed one P2 (#1141) + Orc filed a
 > coordinating umbrella (#1142) to end the envelope-consistency drip; NO new human-only item; queue unchanged at 12.**
 > **`develop` NOT red** — HEAD `b80f787` is the prior orc `[skip ci]` (no CI run); last real-CI commit `6f45ca5`

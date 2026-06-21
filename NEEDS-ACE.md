@@ -4,28 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 21:22Z (Orc autonomous cycle — **quiet, healthy; QA filed one P2 (#1141) this window
-and Orc filed a coordinating umbrella (#1142) to stop the envelope-consistency drip; NO new human-only item** →
-**queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
-`develop` NOT red — HEAD `b80f787` is the prior orc `[skip ci]` (no CI run); last real-CI commit `6f45ca5` (#1140,
-*fixes #1079*) **Build & Test + CodeQL both SUCCESS** @11:59Z → no STOP → new work permitted. **Step 1:** **NO open
-team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055**
+_Last refreshed: 2026-06-21 13:52Z (Orc autonomous cycle — **quiet, healthy; one team-Dev fix shipped + handed to QA
+this window (#1084 process_name round-trip, PR #1143 merged all-green); a second recognition fix is mid-flight
+(#1144, PR #1145 auto-merge pending); NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — HEAD `bed0ee0` (#1143, *fixes #1084*) **Build & Test + CodeQL both SUCCESS** @13:33Z → no STOP →
+new work permitted. **Step 1:** team-Dev PR **#1145** (`fix/issue-1144-find-autodetect`→develop, recognition
+find-strategy auto-detect, part of #809) is MERGEABLE with **auto-merge ON** (SQUASH), checks pending — it will
+land itself; not touched. Only other open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — untouched. Nothing
-merged/closed by Orc (Rule 1). **Step 2:** `status:done` open = **#972** only (P0 input-safety, human-only, already
-queued — closing it is a security sign-off). `status:in-progress` = **#1084** (P2 process_name path round-trip — Dev
-actively on it, touched 12:41Z < 24h, no open PR yet) + **#766** (Ace umbrella, 04:16Z, slice-by-slice). Nothing
-abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
-epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932** OPEN but native-rebuild build-blocked
-(MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof) **CLOSED + QA-verified since 06-16** and
-README leads with the moat headline + benchmark link. **New this cycle:** filed umbrella **#1142** (P2/tech-debt,
-v0.3.4) mandating a single repo-wide sweep of every `-j`/`--json` success path for envelope consistency + a
-self-maintaining guard test — consolidates the per-subcommand drip #865/#1054/#1141 (and the gap CLOSED #977 left),
-not a dup (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6:** **no change — no new
-evidence.** The only signal completed since 20:52Z was QA (21:12Z), **exemplary**: exploratory PASS, filed a genuine
-P2 (#1141) only after verifying it on the clean path + ruling out its own harness; the 21:07Z Dev cycle is still
-in-flight → no completed Dev signal. The envelope-sibling pattern (#977→#1141) is addressed at the backlog level via
-#1142 rather than a prompt edit (a rule on one in-flight Dev signal would over-fit, Step 3.6 forbids); watch-flag
-pre-registered. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+merged/closed by Orc (Rule 1). **Step 2:** flipped **#1084** `status:in-progress`→`status:done` (its PR #1143
+merged green — the orch merge-handoff) so QA can verify; `status:done` open now = **#972** (human-only security
+sign-off, already queued) + **#1084** (awaiting QA). `status:in-progress` = **#1144** (PR #1145 in-flight, touched
+13:52Z) + **#766** (Ace umbrella). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition
+moat, Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932** OPEN but
+native-rebuild build-blocked (MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof) **CLOSED +
+QA-verified since 06-16**, README leads with the moat headline; recognition work pulled forward this window via
+#1144/#1145 (find-engine #809 slice). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6:** a
+real change — `qa-cycle.md` Step 0 now sets a UTF-8/no-pipe harness baseline up front, because QA re-discovered the
+*same two* harness artifacts (cp936 mojibake; `| head` masking exit codes) across 4 consecutive cycles
+(20:22/20:39/21:12/21:40Z). Preventive complement to the existing reactive Step 2.4; logged in EVOLUTION.md.
+v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
