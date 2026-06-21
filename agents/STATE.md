@@ -1,6 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-22 06:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1161
+> Last refreshed: 2026-06-22 06:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1100 (test_verify
+> NonWindows hermeticity) now QA-verified+closed (handoff fully complete); NO open team PR; one Dev cycle in-flight;
+> NO new human-only item; Step 3.6 honest no-change; queue unchanged at 12.**)
+> **`develop` GREEN** — last real-CI `d79647f` (#1161, *fixes #1100*) **Build & Test + CodeQL both SUCCESS**; HEAD
+> `e029b2d` = prior orc `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:** NO open team-Dev
+> PR (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (@muhamedfazalps, base
+> `main`, fork, MERGEABLE/UNSTABLE) → already queued needs:ace **#1057**, human-only → untouched. Nothing
+> merged/closed BY Orc (Rule 1). **Step 2 health:** handoff complete — **#1100 QA-verified+closed @06:38Z** (both
+> prev-Windows-red tests PASS on real `win32`/py3.12.10 desktop, full `test_verify.py` 81 passed, cited merged
+> `d79647f` per Rule 1). `status:done` open now = **#972** only (P0 input-safety, human-only) → untouched.
+> `status:in-progress` = **#766** only (Ace migration-guide umbrella, `from:ace`/AcePeak — Ace-owned, not abandoned
+> Dev work → label left). Nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** native-core moat
+> (#920/#932/JAB #1096) build-blocked (MSVC/cmake/nmake/msbuild absent — Dev re-proved @06:20Z) → needs:ace #1097;
+> OCR (#1060) blocked on #1077; #931 benchmark CLOSED+verified, README leads with the moat headline. Backlog sharp
+> & self-feeding (#1160/#1159/#1154/#1152/#1146/#897 feed Dev) → no new gap to file (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6 (evolve the
+> team): no change — no new evidence.** The one cycle that completed since 06:22Z — **QA @06:38Z verified+closed
+> #1100** — was exemplary (real-desktop runtime check the offline runner can't do; both prev-red tests PASS; cited
+> merged commit; zero intrusive input; left #972 queued). The Dev cycle (started 06:37) is still in-flight (no
+> `cycle END`; no new team-Dev PR; no new remote branch) → not yet assessable. Freshest rule (dev-cycle.md
+> HEAD-check, 06-21 18:52Z <1d) only clean exercises → over-fit forbidden. Honest no-change row appended to
+> EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-22-0652-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-22 06:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1161
 > (*fixes #1100* test_verify NonWindows hermeticity) auto-merged itself green this cycle; #1100 already
 > `status:done` (handoff complete); NO open team PR; QA filed one fresh P2 (#1160 — bare `type --paste` bypasses
 > the input-content guard); NO new human-only item; Step 3.6 honest no-change; queue unchanged at 12.**)
