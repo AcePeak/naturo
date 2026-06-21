@@ -4,28 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; QA verified+closed the never-lie
-error-code taxonomy fix #1135 this window (`d7280eb`, Rule 1) and Dev is in-flight on actionable bug #1124; NO new
-human-only item** → **queue unchanged at 12**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `d7280eb` (#1137,
-*fixes #1135*) **Build & Test + CodeQL both SUCCESS** @09:22Z; prior `c00227e` (#1134) also green; local HEAD
-`e29542b` is the prior orc `[skip ci]` (no CI run) → no STOP → new work permitted. **Step 1:** **NO open team-Dev
-PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055**
-([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — untouched. Nothing
-merged/closed by Orc (Rule 1). **Step 2:** `status:done` open = **#972** only (P0 input-safety, human-only,
-already queued — QA correctly defers *closing* it as a security sign-off). `status:in-progress` = **#1124** (Dev
-in-flight, set @09:42Z by the still-running 09:37Z Dev cycle — P1 headless first-frame timeout, < 24h) + **#766**
-(Ace umbrella, 04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat,
-Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932** OPEN but native-rebuild
-build-blocked (MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof) **CLOSED + QA-verified
-since 06-16** and the **README already leads with the moat headline + benchmark link** (#931 follow-up done). No
-new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 no change — no
-new evidence:** the only completed signal since 17:22Z was **QA (verified+closed #1135 @09:42Z)** — exemplary
-(`screenshot --selector '#missing' -j` → `ELEMENT_NOT_FOUND`/`automation`/recoverable, was
-`SCREENSHOT_FAILED`/unknown; swept the browser family, no unregistered codes remain; cited `d7280eb` per Rule 1;
-zero intrusive input). The 09:37Z Dev cycle is still in-flight on #1124 → no completed Dev signal. Freshest rules
-exercised cleanly → a tweak now would over-fit (EVOLUTION no-change row appended). v0.3.2 ship-gate unchanged
-(FULLY MET — release is your call, #914)._
+_Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **healthy; team-Dev shipped + QA verified+closed the
+P1 headless first-frame screenshot fix #1124 this window (`2c3c9f3`, Rule 1); Step 3.6 made a real, pre-registered
+change to the Dev gate; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `2c3c9f3` (#1138,
+*fixes #1124*) **Build & Test + CodeQL both SUCCESS** @10:06Z; prior `d7280eb` (#1137) also green → no STOP → new
+work permitted. **Step 1:** **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR =
+community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) —
+untouched. Nothing merged/closed by Orc (Rule 1). **Step 2:** `status:done` open = **#972** only (P0 input-safety,
+human-only, already queued — QA correctly defers *closing* it as a security sign-off). `status:in-progress` =
+**#766** only (Ace umbrella, 04:16Z < 24h). #1124 closed+verified by QA this window. Nothing abandoned; nothing for
+Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics
+**[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932** OPEN but native-rebuild build-blocked
+(MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof) **CLOSED + QA-verified since 06-16**
+and the **README already leads with the moat headline + benchmark link** (#931 follow-up done). No new gap sharp
+enough (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 CHANGE MADE — a
+pre-registered watch-flag fired on its 2nd instance:** an `--auto` PR's first CI run went red on test failures the
+full local `tests/` run would catch — #1081 (own modified test modules red) and now **#1124/#1138** (Dev ran only
+`tests/browser/` → first CI run red on 3 existing `tests/`-root mocks). Tightened `dev-cycle.md` Step 3.3 with an
+**auditable full-suite** rule (run the FULL `tests/`, never a sub-folder; paste the `pytest tests/ …` command +
+summary in the gate report) + EVOLUTION row citing both. v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

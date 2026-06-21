@@ -86,6 +86,16 @@ git checkout -b fix/issue-N-short-desc origin/develop
    mypy naturo/
    python -m pytest tests/ -x -q --timeout=60     # add -m "not desktop" to skip UI tests
    ```
+   **Run the FULL `tests/` tree, not a sub-folder — and make it auditable.** CI runs the whole non-desktop
+   `tests/` suite; a production change can redden a *sibling* module you never edited (a shifted mock
+   call-sequence/count), and a partial edit can leave a module you *did* edit red — running only the
+   sub-folder you worked in (`pytest tests/browser/`) hides both, so the `--auto` PR's first CI run goes red.
+   Always run the prescribed full `python -m pytest tests/ …` before pushing, and **paste the exact command
+   + its one-line summary** (e.g. `tests/ … 6994 passed`) into your gate report so "I ran the tests" is
+   auditable — a subdirectory run is not acceptable. (Evidence: #1081 auto-merged with its own modified test
+   modules red [mock stubs too short]; #1124/#1138 first CI run red on 3 existing `tests/`-root screenshot
+   mocks because only `tests/browser/` was run locally — two instances, >1 day apart, of one
+   incomplete-local-run → red-first-CI class.)
 4. **Self-review** `git diff`: scope tight? no regressions? helpful errors? complete docstrings? no TODO/HACK?
    **Cross-command parity (family / "harmonization" work):** if the change touches a flag shared across a
    command family (e.g. window-targeting `--app`/`--window`/`--hwnd`/`--pid`), assert that flag *resolves the

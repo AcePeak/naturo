@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **healthy; team-Dev shipped+QA verified+closed the
+> P1 headless first-frame screenshot fix #1124 this window (`2c3c9f3`, Rule 1); Step 3.6 made a REAL change — a
+> pre-registered watch-flag fired on its 2nd instance and I tightened the Dev gate. NO new human-only item; queue
+> unchanged at 12.** **`develop` NOT red** — HEAD `2c3c9f3` (#1138, *fixes #1124*) **Build & Test + CodeQL both
+> SUCCESS** @10:06Z; prior `d7280eb` (#1137) also green → no STOP → new work permitted. **Step 1 PR sweep:** **NO
+> open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (base
+> `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc
+> (Rule 1). **Step 2 health:** `status:done` open = **#972** only (P0 input-safety, human-only, already needs:ace —
+> QA correctly defers closing it as a security sign-off). `status:in-progress` = **#766** only (Ace migration-guide
+> umbrella, 04:16Z < 24h). #1124 closed+verified by QA this window. Nothing abandoned; nothing for Orc to close
+> (Rule 1). **Step 3 (recognition moat, Standing #1):** epics **#920**/**#932** OPEN but native-rebuild
+> build-blocked (MSVC/cmake absent, re-proved fresh by recent Dev cycles) → needs:ace #1097; **#931** (coverage
+> benchmark = headline proof) **CLOSED + QA-verified since 06-16** (`b9e4180`) and README already leads with the
+> moat headline + benchmark link. No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT due**
+> (last tracker row 2026-06-16, today 06-21 = 5d < 7) → skipped per weekly cadence. **Step 3.6 (evolve the team):
+> CHANGE MADE — real, pre-registered recurrence.** The 06-20 19:22Z watch-flag (auto-merge PR's first CI run red on
+> test failures the full local `tests/` run would catch) **fired on its 2nd instance**: #1081 (own modified test
+> modules red, mock stubs too short) and now **#1124/#1138** (Dev ran only `tests/browser/` locally → first CI run
+> red on 3 existing `tests/`-root screenshot mocks his `Page.enable` change shifted). Two instances >1 day apart →
+> over-fit bar cleared. Added an **auditable full-suite** rule to `dev-cycle.md` Step 3.3 (run the FULL `tests/`
+> tree, never a sub-folder; paste the exact `pytest tests/ …` command + summary in the gate report) + EVOLUTION row
+> citing both. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1822-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; QA verified+closed the never-lie
 > error-code taxonomy fix #1135 this window (`d7280eb`, Rule 1) and Dev is in-flight on actionable bug #1124; NO
 > new human-only item; queue unchanged at 12.** **`develop` NOT red** — HEAD `d7280eb` (#1137, *fixes #1135*)
