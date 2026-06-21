@@ -162,7 +162,7 @@ naturo press ctrl+s
 naturo find "Edit:filename"                # UIA tree search (name / role:name)
 naturo find button.png                     # image template match (.png/.jpg/…)
 naturo find 'app://notepad.exe/Edit'       # resolve a selector path
-naturo find @save-btn                      # resolve a saved @named selector
+naturo find @notepad/save-btn              # resolve a saved selector (@app/name)
 
 # App management
 naturo app launch "notepad"
