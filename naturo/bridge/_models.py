@@ -5,26 +5,62 @@ parsing utilities used throughout the bridge package.
 """
 from __future__ import annotations
 
+import ctypes
 import json
 import logging
 import re
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-def _decode_native(raw: bytes) -> str:
-    """Decode bytes from native DLL, trying UTF-8 first then system codepage.
+def _system_ansi_encoding() -> str:
+    """Return the OS ANSI codepage as a Python codec name (e.g. ``"cp936"``).
 
-    On Chinese Windows the DLL may return GBK/CP936 encoded strings.
+    On Windows the active ANSI codepage is read from the Win32 ``GetACP`` API.
+    ``locale.getpreferredencoding`` must NOT be used for this on Windows because
+    it returns ``"utf-8"`` under Python UTF-8 mode (``PYTHONUTF8=1`` / ``-X
+    utf8``) regardless of the OS codepage; trusting it there re-decodes ANSI
+    (e.g. CP936/GBK) bytes from the native core as UTF-8 and corrupts every
+    non-ASCII character to U+FFFD (#1150). Off Windows there is no ANSI
+    codepage, so the locale preferred encoding is used, defaulting to
+    ``"cp936"`` when it cannot be resolved.
+
+    Returns:
+        A codec name suitable for ``bytes.decode``.
+    """
+    if sys.platform == "win32":
+        try:
+            acp = ctypes.windll.kernel32.GetACP()  # type: ignore[attr-defined]
+            if acp:
+                return f"cp{acp}"
+        except (OSError, AttributeError, ValueError):
+            pass
+    import locale
+    return locale.getpreferredencoding(False) or "cp936"
+
+
+def _decode_native(raw: bytes) -> str:
+    """Decode bytes from the native DLL, trying UTF-8 then the OS ANSI codepage.
+
+    On a non-UTF-8 Windows desktop (e.g. CP936/GBK on a Chinese-locale system)
+    the native core may emit narrow strings in the system ANSI codepage rather
+    than UTF-8. A strict UTF-8 decode is attempted first; on failure the bytes
+    are decoded with the OS ANSI codepage resolved by ``_system_ansi_encoding``
+    (see #1150 for why ``locale.getpreferredencoding`` is unsafe here).
+
+    Args:
+        raw: Raw bytes returned by the native library.
+
+    Returns:
+        The decoded string.
     """
     try:
         return raw.decode("utf-8")
     except UnicodeDecodeError:
-        import locale
-        encoding = locale.getpreferredencoding(False) or "cp936"
-        return raw.decode(encoding, errors="replace")
+        return raw.decode(_system_ansi_encoding(), errors="replace")
 
 
 def _safe_json_loads(s: str):
