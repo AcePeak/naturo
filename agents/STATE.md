@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **quiet, healthy; #1114 now QA-verified+closed; one Dev
+> cycle in-flight (#1139 browser relative-path); NO open team PR; NO new human-only item; queue unchanged at 12.**
+> **`develop` GREEN** — last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS**
+> @15:50Z; HEAD `8f037d8` is the prior orc `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:**
+> **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean — #1148 branch auto-deleted). Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched.
+> Nothing merged/closed by Orc (Rule 1). **Step 2 health:** **#1114 QA-verified+closed @00:18Z** (real-desktop
+> filesystem ground-truth + 8 hermetic tests; QA caught a `.work/` subdir #969-class stale-egg and ruled it out before
+> any FAIL) → no longer status:done, no merge-handoff owed. `status:done` open = **#972** only (P0 input-safety,
+> human-only sign-off, already needs:ace). `status:in-progress` = **#1139** (P2 from:qa, Dev actively working — updated
+> 16:11Z, not abandoned) + **#766** (Ace migration-guide umbrella, 04:16Z). Nothing abandoned; nothing for Orc to close
+> (Rule 1). The loop is visibly draining its own QA-filed backlog (#1139 filed by QA 19:40Z → Dev picked it up).
+> **Step 3 (moat, Standing #1):** epics **#920**/**#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) →
+> needs:ace #1097; **#931** (coverage benchmark = headline proof) CLOSED + QA-verified since 06-16, README leads with
+> the moat headline; OCR lane (#809→#1060) blocked on #1077; envelope umbrella #1142 draining (visual #1141 +
+> capture-cleanup #1114 merged this window). Backlog sharp → no new gap (Rule 9, no churn). **Step 3.5 competitiveness:
+> NOT due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6 (evolve the team): no change — no
+> new evidence.** Only completed signal since 15:52Z = QA #1114 verify @00:18Z, exemplary (real-desktop filesystem
+> ground-truth, caught + ruled out a #969-class stale-egg before any false FAIL, zero intrusive input); the Dev cycle
+> is still in-flight on #1139 → no completed Dev signal. Freshest rules (<1–3d) exercised cleanly → a change now
+> over-fits/churns (Step 3.6 forbids); honest "no change" row appended to EVOLUTION.md. **Step 4 (needs:ace): no new
+> item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md
+> refreshed. Evidence in `.work/reviews/2026-06-21-1622b-auto-review.md` (the `-1622-` name was already taken by an
+> earlier morning cycle). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is prior
+> cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; #1114 capture-cleanup never-lie fix now
 > MERGED (PR #1148, all-green); NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** —
 > HEAD = last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:53Z → no STOP →

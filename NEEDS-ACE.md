@@ -4,7 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; #1114 capture-cleanup never-lie fix now MERGED
+_Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **quiet, healthy; #1114 now QA-verified+closed; one Dev
+cycle in-flight (#1139 browser relative-path); NO open team PR; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:50Z;
+HEAD `8f037d8` is orc `[skip ci]` → no STOP. **Step 1:** NO open team-Dev PR (Rule 14 clean — #1148 branch auto-deleted);
+only open PR = community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing
+merged/closed by Orc (Rule 1). **Step 2:** **#1114 QA-verified+closed @00:18Z** (real-desktop filesystem ground-truth +
+8 hermetic tests; QA caught a `.work/` subdir #969-class stale-egg and ruled it out before any false FAIL) → no handoff
+owed; `status:done` open = **#972** only (human-only); `status:in-progress` = **#1139** (P2 from:qa, Dev actively
+working, 16:11Z — not abandoned) + **#766** (Ace umbrella). **Step 3.5** competitiveness not due (6d < 7; due 06-23).
+**Step 3.6: no change — no new evidence** (only completed signal since 15:52Z = QA #1114 verify @00:18Z, exemplary —
+real-desktop filesystem ground-truth, caught + ruled out a #969-class stale-egg before any false FAIL, zero intrusive
+input; Dev cycle still in-flight on #1139 → no completed Dev signal; freshest rules <1–3d exercised cleanly → over-fit
+forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; #1114 capture-cleanup never-lie fix now MERGED
 (PR #1148, all-green); NO open team PR; NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — HEAD `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:53Z → no STOP.
