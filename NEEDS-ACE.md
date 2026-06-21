@@ -4,7 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 05:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR;
+_Last refreshed: 2026-06-22 06:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1161
+(*fixes #1100* test_verify NonWindows hermeticity) auto-merged itself green this cycle; #1100 already `status:done`
+(handoff complete); NO open team PR; QA filed one fresh P2 (#1160 — bare `type --paste` bypasses the
+input-content guard) feeding Dev; NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — HEAD `d79647f` (#1161, *fixes #1100*) **Build & Test + CodeQL both SUCCESS** → no STOP. **Step 1:**
+NO open team-Dev PR — #1161 auto-merged itself (`d79647f`, full CI matrix green), **branch auto-deleted** (Rule 14
+clean — remote = `develop`+`main` only). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057,
+human-only) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** handoff already complete — #1100 is
+**`status:done`** (Dev flipped on merge; PR base `develop` ≠ default branch → no auto-close, Rule 1 preserved).
+`status:done` open = **#1100** (awaiting QA) + **#972** (human-only) → #972 untouched; `status:in-progress` =
+**#766** only (Ace umbrella, `from:ace` — left). **Step 3:** QA filed **#1160** (P2 — bare `naturo type --paste`
+clipboard path issues raw Ctrl+V WITHOUT the input-content guard; guard gated on `if text is not None` at
+`_type.py:143`, bare-paste branch bypasses it; mocked-backend demo, zero live keystrokes) — Dev-actionable backlog
+bug, lateral to #960/#972, not human-only → no queue change. **Step 3.5** competitiveness not due (6d < 7; due
+06-23). **Step 3.6: no change — no new evidence** (both completed cycles since 05:52Z exemplary — QA @06:12Z filed
+#1160 [true new code path, mocked backend, zero intrusive input]; Dev @06:20Z shipped #1100 [re-proved the native
+block first, surgical test-only fix, auditable stash-rerun gate]; freshest dev-cycle.md HEAD-check rule landed <1d
+ago → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below
+kept as history.)
+
+_Earlier: 2026-06-22 05:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR;
 QA filed one fresh P2 (#1159 — native A-API title data-loss, lateral to #1150) feeding Dev; Dev cycle in-flight
 (#1100 test_verify hermeticity); NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
