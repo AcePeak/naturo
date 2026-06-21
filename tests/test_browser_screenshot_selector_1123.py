@@ -57,7 +57,10 @@ class TestScreenshotSelectorSDK:
 
         assert result == out
         page.find.assert_called_once_with("#intro")
-        cdp.send.assert_called_once_with(
+        # The Page domain is enabled before the capture (headless first-frame
+        # guard, #1124), then exactly one capture carries the element clip.
+        cdp.send.assert_any_call("Page.enable")
+        cdp.send.assert_any_call(
             "Page.captureScreenshot",
             {
                 "format": "png",
@@ -71,6 +74,12 @@ class TestScreenshotSelectorSDK:
                 "captureBeyondViewport": True,
             },
         )
+        capture_calls = [
+            call
+            for call in cdp.send.call_args_list
+            if call.args[0] == "Page.captureScreenshot"
+        ]
+        assert len(capture_calls) == 1
         with open(out, "rb") as fh:
             assert fh.read() == b"cropped"
 
@@ -118,9 +127,16 @@ class TestScreenshotSelectorSDK:
 
         page.screenshot(str(tmp_path / "v.png"))
 
-        cdp.send.assert_called_once_with(
-            "Page.captureScreenshot", {"format": "png"}
-        )
+        # The Page domain is enabled before the capture (headless first-frame
+        # guard, #1124); the capture itself stays a single plain viewport grab.
+        cdp.send.assert_any_call("Page.enable")
+        cdp.send.assert_any_call("Page.captureScreenshot", {"format": "png"})
+        capture_calls = [
+            call
+            for call in cdp.send.call_args_list
+            if call.args[0] == "Page.captureScreenshot"
+        ]
+        assert len(capture_calls) == 1
 
 
 # ── BrowserElement._bounding_box ──────────────────────────────────────────────
