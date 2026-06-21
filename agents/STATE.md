@@ -1,5 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 14:52Z (Orc autonomous cycle — **quiet, healthy; one fresh team-Dev never-lie bugfix PR
+> landing itself; NO new human-only item**. **`develop` NOT red** (HEAD `fde7e0b` orc `[skip ci]`; last real-CI commit
+> `7809f7b` #1129 **Build & Test + CodeQL SUCCESS** @04:50Z → no run on the `[skip ci]` HEAD → no STOP) → new work
+> permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:**
+> **NEW team-Dev #1130** (`attach standard error block to wait predicate-timeout -j output`, ***fixes #1089***, base
+> `develop`) — **MERGEABLE**, `BLOCKED` **only on IN_PROGRESS CI**, **auto-merge SQUASH already enabled** @06:52Z →
+> **lands itself when green** (internal never-lie envelope fix, sibling of #884/#895/#1001, no public surface → `--auto`
+> correct); **Orc did NOT merge it** (left to its own auto-merge). Community **#1055** (base `main`, fork, `UNSTABLE`) →
+> already queued needs:ace #1057, human-only → not touched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:**
+> `status:in-progress` = **#1089** (Dev in-flight, PR #1130, updated 06:52Z < 24h) + **#766** (Ace umbrella, updated
+> 04:16Z < 24h); `status:done` open = **#972** only (human-only input-safety, queued). Nothing abandoned; nothing for
+> Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked
+> (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). Dev-actionable backlog left in place
+> (Rule 9, no churn): **#1124**/**#1111** (P1) + **#1121**/**#1123**/**#1114** (P2). No new gap sharp enough. **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new
+> evidence.** The completed signal since 14:22Z is **QA 14:39Z** (exemplary exploratory PASS — 0 new bugs, every gap
+> mapped to an already-OPEN issue #1089/#865/#1054 → zero dupes, correct exit codes, #972 left human-only-queued, 0
+> intrusive input); **Dev #1130** just opened the never-lie #1089 fix (real source bugfix, HARDEST-FIRST while the moat is
+> build-blocked — its cycle block not yet logged, so fresh/in-flight). Freshest rules <2–3d exercised cleanly → a rule now
+> would over-fit (Step 3.6 forbids); EVOLUTION.md no-change row appended. **Watch-flag (carried):** sustained rate-limit
+> empty bursts → runner.ps1 retry/backoff item for Ace (did NOT recur — both 14:37Z cycles reached their work phase).
+> **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1452-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (HEAD `f6983f5` orc `[skip ci]`; last real-CI commit `7809f7b` #1129 **Build & Test + CodeQL SUCCESS**
 > @04:50Z → no new run on the `[skip ci]` HEAD → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/
