@@ -348,7 +348,7 @@ class TestLaunchChrome:
         mock_popen.return_value = MagicMock(pid=100)
         launch_chrome(user_data_dir="/tmp/my-profile")
         args = mock_popen.call_args[0][0]
-        assert "--user-data-dir=/tmp/my-profile" in args
+        assert f"--user-data-dir={os.path.abspath('/tmp/my-profile')}" in args
 
     @patch("naturo.browser._launcher._wait_for_cdp")
     @patch("subprocess.Popen")
@@ -357,8 +357,48 @@ class TestLaunchChrome:
         mock_popen.return_value = MagicMock(pid=100)
         launch_chrome(user_data_dir="/tmp/data", profile="Profile 1")
         args = mock_popen.call_args[0][0]
-        assert "--user-data-dir=/tmp/data" in args
+        # An already-absolute path is passed through unchanged (abspath is
+        # idempotent for it). Compute the expected value the same way the
+        # launcher does so the assertion holds on both POSIX and Windows CI
+        # lanes (#946: WindowsPath vs POSIX slashes).
+        assert f"--user-data-dir={os.path.abspath('/tmp/data')}" in args
         assert "--profile-directory=Profile 1" in args
+
+    @patch("naturo.browser._launcher._wait_for_cdp")
+    @patch("subprocess.Popen")
+    @patch("naturo.browser._launcher.find_chrome", return_value="/usr/bin/chrome")
+    def test_launch_resolves_relative_user_data_dir(self, mock_find, mock_popen, mock_wait):
+        """Regression #1139: a relative ``--user-data-dir`` must reach Chrome as
+        an absolute path.
+
+        Chrome rejects a relative ``--user-data-dir`` (exits with code 21 before
+        CDP becomes available), so naturo must resolve it against its own working
+        directory before launch — otherwise the user gets an opaque failure.
+        """
+        mock_popen.return_value = MagicMock(pid=100)
+        launch_chrome(user_data_dir=os.path.join(".work", "_qa_chrome"))
+        args = mock_popen.call_args[0][0]
+        udd_arg = next(a for a in args if a.startswith("--user-data-dir="))
+        resolved = udd_arg.split("=", 1)[1]
+        assert os.path.isabs(resolved), f"expected absolute path, got {resolved!r}"
+        assert resolved == os.path.abspath(os.path.join(".work", "_qa_chrome"))
+
+    @patch("naturo.browser._launcher._wait_for_cdp")
+    @patch("subprocess.Popen")
+    @patch("naturo.browser._launcher.find_chrome", return_value="/usr/bin/chrome")
+    def test_launch_expands_user_in_user_data_dir(self, mock_find, mock_popen, mock_wait):
+        """A ``~``-prefixed ``--user-data-dir`` is expanded to the home directory
+        and passed as an absolute path."""
+        mock_popen.return_value = MagicMock(pid=100)
+        launch_chrome(user_data_dir=os.path.join("~", "chrome-profile"))
+        args = mock_popen.call_args[0][0]
+        udd_arg = next(a for a in args if a.startswith("--user-data-dir="))
+        resolved = udd_arg.split("=", 1)[1]
+        assert "~" not in resolved
+        assert os.path.isabs(resolved)
+        assert resolved == os.path.abspath(
+            os.path.expanduser(os.path.join("~", "chrome-profile"))
+        )
 
     @patch("naturo.browser._launcher._wait_for_cdp")
     @patch("subprocess.Popen")

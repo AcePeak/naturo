@@ -269,7 +269,9 @@ def launch_chrome(
         profile: Chrome profile name or directory (e.g. "Work", "Profile 1").
             Resolved against the user data directory.
         user_data_dir: Custom user data directory. Overrides the default
-            Chrome profile location entirely.
+            Chrome profile location entirely. Relative and ``~`` paths are
+            resolved to an absolute path before launch, since Chrome rejects a
+            relative ``--user-data-dir``.
         extra_args: Additional Chrome command-line flags.
         url: Initial URL to open (default: ``about:blank``).
         chrome_path: Explicit path to Chrome binary. If ``None``,
@@ -307,7 +309,13 @@ def launch_chrome(
 
     # Profile handling
     if user_data_dir:
-        args.append(f"--user-data-dir={user_data_dir}")
+        # Chrome requires --user-data-dir to be absolute: it resolves a relative
+        # value against its own working directory (not naturo's) and in practice
+        # rejects it outright, exiting with code 21 before CDP comes up (#1139).
+        # Resolve here so relative/``~`` paths just work and the user is not left
+        # with an opaque "Chrome exited with code 21" failure.
+        abs_user_data_dir = os.path.abspath(os.path.expanduser(user_data_dir))
+        args.append(f"--user-data-dir={abs_user_data_dir}")
         if profile:
             # When user_data_dir is explicit, use profile as-is
             args.append(f"--profile-directory={profile}")
