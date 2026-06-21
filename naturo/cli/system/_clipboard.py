@@ -13,12 +13,15 @@ Examples:
 from __future__ import annotations
 
 from naturo.cli._jsonio import json_dumps
+import logging
 import sys
 
 import click
 
 from naturo.cli.error_helpers import emit_error, emit_exception_error
 from naturo.cli.fuzzy_group import FuzzyGroup
+
+logger = logging.getLogger(__name__)
 
 
 def _get_backend(json_output: bool = False):
@@ -114,8 +117,13 @@ def clipboard() -> None:
 def get(fmt: str, json_output: bool) -> None:
     """Read current clipboard content.
 
-    Returns the text content of the system clipboard. If the clipboard is
-    empty or contains non-text data, returns an empty string.
+    Returns the text content of the system clipboard. When the clipboard holds
+    non-text data (an image or a file-drop list) there is no text to return, so
+    the reported ``format`` reflects the real content (``image``/``files``)
+    rather than ``text``, and the plain output says the clipboard holds non-text
+    data instead of falsely claiming it is empty (#1079). A genuinely empty
+    clipboard reports ``format: empty``. ``clipboard info`` is the source of
+    truth that ``get`` consults for this distinction.
 
     \b
     Examples:
@@ -129,17 +137,44 @@ def get(fmt: str, json_output: bool) -> None:
         emit_exception_error(exc, json_output, fallback_code="CLIPBOARD_ERROR")
         return
 
+    # Determine the real clipboard format so non-text content is never
+    # misreported as empty text (#1079). When text is present the format is
+    # unambiguously "text", so skip the extra clipboard probe; only consult
+    # ``clipboard info`` when there is no text to tell a genuinely empty
+    # clipboard apart from one holding an image or files. The ``--format``
+    # choice (text-only) selects the read strategy, not the reported content
+    # type, so it no longer dictates the ``format`` field.
+    if text:
+        clip_format = "text"
+        has_text = True
+    else:
+        clip_format = "empty"
+        has_text = False
+        try:
+            clip_info = backend.clipboard_info()
+        except Exception as exc:
+            # A failed info probe must not turn a successful (empty) read into
+            # an error; fall back to reporting an empty clipboard.
+            logger.debug("clipboard_info probe failed during get: %s", exc)
+            clip_info = {}
+        if isinstance(clip_info, dict):
+            clip_format = clip_info.get("format") or "empty"
+            has_text = bool(clip_info.get("has_text", False))
+
     if json_output:
         click.echo(json_dumps({
             "success": True,
             "action": "clipboard_get",
-            "format": fmt,
+            "format": clip_format,
             "text": text,
             "length": len(text),
+            "has_text": has_text,
         }))
     else:
         if text:
             click.echo(text)
+        elif clip_format in ("image", "files"):
+            click.echo(f"(clipboard contains non-text data: {clip_format})", err=True)
         else:
             click.echo("(clipboard is empty)", err=True)
 

@@ -1491,6 +1491,13 @@ naturo clipboard clear                  # Clear clipboard
 
 Read current clipboard content.
 
+When the clipboard holds non-text data (an image or a file-drop list) there is
+no text to return: the plain output reports `(clipboard contains non-text data:
+image|files)` rather than falsely claiming the clipboard is empty, and the JSON
+`format` field reflects the real content type (`image`/`files`/`empty`/`text`)
+with `has_text` indicating whether text is present — consistent with `clipboard
+info`.
+
 **Options:**
 
 | Flag | Type | Description |

@@ -82,6 +82,104 @@ class TestClipboardGet:
         assert "line1" in result.output
         assert "line2" in result.output
 
+    # --- #1079: non-text content must not be misreported as empty/text ------
+
+    def test_get_image_plain_reports_non_text(self, runner, mock_backend):
+        """An image on the clipboard must not be reported as '(clipboard is empty)'."""
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.return_value = {
+            "format": "image", "size": 4096,
+            "has_text": False, "has_image": True, "has_files": False,
+        }
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get"])
+        assert result.exit_code == 0
+        assert "non-text" in result.output.lower()
+        assert "image" in result.output.lower()
+        assert "is empty" not in result.output
+
+    def test_get_files_plain_reports_non_text(self, runner, mock_backend):
+        """A file-drop list must not be reported as '(clipboard is empty)'."""
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.return_value = {
+            "format": "files", "size": 128,
+            "has_text": False, "has_image": False, "has_files": True,
+        }
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get"])
+        assert result.exit_code == 0
+        assert "non-text" in result.output.lower()
+        assert "files" in result.output.lower()
+        assert "is empty" not in result.output
+
+    def test_get_image_json_reflects_real_format(self, runner, mock_backend):
+        """get -j must report the true format (not a hardcoded 'text') for an image."""
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.return_value = {
+            "format": "image", "size": 4096,
+            "has_text": False, "has_image": True, "has_files": False,
+        }
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["text"] == ""
+        assert data["length"] == 0
+        assert data["format"] == "image"
+        assert data["has_text"] is False
+
+    def test_get_files_json_reflects_real_format(self, runner, mock_backend):
+        """get -j must report 'files' (not 'text') for a file-drop list."""
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.return_value = {
+            "format": "files", "size": 128,
+            "has_text": False, "has_image": False, "has_files": True,
+        }
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["format"] == "files"
+        assert data["has_text"] is False
+
+    def test_get_truly_empty_json_reports_empty_format(self, runner, mock_backend):
+        """A genuinely empty clipboard reports format 'empty', not 'text'."""
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.return_value = {
+            "format": "empty", "size": 0,
+            "has_text": False, "has_image": False, "has_files": False,
+        }
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["format"] == "empty"
+        assert data["has_text"] is False
+
+    def test_get_text_json_does_not_probe_info(self, runner, mock_backend):
+        """When text is present the format is unambiguously 'text' and info is not consulted."""
+        mock_backend.clipboard_get.return_value = "hello"
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["format"] == "text"
+        assert data["has_text"] is True
+        mock_backend.clipboard_info.assert_not_called()
+
+    def test_get_info_probe_failure_falls_back_to_empty(self, runner, mock_backend):
+        """If info probing fails on an empty text read, get still succeeds (reports empty)."""
+        from naturo.errors import NaturoError
+        mock_backend.clipboard_get.return_value = ""
+        mock_backend.clipboard_info.side_effect = NaturoError("CLIPBOARD_ERROR", "locked")
+        with patch("naturo.backends.base.get_backend", return_value=mock_backend):
+            result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["format"] == "empty"
+
 
 # ---------------------------------------------------------------------------
 # clipboard set
