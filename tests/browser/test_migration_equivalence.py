@@ -27,7 +27,7 @@ import socket
 import subprocess
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Iterator
 
@@ -1465,3 +1465,104 @@ def test_profile_user_data_dir_persistence_equivalence(fixtures_server: str) -> 
     finally:
         shutil.rmtree(persistent_dir, ignore_errors=True)
         shutil.rmtree(fresh_dir, ignore_errors=True)
+
+
+def test_multi_account_concurrent_profiles_equivalence(fixtures_server: str) -> None:
+    """Reproduce the per-account-profile multi-account flow via naturo.
+
+    Mirrors the migration guide's "Multi-Account Management" section. The
+    *Before* live-streaming/Douyin Selenium recipe pins each account to its own
+    ``user-data-dir`` but shares a single debug port (``9345``), so it must kill
+    Chrome between accounts -- two accounts cannot run at once without a port
+    collision crash (the guide's quoted "Port collision if two accounts run
+    simultaneously -> crash"). naturo's documented headline is that each launch
+    gets its own auto-assigned port, so accounts "can even run simultaneously, no
+    port conflicts".
+
+    Driven against the offline ``basic.html`` fixture, this proves that claim
+    end-to-end across three concurrently-live accounts, with three legs:
+
+    * **Simultaneity / no port collision (the headline):** all three accounts are
+      launched and held open at the same time, each on its OWN auto-assigned free
+      port, and every one answers a live ``evaluate`` while the others are still
+      running -- exactly what the shared-port Before code could not do without
+      killing Chrome between sessions.
+    * **Per-account isolation:** each account writes a *distinct* value under the
+      same ``localStorage`` key into its own profile; every account reads back
+      ONLY its own value, never a sibling's -- the separate-identity guarantee
+      per-account ``user-data-dir``s provide (distinct profiles partition storage
+      even on the shared fixture origin).
+    * **Per-account persistence (non-vacuous):** re-launching one account on its
+      SAME directory reads that account's value back after a full restart, and it
+      is still that account's value rather than a sibling's -- proving the survival
+      is the per-account directory carrying its own state.
+
+    Scope note (never-lie / doc-vs-code): the guide's higher-level
+    ``naturo browser profile create|setup|launch --profile`` manager (which would
+    auto-assign the ports ``19200, 19201, ...`` and store named profiles) is
+    **not** implemented; this row asserts only the underlying ``user_data_dir`` +
+    per-launch free-port mechanism that surface would be built on, the same
+    precedent as :func:`test_profile_user_data_dir_persistence_equivalence`.
+
+    Marked ``@pytest.mark.desktop`` (module-level): it launches three real
+    headless Chrome processes. It owns its profile-directory lifetimes (the
+    shared ``browser_page`` fixture uses a single throwaway dir -- the opposite of
+    what a per-account isolation/persistence proof needs), so it is standalone.
+    """
+    accounts = ["account-zhangsan", "account-lisi", "account-wangwu"]
+    marker_key = "naturo_migration_account_token"
+    # Each account's directory and the distinct marker value it will store.
+    account_dirs = {
+        name: tempfile.mkdtemp(prefix=f"naturo_acct_{index}_")
+        for index, name in enumerate(accounts)
+    }
+    account_markers = {name: f"session-token-for-{name}" for name in accounts}
+    try:
+        # Launch all three accounts concurrently and keep them open together; the
+        # ExitStack tears every browser down on exit even if an assertion fails.
+        with ExitStack() as stack:
+            pages = {
+                name: stack.enter_context(_chrome_on_dir(account_dirs[name]))
+                for name in accounts
+            }
+
+            # Headline: every account got its OWN auto-assigned port -- the shared
+            # port 9345 collision the Before code suffered cannot occur.
+            ports = [page._cdp.port for page in pages.values()]
+            assert len(set(ports)) == len(accounts)
+
+            # Each account writes a distinct marker into its own profile.
+            for name, page in pages.items():
+                page.navigate(f"{fixtures_server}/basic.html")
+                page.evaluate(
+                    f"localStorage.setItem({marker_key!r}, {account_markers[name]!r})"
+                )
+
+            # Simultaneity: every browser is still live and responsive while all
+            # the others are open -- the concurrency the shared-port Before code
+            # could only fake by killing Chrome between accounts.
+            for name, page in pages.items():
+                assert page.evaluate("1 + 1") == 2
+                assert page.url == f"{fixtures_server}/basic.html"
+
+            # never-lie isolation: each account reads back ONLY its own marker;
+            # a sibling's value never bleeds across the per-account profiles.
+            for name, page in pages.items():
+                read_back = page.evaluate(f"localStorage.getItem({marker_key!r})")
+                assert read_back == account_markers[name]
+                others = {
+                    account_markers[other] for other in accounts if other != name
+                }
+                assert read_back not in others
+
+        # Per-account persistence: re-launch one account on its SAME directory
+        # after a full shutdown and read its own marker back -- still that
+        # account's value, not a sibling's.
+        with _chrome_on_dir(account_dirs["account-zhangsan"]) as page:
+            page.navigate(f"{fixtures_server}/basic.html")
+            read_back = page.evaluate(f"localStorage.getItem({marker_key!r})")
+            assert read_back == account_markers["account-zhangsan"]
+            assert read_back != account_markers["account-lisi"]
+    finally:
+        for directory in account_dirs.values():
+            shutil.rmtree(directory, ignore_errors=True)
