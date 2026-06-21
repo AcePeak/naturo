@@ -4,27 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 19:52Z (Orc autonomous cycle — **quiet, healthy; loop running again post-7pm reset;
-QA filed a new P2 (#1139) and Dev is mid-cycle on #1079 this window; NO new human-only item** → **queue unchanged
-at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `ef13dd4` is the
-prior orc `[skip ci]` (no CI run); last real-CI commit `2c3c9f3` (#1138, *fixes #1124*) **Build & Test + CodeQL both
-SUCCESS** @10:06Z → no STOP → new work permitted. **Step 1:** **NO open team-Dev PR** (remote = `develop`+`main`
-only, Rule 14 clean). Only open PR = community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057),
-base `main`, fork, UNSTABLE) — untouched. Nothing merged/closed by Orc (Rule 1). **Step 2:** `status:done` open =
-**#972** only (P0 input-safety, human-only, already queued — closing it is a security sign-off). `status:in-progress`
-= **#1079** (clipboard-get bug — Dev actively on it, `dev.lock` from 19:37Z, < 24h) + **#766** (Ace umbrella, 04:16Z,
-slice-by-slice). Nothing abandoned; nothing for Orc to close (Rule 1).
-**Step 3 (recognition moat, Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932**
+_Last refreshed: 2026-06-21 20:22Z (Orc autonomous cycle — **quiet, healthy; one team-Dev fix shipped + QA-verified
+this window (#1079 clipboard never-lie, PR #1140); NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `6f45ca5` (#1140,
+*fixes #1079*) **Build & Test + CodeQL both SUCCESS** @11:59Z → no STOP → new work permitted. **Step 1:** **NO open
+team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean — #1140 branch auto-deleted). Only open PR = community
+**#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — untouched. Nothing
+merged/closed by Orc (Rule 1). **Step 2:** `status:done` open = **#972** only (P0 input-safety, human-only, already
+queued — closing it is a security sign-off). `status:in-progress` = **#1084** (P2 process_name path round-trip — Dev
+actively on it, touched 12:10Z < 24h) + **#766** (Ace umbrella, 04:16Z, slice-by-slice). #1079 already
+**QA-verified+closed @20:12Z** (PowerShell-API independent ground truth). Nothing abandoned; nothing for Orc to
+close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932**
 OPEN but native-rebuild build-blocked (MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof)
 **CLOSED + QA-verified since 06-16** and README leads with the moat headline + benchmark link. No new gap sharp
 enough (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6:** **no change — no new
-evidence.** The only cycle that completed since 19:22Z was QA 19:40Z — **exemplary** (filed genuine P2 #1139
-`browser launch --user-data-dir <relative>` opaque-fail with root cause, ruled out its own harness, no false bug);
-the 19:37Z Dev cycle is still in-flight on #1079, so no completed Dev signal to assess. Freshest rule (18:22Z
-auditable full-suite) <2 cycles old, not yet exercised by a completed Dev cycle → a rule on one exemplary QA signal
-would over-fit (Step 3.6 forbids); honest EVOLUTION no-change row. The 19:22Z **session-cap watch-flag did NOT
-recur** — the 7pm reset held and all three roles reached their work phase this window. v0.3.2 ship-gate unchanged
-(FULLY MET — release is your call, #914)._
+evidence.** Both signals completed since 19:52Z were **exemplary**: Dev shipped the #1079 never-lie clipboard fix
+(PR #1140, merged all-green, left close to QA per Rule 1); QA verified+closed it via PowerShell clipboard APIs as
+independent ground truth across all 4 states, ruled out its own harness, simulated no intrusive input. Attaching a
+rule on two clean cycles would over-fit (Step 3.6 forbids); honest EVOLUTION no-change row. The 19:22Z session-cap
+watch-flag did NOT recur. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
