@@ -1,5 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR; one fresh
+> QA-filed bug (#1149) feeding Dev; NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — last real-CI
+> commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:50Z; HEAD `07dd443` is prior orc
+> `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:** NO open team-Dev PR (remote = `develop`+
+> `main` only, Rule 14 clean — #1148 branch auto-deleted). Only open PR = community **#1055** (base `main`, fork,
+> `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1).
+> **Step 2 health:** `status:done` open = **#972** only (P0 input-safety, human-only sign-off, already needs:ace) →
+> untouched; no merge-handoff owed. `status:in-progress` = **#1139** (P2 from:qa, Dev actively working — 16:11Z, not
+> abandoned) + **#766** (Ace migration-guide umbrella, 04:16Z). **New:** QA filed **#1149** (`visual --threshold` not
+> range-validated 0.0–1.0 → out-of-range makes identical images FAIL = false CI regression) — normal in-authority Dev
+> work, no Orc action. Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** epics
+> **#920**/**#932**/JAB #1096 native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** benchmark
+> CLOSED+verified, README leads with the moat headline; OCR (#809→#1060) blocked on #1077; envelope umbrella #1142
+> draining (recent #1140/#1143/#1145/#1147/#1148; #1149 now feeds it). Backlog sharp & self-feeding → no new gap (Rule 9,
+> no churn). **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23).
+> **Step 3.6 (evolve the team): no change — no new evidence.** Only completed signal since 16:22Z = QA cycle @00:45Z,
+> exemplary (lateral `-j`/visual sweep on real desktop, ruled out a harness-lie before any false FAIL, cleaned up its own
+> + two stray baselines → `visual list` count 0, filed one genuine defect #1149); Dev cycle @00:37 errored on a
+> loop-state.log file-lock = harness-infra transient already tracked by #935, NOT a Dev behavior weakness; freshest rules
+> <1–3d exercised cleanly → a change now over-fits/churns (forbidden). Honest "no change" row appended to EVOLUTION.md.
+> **Step 4 (needs:ace): no new item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/
+> #914/#897; NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-1652b-auto-review.md` (the `-1652-` name was
+> already taken by an earlier mislabeled cycle). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **quiet, healthy; #1114 now QA-verified+closed; one Dev
 > cycle in-flight (#1139 browser relative-path); NO open team PR; NO new human-only item; queue unchanged at 12.**
 > **`develop` GREEN** — last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS**
