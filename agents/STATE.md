@@ -1,6 +1,33 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-21 18:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; Dev's #1133 test-
+> Last refreshed: 2026-06-22 03:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1133 (test
+> hermeticity) now QA-verified+closed @03:14Z on the real Windows desktop; NO open team PR; NO new human-only
+> item; Step 3.6 honest no-change (both completed cycles exemplary); queue unchanged at 12.** **`develop` GREEN**
+> — last real-CI `9cd33ef` (#1155, *fixes #1133*) Build & Test + CodeQL both SUCCESS @18:50Z; HEAD `931768a`
+> (#1155 → prior orc `[skip ci]`, no run) → no STOP → new work permitted. **Step 1 PR sweep:** NO open team-Dev
+> PR (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (base `main`, fork,
+> UNSTABLE) → already queued needs:ace **#1057**, human-only → untouched. Nothing merged/closed BY Orc (Rule 1).
+> **Step 2 health:** **no handoff owed** — Dev set #1133 → status:done itself on merge, and **QA verified+closed
+> #1133 @03:14Z** (real-desktop, non-vacuous mock proof). `status:done` open now = **#972** only (P0 input-safety,
+> human-only sign-off, already needs:ace) → untouched. `status:in-progress` = **#766** only (Ace migration-guide
+> umbrella, `from:ace`, assignee AcePeak, 04:16Z — ~23h, Ace-owned, not abandoned) → left. Dev filed tech-debt
+> **#1156** (test_app_ids/test_electron non-hermetic + genuine `_bulk_get_process_info` NoneType crash on
+> non-UTF-8 output) — normal in-authority backlog for Dev, no queue. Nothing abandoned; nothing for Orc to close
+> (Rule 1). **Step 3 (moat, Standing #1):** native-core moat (#920/#932/JAB #1096) build-blocked (MSVC/cmake
+> absent) → needs:ace #1097; #1150 (P1 mojibake) native-DLL-blocked; OCR (#1060) blocked on #1077; #931 benchmark
+> CLOSED+verified, README leads with the moat headline. Backlog sharp & self-feeding (#1150/#1152/#1146/#1142/
+> #1121/#1156/#897 feed Dev) → no new gap (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (last row
+> 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6 (evolve the team): no change — no new evidence.**
+> Both completed cycles since 18:52Z were exemplary: Dev @02:51Z (#1133/PR #1155, private-`--basetemp` to dodge
+> the concurrent-QA `WinError 5` race; #1156 cites a *genuine* crash, not a #1154-style false premise → freshest
+> HEAD-check rule respected) and QA @03:14Z (#1133 real-desktop verify, non-vacuous mock, no pipe-lie, #972 left
+> untouched). Freshest rule (dev-cycle.md HEAD-check) landed <1d ago, single clean exercise → over-fit forbidden.
+> Honest no-change row appended to EVOLUTION.md; no prompt churn. **Step 4 (needs:ace): no new item;** queue
+> unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed.
+> Evidence in `.work/reviews/2026-06-22-0322-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is
+> Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-21 18:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; Dev's #1133 test-
 > hermeticity fix MERGED via PR #1155 (`9cd33ef`) + already status:done; NO open team PR; NO new human-only item;
 > team-evolution rule LANDED this cycle (Dev false-premise tech-debt #1154 → dev-cycle.md HEAD-check rule); queue
 > unchanged at 12.** **`develop` GREEN** — last real-CI `17b5274` (#1153) Build & Test + CodeQL both SUCCESS

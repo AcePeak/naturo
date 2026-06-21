@@ -4,23 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 18:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1133
-(test hermeticity) MERGED via PR #1155 (`9cd33ef`) + already status:done; NO open team PR; NO new human-only
-item; team-evolution rule landed (Dev false-premise tech-debt #1154)** → **queue unchanged at 12**
+_Last refreshed: 2026-06-22 03:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1133
+(test hermeticity) now QA-verified+closed @03:14Z on the real Windows desktop; NO open team PR; NO new human-only
+item; Step 3.6 honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
-`develop` GREEN — last real-CI `17b5274` (#1153) **Build & Test + CodeQL both SUCCESS** @17:55Z; HEAD
-`9cd33ef` (#1155, *fixes #1133*) post-merge CI **IN_PROGRESS** (auto-merge required green PR checks → not red)
-→ no STOP. **Step 1:** NO open team-Dev PR (remote = `develop`+`main` only, Rule 14 clean). Community **#1055**
-(base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed BY Orc (Rule 1).
-**Step 2:** no handoff owed (Dev set #1133 → status:done itself on merge). `status:done` open = **#1133**
-(awaiting QA) + **#972** (human-only) → #972 untouched; `status:in-progress` = **#766** only (Ace umbrella);
-Dev filed tech-debt **#1156** (test_app_ids/test_electron non-hermetic + `_bulk_get_process_info` non-UTF-8
-crash) — backlog for Dev. **Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: CHANGE landed**
-— Dev filed parity tech-debt **#1154** on a FALSE premise (claimed find/click `--threshold` unvalidated, but the
-guard already existed at `_find.py:540` via #1093 a day earlier; QA burned the 02:44Z cycle disproving it). Added
-a surgical `dev-cycle.md` rule: verify a parity/sibling tech-debt premise against HEAD (`grep` the sibling)
-before filing. v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as
-history.)
+`develop` GREEN — last real-CI `9cd33ef` (#1155, *fixes #1133*) **Build & Test + CodeQL both SUCCESS** @18:50Z;
+HEAD `931768a` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** NO open team-Dev PR (remote =
+`develop`+`main` only, Rule 14 clean). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057,
+human-only) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed (Dev set #1133 →
+status:done on merge; QA verified+closed it @03:14Z). `status:done` open = **#972** only (human-only) → untouched;
+`status:in-progress` = **#766** only (Ace umbrella, `from:ace`, ~23h, not abandoned); Dev filed tech-debt **#1156**
+(test_app_ids/test_electron non-hermetic + a *genuine* `_bulk_get_process_info` non-UTF-8 crash) — backlog for Dev.
+**Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (both completed
+cycles — Dev #1133-merge @02:51Z + QA #1133 verify @03:14Z — exemplary; freshest dev-cycle.md HEAD-check rule
+landed <1d ago, single clean exercise → over-fit forbidden; honest no-change row appended). v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
 
 _Earlier: 2026-06-21 18:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1149 now
 QA-verified+closed; NO open team PR; one Dev cycle in-flight (#1133); NO new human-only item** →
