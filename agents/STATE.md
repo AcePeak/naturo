@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **quiet, healthy; the never-lie record/type fix #1111
+> was QA-verified+closed this window; Dev now in-flight on actionable bug #1065; NO new human-only item**.
+> **`develop` NOT red** (HEAD `06baa96` orc `[skip ci]`; last real-CI commit `4ff22e8` #1131 *fixes #1111* —
+> **Build & Test + CodeQL both SUCCESS** @07:45Z, runs 27897676484/27897676499 → no run on the `[skip ci]` HEAD →
+> no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.**
+> **Step 1 PR sweep:** **NO open team/Dev PR** (only `develop`+`main` remain, Rule 14 clean). Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:done` open = **#972** only (human-only
+> input-safety, queued) — **#1111 verified+closed by QA (08:11Z)** via the real recording pipeline (5/5
+> data-artifact asserts, non-vacuous 3-fail negative control; abstained from physical SendInput per focus-safety)
+> → prior cycle's QA handoff cleared cleanly. `status:in-progress` = **#1065** (Dev in-flight, `app …--app`
+> matches window-title not process-name, updated 08:13Z < 24h, picked up this window) + **#766** (Ace umbrella,
+> 04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
+> P0 **#1096** (JAB never attaches) stays build-blocked (MSVC/cmake/nmake absent) → needs:ace #1097; README hero =
+> recognition matrix (#931). Dev-actionable backlog left in place (Rule 9, no churn): **#1124** (P1) +
+> **#1121**/**#1123**/**#1114** (P2); Dev now hardest-first on actionable **#1065**. No new gap sharp enough.
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team):
+> no change — no new evidence.** The only completed signal since 15:52Z was **QA (08:11Z)** — exemplary, not a
+> weakness: verified+closed #1111 through the real recording pipeline with a non-vacuous negative control and
+> correctly abstained from physical SendInput (foreground = Claude terminal, focus unconfirmable per focus-safety),
+> no main push / zero production changes, #972 left queued; the 08:07Z Dev cycle is still in-flight on #1065 (no
+> `cycle END`) → no completed Dev signal. Freshest self-review rules <2–3d exercised cleanly → a rule now would
+> over-fit (Step 3.6 forbids); EVOLUTION.md no-change row appended. **Step 4 (needs:ace): no new item;** queue
+> unchanged; NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-1622-auto-review.md`. v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; the never-lie record/type fix #1111
 > shipped this window (merged `4ff22e8`, all-green) and is now `status:done` awaiting QA; NO new human-only item**.
 > **`develop` NOT red** (HEAD `4ff22e8` #1131 *fixes #1111* — **Build & Test + CodeQL both SUCCESS** @07:45Z, runs

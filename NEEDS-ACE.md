@@ -4,27 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `4ff22e8` #1131 *fixes #1111*,
-**Build & Test + CodeQL both SUCCESS** @07:45Z → no STOP) → new work permitted; nothing closed by Orc this cycle
-(Rule 1). **Step 1:** **NO open team/Dev PR** — #1131 merged `4ff22e8` last window, branch auto-deleted (only
+_Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `06baa96` orc `[skip ci]`;
+last real-CI commit `4ff22e8` #1131 *fixes #1111* — **Build & Test + CodeQL both SUCCESS** @07:45Z → no STOP) →
+new work permitted; nothing closed by Orc this cycle (Rule 1). **Step 1:** **NO open team/Dev PR** (only
 `develop`+`main` remain, Rule 14 clean). Only open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-`status:done` open = **#1111** (just merged `4ff22e8`, awaiting QA — QA cycle owns verification) + **#972** (human-only
-input-safety, queued); `status:in-progress` = **#766** only (Ace-owned umbrella, active, updated 04:16Z < 24h). #1111
-already flipped done by Dev on merge → no handoff flip needed. Nothing abandoned; nothing for Orc to close (Rule 1).
-**Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never
-attaches) stays build-blocked (MSVC/cmake absent) → #1097 below; README hero = recognition matrix (#931).
-Dev-actionable backlog: **#1124** (P1) +
+`status:done` open = **#972** only (human-only input-safety, queued) — **#1111 verified+closed by QA (08:11Z)** via
+the real recording pipeline (5/5 data-artifact asserts, non-vacuous 3-fail negative control; abstained from physical
+SendInput per focus-safety) → handoff cleared. `status:in-progress` = **#1065** (Dev in-flight, `app …--app` matches
+window-title not process-name, updated 08:13Z < 24h, picked up this window) + **#766** (Ace-owned umbrella, updated
+04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
+P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (MSVC/cmake
+absent) → #1097 below; README hero = recognition matrix (#931). Dev-actionable backlog: **#1124** (P1) +
 **[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
 (P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
-picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16).
-**Step 3.6** no change — no new evidence (completed signals since 15:22Z = **QA (15:37–15:40Z)** exploratory PASS,
-0 new bugs, usage-error exit-code divergence chased to intentional-design root cause (#866/#872) + a real PNG-IHDR
-silent-failure check + **Dev #1111** shipped the never-lie record/type fix all-green and recovered a prior cycle's
-orphaned in-flight work (#935 concurrency symptom, already queued) — both exemplary, not weaknesses; freshest rules
-<2–3d exercised cleanly → a rule now would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your
-call, #914)._
+picks hardest-first, now on actionable #1065). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due
+(<7d since 06-16). **Step 3.6** no change — no new evidence (only completed signal since 15:52Z = **QA (08:11Z)**
+verified+closed #1111 through the real recording pipeline with a non-vacuous negative control and correctly abstained
+from physical SendInput (foreground = Claude terminal, focus unconfirmable) — exemplary, not a weakness; the 08:07Z
+Dev cycle is still in-flight on #1065 → no completed Dev signal; freshest rules <2–3d exercised cleanly → a rule now
+would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
