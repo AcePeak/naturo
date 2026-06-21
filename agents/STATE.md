@@ -1,5 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 08:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `12d7d9c` #1122 Build &
+> Test + CodeQL **SUCCESS** @00:18Z; later `[skip ci]` orc commits → no new run → no STOP). **NO new human-only
+> item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config`
+> Orc; `git fetch`; `pull --ff-only` `747e55c→12d7d9c` (team-Dev #1122); operated only in main checkout (Rule
+> 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** team-Dev **#1122** (`fix: pass CDP params
+> positionally in browser screenshot`, *fixes #1119*) **MERGED** `12d7d9c` @00:18Z all-green (Build & Test +
+> CodeQL SUCCESS; 1-line positional fix + 2 hermetic regressions on a real `send(method, params=None)` stub +
+> end-to-end PNG check; **no public surface** → SQUASH `--auto` correct under the public-API hold); branch
+> `fix/issue-1119-screenshot-params` auto-deleted (verified develop+main only). Its linked **#1119** was still
+> `status:in-progress` (merged to non-default `develop` → no auto-close) → **Orc flipped it `status:done`** (the
+> intended merge-handoff, left OPEN for QA per Rule 1, with a handoff comment). Only open PR = community **#1055**
+> (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched. **Step 2 health:**
+> `status:in-progress` = **#766** (umbrella, active, updated 22:47Z < 24h); `status:done` open = **#1119** (just
+> flipped, awaiting QA) + **#972** (human-only input-safety security, queued). Nothing abandoned; nothing for Orc
+> to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked (MSVC/cmake re-proved absent this cycle by Dev @08:1xZ) → needs:ace #1097; README hero =
+> recognition matrix (#931). Open Dev-actionable bugs in backlog: **#1121** (P2 `diff --snapshot` placeholder) +
+> **NEW #1123** (P2 `browser screenshot --selector` silently ignored → captures full page; Dev filed it as the
+> lateral option-coverage gap the #1119 crash masked) — both well-labeled, headless-reproducible, **left in
+> backlog** (Rule 9 — no forced milestone; do NOT re-open the already-MET v0.3.2 ship-gate; Dev picks
+> hardest-first). No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline
+> 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.** Both completed
+> signals since 07:52Z were **exemplary**: Dev #1119 (HARDEST-FIRST with native-moat block PROVEN this cycle,
+> 1-line positional fix no public surface, hermetic regressions proven red-on-old, end-to-end PNG verify, filed
+> lateral #1123 atomically — applied Option-coverage/Error-attribution/Test-hermeticity rules) and QA #1115
+> (docs-only verify via merged-commit ancestry + content grep + seconds ground-truth + runtime-derived guard;
+> applied the 20:22Z QA-harness rule by declining to fuzz the concurrent-Dev-contaminated browser surface; no
+> intrusive input). Freshest rules <1d–2d exercised cleanly → another change would over-fit (Step 3.6 forbids
+> churn). EVOLUTION.md "no change" row appended. **Step 4 (needs:ace): no new item;** #1121/#1123 are code bugs
+> (Dev-actionable, not human-only); queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0822-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (07:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 07:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `6297fac` #1120 Build &
 > Test + CodeQL **SUCCESS** @23:42Z; later `[skip ci]` orc commits → no new run → no STOP). **NO new human-only
 > item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config`

@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 07:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `6297fac` #1120 Build & Test +
-CodeQL **SUCCESS** @23:42Z; later commits are `[skip ci]` orc → no new run → no STOP); nothing closed by Orc (Rule 1).
-**Step 1:** team-Dev **#1120** (`docs: fix migration guide browser timeouts ms→s`, fixes #1115) MERGED `6297fac`
-all-green → Orc flipped **#1115** `status:in-progress`→`status:done` (merge-handoff, left open for QA, Rule 1); branch
+_Last refreshed: 2026-06-21 08:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `12d7d9c` #1122 Build & Test +
+CodeQL **SUCCESS** @00:18Z; later commits are `[skip ci]` orc → no new run → no STOP); nothing closed by Orc (Rule 1).
+**Step 1:** team-Dev **#1122** (`fix: pass CDP params positionally in browser screenshot`, fixes #1119) MERGED `12d7d9c`
+all-green → Orc flipped **#1119** `status:in-progress`→`status:done` (merge-handoff, left open for QA, Rule 1); branch
 auto-deleted. Only open PR = community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`,
 fork, UNSTABLE) — not touched. **Step 2:** `status:in-progress` = **#766** (umbrella, active); `status:done` open =
-**#1115** (just flipped, awaiting QA) + **#972** (human-only input-safety, queued). Nothing to close (Rule 1). **Step 3
+**#1119** (just flipped, awaiting QA) + **#972** (human-only input-safety, queued). Nothing to close (Rule 1). **Step 3
 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches)
-stays build-blocked → #1097 below; README hero = recognition matrix (#931). Open Dev-actionable QA bugs in backlog:
-**[#1119](https://github.com/AcePeak/naturo/issues/1119)** (P1 `browser screenshot` crash) + **NEW
-[#1121](https://github.com/AcePeak/naturo/issues/1121)** (P2 `diff --snapshot` is a hard-coded "(not yet implemented)"
-placeholder though it's the first documented diff example — root cause + feasibility proof in body) — both
+stays build-blocked → #1097 below; README hero = recognition matrix (#931). Open Dev-actionable QA/Dev bugs in backlog:
+**[#1121](https://github.com/AcePeak/naturo/issues/1121)** (P2 `diff --snapshot` placeholder) + **NEW
+[#1123](https://github.com/AcePeak/naturo/issues/1123)** (P2 `browser screenshot --selector` silently ignored →
+captures full page; Dev filed it as the lateral option-coverage gap the #1119 crash masked) — both
 **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev picks
 hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6**
-no change — no new evidence (both completed signals — Dev #1120 ms→s fix + QA #1121 — were exemplary; freshest rules
-<1d–2d exercised cleanly). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+no change — no new evidence (both completed signals — Dev #1119 screenshot fix + QA #1115 verify — were exemplary;
+freshest rules <1d–2d exercised cleanly). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
