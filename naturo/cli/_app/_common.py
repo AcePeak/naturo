@@ -92,32 +92,45 @@ def _resolve_window_target(backend, name, window_title=None, hwnd=None, pid=None
     Accepts the unified window-targeting flag set: positional NAME / ``--app``
     (*name*), ``--window`` (*window_title*), ``--hwnd``, and ``--pid``.
 
-    When ``--pid`` is supplied without an explicit ``--hwnd``, the PID is
-    resolved to a concrete window handle through the backend's canonical
-    ``_resolve_hwnd`` resolver — the same path ``see``/``capture``/``click``
-    use — so PID targeting works without a backend method-signature change
-    (#871).  *name*/*window_title* further narrow the PID match when supplied
-    alongside it.  An explicit ``--hwnd`` always wins (most specific target).
+    Resolution dimensions (#1065 — consistent with the gold-standard
+    ``see``/``capture``/``click`` and ``list windows``):
+
+    * An explicit ``--hwnd`` always wins (most specific target).
+    * Positional NAME / ``--app`` (*name*) and/or ``--pid`` are resolved to a
+      concrete window handle through the backend's canonical ``_resolve_hwnd``
+      resolver, which matches the **process name** first (title as a fallback)
+      — the same path the gold-standard commands use.  This makes ``--app``
+      mean "application/process name" everywhere, so it works for localized
+      apps whose window title differs from the exe name (e.g. Calculator →
+      ``计算器``).  *window_title* narrows the match when supplied alongside.
+    * ``--window`` alone (*window_title* with no *name*/*pid*) keeps
+      title-substring semantics — the backend window method resolves the title.
 
     Args:
         backend: Active backend instance (provides ``_resolve_hwnd``).
         name: Application/process name (positional NAME or ``--app``).
         window_title: Optional title substring to pick a specific window.
-        hwnd: Optional direct window handle (takes priority over *pid*).
+        hwnd: Optional direct window handle (takes priority over *name*/*pid*).
         pid: Optional process ID to target.
 
     Returns:
         Dict with ``title`` and/or ``hwnd`` keys for backend calls.
 
     Raises:
-        WindowNotFoundError: When *pid* matches no resolvable window
+        WindowNotFoundError: When *name*/*pid* match no resolvable window
             (propagated from ``_resolve_hwnd``).
     """
-    if pid is not None and hwnd is None and hasattr(backend, "_resolve_hwnd"):
-        hwnd = backend._resolve_hwnd(app=name, window_title=window_title, pid=pid)
-        return {"title": None, "hwnd": hwnd}
-    effective_title = window_title or name
-    return {"title": effective_title, "hwnd": hwnd}
+    # Explicit --hwnd is the most specific target and short-circuits resolution.
+    if hwnd is not None:
+        return {"title": window_title or name, "hwnd": hwnd}
+    # NAME/--app and/or --pid → canonical process-aware resolver (#1065): the
+    # same path see/capture/click use, so --app means process name, not title.
+    if (name is not None or pid is not None) and hasattr(backend, "_resolve_hwnd"):
+        resolved_hwnd = backend._resolve_hwnd(app=name, window_title=window_title, pid=pid)
+        return {"title": None, "hwnd": resolved_hwnd}
+    # --window only (or a backend without _resolve_hwnd): title-substring match,
+    # resolved by the backend method itself.
+    return {"title": window_title or name, "hwnd": hwnd}
 
 
 def _require_target(name, window_title, hwnd, pid, json_output):
