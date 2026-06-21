@@ -158,8 +158,11 @@ naturo type "Hello" --input-mode hardware
 # Press key combo
 naturo press ctrl+s
 
-# Find element
-naturo find "Edit:filename"
+# Find element — the universal locator auto-detects the strategy from the query
+naturo find "Edit:filename"                # UIA tree search (name / role:name)
+naturo find button.png                     # image template match (.png/.jpg/…)
+naturo find 'app://notepad.exe/Edit'       # resolve a selector path
+naturo find @save-btn                      # resolve a saved @named selector
 
 # App management
 naturo app launch "notepad"

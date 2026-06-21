@@ -8,6 +8,44 @@ import click
 
 import naturo.cli.core._common as _common
 
+# (#1144 / #809 §4) File extensions that mark a bare query as an image-template
+# path for strategy auto-detection. Lower-cased; compared case-insensitively.
+_IMAGE_QUERY_EXTENSIONS = frozenset(
+    {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp"}
+)
+
+
+def _detect_query_strategy(query: str) -> str | None:
+    """Infer the find strategy from a bare query's shape (#1144, #809 §4).
+
+    The unified find engine is a *universal locator*: a positional (or
+    ``-q/--query``) value should reach the right strategy without the caller
+    spelling out ``--image``/``--selector``. This classifies only the
+    *unambiguous* shapes from the #809 table; everything else falls through to
+    the default UIA tree search so a normal name query is never hijacked.
+
+    Args:
+        query: The raw query string (positional arg or ``--query`` value).
+
+    Returns:
+        ``"selector"`` for a unified-selector path (an ``app://…`` URI or an
+        ``@name`` saved-selector ref), ``"image"`` for a template-image file
+        path (extension in :data:`_IMAGE_QUERY_EXTENSIONS`), or ``None`` for an
+        ordinary text/role query.
+    """
+    import os
+
+    q = query.strip()
+    # Only ``app://`` URIs and ``@name`` refs auto-route to the selector engine
+    # (per the #809 table). The ``//`` shorthand is deliberately excluded: it is
+    # far likelier to be a literal text fragment than the ``app://``/``@`` forms,
+    # so it stays a text query unless passed via the explicit --selector flag.
+    if q.startswith("app://") or q.startswith("@"):
+        return "selector"
+    if os.path.splitext(q)[1].lower() in _IMAGE_QUERY_EXTENSIONS:
+        return "image"
+    return None
+
 
 @click.command("find")
 @click.argument("query", required=False, default=None)
@@ -72,6 +110,14 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     Use --backend ia2 for IA2-enabled apps (Firefox, Thunderbird, LibreOffice).
 
     \b
+    Strategy auto-detection: a bare query routes itself by shape, so you can skip
+    the explicit flag —
+        app://… or @name        -> selector resolution (same as --selector)
+        path ending .png/.jpg/… -> image template match (same as --image)
+        anything else           -> UIA tree search
+    Explicit --image/--selector/--ai always take precedence.
+
+    \b
     Examples:
         naturo find "Save"                      # fuzzy name search
         naturo find "Button:Save"               # role + name
@@ -82,10 +128,11 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find "Save" --app "Notepad"              # search in specific app
         naturo find "search field" --ai --app "Chrome"  # AI + specific app
         naturo find "OK" --backend msaa          # MSAA for legacy apps
-        naturo find --image submit.png           # template match on screen
+        naturo find submit.png                   # auto-detected image template match
         naturo find --image icon.png --app Notepad --all  # all matches in app
+        naturo find 'app://notepad.exe/Edit'     # auto-detected selector resolution
+        naturo find @save-btn                    # auto-detected saved selector
         naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
-        naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -105,6 +152,25 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 click.echo(f"Error: {msg}", err=True)
             raise SystemExit(1)
         hwnd = entry.handle
+
+    # (#1144 / #809 §4) Strategy auto-detection — when the caller gives a bare
+    # query and no explicit strategy flag, infer the locator strategy from the
+    # query's shape so `naturo find button.png` and `naturo find app://…` reach
+    # the image and selector engines without --image/--selector. Explicit
+    # --image/--selector/--ai always win (we only run when none is set), and an
+    # ordinary text/role query stays on the default tree-search path. The
+    # detected query is moved into the matching strategy flag so the existing
+    # dispatch (and its conflict checks) handle it unchanged.
+    _auto_query = query if query is not None else query_opt
+    if (selector is None and image_template is None and not ai
+            and not find_all and _auto_query is not None):
+        detected = _detect_query_strategy(_auto_query)
+        if detected == "selector":
+            selector = _auto_query
+            query = query_opt = None
+        elif detected == "image":
+            image_template = _auto_query
+            query = query_opt = None
 
     # Selector resolution mode — resolve a saved/inline selector path to an
     # element (the third unified-find strategy, #1061 / #809).  Dispatched
