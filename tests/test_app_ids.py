@@ -6,6 +6,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -206,15 +207,21 @@ class TestResolveAppIdHelper:
             return AppIdMap(session=session, storage_root=tmp_storage)
 
         app_ids_mod.get_app_id_map = _patched
-        try:
-            app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
-            # (#573) app must be None — process_name may be a full path that
-            # breaks fuzzy matching downstream.  hwnd + pid suffice.
-            assert app is None
-            assert hwnd == 999
-            assert pid == 42
-        finally:
-            app_ids_mod.get_app_id_map = orig_factory
+        # (#1156) Treat the synthetic stored window as alive so the #788
+        # stale-window guard (a live ``user32.IsWindow`` call) does not make
+        # this host-state-dependent on a real desktop.
+        with patch(
+            "naturo.cli.interaction._common._is_hwnd_alive", return_value=True
+        ):
+            try:
+                app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
+                # (#573) app must be None — process_name may be a full path that
+                # breaks fuzzy matching downstream.  hwnd + pid suffice.
+                assert app is None
+                assert hwnd == 999
+                assert pid == 42
+            finally:
+                app_ids_mod.get_app_id_map = orig_factory
 
     def test_resolve_full_path_process_name_does_not_leak(self, tmp_storage):
         """#573: Full path in process_name must not become the app filter."""
@@ -237,13 +244,21 @@ class TestResolveAppIdHelper:
             return AppIdMap(session=session, storage_root=tmp_storage)
 
         app_ids_mod.get_app_id_map = _patched
-        try:
-            app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
-            assert app is None, "app must not be set to full process path"
-            assert hwnd == 5555
-            assert pid == 100
-        finally:
-            app_ids_mod.get_app_id_map = orig_factory
+        # (#1156) Neutralize the live HWND liveness check: on a real desktop
+        # ``_is_hwnd_alive(5555)`` calls ``user32.IsWindow`` and returns False
+        # for this synthetic handle, tripping the #788 stale-window guard and
+        # making the test depend on host window state. This test asserts the
+        # #573 no-leak contract, so treat the stored window as alive.
+        with patch(
+            "naturo.cli.interaction._common._is_hwnd_alive", return_value=True
+        ):
+            try:
+                app, hwnd, pid = _resolve_app_id("a1", None, None, None, False)
+                assert app is None, "app must not be set to full process path"
+                assert hwnd == 5555
+                assert pid == 100
+            finally:
+                app_ids_mod.get_app_id_map = orig_factory
 
     def test_resolve_error_exits(self, tmp_storage):
         """On invalid app_id, _resolve_app_id exits with error."""
