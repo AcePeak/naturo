@@ -1,5 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1153
+> (#1149) AUTO-MERGED itself green as `17b5274` mid-cycle + #1149 flipped status:done (handoff done); one fresh
+> Dev-filed parity tech-debt (#1154); NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — HEAD `7a9295e` = prior orc `[skip ci]` (no run);
+> last real-CI `d27240d` (#1151, *fixes #1139*) **Build & Test + CodeQL both SUCCESS** @17:24Z → no STOP, new work
+> permitted. **Step 1 PR sweep:** team-Dev PR **#1153** (`fix/issue-1149-validate-visual-threshold`→`develop`,
+> *fixes #1149*) is **MERGEABLE + auto-merge ON** (squash, `--delete-branch`, enabled by Ace @17:51Z); `BLOCKED`
+at cycle start was test-matrix IN_PROGRESS (early checks Commit-Author + Lint&Type + Version + Build-C++(Win)
+> all SUCCESS) → Orc left it to land on its own (never merge outside a PR); **it AUTO-MERGED itself green as
+> `17b5274` @17:55Z during the cycle** (squash, `--delete-branch`). **Branch auto-deleted (Rule 14 clean — remote
+> = `develop`+`main` only).** Only other open PR = community **#1055** (base `main`, fork, UNSTABLE) → already
+> queued needs:ace #1057, human-only → untouched. Nothing merged/closed BY Orc (Rule 1; #1153 landed via its own
+> auto-merge). **Step 2 health:** **HANDOFF — flipped #1149 status:in-progress → status:done** (Rule 1, merged
+> `17b5274`, awaiting QA — prevents premature status:done on a still-red PR). `status:done` open now = **#1149**
+> (just merged) + **#972** (P0 input-safety, human-only sign-off, already needs:ace) → #972 untouched.
+> `status:in-progress` = **#766** only (Ace migration-guide umbrella, 04:16Z). Nothing abandoned; nothing for Orc
+> to close (Rule 1). Dev filed parity tech-debt **#1154** (find/click `--image --threshold` same unvalidated-range
+> class as #1149) while shipping #1149 — normal in-authority Dev work, no queue. **Step 3 (moat, Standing #1):**
+> native-core moat (#920/#932/#1096 JAB) **build-blocked** — Dev re-proved live (`where cl`/`where cmake` absent,
+> JDK 21 present) → needs:ace #1097; #1150 (P1 mojibake) root-caused to native DLL → same block; OCR (#1060)
+> blocked on #1077; #931 benchmark CLOSED+verified, README leads with the moat headline. Backlog sharp &
+> self-feeding (QA→Dev draining #1149; fresh #1150/#1152/#1154 feed Dev) → no new gap to file (Rule 9, no churn).
+> **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6
+> (evolve the team): no change — no new evidence.** Both completed signals since 17:22Z exemplary: Dev #1149 (PR
+> #1153) hardest-first probe with PROVEN env blocks + red-first TDD + auditable stash-and-rerun gate + mechanical
+> public-API check + filed parity debt #1154 (rebuts the 避实就虚 class head-on); QA @17:42Z (#1139 verify+close)
+> physical Chrome-profile/CDP-port ground-truth + lateral 35-subcommand `--json` sweep + ruled out a pipe-lie
+> before any false report. Freshest rules <1–3d exercised cleanly → a change now over-fits/churns (forbidden).
+> Honest "no change" row appended to EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1752b-auto-review.md` (the `-1752-` name was already taken by an earlier mislabeled
+> cycle — same as the prior `-1722b-`/`-1652b-`). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1151
 > (#1139) MERGED in-cycle + #1139 flipped status:done (handoff done); one fresh QA-filed P1 bug (#1150) feeding Dev;
 > NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — merge commit `d27240d` (#1151, *fixes #1139*)

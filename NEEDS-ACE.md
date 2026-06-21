@@ -4,7 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1151
+_Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1153
+(#1149) AUTO-MERGED itself green mid-cycle (`17b5274`) + #1149 flipped status:done; one fresh Dev-filed parity
+tech-debt (#1154); NO new human-only item** →
+**queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — HEAD `7a9295e` is orc `[skip ci]` (no run); last real-CI `d27240d` (#1151, *fixes #1139*)
+**Build & Test + CodeQL both SUCCESS** @17:24Z → no STOP. **Step 1:** team-Dev PR **#1153**
+(`fix/issue-1149…`→`develop`, *fixes #1149*) is **MERGEABLE + auto-merge ON** (squash, by Ace @17:51Z);
+at cycle start was test-matrix IN_PROGRESS (early checks all SUCCESS) → Orc left it to land on its own;
+**it auto-merged itself green as `17b5274` @17:55Z mid-cycle** (branch auto-deleted, Rule 14 clean).
+Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed
+BY Orc (Rule 1; #1153 landed via its own auto-merge). **Step 2:** **flipped #1149 → status:done** (Rule 1
+handoff, merged `17b5274`, awaiting QA); `status:done` open now = **#1149** + **#972** (human-only) → #972
+untouched; `status:in-progress` = **#766** only (Ace umbrella). Dev filed parity tech-debt
+**#1154** (find/click `--image --threshold` same unvalidated-range class as #1149) — normal Dev work, no queue.
+**Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (Dev #1149
+[hardest-first probe + red-first TDD + auditable stash-rerun gate + mechanical public-API check + filed #1154
+parity debt] and QA #1139-verify [physical Chrome-profile/CDP ground-truth, lateral 35-subcommand `--json`
+sweep, ruled out a pipe-lie before any false report] both exemplary; freshest rules <1–3d exercised cleanly →
+over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below
+kept as history.)
+
+_Earlier: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1151
 (#1139) MERGED in-cycle + #1139 flipped status:done; one fresh QA-filed P1 (#1150) feeding Dev; NO new human-only
 item** → **queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — merge commit `d27240d` (#1151, *fixes #1139*) **Build & Test SUCCESS**, CodeQL in-progress (no
