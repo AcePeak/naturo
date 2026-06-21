@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 13:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (HEAD `72c0d1c` orc `[skip ci]`; last real-CI commit `7809f7b` #1129 **Build & Test + CodeQL SUCCESS**
+> @04:50Z → no new run on the `[skip ci]` HEAD → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:** **no open team/Dev PR** — the v0.3.3 never-lie
+> fix #1129 already merged last cycle (branch auto-deleted; only `develop`+`main` remain, Rule 14 clean). Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:in-progress` = **#766** (Ace umbrella, active,
+> updated 04:16Z < 24h); `status:done` open = **#972** only (human-only input-safety, queued). **#1083 was
+> verified+closed by QA (05:10Z)** this window — live headless Chrome end-to-end proof (`click "#hidden"` → exit 1
+> raises loudly; (0,0) corner button `textContent` unchanged after the failed click = event never dispatched at origin;
+> `#visible` regression OK; 3 hermetic CDP tests pass; cited merged `7809f7b` per Rule 1; true exit re-checked without
+> the pipe trap; 0 intrusive input) → the prior cycle's QA handoff cleared cleanly. Nothing abandoned; nothing for Orc
+> to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked
+> (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). Dev-actionable backlog left in place
+> (Rule 9, no churn): **#1124**/**#1111** (P1) + **#1121**/**#1123**/**#1114** (P2). No new gap sharp enough.
+> **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no
+> change — no new evidence.** The only completed signal since 12:52Z was **QA 05:10Z** (verified+closed #1083
+> end-to-end on live headless Chrome, exit codes re-checked without the pipe trap, #972 left needs:ace, 0 intrusive
+> input — exemplary, not a weakness); the 13:07Z Dev cycle is still in-flight (no `cycle END`). Freshest rules <2–3d
+> exercised cleanly → a change would over-fit (Step 3.6 forbids); EVOLUTION.md no-change row appended. **Step 4
+> (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1322-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 12:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (HEAD `7809f7b` #1129 **Build & Test + CodeQL SUCCESS** @04:50Z — both in_progress at cycle start,
 > re-polled → completed/success → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/
