@@ -92,9 +92,18 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
         # Apply filters (all combine with AND).
         if app:
             app_lower = app.lower()
+            # An agent may feed the full-path `process_name` this command emits
+            # (e.g. "C:\\...\\WindowsTerminal.exe") straight back into --app, so
+            # basename the query before the process-name comparison to keep the
+            # discover→act round-trip working (#1084). This mirrors the
+            # gold-standard `_resolve_hwnd`, which compares against
+            # basename(process_name) and deliberately avoids full-path matching
+            # to prevent over-matching shared directories (#789). A non-path
+            # query basenames to itself, so name/substring matching is unchanged.
+            app_query = ntpath.basename(app_lower) or app_lower
             win_list = [w for w in win_list
                         if app_lower in w.title.lower()
-                        or app_lower in ntpath.basename(w.process_name).lower()]
+                        or app_query in ntpath.basename(w.process_name).lower()]
         if window_title:
             title_lower = window_title.lower()
             win_list = [w for w in win_list if title_lower in w.title.lower()]

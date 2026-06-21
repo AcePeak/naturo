@@ -144,6 +144,72 @@ class TestListWindows:
         assert "PLATFORM_ERROR" in result.output
 
 
+# ── list windows: --app round-trips its own full-path output (#1084) ──
+
+
+class TestListWindowsAppRoundTrip:
+    """The full-path ``process_name`` emitted by ``list windows -j`` must feed
+    straight back into ``--app`` and select the same window (#1084).
+
+    Previously ``--app`` matched the query against ``basename(process_name)``
+    only, while the JSON output leaked the full absolute path — so an agent
+    that discovered a window and fed its reported ``process_name`` back into
+    ``--app`` got zero matches (discover→act round-trip broken).
+    """
+
+    FULL_PATH = (
+        r"C:\Program Files\WindowsApps"
+        r"\Microsoft.WindowsTerminal_1.24.11321.0_x64__8wekyb3d8bbwe"
+        r"\WindowsTerminal.exe"
+    )
+
+    @pytest.fixture
+    def path_backend(self):
+        backend = MagicMock()
+        backend.list_windows.return_value = [
+            _make_window(handle=2001, title="claude", process_name=self.FULL_PATH, pid=300),
+            _make_window(handle=2002, title="Calculator", process_name="calc.exe", pid=200),
+        ]
+        return backend
+
+    def _run(self, runner, backend, app_value):
+        with _patch_platform(), _patch_backend(backend), \
+             patch("os.getpid", return_value=99999), patch("os.getppid", return_value=99998):
+            return runner.invoke(
+                list_cmd, ["windows", "--app", app_value, "--json"], catch_exceptions=False
+            )
+
+    def test_full_path_process_name_round_trips(self, runner, path_backend):
+        # The exact value emitted in the JSON must select the same window.
+        result = self._run(runner, path_backend, self.FULL_PATH)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["count"] == 1
+        assert data["windows"][0]["handle"] == 2001
+        # And the round-tripped value is exactly what the command emitted.
+        assert data["windows"][0]["process_name"] == self.FULL_PATH
+
+    def test_basename_still_matches(self, runner, path_backend):
+        result = self._run(runner, path_backend, "WindowsTerminal.exe")
+        data = json.loads(result.output)
+        assert data["count"] == 1
+        assert data["windows"][0]["handle"] == 2001
+
+    def test_partial_name_still_matches(self, runner, path_backend):
+        result = self._run(runner, path_backend, "terminal")
+        data = json.loads(result.output)
+        assert data["count"] == 1
+        assert data["windows"][0]["handle"] == 2001
+
+    def test_path_query_does_not_overmatch_siblings(self, runner, path_backend):
+        # Basenaming the query must NOT broaden to full-path substring matching:
+        # a shared directory component (e.g. "WindowsApps") must not pull in
+        # unrelated windows the way matching the whole path would (#789).
+        result = self._run(runner, path_backend, r"C:\Program Files\WindowsApps")
+        data = json.loads(result.output)
+        assert data["count"] == 0
+
+
 # ── list screens ─────────────────────────────────────────────────────
 
 

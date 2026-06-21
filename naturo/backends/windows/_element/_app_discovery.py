@@ -183,6 +183,18 @@ class AppDiscoveryMixin:
             return 0  # foreground window
 
         search_lower = search.lower() if search else ""
+        # (#1084) An agent may feed the full-path `process_name` that
+        # `list windows`/`list apps`/`app list` emit (e.g.
+        # "C:\\...\\WindowsTerminal.exe") straight back into --app. Normalize the
+        # --app query to a basename without the .exe suffix so it compares the
+        # same way `proc_stem` is derived below, keeping the discover→act
+        # round-trip working across the whole --app family. A plain name
+        # ("notepad") normalizes to itself, so existing matching is unchanged;
+        # basenaming also preserves the #789 guard against a shared directory
+        # component (e.g. "WindowsApps") over-matching unrelated windows.
+        app_query = (ntpath.basename(search_lower) or search_lower) if app else search_lower
+        if app and app_query.endswith(".exe"):
+            app_query = app_query[:-4]
         windows = self.list_windows()
 
         # (#471) Filter by PID when provided — only consider windows owned
@@ -238,10 +250,12 @@ class AppDiscoveryMixin:
                 # All PID-filtered windows are valid candidates
                 score = 1
             elif match_process:
-                # Process-name matching (priority)
-                if search_lower == proc_stem:
+                # Process-name matching (priority). Uses the normalized
+                # `app_query` (basename, no .exe) so a full-path --app value
+                # round-trips (#1084).
+                if app_query == proc_stem:
                     score = 4  # exact process name
-                elif search_lower in proc_stem:
+                elif app_query in proc_stem:
                     score = 3  # substring in process name
                 # (#465) Title-only fallback removed from --app matching.
                 # When --app is used, we only match by process name or alias.
@@ -251,7 +265,7 @@ class AppDiscoveryMixin:
                 #
                 # Alias matching: cross-locale app name resolution
                 if score == 0:
-                    aliases = self._APP_ALIASES.get(search_lower, set())
+                    aliases = self._APP_ALIASES.get(app_query, set())
                     for alias in aliases:
                         if alias == proc_stem:
                             score = 4  # alias → exact process name
@@ -491,6 +505,12 @@ class AppDiscoveryMixin:
             return []
 
         search_lower = search.lower()
+        # (#1084) Normalize a full-path --app query to a basename without .exe
+        # so the value emitted by the list family round-trips here too; mirrors
+        # _resolve_hwnd. See that method for the full rationale.
+        app_query = (ntpath.basename(search_lower) or search_lower) if app else search_lower
+        if app and app_query.endswith(".exe"):
+            app_query = app_query[:-4]
         windows = self.list_windows()
         console_session = _get_console_session_id()
         match_process = app is not None
@@ -507,15 +527,15 @@ class AppDiscoveryMixin:
             title_lower = w.title.lower()
 
             if match_process:
-                # Process-name matching
-                if search_lower == proc_stem:
+                # Process-name matching (normalized query, #1084)
+                if app_query == proc_stem:
                     score = 4
-                elif search_lower in proc_stem:
+                elif app_query in proc_stem:
                     score = 3
                 # (#465) No title fallback for --app (see _resolve_hwnd)
                 # Alias matching
                 if score == 0:
-                    aliases = self._APP_ALIASES.get(search_lower, set())
+                    aliases = self._APP_ALIASES.get(app_query, set())
                     for alias in aliases:
                         if alias == proc_stem:
                             score = 4
