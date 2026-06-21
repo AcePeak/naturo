@@ -4,7 +4,7 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 09:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-21 09:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `2069b49` #1125 Build & Test +
 CodeQL **SUCCESS** @00:48Z; later `[skip ci]` orc commits → no new run → no STOP) → new work permitted; nothing
 merged/closed by Orc this cycle (Rule 1). **Step 1:** no open team-Dev PR; only open PR = community **#1055**
@@ -19,8 +19,8 @@ README hero = recognition matrix (#931). Open Dev-actionable bugs in backlog:
 ~30s/no-file across 5 fresh launches, then OK; headless first-frame-readiness gap; distinct from the #1119/#1122 param
 fix) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
 picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16). **Step
-3.6** no change — no new evidence (no Dev/QA cycle has completed since 08:52Z; the 09:07Z Dev/QA are still in-flight).
-v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+3.6** no change — no new evidence (no Dev/QA cycle has completed since 08:52Z; the 09:07Z and 09:37Z Dev/QA are still
+in-flight). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
