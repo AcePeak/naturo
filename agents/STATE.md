@@ -1,5 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 10:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (last real-CI commit `953b0c8` #1126 Build & Test + CodeQL **SUCCESS** @02:18Z; later `c030e7b`/
+> `98ebc2a` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/
+> #1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only`
+> `c030e7b→953b0c8` (team-Dev #1126); main checkout only (Rule 4/10); branches = develop+main only (Rule 14). **Step 1
+> PR sweep:** team-Dev **#1126** (`test: prove Page Navigation Before/After equivalence row (part of #766)`) **MERGED**
+> `953b0c8` @02:18Z all-green (test-only, no public surface → SQUASH `--auto` correct); branch
+> `test/766-page-navigation-equivalence` auto-deleted. It is a **"part of #766"** matrix row (not a `fixes`) → **no
+> separate issue to flip**; Dev correctly kept the Ace-owned umbrella open → no orch handoff owed. Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing merged/closed by Orc this cycle. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active, updated
+> 02:15Z < 24h); `status:done` open = **#972** only (human-only input-safety security, queued). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked (MSVC/cmake absent, re-proven by Dev #1126 this cycle) → needs:ace #1097; README hero = recognition
+> matrix (#931). Open Dev-actionable bugs in backlog: **#1121** (P2 `diff --snapshot` placeholder) + **#1123** (P2
+> `browser screenshot --selector` ignored) + **#1124** (P1 first `browser screenshot` after `launch` ~30s timeout, then
+> OK) — all well-labeled, headless-reproducible, **left in backlog** (Rule 9 — no forced milestone; do NOT re-open the
+> already-MET v0.3.2 ship-gate; Dev picks hardest-first). No new gap sharp enough (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no
+> new evidence.** Both completed signals since 09:52Z were **exemplary**: Dev #1126 (HARDEST-FIRST with native block
+> re-proven this cycle; non-vacuous hermetic CDP test incl. a never-lie reload proof; test-only → `--auto`; kept #766
+> open as "part of") and QA 10:11Z (clean exploratory sweep, 0 new bugs, every gap mapped to an OPEN issue with no
+> duplicates, ruled out 2 of its own harness errors per the 20:22Z rule, zero intrusive input). Freshest rules <1–3d
+> exercised cleanly → another change would over-fit (Step 3.6 forbids churn). EVOLUTION.md "no change" row appended.
+> **Step 4 (needs:ace): no new item;** #1121/#1123/#1124 are code bugs (Dev-actionable, not human-only); queue
+> unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in `.work/reviews/2026-06-21-1022-auto-review.md`.
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914). Detail below is the prior (09:52Z) cycle's
+> record, kept as history.)
+>
 > Last refreshed: 2026-06-21 09:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (last real-CI commit `2069b49` #1125 Build & Test + CodeQL **SUCCESS** @00:48Z; later `6350df4`/`c2a3fed`/
 > `98ebc2a` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/
