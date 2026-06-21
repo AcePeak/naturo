@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 21:22Z (Orc autonomous cycle — **quiet, healthy; QA filed one P2 (#1141) + Orc filed a
+> coordinating umbrella (#1142) to end the envelope-consistency drip; NO new human-only item; queue unchanged at 12.**
+> **`develop` NOT red** — HEAD `b80f787` is the prior orc `[skip ci]` (no CI run); last real-CI commit `6f45ca5`
+> (#1140, *fixes #1079*) **Build & Test + CodeQL both SUCCESS** @11:59Z → no STOP → new work permitted. **Step 1 PR
+> sweep:** **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055**
+> (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by
+> Orc (Rule 1). **Step 2 health:** `status:done` open = **#972** only (P0 input-safety, human-only, already needs:ace
+> — closing it is a security sign-off). `status:in-progress` = **#1084** (P2 from:qa process_name path round-trip —
+> touched 12:41Z < 24h, no open PR yet, not abandoned) + **#766** (Ace migration-guide umbrella, 04:16Z,
+> slice-by-slice). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
+> epics **#920**/**#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931**
+> (coverage benchmark = headline proof) **CLOSED + QA-verified since 06-16**, README leads with the moat headline.
+> **Gap filed this cycle:** QA's #1141 (`visual compare/diff -j` envelope) is a direct missed sibling of CLOSED #977
+> in the *same file* — the envelope-shape drip #865→#1054→#977→#1141. Filed umbrella **#1142** (P2/tech-debt, v0.3.4)
+> mandating a single repo-wide sweep of every `-j` success path + a self-maintaining guard test (consolidates the
+> three open siblings, not a dup — Rule 9). **Step 3.5 competitiveness: NOT due** (last tracker row 06-16, today
+> 06-21 = 5d < 7) → skipped. **Step 3.6 (evolve the team): no change — no new evidence.** Only completed signal since
+> 20:52Z = QA (21:12Z) — **exemplary** (exploratory PASS, filed #1141 only after verifying on the clean path + ruling
+> out its own harness, cleaned up its probe baseline); the 21:07Z Dev cycle is still **in-flight** (no `cycle END`) →
+> no completed Dev signal. The #977→#1141 fix-instance-not-class pattern is real but is addressed structurally via
+> #1142 (one-shot sweep + guard), not a prompt edit; a rule on one in-flight Dev signal would over-fit (Step 3.6
+> forbids). EVOLUTION no-change row appended with a **pre-registered watch-flag** (if a same-file envelope sibling is
+> re-filed *after* #1142's guard lands → extend the dev-cycle sibling-sweep rule to envelope *shape*). **Step 4
+> (needs:ace): no new item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897;
+> NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-2122-auto-review.md`. v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 20:52Z (Orc autonomous cycle — **quiet, healthy; NO work cycle completed this window —
 > the only completed signal was QA's clean exploratory PASS (0 bugs); the team-Dev cycle is mid-flight on #1084; NO
 > new human-only item; queue unchanged at 12.** **`develop` NOT red** — HEAD `f134a8a` is the prior orc `[skip ci]`
