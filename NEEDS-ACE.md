@@ -4,25 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 12:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `a543925` #1128 Build & Test +
-CodeQL **SUCCESS** @04:18Z — was in_progress at cycle start, re-polled → success → no STOP) → new work permitted;
-nothing merged/closed by Orc this cycle (Rule 1). **Step 1:** team-Dev **#1128** (`prove Multi-Account concurrent-profile
-isolation equivalence row`, *part of #766*) MERGED `a543925` all-green, test-only, branch auto-deleted (only
-`develop`+`main` remain) — "part of" not "fixes" → no issue flip, Ace-owned umbrella #766 kept open. Only remaining open
-PR = community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not
-touched. **Step 2:** `status:in-progress` = **#766** (Ace-owned umbrella, active); `status:done` open = **#972** only
-(human-only input-safety, queued). Nothing abandoned; nothing to close (Rule 1). **Step 3 (recognition moat, Standing
-#1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (re-proven
-by #1128 this cycle) → #1097 below; README hero = recognition matrix (#931). Dev-actionable backlog: **#1124**/**#1111**
+_Last refreshed: 2026-06-21 12:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `7809f7b` #1129 Build & Test +
+CodeQL **SUCCESS** @04:50Z — both in_progress at cycle start, re-polled → success → no STOP) → new work permitted;
+nothing closed by Orc this cycle (Rule 1). **Step 1:** team-Dev **#1129** (`raise instead of clicking (0,0) on zero-area
+browser elements`, *fixes #1083*) MERGED `7809f7b` all-green — a **real `_element.py` never-lie source bugfix** (no
+public surface, internal bugfix → `--auto` correct), branch auto-deleted (only `develop`+`main` remain). `fixes` +
+default branch `main` → no auto-close on develop merge, so Orc flipped **#1083 `status:in-progress → status:done`**
+(QA handoff; not closed — Rule 1). Only remaining open PR = community **#1055**
+([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
+`status:in-progress` = **#766** (Ace-owned umbrella, active); `status:done` open = **#1083** (fresh QA handoff) +
+**#972** (human-only input-safety, queued). Nothing abandoned; nothing to close (Rule 1). **Step 3 (recognition moat,
+Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked
+(re-proven by #1129 this cycle) → #1097 below; README hero = recognition matrix (#931). Dev ran HARDEST-FIRST then,
+once #766's actionable rows ran out, shipped the v0.3.3 never-lie bug #1083. Dev-actionable backlog: **#1124**/**#1111**
 (P1) + **[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
 (P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
 picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16).
-**Step 3.6** no change — no new evidence (the two completed signals since 11:52Z — Dev #1128 + QA 12:09Z — were both
-clean/exemplary: #1128 HARDEST-FIRST native-block re-proven then fell to actionable #766 row 24, gate clean, umbrella
-kept open; QA 12:09Z clean exploratory PASS, 0 bugs, ruled out 1 false alarm as intentional #98 design; freshest rules
-<2–3d exercised cleanly → a rule now would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
-#914)._
+**Step 3.6** no change — no new evidence (the two completed signals since 12:22Z — Dev #1129 + QA 12:43Z — were both
+clean/exemplary: #1129 HARDEST-FIRST native-block re-proven then fell to the hardest actionable v0.3.3 never-lie bug,
+TDD 3 hermetic tests fail-before/pass-after, no #1080 regression, public-API none; QA 12:43Z clean exploratory PASS,
+0 bugs, ruled out a `highlight` no-op with a visual-proof PNG; freshest rules <2–3d exercised cleanly → a rule now
+would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |

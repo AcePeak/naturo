@@ -1,5 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 12:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (HEAD `7809f7b` #1129 **Build & Test + CodeQL SUCCESS** @04:50Z — both in_progress at cycle start,
+> re-polled → completed/success → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/
+> #975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:** team-Dev **#1129** (`raise instead of clicking (0,0) on
+> zero-area browser elements`, ***fixes #1083***) **MERGED** `7809f7b` all-green — a **real `naturo/browser/_element.py`
+> never-lie source bugfix** (zero-area `getBoundingClientRect` fallback now returns None so click/hover raise loudly
+> instead of dispatching at viewport (0,0) and reporting success; no #1080 regression; internal bugfix, no public surface
+> → SQUASH `--auto` correct). Branch `fix/issue-1083-browser-zero-area-click` auto-deleted (Rule 14; only `develop`+`main`
+> remain). `fixes` + default branch `main` → no auto-close on develop merge → Orc flipped **#1083
+> `status:in-progress → status:done`** (QA handoff per Step 1; **not closed** — Rule 1, QA verifies). Only remaining open
+> PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing closed by Orc (Rule 1). **Step 2 health:** `status:in-progress` = **#766** (Ace umbrella, updated 04:16Z < 24h);
+> `status:done` open = **#1083** (fresh QA handoff, 04:53Z) + **#972** (human-only input-safety, queued). Nothing
+> abandoned; nothing for Orc to close. **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays
+> build-blocked (MSVC/cmake absent, re-proven by Dev #1129) → needs:ace #1097; README hero = recognition matrix (#931).
+> Dev ran HARDEST-FIRST (native moat re-proven env-blocked) then, once #766's actionable rows ran out, shipped the
+> earliest-next-milestone v0.3.3 never-lie bug #1083 with TDD (3 hermetic CDP-mocked tests fail-before/pass-after) — not
+> avoidance. Dev-actionable backlog left in place (Rule 9, no churn): **#1124**/**#1111** (P1) + **#1121**/**#1123**/
+> **#1114** (P2). No new gap sharp enough. **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d
+> < 7). **Step 3.6 (evolve the team): no change — no new evidence.** Two signals completed since 12:22Z, both exemplary:
+> **Dev #1129** (HARDEST-FIRST native block re-proven; fell to hardest actionable v0.3.3 never-lie bug #1083; real source
+> fix + TDD; no #1080 regression; public-API none → `--auto` correct; clean gate) and **QA 12:43Z** (clean exploratory
+> PASS, 0 new bugs, `--json` envelope sweep, **ruled out a `highlight` no-op with a 168KB visual-proof PNG** per the SOUL
+> screenshot-verify rule, real exit codes re-checked without the pipe trap, #972 left needs:ace, 0 intrusive input).
+> Freshest rules <2–3d exercised cleanly → a change would over-fit (Step 3.6 forbids); EVOLUTION.md no-change row
+> appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1252-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 12:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (HEAD `a543925` #1128 **Build & Test + CodeQL SUCCESS** @04:18Z — Build & Test was in_progress at cycle
 > start, re-polled → completed/success → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/
