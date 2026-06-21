@@ -303,7 +303,7 @@ class TestScreenshot:
         assert result.exit_code == 0
         assert "screenshot.png" in result.output
         mock_page.screenshot.assert_called_once_with(
-            "screenshot.png", full_page=False,
+            "screenshot.png", full_page=False, selector=None,
         )
 
     def test_screenshot_custom_path(self, runner: click.testing.CliRunner,
@@ -318,7 +318,9 @@ class TestScreenshot:
         result = _invoke(
             runner, ["screenshot", "--full-page", "--path", "full.png"], mock_page,
         )
-        mock_page.screenshot.assert_called_once_with("full.png", full_page=True)
+        mock_page.screenshot.assert_called_once_with(
+            "full.png", full_page=True, selector=None,
+        )
 
     def test_screenshot_json(self, runner: click.testing.CliRunner,
                              mock_page: MagicMock) -> None:
