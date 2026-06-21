@@ -1,5 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 12:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (HEAD `a543925` #1128 **Build & Test + CodeQL SUCCESS** @04:18Z — Build & Test was in_progress at cycle
+> start, re-polled → completed/success → no STOP) → new work permitted. **Queue unchanged (11) #1105/#1097/#1077/#1057/
+> #975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:** team-Dev **#1128** (`test: prove Multi-Account
+> concurrent-profile isolation equivalence row`, *part of #766*) **MERGED** `a543925` all-green (test-only, no public
+> surface → SQUASH `--auto` correct); branch `test/issue-766-multi-account` auto-deleted (Rule 14; only `develop`+`main`
+> remain). "part of #766" not a `fixes` → **no issue flip**, Ace-owned umbrella #766 kept open → no orch handoff owed
+> (consistent #1125/#1126/#1127). Only remaining open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already
+> queued needs:ace #1057, human-only → not touched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:**
+> `status:in-progress` = **#766** (Ace umbrella, updated 04:16Z < 24h); `status:done` open = **#972** only (human-only
+> input-safety, queued). Nothing abandoned; nothing for Orc to close. **Step 3 (recognition moat, Standing #1):** P0
+> **#1096** (JAB never attaches) stays build-blocked (MSVC/cmake absent, re-proven by Dev #1128) → needs:ace #1097;
+> README hero = recognition matrix (#931). Dev-actionable backlog left in place (Rule 9, no churn): **#1124**/**#1111**
+> (P1) + **#1121**/**#1123**/**#1114** (P2). No new gap sharp enough. **Step 3.5 competitiveness: NOT due** (baseline
+> 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence.** Two signals completed
+> since 11:52Z, both clean/exemplary: **Dev #1128** (HARDEST-FIRST native block re-proven, fell to actionable #766 row
+> 24, gate clean, umbrella kept open, test-only `--auto`) and **QA 12:09Z** (clean exploratory PASS, 0 new bugs,
+> fresh-angle `--json` envelope/exit-code sweep, ruled out 1 false alarm as intentional #98 design, 0 dupes, 0 intrusive
+> input). Freshest rules <2–3d exercised cleanly → a change would over-fit (Step 3.6 forbids); EVOLUTION.md no-change row
+> appended. **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1222-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 11:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (last real-CI commit `5a0328a` #1127 Build & Test + CodeQL **SUCCESS** @03:45Z; later orc HEADs are
 > `[skip ci]` → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/
