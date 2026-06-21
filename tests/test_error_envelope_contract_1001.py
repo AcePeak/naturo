@@ -280,6 +280,50 @@ def test_interaction_action_error_keeps_semantic_identity(argv, action_method, m
     assert error["suggested_action"], f"{' '.join(argv)} dropped the recovery hint"
 
 
+@pytest.mark.parametrize(
+    "argv,wait_fn",
+    [
+        (["wait", "--element", "Button:ZZZabsent", "--app", "Notepad", "--timeout", "1"],
+         "wait_for_element"),
+        (["wait", "--window", "ZZZabsentWindow", "--timeout", "1"], "wait_for_window"),
+        (["wait", "--gone", "Dialog:ZZZpresent", "--timeout", "1"], "wait_until_gone"),
+    ],
+    ids=["element", "window", "gone"],
+)
+def test_wait_timeout_success_false_is_canonical(argv, wait_fn, monkeypatch) -> None:
+    """A ``wait`` predicate *timeout* surfaces the canonical error envelope (#1089).
+
+    ``wait`` returns ``success:false`` on timeout **without raising**, so the
+    failure slips past the fast-fail ``json_error`` path that layers 1–2 above
+    enumerate (#895 fixed the success shape; this leg pins the failure shape).
+    The wait backend and the desktop pre-flight gate are stubbed so the timeout
+    is driven deterministically with no desktop and no DLL — the timeout path is
+    asserted to attach the same six canonical keys every other failure carries,
+    keeping the #895 ``mode``/``wait_time``/``found``/``warnings`` keys intact.
+    """
+    timeout_result = MagicMock(found=False, wait_time=1.0, warnings=[], element=None)
+    monkeypatch.setattr(f"naturo.wait.{wait_fn}", lambda *a, **k: timeout_result)
+    monkeypatch.setattr(
+        "naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None
+    )
+
+    result = CliRunner().invoke(main, [*argv, "-j"], catch_exceptions=True)
+
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    # #895 success-shape keys must coexist with the #1089 error block.
+    assert {"success", "mode", "wait_time", "found", "warnings"} <= set(payload)
+    error = _single_error_object(result.output)
+    assert list(error.keys())[:6] == _CANONICAL_KEYS, (
+        f"{' '.join(argv)} -j timeout error drifted from the canonical schema: "
+        f"{list(error.keys())}"
+    )
+    assert error["code"] == "TIMEOUT"
+    assert error["category"] == "automation"
+    assert error["recoverable"] is True
+    assert error["suggested_action"]
+
+
 def test_json_err_preserves_naturoerror_but_falls_back_for_plain_exception(capsys) -> None:
     """``_common._json_err`` is the funnel #1004 fixed — pin both of its branches.
 

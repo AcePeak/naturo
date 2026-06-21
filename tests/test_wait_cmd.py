@@ -350,6 +350,118 @@ class TestWaitEnvelopeConsistency:
 
 
 # ---------------------------------------------------------------------------
+# Timeout-failure error envelope (#1089)
+# ---------------------------------------------------------------------------
+
+# The six canonical keys, in order, that every ``-j`` error object must carry —
+# identical to naturo.errors.NaturoError.to_dict() and json_error's object (#884).
+_CANONICAL_ERROR_KEYS = [
+    "code", "message", "category", "context", "suggested_action", "recoverable",
+]
+
+
+class TestWaitTimeoutErrorEnvelope:
+    """Predicate-mode timeout (-j) carries the standard ``error`` block (#1089).
+
+    A ``wait`` predicate timeout sets ``success:false`` and exits 1 *without
+    raising*, so it never reaches the ``json_error`` path the rest of the CLI
+    uses. Before #1089 the ``-j`` timeout envelope therefore omitted the ``error``
+    object entirely — every other failing command, and ``wait``'s own validation
+    failures, emit ``{code, message, category, recoverable, ...}``. These tests
+    pin that the timeout path now attaches the canonical block while keeping the
+    #895 success-shape keys intact.
+
+    The desktop pre-flight gate is mocked out so the forced timeout path reflects
+    the *code*, not the runner's desktop state (hermeticity, cf. #1068).
+    """
+
+    @staticmethod
+    def _timeout_result(wait_time: float = 1.0):
+        result = MagicMock()
+        result.found = False
+        result.wait_time = wait_time
+        result.warnings = []
+        result.element = None
+        return result
+
+    @patch("naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None)
+    @patch("naturo.wait.wait_for_element")
+    def test_element_timeout_attaches_canonical_error(self, mock_wfe, runner):
+        mock_wfe.return_value = self._timeout_result(1.0)
+        result = runner.invoke(
+            wait, ["--element", "Button:ZZZNoExist", "--app", "Notepad",
+                   "--timeout", "1", "--json"],
+        )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        # #895 success-shape keys stay intact.
+        assert set(data) >= CANONICAL_WAIT_KEYS
+        assert data["success"] is False
+        assert data["found"] is False
+        assert data["mode"] == "element"
+        # #1089 error block: canonical six keys, in order, with resolved taxonomy.
+        error = data["error"]
+        assert list(error.keys()) == _CANONICAL_ERROR_KEYS
+        assert error["code"] == "TIMEOUT"
+        assert error["category"] == "automation"
+        assert error["recoverable"] is True
+        assert error["suggested_action"]
+        assert "Button:ZZZNoExist" in error["message"]
+        assert "1.0s" in error["message"]
+
+    @patch("naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None)
+    @patch("naturo.wait.wait_for_window")
+    def test_window_timeout_attaches_canonical_error(self, mock_wfw, runner):
+        mock_wfw.return_value = self._timeout_result(2.0)
+        result = runner.invoke(wait, ["--window", "ZZZNoWindow", "--timeout", "2", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["mode"] == "window"
+        error = data["error"]
+        assert list(error.keys()) == _CANONICAL_ERROR_KEYS
+        assert error["code"] == "TIMEOUT"
+        assert error["category"] == "automation"
+        assert "ZZZNoWindow" in error["message"]
+
+    @patch("naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None)
+    @patch("naturo.wait.wait_until_gone")
+    def test_gone_timeout_attaches_canonical_error(self, mock_wug, runner):
+        mock_wug.return_value = self._timeout_result(1.0)
+        result = runner.invoke(wait, ["--gone", "Dialog:Loading", "--timeout", "1", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["mode"] == "gone"
+        error = data["error"]
+        assert list(error.keys()) == _CANONICAL_ERROR_KEYS
+        assert error["code"] == "TIMEOUT"
+        assert "Dialog:Loading" in error["message"]
+
+    @patch("naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None)
+    @patch("naturo.wait.wait_for_element")
+    def test_found_success_has_no_error_block(self, mock_wfe, runner, mock_wait_result):
+        """The error block is attached only on failure — success stays clean."""
+        mock_wfe.return_value = mock_wait_result
+        result = runner.invoke(wait, ["--element", "Button:Save", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert "error" not in data
+
+    @patch("naturo.cli.core._common._enforce_desktop_session", lambda *a, **k: None)
+    @patch("naturo.wait.wait_for_element")
+    def test_human_path_timeout_message_matches_error_message(self, mock_wfe, runner):
+        """The -j error message mirrors the human-path ``Error: Timeout ...`` text."""
+        mock_wfe.return_value = self._timeout_result(1.0)
+        human = runner.invoke(wait, ["--element", "Button:ZZZNoExist", "--timeout", "1"])
+        mock_wfe.return_value = self._timeout_result(1.0)
+        js = runner.invoke(wait, ["--element", "Button:ZZZNoExist", "--timeout", "1", "--json"])
+        # Human path: "Error: Timeout after 1.0s waiting for 'Button:ZZZNoExist'"
+        assert "Timeout after 1.0s waiting for 'Button:ZZZNoExist'" in human.output
+        assert json.loads(js.output)["error"]["message"] == \
+            "Timeout after 1.0s waiting for 'Button:ZZZNoExist'"
+
+
+# ---------------------------------------------------------------------------
 # Help
 # ---------------------------------------------------------------------------
 
