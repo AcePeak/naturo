@@ -202,6 +202,73 @@ def test_form_interaction_equivalence(
     assert status.attr("data-submitted") == "true"
 
 
+def test_page_navigation_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage/Selenium ``page.get()`` pattern via naturo.
+
+    Mirrors the migration guide's "Page Navigation" section. The *Before* code
+    pairs ``page.get(url, retry=3, timeout=10)`` with a hand-written
+    ``time.sleep`` (and a manual ``page.refresh()`` retry on the Douyin/Selenium
+    variant) because the old libraries return before the document is ready. The
+    guide's headline *After* promise is that ``navigate`` "already waits for
+    load", so naturo needs neither the sleep nor the manual retry.
+
+    This proves the three documented navigation primitives against the offline
+    fixtures, with never-lie assertions (SOUL.md) that each call genuinely took
+    effect rather than reporting a no-op success:
+
+    * ``navigate`` lands on the requested URL and the document is already loaded
+      and queryable the instant it returns -- no explicit wait.
+    * ``reload`` performs a real fresh fetch: live DOM mutations are discarded
+      and the served HTML is restored (the ``page.refresh()`` retry pattern).
+    * ``back``/``forward`` walk the session history to the correct documents.
+    """
+    # Before: page.get(target_url, retry=3, timeout=10)
+    #  ->  After: page.navigate(url) -- final URL matches, no retry kwargs needed.
+    target = f"{fixtures_server}/basic.html"
+    browser_page.navigate(target)
+    assert browser_page.url == target
+
+    # The headline claim: navigate already waited for "load", so with NO sleep
+    # the document is complete and its content is immediately readable -- this is
+    # exactly what the Before code needed `time.sleep`/`retry` to guarantee.
+    assert browser_page.evaluate("document.readyState") == "complete"
+    assert browser_page.find("#intro").text.startswith("A deterministic page")
+
+    # Before: page.refresh() on a failed load  ->  After: page.reload().
+    # never-lie: mutate live document state, then prove reload re-fetched the
+    # served HTML rather than no-op'ing -- the injected flag is gone and the
+    # title is restored from disk.
+    browser_page.evaluate(
+        "window.__naturo_dirty = true; document.title = 'MUTATED';"
+    )
+    assert browser_page.evaluate("window.__naturo_dirty === true") is True
+    browser_page.reload()
+    assert browser_page.evaluate("typeof window.__naturo_dirty") == "undefined"
+    assert browser_page.evaluate("document.readyState") == "complete"
+    assert browser_page.title == "naturo fixture: basic"
+    assert browser_page.find("#intro").text.startswith("A deterministic page")
+
+    # Before: page.back()/page.forward()  ->  After: same names.
+    # Navigate to a second document so history has two real entries.
+    form_url = f"{fixtures_server}/form.html"
+    browser_page.navigate(form_url)
+    assert browser_page.url == form_url
+    assert browser_page.find("#username").value == ""
+
+    # back() and forward() issue an async history navigation, so settle on a
+    # marker element of the destination document before asserting (wait_for
+    # re-resolves against the freshly loaded DOM).
+    browser_page.back()
+    browser_page.wait_for("#intro", state="attached", timeout=5.0)
+    assert browser_page.url == target
+
+    browser_page.forward()
+    browser_page.wait_for("#username", state="attached", timeout=5.0)
+    assert browser_page.url == form_url
+
+
 def test_iframe_switching_equivalence(
     browser_page: BrowserPage, fixtures_server: str
 ) -> None:
