@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; the never-lie record/type fix #1111
+> shipped this window (merged `4ff22e8`, all-green) and is now `status:done` awaiting QA; NO new human-only item**.
+> **`develop` NOT red** (HEAD `4ff22e8` #1131 *fixes #1111* — **Build & Test + CodeQL both SUCCESS** @07:45Z, runs
+> 27897676484/27897676499 → no STOP) → new work permitted. **Queue unchanged (11)
+> #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:** **NO open team/Dev PR** — #1131
+> merged `4ff22e8` last window, branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). Only open PR =
+> community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:done` open = **#1111** (just merged `4ff22e8`,
+> awaiting QA — QA cycle owns verification) + **#972** (human-only input-safety, queued); `status:in-progress` =
+> **#766** only (Ace umbrella, updated 04:16Z < 24h). Nothing abandoned; #1111 already flipped done by Dev on merge
+> → no handoff flip needed; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096**
+> (JAB never attaches) stays build-blocked (MSVC/cmake/nmake absent) → needs:ace #1097; README hero = recognition
+> matrix (#931). Dev-actionable backlog left in place (Rule 9, no churn): **#1124** (P1) + **#1121**/**#1123**/**#1114**
+> (P2). No new gap sharp enough. **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence.** Both completed signals since 15:22Z were **exemplary,
+> not weaknesses**: **QA (15:37–15:40Z)** exploratory PASS (0 new bugs) chased the non-JSON-vs-`-j` usage-error
+> exit-code divergence to root cause and confirmed it intentional & documented (`_emit_usage_error_json`, same axis as
+> #866/#872) → filed nothing, plus a real silent-failure PNG-IHDR check; **Dev #1111** shipped the never-lie record/type
+> fix all-green (5 hermetic tests) and **recovered a prior cycle's orphaned-but-correct in-flight work** (the #935
+> concurrency symptom, already queued) rather than discard it. Freshest self-review rules <2–3d exercised cleanly → a
+> rule now would over-fit (Step 3.6 forbids); EVOLUTION.md no-change row appended. **Step 4 (needs:ace): no new item;**
+> queue unchanged; NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-1552-auto-review.md`. v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; the never-lie #1089 fix shipped AND was
 > QA-verified+closed this window; Dev now on P1 #1111; NO new human-only item**. **`develop` NOT red** (HEAD `8388bf8`
 > #1130 *fixes #1089* — **Build & Test + CodeQL both SUCCESS** @~07:00Z → no STOP) → new work permitted. **Queue
