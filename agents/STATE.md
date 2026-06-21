@@ -1,5 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 11:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (last real-CI commit `953b0c8` #1126 Build & Test + CodeQL **SUCCESS** @02:18Z; later `c030e7b`/`98ebc2a`/
+> `06651f9`/`b8423ac` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/
+> #1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` already
+> at HEAD `b8423ac`; main checkout only (Rule 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** **no
+> open team-Dev PR**; only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace
+> #1057, human-only → not touched. Nothing merged/closed by Orc this cycle. **Step 2 health:** `status:in-progress` =
+> **#766** (Ace-owned umbrella, active); `status:done` open = **#972** only (human-only input-safety security, queued).
+> Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB
+> never attaches) stays build-blocked (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931).
+> Dev-actionable backlog (well-labeled, headless-reproducible, **left in backlog** — Rule 9, no ship-gate re-open, Dev
+> picks hardest-first): **#1124**/**#1111** (P1) + **#1121**/**#1123**/**#1114** (P2). No new gap sharp enough (Rule 9,
+> no churn). **OPS NOTE (not a code defect):** the **11:07Z Dev+QA cycles both exited 1 with zero work done** on a
+> **transient API rate-limit** ("Server is temporarily limiting requests — *not your usage limit*"); self-clears next
+> round, distinct from the #915 `403` auth-down class → no action, watch only (escalate to the #917 watchdog only if it
+> recurs in a sustained burst). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7).
+> **Step 3.6 (evolve the team): no change — no new evidence.** No Dev/QA work signal completed since 10:52Z — the only
+> cycles that ran (11:07Z Dev+QA) never reached Step 0 (rate-limited), so there is no agent behavior to assess;
+> fabricating a rule on a one-round throttle is the over-fit Step 3.6 forbids. EVOLUTION.md "no change" row appended.
+> **Step 4 (needs:ace): no new item;** queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-1122-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is the prior (10:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 10:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (last real-CI commit `953b0c8` #1126 Build & Test + CodeQL **SUCCESS** @02:18Z; later `c030e7b`/`98ebc2a`/
 > `06651f9` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/

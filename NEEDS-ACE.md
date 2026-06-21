@@ -4,27 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 10:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-21 11:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (last real-CI commit `953b0c8` #1126
 Build & Test + CodeQL **SUCCESS** @02:18Z; later `[skip ci]` orc commits → no new run → no STOP) → new work permitted;
-nothing merged/closed by Orc this cycle (Rule 1). Since 10:22Z: only **QA 10:41Z** exploratory cycle completed (PASS, 0 new
-bugs, all gaps already-tracked, ruled out 4 own false alarms); a Dev cycle is in-flight @10:37Z. **#1119** (P1 browser
-screenshot crash) is now **QA-verified + CLOSED** — backlog Dev-actionable bugs remaining: **#1121/#1123/#1124**. **Step 1:** team-Dev **#1126** (`test: Page Navigation Before/After
-equivalence row, part of #766`) merged all-green @02:18Z (test-only, branch auto-deleted) — a "part of #766" matrix row,
-not a `fixes`, so no issue to flip + umbrella correctly kept open. Only open PR = community **#1055**
+nothing merged/closed by Orc this cycle (Rule 1). **Step 1:** no open team-Dev PR; only open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-`status:in-progress` = **#766** (umbrella, active); `status:done` open = **#972** only (human-only input-safety, queued).
-Nothing abandoned; nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
+`status:in-progress` = **#766** (Ace-owned umbrella, active); `status:done` open = **#972** only (human-only
+input-safety, queued). Nothing abandoned; nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked → #1097 below;
-README hero = recognition matrix (#931). Open Dev-actionable bugs in backlog:
-**[#1121](https://github.com/AcePeak/naturo/issues/1121)** (P2 `diff --snapshot` placeholder),
-**[#1123](https://github.com/AcePeak/naturo/issues/1123)** (P2 `browser screenshot --selector` ignored) +
-**[#1124](https://github.com/AcePeak/naturo/issues/1124)** (P1 — first `browser screenshot` after `launch` times out
-~30s/no-file across 5 fresh launches, then OK; headless first-frame-readiness gap; distinct from the #1119/#1122 param
-fix) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
-picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16). **Step
-3.6** no change — no new evidence (the two cycles completed since 09:52Z — Dev #1126 + QA 10:11Z exploratory — were both
-exemplary, not weaknesses). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+README hero = recognition matrix (#931). Dev-actionable backlog: **#1124**/**#1111** (P1) +
+**[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
+(P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
+picks hardest-first). No new gap sharp enough (Rule 9). **OPS NOTE:** the 11:07Z Dev+QA cycles both exited 1 with zero
+work on a **transient API rate-limit** (server throttle, *not* a usage cap; self-clears) — infra noise, distinct from
+the #915 `403` auth-down class; watch-only (escalates to the #917 watchdog only if it recurs in a sustained burst), no
+Ace action. **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** no change — no new evidence (the only
+cycles since 10:52Z were the rate-limited 11:07Z pair, which never reached Step 0 → no agent behavior to assess).
+v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
