@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +25,33 @@ pytestmark = pytest.mark.skipif(not _HAS_PIL, reason="Pillow not installed")
 @pytest.fixture()
 def runner():
     return CliRunner()
+
+
+def _invoke_run(monkeypatch, capsys, argv: list[str]) -> tuple[int, str, str]:
+    """Drive the real console-script entry point ``naturo.cli.run``.
+
+    ``CliRunner(main)`` dispatches the Click group directly and therefore lets
+    Click handle parse-time usage errors itself (plain text, exit 2). Production
+    instead goes through :func:`naturo.cli.run`, which wraps every usage error in
+    the ``-j`` JSON envelope (``INVALID_INPUT``, exit 1). Tests that assert that
+    envelope must exercise this wrapper, not the bare group.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture, used to set ``sys.argv``.
+        capsys: pytest capture fixture for stdout/stderr.
+        argv: Arguments after the program name (e.g. ``["-j", "visual", ...]``).
+
+    Returns:
+        Tuple of (exit_code, stdout, stderr).
+    """
+    from naturo.cli import run
+
+    monkeypatch.setattr(sys, "argv", ["naturo", *argv])
+    with pytest.raises(SystemExit) as exc_info:
+        run()
+    captured = capsys.readouterr()
+    code = exc_info.value.code
+    return (code if isinstance(code, int) else 0), captured.out, captured.err
 
 
 @pytest.fixture()
@@ -307,6 +335,107 @@ class TestVisualCLI:
         assert "report" in result.output
 
 
+# ── Threshold range validation (#1149) ──────────────────────────────────────
+
+
+class TestThresholdRangeValidation:
+    """#1149: ``--threshold`` must be validated to its documented ``[0.0, 1.0]``
+    range. An out-of-range value (e.g. typing ``95`` for ``0.95``) previously
+    made pixel-identical images report ``match: false`` — a guaranteed false
+    CI regression — instead of erroring.
+    """
+
+    def test_compare_threshold_above_one_human_exit2(
+        self, runner, tmp_dirs, red_image, red_copy
+    ):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, [
+            "visual", "compare", "s1", "--current", str(red_copy),
+            "--threshold", "95",
+        ])
+        # Click rejects at parse time (exit 2); identical images are never
+        # reported as a mismatch.
+        assert result.exit_code == 2
+        assert "0.0" in result.output and "1.0" in result.output
+        assert "PASS" not in result.output and "FAIL" not in result.output
+
+    def test_compare_threshold_below_zero_human_exit2(
+        self, runner, tmp_dirs, red_image, red_copy
+    ):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, [
+            "visual", "compare", "s1", "--current", str(red_copy),
+            "--threshold", "-0.5",
+        ])
+        assert result.exit_code == 2
+        assert "FAIL" not in result.output
+
+    def test_compare_threshold_in_range_still_passes(
+        self, runner, tmp_dirs, red_image, red_copy
+    ):
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        result = runner.invoke(main, [
+            "visual", "compare", "s1", "--current", str(red_copy),
+            "--threshold", "0.95",
+        ])
+        assert result.exit_code == 0
+        assert "PASS" in result.output
+
+    def test_compare_threshold_boundary_values_accepted(
+        self, runner, tmp_dirs, red_image, red_copy
+    ):
+        """The inclusive bounds 0.0 and 1.0 are valid thresholds."""
+        runner.invoke(main, ["visual", "baseline", "s1", "--from", str(red_image)])
+        for thr in ("0.0", "1.0"):
+            result = runner.invoke(main, [
+                "visual", "compare", "s1", "--current", str(red_copy),
+                "--threshold", thr,
+            ])
+            assert result.exit_code == 0, f"threshold {thr} should be accepted"
+
+    def test_compare_threshold_above_one_json_envelope(
+        self, monkeypatch, capsys, tmp_dirs, red_image, red_copy
+    ):
+        """The real ``run()`` entry maps the parse error to an INVALID_INPUT
+        envelope (exit 1), not a manufactured ``match: false``."""
+        code, out, _ = _invoke_run(monkeypatch, capsys, [
+            "-j", "visual", "compare", "s1", "--current", str(red_copy),
+            "--threshold", "95",
+        ])
+        assert code == 1
+        data = json.loads(out)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "match" not in data
+
+    def test_diff_threshold_out_of_range_json_envelope(
+        self, monkeypatch, capsys, red_image, red_copy
+    ):
+        code, out, _ = _invoke_run(monkeypatch, capsys, [
+            "-j", "visual", "diff", str(red_image), str(red_copy),
+            "--threshold", "2.0",
+        ])
+        assert code == 1
+        data = json.loads(out)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert "match" not in data
+
+    def test_report_threshold_out_of_range_json_envelope(
+        self, monkeypatch, capsys, tmp_dirs, tmp_path
+    ):
+        current = tmp_path / "current"
+        current.mkdir()
+        code, out, _ = _invoke_run(monkeypatch, capsys, [
+            "-j", "visual", "report", "--current-dir", str(current),
+            "--threshold", "50",
+        ])
+        assert code == 1
+        data = json.loads(out)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+
 # ── Enterprise feature tests ────────────────────────────────────────────────
 
 
@@ -403,6 +532,71 @@ class TestSuiteLoading:
         }))
         with pytest.raises(ValueError, match="current"):
             visual_mod.load_suite(suite_file)
+
+    def test_load_top_level_threshold_above_one_rejected(self, tmp_path):
+        """#1149: an out-of-range top-level suite threshold is rejected at load."""
+        suite_file = tmp_path / "thr.json"
+        suite_file.write_text(json.dumps({
+            "threshold": 95,
+            "tests": [{"name": "s1", "current": "shots/s1.png"}],
+        }))
+        with pytest.raises(ValueError, match="0.0"):
+            visual_mod.load_suite(suite_file)
+
+    def test_load_top_level_threshold_below_zero_rejected(self, tmp_path):
+        suite_file = tmp_path / "thr_neg.json"
+        suite_file.write_text(json.dumps({
+            "threshold": -0.5,
+            "tests": [{"name": "s1", "current": "shots/s1.png"}],
+        }))
+        with pytest.raises(ValueError, match="range"):
+            visual_mod.load_suite(suite_file)
+
+    def test_load_per_test_threshold_out_of_range_rejected(self, tmp_path):
+        """#1149: a per-test out-of-range threshold is rejected at load too."""
+        suite_file = tmp_path / "thr_test.json"
+        suite_file.write_text(json.dumps({
+            "threshold": 0.95,
+            "tests": [{"name": "s1", "current": "shots/s1.png", "threshold": 2.0}],
+        }))
+        with pytest.raises(ValueError, match="s1"):
+            visual_mod.load_suite(suite_file)
+
+    def test_load_non_numeric_threshold_rejected(self, tmp_path):
+        """A non-numeric threshold is rejected cleanly, not via a later TypeError."""
+        suite_file = tmp_path / "thr_str.json"
+        suite_file.write_text(json.dumps({
+            "threshold": "0.95",
+            "tests": [{"name": "s1", "current": "shots/s1.png"}],
+        }))
+        with pytest.raises(ValueError, match="number"):
+            visual_mod.load_suite(suite_file)
+
+    def test_load_boundary_thresholds_accepted(self, tmp_path):
+        """Inclusive bounds 0.0 and 1.0 load successfully."""
+        suite_file = tmp_path / "thr_bounds.json"
+        suite_file.write_text(json.dumps({
+            "threshold": 1.0,
+            "tests": [{"name": "s1", "current": "shots/s1.png", "threshold": 0.0}],
+        }))
+        suite = visual_mod.load_suite(suite_file)
+        assert suite.threshold == 1.0
+        assert suite.tests[0].threshold == 0.0
+
+    def test_suite_cli_out_of_range_threshold_json_envelope(self, runner, tmp_path):
+        """``visual suite`` surfaces an out-of-range JSON threshold as
+        INVALID_INPUT rather than running a poisoned suite (#1149)."""
+        suite_file = tmp_path / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "Poisoned",
+            "threshold": 95,
+            "tests": [{"name": "s1", "current": str(tmp_path / "s1.png")}],
+        }))
+        result = runner.invoke(main, ["visual", "suite", str(suite_file), "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
 
 
 class TestRunSuite:
