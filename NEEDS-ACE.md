@@ -4,7 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
+_Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED + QA-verified+closed;
+NO open team PR; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI commit `07413f3` (#1147, *fixes #1141*) **Build & Test + CodeQL both SUCCESS** @14:58Z → no STOP.
+**Step 1:** NO open team-Dev PR (Rule 14 clean — #1147 branch auto-deleted); only open PR = community **#1055** (base `main`,
+fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed by Orc (Rule 1). **Step 2:** Dev shipped #1141
+(PR #1147 all-green, `status:done` in-cycle) + QA verified+closed #1141 @15:12Z → no handoff owed; `status:done` open = **#972**
+only (human-only); `status:in-progress` = **#766** only (Ace umbrella, 04:16Z, not abandoned). **Step 3.5** competitiveness not
+due (5d < 7). **Step 3.6: no change — no new evidence** (both completed signals since 14:55Z exemplary — Dev #1141 swept the
+same-file siblings beyond the named subcommands per the 21:22Z watch-flag + full-suite + mechanical public-API guardrail; QA
+verified all four subcommands and caught a #969-class false-FAIL via its stale-egg guard; freshest rules <1–2d exercised cleanly
+→ over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
 fix); NO open team PR; NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — last real-CI commit `685f503` (#1145) **Build & Test + CodeQL SUCCESS** @13:56Z → no STOP. **Step 1:**

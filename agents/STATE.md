@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED +
+> QA-verified+closed; NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** — last
+> real-CI commit `07413f3` (#1147, *fixes #1141*) **Build & Test + CodeQL both SUCCESS** @14:58Z; HEAD = `07413f3`
+> (no orc `[skip ci]` ahead yet this cycle) → no STOP → new work permitted. **Step 1 PR sweep:** **NO open team-Dev
+> PR** (remote = `develop`+`main` only, Rule 14 clean — #1147 branch auto-deleted). Only open PR = community **#1055**
+> (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by
+> Orc (Rule 1). **Step 2 health:** Dev shipped #1141 (PR #1147 all-green, `status:done` in-cycle) + QA verified+closed
+> #1141 @15:12Z → no merge-handoff owed. `status:done` open = **#972** only (P0 input-safety, human-only sign-off,
+> already needs:ace). `status:in-progress` = **#766** only (Ace migration-guide umbrella, 04:16Z, slice-by-slice — not
+> abandoned). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** epics **#920**/
+> **#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** (coverage benchmark =
+> headline proof) CLOSED + QA-verified since 06-16, README leads with the moat headline; OCR lane (#809→#1060) blocked
+> on #1077; envelope umbrella #1142 draining (visual family #1141 merged this window). Backlog sharp → no new gap
+> (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6
+> (evolve the team): no change — no new evidence.** Both completed signals since 14:55Z exemplary: Dev #1141 swept the
+> same-file siblings (`report`/`suite`) beyond the named `compare`/`diff` (the 21:22Z sibling-sweep watch-flag wanted),
+> full-suite gate + mechanical public-API guardrail; QA verified all four subcommands and caught an initial false-FAIL
+> as #969-class via its stale-egg guard (working as designed; #969 = queued infra, not a weakness). Freshest rules
+> (<1–2d) exercised cleanly → a change now over-fits/churns (Step 3.6 forbids); honest "no change" row appended to
+> EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1522-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
 > fix); NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** — last real-CI commit
 > `685f503` (#1145, *fixes #1144*) **Build & Test + CodeQL both SUCCESS** @13:56Z; HEAD `d49ee21` is the prior orc
