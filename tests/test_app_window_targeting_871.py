@@ -96,15 +96,18 @@ def test_pid_resolves_to_hwnd(cmd, backend_method, mock_backend):
 
 
 @pytest.mark.parametrize("cmd,backend_method", _STATE_COMMANDS)
-def test_app_flag_targets_by_name(cmd, backend_method, mock_backend):
-    """--app is accepted on every window-state command and targets by title."""
+def test_app_flag_targets_by_process_name(cmd, backend_method, mock_backend):
+    """--app resolves by process name via the canonical resolver, not by title
+    (#1065 — parity with see/capture/click and list windows)."""
     with patch("naturo.backends.base.get_backend", return_value=mock_backend):
         result = runner.invoke(cmd, ["--app", "Notepad"])
     assert result.exit_code == 0, result.output
-    mock_backend._resolve_hwnd.assert_not_called()
+    mock_backend._resolve_hwnd.assert_called_once_with(
+        app="Notepad", window_title=None, pid=None
+    )
     call_kwargs = getattr(mock_backend, backend_method).call_args.kwargs
-    assert call_kwargs["title"] == "Notepad"
-    assert call_kwargs["hwnd"] is None
+    assert call_kwargs["title"] is None
+    assert call_kwargs["hwnd"] == 999
 
 
 @pytest.mark.parametrize("cmd,backend_method", _STATE_COMMANDS)
@@ -132,12 +135,16 @@ def test_move_accepts_app_and_pid(mock_backend):
     mock_backend.move_window.assert_called_once_with(x=10, y=20, title=None, hwnd=999)
 
 
-def test_move_app_flag_targets_by_name(mock_backend):
-    """app move --app targets by title (parity with the other state commands)."""
+def test_move_app_flag_targets_by_process_name(mock_backend):
+    """app move --app resolves by process name (parity with the other state
+    commands and the gold standard — #1065)."""
     with patch("naturo.backends.base.get_backend", return_value=mock_backend):
         result = runner.invoke(app_move, ["--app", "Notepad", "--x", "10", "--y", "20"])
     assert result.exit_code == 0, result.output
-    mock_backend.move_window.assert_called_once_with(x=10, y=20, title="Notepad", hwnd=None)
+    mock_backend._resolve_hwnd.assert_called_once_with(
+        app="Notepad", window_title=None, pid=None
+    )
+    mock_backend.move_window.assert_called_once_with(x=10, y=20, title=None, hwnd=999)
 
 
 def test_pid_combined_with_window_filter(mock_backend):
