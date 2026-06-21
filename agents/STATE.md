@@ -1,5 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; the team-Dev never-lie error-code
+> taxonomy fix #1135 landed itself this window (`d7280eb`, all required checks green via its own auto-merge) and is
+> now `status:done` awaiting QA; NO new human-only item; queue unchanged at 12.** **`develop` NOT red** — last
+> real-CI commit `c00227e` (#1134) Build & Test + CodeQL both SUCCESS @08:58Z; the `d7280eb` merge fired a fresh
+> CI run **IN_PROGRESS** (no failure) → no STOP → new work permitted. **Step 1 PR sweep:** team-Dev **PR #1137**
+> (`browser screenshot emits registered, correctly-attributed error codes`, *fixes #1135*, base `develop`)
+> **auto-merged `d7280eb` @09:22:56Z** on its own once macOS Python Tests went green — all 15 checks SUCCESS;
+> Dev correctly classified it **non-public-API** (registering an `ErrorCode` is the dev-cycle-prescribed
+> remediation, no signature/flag change) so `--auto` ON was correct → Orc left it to land itself, did not merge.
+> Branch auto-deleted (Rule 14 clean: remote = `develop`+`main` only). Community **#1055** (base `main`, fork,
+> `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1).
+> **Step 2 health:** flipped **#1135 → `status:done`** (Rule 1 SHA `d7280eb`, awaiting QA — the dev-cycle handoff
+> that prevents premature done on a still-red PR). `status:done` open = **#1135** + **#972** (human-only
+> input-safety, queued). `status:in-progress` = **#766** only (Ace umbrella, 04:16Z < 24h). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches)
+> stays build-blocked (MSVC/cmake/msbuild/vswhere all absent — re-proved fresh by Dev #1135) → needs:ace #1097;
+> README hero = recognition matrix (#931). No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness:
+> NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7) → skipped per weekly cadence. **Step 3.6 (evolve the team):
+> no change — no new evidence.** Both completed signals since 16:52Z were **exemplary**: **Dev #1135** directly
+> exercised the brand-new 16:52Z public-API trigger and **applied it correctly** (explicitly reasoned ErrorCode
+> registration is not a public-signature change → kept `--auto` ON, the rule working as designed), re-proved the
+> native build-block fresh, added a self-maintaining sweep test; **QA #1123** verified+closed the crop fix on real
+> headless Chrome and ruled out a transient CDP race as harness flake. Freshest rule <1 cycle old, exercised
+> cleanly → a tweak now would over-fit (Step 3.6 forbids churn); EVOLUTION.md no-change row appended. **Step 4
+> (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1722-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **ENFORCEMENT cycle: a public-API change landed
 > unattended via auto-merge; queued for Ace + Dev guardrail tightened.** **`develop` NOT red** — HEAD `c00227e`
 > #1134 (*fixes #1123*) **Build & Test + CodeQL both SUCCESS** @08:58Z; prior `dc1a79b` #1132 also green → no STOP →

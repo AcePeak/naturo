@@ -4,26 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **ENFORCEMENT: a public-API change landed unattended →
-queued + Dev guardrail tightened** → **queue now 12 (+#1136)**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red (HEAD `c00227e` #1134 *fixes
-#1123* — **Build & Test + CodeQL both SUCCESS** @08:58Z; prior `dc1a79b` #1132 green) → no STOP → new work permitted.
-**Step 1:** team-Dev **PR #1134** (`screenshot --selector` crops to element, base `develop`) **auto-merged `c00227e`
-@08:55Z before Orc could hold it** — it added a public-API param `BrowserPage.screenshot(..., selector=...)` + made
-the inert `--selector` flag functional with `--auto` ON. Per the dev-cycle public-API guardrail this is a human-only
-sign-off (holds even when doc-promised) → **queued [#1136](https://github.com/AcePeak/naturo/issues/1136)** (recommend
-ratify). Branch auto-deleted (Rule 14 clean). Community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057),
-base `main`, fork, UNSTABLE) — untouched. **Step 2:** flipped **#1123 → status:done** (Rule 1 SHA `c00227e`, awaiting
-QA). `status:done` open = **#972** (human-only, queued) + #1123. `status:in-progress` = **#766** only (Ace umbrella,
-04:16Z < 24h); #1065 verified+closed by QA earlier this window (`dc1a79b`). Nothing abandoned; nothing for Orc to
-close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)**
-(JAB) stays build-blocked (MSVC/cmake absent) → #1097; README hero = matrix (#931). No new gap sharp enough (Rule 9).
-**Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 CHANGE MADE:** Dev auto-merged a public-surface
-change unattended **again** (#1134, 2nd after #1104), rationalizing *"honors the already-committed documented contract;
-no doc change needed"* — the exact inversion the guardrail forbids → added a **mechanical** decision trigger to
-`dev-cycle.md` ("honors a doc" is a trigger, not an exemption; test = does a public signature change / inert flag
-become functional → auto-merge OFF), EVOLUTION row appended. v0.3.2 ship-gate unchanged (FULLY MET — release is your
-call, #914)._
+_Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; the team-Dev never-lie error-code
+taxonomy fix #1135 landed itself this window (`d7280eb`, all checks green via its own auto-merge) and is now
+status:done awaiting QA; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — last real-CI commit `c00227e`
+(#1134) **Build & Test + CodeQL both SUCCESS** @08:58Z; the `d7280eb` merge fired a fresh CI run IN_PROGRESS (no
+failure) → no STOP → new work permitted. **Step 1:** team-Dev **PR #1137** (`browser screenshot emits registered,
+correctly-attributed error codes`, *fixes #1135*, base `develop`) **auto-merged `d7280eb` @09:22:56Z** on its own once
+macOS Python Tests went green — Dev correctly classified it **non-public-API** (registering an `ErrorCode` is the
+prescribed remediation, no signature/flag change) so `--auto` ON was correct → Orc left it to land itself. Branch
+auto-deleted (Rule 14 clean). Community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`,
+fork, UNSTABLE) — untouched. **Step 2:** flipped **#1135 → status:done** (Rule 1 SHA `d7280eb`, awaiting QA).
+`status:done` open = **#1135** + **#972** (human-only, queued). `status:in-progress` = **#766** only (Ace umbrella,
+04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
+**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB) stays build-blocked (MSVC/cmake/msbuild/vswhere all
+absent — re-proved fresh by Dev #1135) → #1097; README hero = matrix (#931). No new gap sharp enough (Rule 9).
+**Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 no change — no new evidence:** both completed
+signals since 16:52Z were exemplary — Dev #1135 **applied the brand-new 16:52Z public-API trigger correctly** (ErrorCode
+registration is not a public-signature change → `--auto` ON correct, the rule working as designed) and QA #1123
+verified+closed the crop fix on real Chrome, ruling out a transient CDP race as harness flake. Freshest rule <1 cycle
+old, exercised cleanly → a tweak now would over-fit (EVOLUTION no-change row appended). v0.3.2 ship-gate unchanged
+(FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
