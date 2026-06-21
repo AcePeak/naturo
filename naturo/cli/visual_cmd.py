@@ -89,7 +89,7 @@ def _parse_region(value: str) -> tuple[int, int, int, int]:
 @click.argument("name")
 @click.option("--current", required=True, type=click.Path(exists=True),
               help="Path to current screenshot to compare.")
-@click.option("--threshold", type=float, default=0.95,
+@click.option("--threshold", type=click.FloatRange(0.0, 1.0), default=0.95,
               help="Similarity threshold (0.0-1.0, default 0.95).")
 @click.option("--ignore-region", multiple=True,
               help="Region to mask (x,y,w,h). Repeatable.")
@@ -144,7 +144,8 @@ def visual_compare(name: str, current: str, threshold: float,
 @click.argument("image1", type=click.Path(exists=True))
 @click.argument("image2", type=click.Path(exists=True))
 @click.option("--output", "-o", type=click.Path(), help="Save diff image to path.")
-@click.option("--threshold", type=float, default=0.95, help="Similarity threshold.")
+@click.option("--threshold", type=click.FloatRange(0.0, 1.0), default=0.95,
+              help="Similarity threshold (0.0-1.0, default 0.95).")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def visual_diff(image1: str, image2: str, output: Optional[str],
                 threshold: float, json_output: bool):
@@ -248,7 +249,8 @@ def visual_delete(name: str, force: bool, json_output: bool):
 @click.argument("names", nargs=-1)
 @click.option("--current-dir", type=click.Path(exists=True),
               help="Directory containing current screenshots (name.png).")
-@click.option("--threshold", type=float, default=0.95, help="Similarity threshold.")
+@click.option("--threshold", type=click.FloatRange(0.0, 1.0), default=0.95,
+              help="Similarity threshold (0.0-1.0, default 0.95).")
 @click.option("--ignore-region", multiple=True,
               help="Region to mask globally (x,y,w,h). Repeatable.")
 @click.option("--output", "-o", type=click.Path(), default=None,

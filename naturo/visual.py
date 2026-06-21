@@ -546,6 +546,38 @@ class Suite:
     threshold: float = 0.95
 
 
+def _validate_suite_threshold(value: object, context: str) -> float:
+    """Validate a suite-sourced threshold is a real number in ``[0.0, 1.0]``.
+
+    Similarity is a fraction in ``[0, 1]``, so a threshold outside that range
+    silently breaks every comparison (``> 1.0`` fails identical images, ``< 0.0``
+    passes everything). Rejecting it here keeps the JSON ``threshold`` field held
+    to the same contract Click's ``FloatRange`` enforces on the ``--threshold``
+    flag (#1149).
+
+    Args:
+        value: The threshold sourced from the suite JSON (any JSON type).
+        context: Human-readable description of where the value came from, used
+            in the error message (e.g. ``"suite threshold"``).
+
+    Returns:
+        The validated threshold as a float.
+
+    Raises:
+        ValueError: If the value is not a real number in ``[0.0, 1.0]``.
+    """
+    # ``bool`` is a subclass of ``int`` — reject ``true``/``false`` explicitly.
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(
+            f"{context} must be a number in the range 0.0-1.0, got: {value!r}"
+        )
+    if not 0.0 <= value <= 1.0:
+        raise ValueError(
+            f"{context} {float(value)} is not in the range 0.0<=x<=1.0"
+        )
+    return float(value)
+
+
 def load_suite(path: str | Path) -> Suite:
     """Load a visual regression suite from a JSON file.
 
@@ -557,7 +589,8 @@ def load_suite(path: str | Path) -> Suite:
 
     Raises:
         FileNotFoundError: If the suite file does not exist.
-        ValueError: If the suite JSON is invalid.
+        ValueError: If the suite JSON is invalid (malformed structure or a
+            threshold outside the documented ``[0.0, 1.0]`` range).
     """
     p = Path(path)
     if not p.exists():
@@ -569,18 +602,25 @@ def load_suite(path: str | Path) -> Suite:
     if "tests" not in data or not isinstance(data["tests"], list):
         raise ValueError("Suite JSON must contain a 'tests' array")
 
-    suite_threshold = data.get("threshold", 0.95)
+    suite_threshold = _validate_suite_threshold(
+        data.get("threshold", 0.95), "suite threshold"
+    )
     tests = []
     for t in data["tests"]:
         if "name" not in t or "current" not in t:
             raise ValueError("Each test must have 'name' and 'current' fields")
+        test_threshold = t.get("threshold")
+        if test_threshold is not None:
+            test_threshold = _validate_suite_threshold(
+                test_threshold, f"test {t['name']!r} threshold"
+            )
         regions = None
         if "ignore_regions" in t:
             regions = [tuple(r) for r in t["ignore_regions"]]
         tests.append(SuiteTest(
             name=t["name"],
             current=t["current"],
-            threshold=t.get("threshold"),
+            threshold=test_threshold,
             ignore_regions=regions,
         ))
 
