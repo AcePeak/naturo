@@ -4,7 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 04:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one NEW team-Dev
+_Last refreshed: 2026-06-22 05:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1156
+(electron-decode/hermeticity, via PR #1158) now QA-verified+closed; NO open team PR; one Dev cycle in-flight
+(#1100 test_verify hermeticity); NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — merge commit `959411d` (#1158, *fixes #1156*) **CodeQL + Build & Test both SUCCESS** @20:53Z;
+HEAD `7138f8d` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** NO open team-Dev PR (#1158 auto-merged
+itself `959411d`, branch auto-deleted, Rule 14 clean). Community **#1055** (base `main`, fork, UNSTABLE → queued
+#1057, human-only) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed — #1156
+already flipped `status:done` by Dev on merge, then **QA verified+closed it @05:08Z** (cited `959411d`, Rule 1).
+`status:done` open = **#972** only (human-only) → untouched; `status:in-progress` = **#1100** (Dev active, #1133
+family — not abandoned) + **#766** (Ace umbrella). **Step 3.5** competitiveness not due (6d < 7; due 06-23).
+**Step 3.6: no change — no new evidence** (only completed signal since 04:52Z = QA #1156-verify, exemplary —
+live 669-process no-crash runtime check the offline runner can't do + forced-`stdout=None` mock, cited merged
+commit, traced a pytest tmp-dir PermissionError to a harness artifact and filed nothing false; Dev #1100
+in-flight; freshest dev-cycle.md HEAD-check rule landed <1d ago → over-fit forbidden; honest no-change row).
+v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-22 04:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one NEW team-Dev
 PR #1158 (*fixes #1156* electron-decode/hermeticity) MERGEABLE + auto-merge ON, landing itself; NO new
 human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
@@ -119,53 +136,6 @@ failed-crop never-lie defect + swept a latent ZERO_SIZE_ELEMENT mis-code, ran fu
 handled an orphaned-WIP #935 hazard the safe way [byte-identical base → adopt+self-review, not a blind wipe]; QA 15:40Z PASS
 no-defects, ruled out 3 of its own flag-errors as harness lies and filed nothing false; freshest rules <1–3d exercised cleanly
 → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
-
-_Earlier: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED + QA-verified+closed;
-NO open team PR; NO new human-only item** → **queue unchanged at 12**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
-`develop` GREEN — last real-CI commit `07413f3` (#1147, *fixes #1141*) **Build & Test + CodeQL both SUCCESS** @14:58Z → no STOP.
-**Step 1:** NO open team-Dev PR (Rule 14 clean — #1147 branch auto-deleted); only open PR = community **#1055** (base `main`,
-fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed by Orc (Rule 1). **Step 2:** Dev shipped #1141
-(PR #1147 all-green, `status:done` in-cycle) + QA verified+closed #1141 @15:12Z → no handoff owed; `status:done` open = **#972**
-only (human-only); `status:in-progress` = **#766** only (Ace umbrella, 04:16Z, not abandoned). **Step 3.5** competitiveness not
-due (5d < 7). **Step 3.6: no change — no new evidence** (both completed signals since 14:55Z exemplary — Dev #1141 swept the
-same-file siblings beyond the named subcommands per the 21:22Z watch-flag + full-suite + mechanical public-API guardrail; QA
-verified all four subcommands and caught a #969-class false-FAIL via its stale-egg guard; freshest rules <1–2d exercised cleanly
-→ over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
-
-_Earlier: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
-fix); NO open team PR; NO new human-only item** → **queue unchanged at 12**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
-`develop` GREEN — last real-CI commit `685f503` (#1145) **Build & Test + CodeQL SUCCESS** @13:56Z → no STOP. **Step 1:**
-NO open team-Dev PR (Rule 14 clean); only open PR = community **#1055** (queued #1057, human-only) → untouched; nothing
-merged/closed by Orc (Rule 1). **Step 2:** no merged team PR this window → no handoff owed; `status:done` open = **#972**
-only (human-only); `status:in-progress` = **#1141** (Dev in-flight, 14:45Z) + **#766** (Ace umbrella); QA filed P2
-**#1146** (`find --help` `@save-btn` doc vs `@app/name` resolver) — normal Dev backlog, not human-only. **Step 3.5**
-competitiveness not due (5d < 7). **Step 3.6: no change — no new evidence** (only completed signal since 14:22Z =
-QA-Mariana 14:40Z, exemplary; #1146 is a single incident already covered by dev-cycle.md L129–132; freshest rules <1d
-exercised cleanly → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
-Prior header below kept as history.)
-
-_Earlier: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy; both this morning's recognition/round-trip
-fixes (#1084 process_name round-trip + #1144 find-strategy auto-detect) are now QA-verified+closed; NO open team PR;
-NO new human-only item** → **queue unchanged at 12**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
-`develop` GREEN — last real-CI commit `685f503` (#1145, *fixes #1144*) **Build & Test + CodeQL both SUCCESS** @13:56Z;
-HEAD `29fbcd2` is the prior orc `[skip ci]` (no run) → no STOP → new work permitted. **Step 1:** **NO open team-Dev
-PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055**
-([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE, no review/comments) — untouched.
-Nothing merged/closed by Orc (Rule 1). **Step 2:** **#1084 + #1144 both verified+closed by QA @14:11Z** (no handoff
-owed); `status:done` open now = **#972** only (human-only security sign-off, already queued). `status:in-progress` =
-**#766** only (Ace umbrella, 04:16Z, slice-by-slice — not abandoned). Nothing abandoned; nothing for Orc to close
-(Rule 1). **Step 3 (recognition moat, Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/
-**#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline
-proof) **CLOSED + QA-verified since 06-16**, README leads with the moat headline; recognition pulled forward across
-recent windows via #1144/#1145 (find-engine #809 slice — #809 now narrows to OCR-only, blocked on #1077). **Step 3.5**
-competitiveness not due (5d < 7 since 06-16). **Step 3.6: no change — no new evidence** — both completed signals since
-13:52Z were exemplary (QA verified+closed #1084+#1144 applying the just-added 13:52Z UTF-8/no-pipe rule cleanly; Dev
-shipped #1144 HARDEST-FIRST with a proven env-block + full-suite gate + mechanical public-API check); the 13:52Z rule
-is <30 min old and was just exercised cleanly, so a change now would over-fit/churn (Step 3.6 forbids). v0.3.2
-ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
