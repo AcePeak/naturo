@@ -4,7 +4,30 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 06:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1100
+_Last refreshed: 2026-06-22 07:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one open team-Dev
+PR #1163 (*fixes #1146* find --help saved-selector examples) MERGEABLE + auto-merge SQUASH ON, landing itself;
+QA filed one fresh P2 (#1162 — UNKNOWN_OPTION/UNKNOWN_COMMAND `-j` category miss) feeding Dev; NO new human-only
+item; Step 3.6 honest no-change** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI `d79647f` (#1161, *fixes #1100*) **Build & Test + CodeQL both SUCCESS**; HEAD
+`c4a8207` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** ONE open team-Dev PR **#1163**
+(`fix/issue-1146-find-help-saved-selector`→`develop`, *fixes #1146*) is **MERGEABLE + auto-merge SQUASH ON**;
+`BLOCKED` only on the still-running Python test matrix + Analyze c-cpp, every completed check SUCCESS (Build C++,
+Lint & Type, Version, Commit Author, Analyze python) → left to land on its own (pure docs/help-text, no public-API).
+Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed BY
+Orc (Rule 1). **Step 2:** no handoff owed (no team PR merged — #1163 still in CI; its `status:done` flip is Dev's
+on-merge job). `status:done` open = **#972** only (human-only) → untouched; `status:in-progress` = **#1146** (active,
+PR #1163 in CI) + **#766** (Ace umbrella, `from:ace` — left). **Step 3:** backlog sharp & self-feeding
+(#1162/#1160/#1159/#1154/#897 feed Dev) → no new gap (Rule 9). **Step 3.5** competitiveness not due (6d < 7; due
+06-23). **Step 3.6: no change — no new evidence** (both completed cycles since 06:52Z exemplary — QA @07:12Z filed
+P2 #1162 [usage-path `-j` category miss; ruled out the 39-Calculator `list apps` anomaly as machine clutter, filed
+nothing false; zero intrusive input]; Dev @07:20Z shipped PR #1163 [re-proved native block, adopted+finished a
+near-complete prior-cycle fix the safe #935 way, fixed every saved-selector example + a regression test walking the
+docstring AND every option-help string, applied the 18:52Z HEAD-check rule]; freshest dev-cycle.md HEAD-check rule
+landed <1d ago → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior
+header below kept as history.)
+
+_Earlier: 2026-06-22 06:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1100
 (test_verify NonWindows hermeticity) now QA-verified+closed (handoff fully complete); NO open team PR;
 one Dev cycle in-flight; NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.

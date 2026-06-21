@@ -1,6 +1,39 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-22 06:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1100 (test_verify
+> Last refreshed: 2026-06-22 07:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one open team-Dev PR
+> #1163 (*fixes #1146* find --help saved-selector examples) MERGEABLE + auto-merge SQUASH ON, landing itself; QA filed
+> one fresh P2 (#1162 — UNKNOWN_OPTION/UNKNOWN_COMMAND `-j` category miss) feeding Dev; NO new human-only item; Step
+> 3.6 honest no-change; queue unchanged at 12.**)
+> **`develop` GREEN** — last real-CI `d79647f` (#1161, *fixes #1100*) **Build & Test + CodeQL both SUCCESS**; HEAD
+> `c4a8207` = prior orc `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:** ONE open team-Dev
+> PR **#1163** (`fix/issue-1146-find-help-saved-selector` → `develop`, *fixes #1146*) is **MERGEABLE + auto-merge
+> SQUASH ON** (enabled 23:20Z); `BLOCKED` only because the Python test matrix + Analyze c-cpp are still running —
+> every completed check SUCCESS (Build C++, Lint & Type, Version, Commit Author, Analyze python) → **left to land on
+> its own** (never merge outside its own auto-merge, Rule 1/2). Pure docs/help-text (no public-API) → auto-merge
+> eligible. Community **#1055** (@muhamedfazalps, base `main`, fork, MERGEABLE/UNSTABLE) → already queued needs:ace
+> **#1057**, human-only → untouched. Nothing merged/closed BY Orc (Rule 1). **Step 2 health:** no handoff owed (no
+> team PR MERGED this cycle — #1163 still in CI; its `status:done` flip is Dev's on-merge job). `status:done` open =
+> **#972** only (P0 input-safety, human-only) → untouched. `status:in-progress` = **#1146** (active — PR #1163 in CI)
+> + **#766** (Ace migration-guide umbrella, `from:ace`/AcePeak — Ace-owned, not abandoned Dev work → label left).
+> Nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** native-core moat (#920/#932/JAB #1096)
+> build-blocked (MSVC/cmake/nmake/msbuild absent — Dev re-proved @07:20Z) → needs:ace #1097; OCR (#1060) blocked on
+> #1077; #931 benchmark CLOSED+verified, README leads with the moat headline. Backlog sharp & self-feeding
+> (#1162/#1160/#1159/#1154/#897 feed Dev) → no new gap to file (Rule 9, no churn). **Step 3.5 competitiveness: NOT
+> due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6 (evolve the team): no change — no
+> new evidence.** Both completed cycles since 06:52Z exemplary — **QA @07:12Z** filed P2 **#1162**
+> (UNKNOWN_OPTION/UNKNOWN_COMMAND under `-j` emit `category:"unknown"` not `"validation"`; usage-path siblings #1101
+> missed; ruled out the 39-Calculator `list apps` anomaly as machine clutter via OS ground truth and filed nothing
+> false; zero intrusive input) and **Dev @07:20Z** shipped PR #1163 (re-proved native block first, fell to highest
+> *actionable* in-progress item, **adopted a near-complete prior-cycle uncommitted fix** the safe #935 adopt-verify
+> way rather than leave it half-done, fixed EVERY saved-selector example + a regression test walking docstring AND
+> every option-help string, applied the 18:52Z HEAD-check rule). Freshest rule (dev-cycle.md HEAD-check, 06-21
+> 18:52Z <1d) only clean exercises → over-fit forbidden. Honest no-change row appended to EVOLUTION.md. **Step 4
+> (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-22-0722-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-22 06:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1100 (test_verify
 > NonWindows hermeticity) now QA-verified+closed (handoff fully complete); NO open team PR; one Dev cycle in-flight;
 > NO new human-only item; Step 3.6 honest no-change; queue unchanged at 12.**)
 > **`develop` GREEN** — last real-CI `d79647f` (#1161, *fixes #1100*) **Build & Test + CodeQL both SUCCESS**; HEAD
