@@ -1,5 +1,26 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 09:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (HEAD `2069b49` #1125 Build & Test + CodeQL **SUCCESS** @00:48Z; later `6350df4`/`c2a3fed` are `[skip ci]`
+> orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/
+> #915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` already-up-to-date (HEAD `c2a3fed`);
+> main checkout only (Rule 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** **no open team-Dev PR**;
+> only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not
+> touched. Nothing merged/closed this cycle. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active,
+> updated 00:45Z < 24h); `status:done` open = **#972** only (human-only input-safety security, queued). Nothing
+> abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never
+> attaches) stays build-blocked (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). Open
+> Dev-actionable bugs in backlog: **#1121** (P2 `diff --snapshot` placeholder) + **#1123** (P2 `browser screenshot
+> --selector` ignored) + **#1124** (P1 first `browser screenshot` after `launch` ~30s timeout, then OK) — all
+> well-labeled, headless-reproducible, **left in backlog** (Rule 9 — no forced milestone; do NOT re-open the already-MET
+> v0.3.2 ship-gate; Dev picks hardest-first). No new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness:
+> NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change — no new evidence**
+> (no Dev/QA cycle has *completed* since 08:52Z — the 09:07Z Dev/QA are still in-flight; no new PR/issue; fabricating a
+> rule on zero evidence is the over-fit Step 3.6 forbids). EVOLUTION.md "no change" row appended. **Step 4 (needs:ace):
+> no new item;** #1121/#1123/#1124 are code bugs (Dev-actionable, not human-only); queue unchanged; NEEDS-ACE.md header
+> + CI line refreshed. Evidence in `.work/reviews/2026-06-21-0922-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET
+> — release is Ace's call, #914). Detail below is the prior (08:52Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 08:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `2069b49` #1125 Build &
 > Test + CodeQL **SUCCESS** @00:48Z) → new work permitted. **NO new human-only item — queue unchanged
 > #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`;
