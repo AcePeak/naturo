@@ -4,23 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 11:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (last real-CI commit `953b0c8` #1126
-Build & Test + CodeQL **SUCCESS** @02:18Z; later `[skip ci]` orc commits → no new run → no STOP) → new work permitted;
-nothing merged/closed by Orc this cycle (Rule 1). **Step 1:** no open team-Dev PR; only open PR = community **#1055**
+_Last refreshed: 2026-06-21 11:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (last real-CI commit `5a0328a` #1127
+Build & Test + CodeQL **SUCCESS** @03:45Z; later `[skip ci]` orc commits → no new run → no STOP) → new work permitted;
+nothing merged/closed by Orc this cycle (Rule 1). **Step 1:** team-Dev **#1127** (`prove Chrome profile user-data-dir
+persistence equivalence row`, *part of #766*) MERGED `5a0328a` all-green, test-only, branch auto-deleted — "part of"
+not "fixes" → no issue flip, umbrella #766 kept open. Only remaining open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
 `status:in-progress` = **#766** (Ace-owned umbrella, active); `status:done` open = **#972** only (human-only
 input-safety, queued). Nothing abandoned; nothing to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0
-**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked → #1097 below;
-README hero = recognition matrix (#931). Dev-actionable backlog: **#1124**/**#1111** (P1) +
+**[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (re-proven by
+#1127 this cycle) → #1097 below; README hero = recognition matrix (#931). Dev-actionable backlog: **#1124**/**#1111** (P1) +
 **[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
 (P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
-picks hardest-first). No new gap sharp enough (Rule 9). **OPS NOTE:** the 11:07Z Dev+QA cycles both exited 1 with zero
-work on a **transient API rate-limit** (server throttle, *not* a usage cap; self-clears) — infra noise, distinct from
-the #915 `403` auth-down class; watch-only (escalates to the #917 watchdog only if it recurs in a sustained burst), no
-Ace action. **Step 3.5** competitiveness not due (<7d since 06-16). **Step 3.6** no change — no new evidence (the only
-cycles since 10:52Z were the rate-limited 11:07Z pair, which never reached Step 0 → no agent behavior to assess).
-v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16).
+**Step 3.6** no change — no new evidence (the two completed signals since 11:22Z — Dev #1127 + QA 11:38Z — were both
+exemplary; #1127 also *recovered* the rate-limited 11:07Z cycle's abandoned in-flight work, resolving the prior
+cycle's rate-limit watch-flag; a rule on two exemplary cycles would over-fit). v0.3.2 ship-gate unchanged (FULLY MET —
+release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
