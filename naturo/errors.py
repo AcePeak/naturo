@@ -30,6 +30,7 @@ class ErrorCode:
 
     # Operation errors
     CAPTURE_FAILED = "CAPTURE_FAILED"
+    SCREENSHOT_FAILED = "SCREENSHOT_FAILED"
     INTERACTION_FAILED = "INTERACTION_FAILED"
     TIMEOUT = "TIMEOUT"
     CANCELLED = "CANCELLED"
@@ -108,6 +109,9 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.RECORDING_NOT_FOUND: ErrorCategory.SESSION,
     ErrorCode.FILE_NOT_FOUND: ErrorCategory.IO,
     ErrorCode.CAPTURE_FAILED: ErrorCategory.AUTOMATION,
+    # A browser/CDP screenshot that failed to render or encode is an automation
+    # operation failure, alongside CAPTURE_FAILED (#1135).
+    ErrorCode.SCREENSHOT_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.INTERACTION_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
     # Cancellation is an operation-lifecycle outcome, like ``TIMEOUT`` (#1101).

@@ -31,6 +31,18 @@ from naturo.browser._selectors import (
 logger = logging.getLogger(__name__)
 
 
+class BrowserElementNotFoundError(RuntimeError):
+    """A selector matched no element on the page.
+
+    Subclasses :class:`RuntimeError` so existing ``except RuntimeError`` handlers
+    (and the browser CLI's ``ELEMENT_NOT_FOUND`` mapping) keep working unchanged,
+    while callers that need to distinguish a *missing element* from a genuine
+    operation failure — e.g. ``browser screenshot``, which must attribute a
+    missing selector to ``ELEMENT_NOT_FOUND`` rather than ``SCREENSHOT_FAILED``
+    (#1135) — can catch this narrower type.
+    """
+
+
 class BrowserPage:
     """High-level browser page for CDP-based automation.
 
@@ -479,8 +491,11 @@ class BrowserPage:
 
         Raises:
             ValueError: If both *selector* and *full_page* are given.
-            RuntimeError: If *selector* matches no element, or the matched
-                element has no rendered layout box to crop to.
+            BrowserElementNotFoundError: If *selector* matches no element (a
+                :class:`RuntimeError` subclass, so the missing-element case can
+                be attributed distinctly from a capture failure).
+            RuntimeError: If the matched element has no rendered layout box to
+                crop to.
         """
         if selector is not None and full_page:
             raise ValueError(
@@ -489,7 +504,13 @@ class BrowserPage:
 
         params: Dict[str, Any] = {"format": "png"}
         if selector is not None:
-            element = self.find(selector)
+            try:
+                element = self.find(selector)
+            except RuntimeError as exc:
+                # find() reports a missing element as a bare RuntimeError; re-raise
+                # as the narrower type so the CLI attributes it to ELEMENT_NOT_FOUND
+                # (recoverable) rather than a capture failure (#1135).
+                raise BrowserElementNotFoundError(str(exc)) from exc
             box = element._bounding_box()
             if box is None:
                 raise RuntimeError(

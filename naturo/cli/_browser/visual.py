@@ -7,6 +7,7 @@ from typing import Optional
 
 import click
 
+from naturo.browser._page import BrowserElementNotFoundError
 from naturo.cli import browser_cmd
 from naturo.cli._browser._group import browser
 from naturo.cli.error_helpers import emit_exception_error
@@ -39,6 +40,10 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
             click.echo(f"Screenshot saved: {saved_path}")
     except ValueError as exc:
         emit_exception_error(exc, json_output, fallback_code="INVALID_INPUT")
+    except BrowserElementNotFoundError as exc:
+        # A missing --selector is a recoverable not-found, not a capture failure;
+        # attribute it distinctly so the agent gets the right recovery hint (#1135).
+        emit_exception_error(exc, json_output, fallback_code="ELEMENT_NOT_FOUND")
     except RuntimeError as exc:
         emit_exception_error(exc, json_output, fallback_code="SCREENSHOT_FAILED")
     finally:

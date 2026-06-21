@@ -157,6 +157,12 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "Use 'naturo list windows' to verify.",
         True,
     ),
+    "SCREENSHOT_FAILED": (
+        "Browser screenshot failed. Ensure the page has finished loading and the "
+        "target element is visible (not display:none or zero-area), then retry. "
+        "Use 'naturo browser screenshot' without --selector to capture the viewport.",
+        True,
+    ),
     "TIMEOUT": (
         "Operation timed out. Try: 1) increase --timeout, 2) verify the target window "
         "is in the foreground, 3) take a screenshot to check the current UI state.",
