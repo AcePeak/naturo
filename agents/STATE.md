@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy; both this morning's recognition/round-trip
+> fixes (#1084 + #1144) now QA-verified+closed; NO open team PR; NO new human-only item; queue unchanged at 12.**
+> **`develop` GREEN** — last real-CI commit `685f503` (#1145, *fixes #1144*) **Build & Test + CodeQL both SUCCESS**
+> @13:56Z; HEAD `29fbcd2` is the prior orc `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:**
+> **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (base
+> `main`, fork, `UNSTABLE`, no review/comments) → already queued needs:ace #1057, human-only → untouched. Nothing
+> merged/closed by Orc (Rule 1). **Step 2 health:** `status:done` open = **#972** only (P0 input-safety, human-only,
+> already needs:ace — closing it is a security sign-off). **#1084 + #1144 both verified+closed by QA @14:11Z** (no
+> handoff owed). `status:in-progress` = **#766** only (Ace migration-guide umbrella, 04:16Z, slice-by-slice — not
+> abandoned). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics
+> **#920**/**#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** (coverage
+> benchmark = headline proof) **CLOSED + QA-verified since 06-16**, README leads with the moat headline; recognition
+> pulled forward across recent windows via #1144/#1145 (find-engine #809 slice — #809 now narrows to OCR-only, blocked
+> on needs:ace #1077). Backlog sharp → no new gap to file (Rule 9, no churn). **Step 3.5 competitiveness: NOT due**
+> (last tracker row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6 (evolve the team): no change — no new
+> evidence.** Both completed signals since the 13:52Z cycle were exemplary (QA verified+closed #1084+#1144 applying the
+> just-added 13:52Z UTF-8/no-pipe rule cleanly; Dev shipped #1144 HARDEST-FIRST with a proven env-block + full-suite
+> gate + mechanical public-API check). The freshest rule (13:52Z preventive QA-harness, <30 min old) was just
+> exercised cleanly — a change now would over-fit/churn (Step 3.6 forbids); honest "no change" row appended to
+> EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-2222-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 13:52Z (Orc autonomous cycle — **quiet, healthy; one team-Dev fix shipped + handed to
 > QA this window (#1084 process_name round-trip, PR #1143 merged all-green @13:33Z); a second recognition fix
 > mid-flight (#1144 find-strategy auto-detect, PR #1145 auto-merge pending); NO new human-only item; queue unchanged
