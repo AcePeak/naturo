@@ -1,6 +1,8 @@
 """Capture command — screenshot capture with optional element/region crop."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import click
 
 import naturo.cli.core._common as _common
@@ -93,6 +95,12 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
     # surface as a raw [Errno 2] mislabeled as a capture failure.
     _common._ensure_output_dir(path, json_output)
 
+    # (#1114) The backend writes the *full* screenshot to the user's output
+    # path before any crop is validated.  Remember that file so a later
+    # crop-validation failure can remove it (see the SystemExit handler) —
+    # a failed capture must not leave a misleading full-screen image behind.
+    written_capture_path: str | None = None
+
     try:
         backend = _common._get_backend(json_output)
         if hwnd or app or window_title or pid:
@@ -129,6 +137,13 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 pass  # Non-Windows: skip validation, let backend handle it
             result = backend.capture_screen(screen_index=screen, output_path=path)
 
+        # (#1114) A crop overwrites the output file only on success; record the
+        # full screenshot just written so a crop-validation failure can clean it
+        # up.  Only tracked when a crop is requested — a plain full-screen
+        # capture keeps its file.
+        if element_ref or region:
+            written_capture_path = result.path
+
         # ── Element / region crop (issue #160) ───────────────────────────────
         crop_box = None  # (left, top, right, bottom) in image coordinates
         # The user's raw --region request (x, y, w, h), kept so an off-screen
@@ -161,10 +176,15 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 element, snap_id = el_result
                 ex, ey, ew, eh = element.frame
 
-                # Check for zero-size bounds (cannot crop)
+                # Check for zero-size bounds (cannot crop).  UIElement exposes
+                # its display name as ``title`` (``label`` as the accessibility
+                # fallback) — there is no ``name`` attribute, so reach for the
+                # real fields rather than an AttributeError that would mask this
+                # ZERO_SIZE_ELEMENT error as a generic CAPTURE_ERROR (#1114).
                 if ew <= 0 or eh <= 0:
+                    element_name = element.title or element.label
                     msg = (
-                        f"Element {element_ref} (role={element.role!r} name={element.name!r}) "
+                        f"Element {element_ref} (role={element.role!r} name={element_name!r}) "
                         f"has zero-size bounds ({ew}x{eh}) at ({ex},{ey}) and cannot be cropped. "
                         "This element may be off-screen, hidden, or in a virtualized container."
                     )
@@ -238,6 +258,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             try:
                 from PIL import Image as _PILImage
                 img = _PILImage.open(result.path)
+                # Read the pixels now so PIL releases its handle on the capture
+                # file — otherwise the off-screen/non-positive failure branch
+                # below cannot unlink it on Windows (the file stays open). (#1114)
+                img.load()
                 # Clamp to image bounds
                 iw, ih = img.size
                 left = max(0, crop_box[0])
@@ -333,6 +357,22 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             elif region:
                 crop_note = f" [cropped to {region}]"
             click.echo(f"Saved: {full_path} ({result.width}x{result.height}){crop_note}")
+    except SystemExit:
+        # (#1114) A crop was requested but its validation failed after the full
+        # screenshot was already written to the user's path.  Remove that file so
+        # the on-disk artifact matches the reported failure — a failed capture
+        # must not leave a misleading full-screen image where a crop was asked
+        # for.  Best-effort; the success path never raises SystemExit, so a
+        # successful capture always keeps its file.
+        if written_capture_path is not None:
+            try:
+                Path(written_capture_path).unlink(missing_ok=True)
+            except OSError as exc:
+                _common.logger.debug(
+                    "Best-effort cleanup of partial capture %s failed: %s",
+                    written_capture_path, exc,
+                )
+        raise
     except _common.WindowNotFoundError as e:
         if json_output:
             click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))
