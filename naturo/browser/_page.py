@@ -482,7 +482,7 @@ class BrowserPage:
                 "scale": 1,
             }
 
-        result = self._cdp.send("Page.captureScreenshot", **params)
+        result = self._cdp.send("Page.captureScreenshot", params)
         data = result.get("data", "")
 
         import base64

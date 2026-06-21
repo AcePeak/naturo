@@ -365,6 +365,71 @@ class TestBrowserPageScreenshot:
         # First call is getLayoutMetrics
         cdp.send.assert_any_call("Page.getLayoutMetrics")
 
+    def test_screenshot_passes_params_positionally_1119(self, tmp_path):
+        """Regression for #1119: screenshot must pass CDP params *positionally*.
+
+        ``CDPClient.send(method, params=None)`` takes the parameter dict as a
+        single positional argument. ``BrowserPage.screenshot`` previously
+        unpacked it (``send("Page.captureScreenshot", **params)``), which raised
+        ``TypeError: send() got an unexpected keyword argument 'format'`` and
+        broke the command 100% of the time. The prior screenshot tests missed
+        this because a bare ``MagicMock.send`` silently accepts any kwargs; this
+        test drives a ``send`` stub with the *real* signature so the unpack is
+        rejected exactly as the production ``CDPClient`` rejects it.
+        """
+        import base64
+
+        recorded: list[tuple[str, object]] = []
+
+        def faithful_send(method, params=None):
+            """Mirror ``CDPClient.send``'s real signature (positional dict)."""
+            recorded.append((method, params))
+            if method == "Page.captureScreenshot":
+                return {"data": base64.b64encode(b"pngbytes").decode()}
+            return {}
+
+        page, cdp = _make_page()
+        cdp.send.side_effect = faithful_send
+
+        path = str(tmp_path / "shot.png")
+        result = page.screenshot(path)
+
+        assert result == path
+        with open(path, "rb") as f:
+            assert f.read() == b"pngbytes"
+        # The capture params reached send as one positional dict, not kwargs.
+        assert ("Page.captureScreenshot", {"format": "png"}) in recorded
+
+    def test_screenshot_full_page_passes_params_positionally_1119(self, tmp_path):
+        """Regression for #1119 on the ``--full-page`` path (clip dict positional).
+
+        The full-page branch builds a ``params`` dict carrying both ``format``
+        and ``clip``; it must likewise reach ``send`` as a single positional
+        argument rather than being unpacked into keyword arguments.
+        """
+        import base64
+
+        recorded: list[tuple[str, object]] = []
+
+        def faithful_send(method, params=None):
+            recorded.append((method, params))
+            if method == "Page.getLayoutMetrics":
+                return {"contentSize": {"width": 1920, "height": 5000}}
+            if method == "Page.captureScreenshot":
+                return {"data": base64.b64encode(b"full").decode()}
+            return {}
+
+        page, cdp = _make_page()
+        cdp.send.side_effect = faithful_send
+
+        path = str(tmp_path / "full.png")
+        page.screenshot(path, full_page=True)
+
+        capture = next(p for m, p in recorded if m == "Page.captureScreenshot")
+        assert capture["format"] == "png"
+        assert capture["clip"]["width"] == 1920
+        assert capture["clip"]["height"] == 5000
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Evaluate
