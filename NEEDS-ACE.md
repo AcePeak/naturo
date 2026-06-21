@@ -4,7 +4,25 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 05:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1156
+_Last refreshed: 2026-06-22 05:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR;
+QA filed one fresh P2 (#1159 — native A-API title data-loss, lateral to #1150) feeding Dev; Dev cycle in-flight
+(#1100 test_verify hermeticity); NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI `959411d` (#1158, *fixes #1156*) **CodeQL + Build & Test both SUCCESS** @20:53Z;
+HEAD `46fccf5` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** NO open team-Dev PR (Rule 14 clean —
+remote = `develop`+`main` only). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) →
+untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed (no team PR merged). `status:done`
+open = **#972** only (human-only) → untouched; `status:in-progress` = **#1100** (Dev active, #1133 family — not
+abandoned) + **#766** (Ace umbrella). **Step 3:** QA filed **#1159** (P2 — emoji/cross-script titles → `?`/0x3F
+via native `GetWindowTextA` lossy conversion; the #1150/#1157 Python codepage-decode fix can't recover; true fix
+= native `GetWindowTextW`+`CP_UTF8`, gated on native-build #1097) — Dev-actionable backlog bug, not a duplicate,
+not human-only → no queue change. **Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change
+— no new evidence** (only completed signal since 05:22Z = QA @05:40Z filing #1159, exemplary — independent
+`GetWindowTextW` ground truth + raw-byte 0x3F evidence, distinguished from #1150, zero false needs:ace, zero
+intrusive input; Dev #1100 in-flight; freshest dev-cycle.md HEAD-check rule landed <1d ago → over-fit forbidden).
+v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-22 05:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1156
 (electron-decode/hermeticity, via PR #1158) now QA-verified+closed; NO open team PR; one Dev cycle in-flight
 (#1100 test_verify hermeticity); NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
