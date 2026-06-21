@@ -381,17 +381,19 @@ class BrowserElement:
         spot in the top document (#1080).
 
         Falls back to ``getBoundingClientRect`` only when the node exposes no
-        content quad (e.g. an unrendered or zero-area box) — that path is
-        already correct for top-level elements and is the best available
-        estimate when no layout box exists.
+        content quad — that path is already correct for a genuinely top-level
+        element that still has a non-zero box. When the fallback rect is itself
+        zero-area (an unrendered ``display:none`` / detached node, which reports
+        an all-zeros rect), this returns ``None`` rather than the misleading
+        viewport origin ``(0, 0)`` so callers fail loudly (never-lie, #1083).
 
         Args:
             offset_x: X offset from top-left (0 = center).
             offset_y: Y offset from top-left (0 = center).
 
         Returns:
-            (x, y) top-document coordinates, or None if no box model is
-            available at all.
+            (x, y) top-document coordinates, or None when no usable box model is
+            available (no content quad and no non-zero bounding box).
         """
         self.scroll_into_view()
 
@@ -416,6 +418,18 @@ class BrowserElement:
             "}"
         )
         if not box or not isinstance(box, dict):
+            return None
+
+        # A node with no content quad AND a zero-area bounding box is not
+        # rendered (display:none, detached, visibility:collapse). For such a
+        # node getBoundingClientRect reports an all-zeros rect, so computing a
+        # point here would dispatch the click at the top-document origin (0, 0)
+        # and silently hit whatever sits in the viewport's top-left corner while
+        # reporting success — a never-lie violation (#1083). Treat it as "no box
+        # model": return None so click()/hover() raise loudly instead. A
+        # genuinely top-level element with a non-zero box but no quad still
+        # falls through to a real point below.
+        if box["width"] == 0 and box["height"] == 0:
             return None
 
         if offset_x == 0 and offset_y == 0:

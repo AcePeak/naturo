@@ -205,6 +205,26 @@ class TestBrowserElementClick:
         with pytest.raises(RuntimeError, match="Cannot determine element position"):
             el.click()
 
+    def test_click_raises_on_zero_area_box_never_dispatches(self):
+        # display:none / detached / zero-area element: no content quad, and
+        # getBoundingClientRect reports an all-zeros rect. click() must raise
+        # rather than silently dispatch at the (0, 0) viewport origin (#1083).
+        el, page, cdp = _make_element()
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # getContentQuads: no quad
+            {"result": {"value": {"x": 0, "y": 0, "width": 0, "height": 0}}},
+        ]
+
+        with pytest.raises(RuntimeError, match="Cannot determine element position"):
+            el.click()
+
+        mouse_calls = [
+            c for c in cdp.send.call_args_list
+            if c[0][0] == "Input.dispatchMouseEvent"
+        ]
+        assert mouse_calls == []  # never dispatched at (0, 0)
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Hover
@@ -245,6 +265,25 @@ class TestBrowserElementHover:
 
         with pytest.raises(RuntimeError, match="Cannot determine element position"):
             el.hover()
+
+    def test_hover_raises_on_zero_area_box_never_dispatches(self):
+        # Mirror of the click guard (#1083): a zero-area / unrendered element
+        # must make hover() raise rather than move the mouse to (0, 0).
+        el, page, cdp = _make_element()
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # getContentQuads: no quad
+            {"result": {"value": {"x": 0, "y": 0, "width": 0, "height": 0}}},
+        ]
+
+        with pytest.raises(RuntimeError, match="Cannot determine element position"):
+            el.hover()
+
+        mouse_calls = [
+            c for c in cdp.send.call_args_list
+            if c[0][0] == "Input.dispatchMouseEvent"
+        ]
+        assert mouse_calls == []
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -443,6 +482,18 @@ class TestGetClickPoint:
             {"result": {"value": None}},  # scrollIntoView
             {"quads": []},  # no quad
             {"result": {"value": "not-a-dict"}},
+        ]
+        assert el._get_click_point() is None
+
+    def test_returns_none_on_zero_area_box(self):
+        # #1083: an unrendered element yields no quad and an all-zeros rect.
+        # _get_click_point must return None (not the origin (0, 0)) so the
+        # click/hover guards raise instead of dispatching at the wrong spot.
+        el, page, cdp = _make_element()
+        cdp.send.side_effect = [
+            {"result": {"value": None}},  # scrollIntoView
+            {"quads": []},  # no quad
+            {"result": {"value": {"x": 0, "y": 0, "width": 0, "height": 0}}},
         ]
         assert el._get_click_point() is None
 
