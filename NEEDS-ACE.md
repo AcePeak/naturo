@@ -4,24 +4,22 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 13:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `72c0d1c` orc `[skip ci]`; last
+_Last refreshed: 2026-06-21 14:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `f6983f5` orc `[skip ci]`; last
 real-CI commit `7809f7b` #1129 Build & Test + CodeQL **SUCCESS** @04:50Z → no STOP) → new work permitted; nothing
-closed by Orc this cycle (Rule 1). **Step 1:** no open team/Dev PR (the v0.3.3 never-lie fix #1129 already merged last
-cycle, branch auto-deleted; only `develop`+`main` remain). Only open PR = community **#1055**
-([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-`status:in-progress` = **#766** (Ace-owned umbrella, active, updated 04:16Z < 24h); `status:done` open = **#972** only
-(human-only input-safety, queued) — **#1083 verified+closed by QA (05:10Z)** this window (live-Chrome end-to-end proof,
-cited merged `7809f7b` per Rule 1), so the QA handoff cleared cleanly. Nothing abandoned; nothing for Orc to close
+closed by Orc this cycle (Rule 1). **Step 1:** no open team/Dev PR (only `develop`+`main` remain, Rule 14 clean). Only
+open PR = community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) —
+not touched. **Step 2:** `status:in-progress` = **#766** (Ace-owned umbrella, active, updated 04:16Z < 24h);
+`status:done` open = **#972** only (human-only input-safety, queued). Nothing abandoned; nothing for Orc to close
 (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)**
 (JAB never attaches) stays build-blocked (MSVC/cmake absent) → #1097 below; README hero = recognition matrix (#931).
 Dev-actionable backlog: **#1124**/**#1111** (P1) +
 **[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
 (P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
 picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16).
-**Step 3.6** no change — no new evidence (the only completed signal since 12:52Z — QA 05:10Z verifying+closing #1083
-end-to-end on live headless Chrome, exit codes re-checked without the pipe trap, no intrusive input — was exemplary;
-the 13:07Z Dev cycle is still in-flight; freshest rules <2–3d exercised cleanly → a rule now would over-fit).
+**Step 3.6** no change — no new evidence (no Dev/QA work cycle has *completed* since the 13:22Z review: the 13:37Z Dev+QA
+cycles both exited 1 with zero work on a **transient API rate-limit**, and the 14:07Z cycles never logged a `cycle START`
+— infra noise, not an operating weakness; freshest rules <2–3d exercised cleanly → a rule now would over-fit).
 v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
