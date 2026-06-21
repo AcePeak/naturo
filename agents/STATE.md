@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1149 now
+> QA-verified+closed; NO open team PR; one Dev cycle in-flight (#1133); NO new human-only item → queue
+> unchanged at 12.** **`develop` GREEN** — last real-CI `17b5274` (#1153, *fixes #1149*) **Build & Test +
+> CodeQL both SUCCESS** @17:55Z; HEAD `ab2c015` = prior orc `[skip ci]` (no run) → no STOP → new work
+> permitted. **Step 1 PR sweep:** NO open team-Dev PR (remote = `develop`+`main` only, Rule 14 clean). Only
+> open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only
+> → untouched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:** no handoff owed (no team PR merged
+> this cycle); #1149 was **QA-verified+closed @02:10Z** (PR #1153/`17b5274`, file-only boundary+in-range
+> matrix). `status:done` open now = **#972** only (P0 input-safety, human-only sign-off, already needs:ace)
+> → untouched. `status:in-progress` = **#1133** (hermetic `test_win32_hybrid.py`, Dev cycle active 02:07,
+> updated 18:12Z — not abandoned) + **#766** (Ace migration-guide umbrella, 04:16Z). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** native-core moat (#920/#932/JAB #1096)
+> build-blocked (MSVC/cmake absent) → needs:ace #1097; #1150 (P1 mojibake) native-DLL-blocked; OCR (#1060)
+> blocked on #1077; #931 benchmark CLOSED+verified, README leads with the moat headline. Backlog sharp &
+> self-feeding (#1150/#1152/#1154/#897/#1133 feed Dev) → no new gap (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (last row 06-16, today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6
+> (evolve the team): no change — no new evidence.** Only completed signal since 17:52Z = QA @02:10Z (#1149
+> verify+close), exemplary (strictly file-only; out-of-range matrix across diff/compare/report + suite-JSON
+> top-level & per-test → all `INVALID_INPUT`; boundary/in-range still match:true exit 0; anti-pipe-lie
+> discipline; zero intrusive input; cleaned own baselines; left #972 queued); Dev cycle #1133 still in-flight
+> → no completed Dev signal; freshest rules <1–3d exercised cleanly → over-fit forbidden. Honest "no change"
+> row appended to EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1822b-auto-review.md` (the `-1822-` name was taken by an earlier mislabeled cycle
+> — same as the prior `-1752b-`/`-1722b-`). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1153
 > (#1149) AUTO-MERGED itself green as `17b5274` mid-cycle + #1149 flipped status:done (handoff done); one fresh
 > Dev-filed parity tech-debt (#1154); NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — HEAD `7a9295e` = prior orc `[skip ci]` (no run);

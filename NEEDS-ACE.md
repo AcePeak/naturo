@@ -4,7 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1153
+_Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1149 now
+QA-verified+closed; NO open team PR; one Dev cycle in-flight (#1133); NO new human-only item** →
+**queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — HEAD `ab2c015` is orc `[skip ci]` (no run); last real-CI `17b5274` (#1153, *fixes #1149*)
+**Build & Test + CodeQL both SUCCESS** @17:55Z → no STOP. **Step 1:** NO open team-Dev PR (remote =
+`develop`+`main` only, Rule 14 clean). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057,
+human-only) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed; #1149
+**QA-verified+closed @02:10Z** (PR #1153/`17b5274`). `status:done` open now = **#972** only (human-only) →
+untouched; `status:in-progress` = **#1133** (Dev active) + **#766** (Ace umbrella). **Step 3.5**
+competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (only completed signal
+since 17:52Z = QA #1149-verify, exemplary file-only matrix + anti-pipe-lie discipline; Dev #1133 in-flight;
+freshest rules <1–3d exercised cleanly → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release
+is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1153
 (#1149) AUTO-MERGED itself green mid-cycle (`17b5274`) + #1149 flipped status:done; one fresh Dev-filed parity
 tech-debt (#1154); NO new human-only item** →
 **queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
