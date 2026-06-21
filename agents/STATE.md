@@ -1,5 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **ENFORCEMENT cycle: a public-API change landed
+> unattended via auto-merge; queued for Ace + Dev guardrail tightened.** **`develop` NOT red** — HEAD `c00227e`
+> #1134 (*fixes #1123*) **Build & Test + CodeQL both SUCCESS** @08:58Z; prior `dc1a79b` #1132 also green → no STOP →
+> new work permitted. **Step 1 PR sweep:** team-Dev **PR #1134** (`screenshot --selector` crops to element, base
+> `develop`) **auto-merged at 08:55Z as `c00227e` before Orc could hold it** — it added a public-API param
+> `BrowserPage.screenshot(..., selector=...)` + made the inert `--selector` flag functional, with `--auto` **ON**.
+> Per the `dev-cycle.md` public-API guardrail this is a **human-only sign-off** (holds even when doc-promised) →
+> **queued `needs:ace` #1136** (recommend ratify: small/additive/fail-loud/honors the shipped `--selector`
+> contract). Branch auto-deleted (Rule 14 clean: only `develop`+`main` remain). Community **#1055** (base `main`,
+> fork, `UNSTABLE`) untouched → #1057. **Step 2 health:** flipped **#1123 → `status:done`** (Rule 1 SHA `c00227e`,
+> awaiting QA). `status:done` open = **#972** (human-only, queued) + #1123. `status:in-progress` = **#766** (Ace
+> umbrella, 04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat,
+> Standing #1):** P0 **#1096** (JAB) stays build-blocked (MSVC/cmake absent) → #1097; README hero = matrix (#931).
+> No new gap sharp enough (Rule 9). **Step 3.5 competitiveness: NOT due** (baseline 06-16, today 06-21 = 5d < 7).
+> **Step 3.6 (evolve the team): CHANGE MADE — real recurring evidence.** Dev auto-merged a public-surface change
+> unattended **again** (#1134), 2nd instance after #1104; PR body rationalized *"honors the already-committed
+> documented contract; no doc change needed"* — the exact inversion the guardrail forbids. Added a **mechanical**
+> decision trigger to `dev-cycle.md`: "honors a doc / no doc change needed" is a trigger, NOT an exemption; the
+> test is purely whether a public signature changes or an inert flag becomes functional → auto-merge OFF. EVOLUTION
+> row appended (cites #1104+#1134). **Step 4 (needs:ace): +1 → queue now 12**
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1652-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **quiet, healthy; the never-lie record/type fix #1111
 > was QA-verified+closed this window; Dev now in-flight on actionable bug #1065; NO new human-only item**.
 > **`develop` NOT red** (HEAD `06baa96` orc `[skip ci]`; last real-CI commit `4ff22e8` #1131 *fixes #1111* —

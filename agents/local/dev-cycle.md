@@ -161,6 +161,12 @@ public-API change, needs Ace sign-off", leave the issue `status:in-progress`, an
 `needs:ace`. This holds **even when the symbol is already promised in a committed doc**: closing a
 doc-vs-code gap by *shrinking the doc* is a real alternative that is Ace's call, so don't pre-decide it by
 landing the surface unattended (the #1104 download-methods case — flagged-but-auto-merged anyway).
+**"Honors an already-documented contract / no doc change needed" is NOT an exemption — it is a trigger.**
+The test is purely mechanical, not about intent: does the PR add or change a public signature (a new/renamed
+parameter, return type, or exported symbol) **or make a previously-parsed-but-inert public flag/option actually
+function**? If yes → auto-merge **OFF** and queue, regardless of whether a doc already promised it (the #1134
+`screenshot(selector=...)` case — auto-merged because "the contract was already documented", the exact inversion
+this rule forbids).
 
 **Do NOT mark `status:done` at PR-open time.** Local tests passing ≠ CI green — CI runs Linux/macOS
 and a cross-platform/collection break (e.g. a top-level import not on CI's `sys.path`, like #936) only

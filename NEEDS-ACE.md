@@ -4,31 +4,31 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 16:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `06baa96` orc `[skip ci]`;
-last real-CI commit `4ff22e8` #1131 *fixes #1111* — **Build & Test + CodeQL both SUCCESS** @07:45Z → no STOP) →
-new work permitted; nothing closed by Orc this cycle (Rule 1). **Step 1:** **NO open team/Dev PR** (only
-`develop`+`main` remain, Rule 14 clean). Only open PR = community **#1055**
-([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-`status:done` open = **#972** only (human-only input-safety, queued) — **#1111 verified+closed by QA (08:11Z)** via
-the real recording pipeline (5/5 data-artifact asserts, non-vacuous 3-fail negative control; abstained from physical
-SendInput per focus-safety) → handoff cleared. `status:in-progress` = **#1065** (Dev in-flight, `app …--app` matches
-window-title not process-name, updated 08:13Z < 24h, picked up this window) + **#766** (Ace-owned umbrella, updated
-04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
-P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (MSVC/cmake
-absent) → #1097 below; README hero = recognition matrix (#931). Dev-actionable backlog: **#1124** (P1) +
-**[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
-(P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
-picks hardest-first, now on actionable #1065). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due
-(<7d since 06-16). **Step 3.6** no change — no new evidence (only completed signal since 15:52Z = **QA (08:11Z)**
-verified+closed #1111 through the real recording pipeline with a non-vacuous negative control and correctly abstained
-from physical SendInput (foreground = Claude terminal, focus unconfirmable) — exemplary, not a weakness; the 08:07Z
-Dev cycle is still in-flight on #1065 → no completed Dev signal; freshest rules <2–3d exercised cleanly → a rule now
-would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+_Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **ENFORCEMENT: a public-API change landed unattended →
+queued + Dev guardrail tightened** → **queue now 12 (+#1136)**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red (HEAD `c00227e` #1134 *fixes
+#1123* — **Build & Test + CodeQL both SUCCESS** @08:58Z; prior `dc1a79b` #1132 green) → no STOP → new work permitted.
+**Step 1:** team-Dev **PR #1134** (`screenshot --selector` crops to element, base `develop`) **auto-merged `c00227e`
+@08:55Z before Orc could hold it** — it added a public-API param `BrowserPage.screenshot(..., selector=...)` + made
+the inert `--selector` flag functional with `--auto` ON. Per the dev-cycle public-API guardrail this is a human-only
+sign-off (holds even when doc-promised) → **queued [#1136](https://github.com/AcePeak/naturo/issues/1136)** (recommend
+ratify). Branch auto-deleted (Rule 14 clean). Community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057),
+base `main`, fork, UNSTABLE) — untouched. **Step 2:** flipped **#1123 → status:done** (Rule 1 SHA `c00227e`, awaiting
+QA). `status:done` open = **#972** (human-only, queued) + #1123. `status:in-progress` = **#766** only (Ace umbrella,
+04:16Z < 24h); #1065 verified+closed by QA earlier this window (`dc1a79b`). Nothing abandoned; nothing for Orc to
+close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)**
+(JAB) stays build-blocked (MSVC/cmake absent) → #1097; README hero = matrix (#931). No new gap sharp enough (Rule 9).
+**Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 CHANGE MADE:** Dev auto-merged a public-surface
+change unattended **again** (#1134, 2nd after #1104), rationalizing *"honors the already-committed documented contract;
+no doc change needed"* — the exact inversion the guardrail forbids → added a **mechanical** decision trigger to
+`dev-cycle.md` ("honors a doc" is a trigger, not an exemption; test = does a public signature change / inert flag
+become functional → auto-merge OFF), EVOLUTION row appended. v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
+| [#1136](https://github.com/AcePeak/naturo/issues/1136) | **Sign off (or revise/revert) the public API that landed unattended in #1134.** Team-Dev added a `selector` parameter to the public `BrowserPage.screenshot()` method + made the inert `naturo browser screenshot --selector` flag functional, merged `c00227e` (*fixes #1123*) with auto-merge **ON** before Orc could hold it. | **public-API sign-off** — a new public method parameter + an activated CLI contract; the guardrail holds even though the migration guide already promised `--selector` (the alternative, shrinking the doc / removing the flag, is yours). | **Ratify (recommended)** — small, additive, fail-loud (no-match / no-box / `--selector`+`--full-page` → exit 1, never a silent full-page fallback), 10 hermetic tests + real-Chrome e2e, honors the already-shipped flag; removing it would be breaking. Or revise (keyword-only/narrow) / revert (drop param + flag, amend guide). |
 | [#1105](https://github.com/AcePeak/naturo/issues/1105) | **Sign off (or revert) the public API that landed unattended in #1104.** Team-Dev added `BrowserPage.set_download_dir()`/`wait_for_download()` + a `DownloadResult` dataclass **exported from `naturo.browser`**, merged `41b81ad` (part of #766). Dev correctly flagged it as public-API but auto-merged anyway. | **public-API sign-off** — a new public contract; even one that honors a committed doc is yours (shrinking the doc is the alternative). Process gap closed this cycle in `dev-cycle.md`. | **Ratify (recommended)** — the surface is small, additive, matches the committed migration guide, byte-parity tested; confirm and close #1105. Or revise (rename/un-export) / revert (drop methods + amend guide). |
 | [#1097](https://github.com/AcePeak/naturo/issues/1097) | **Pick the build+verify path for native-core moat fixes.** P0 **#1096** (JAB never attaches → the `RECOGNITION.md` "+40" moat headline doesn't reproduce, Standing #1) is a C++ core fix (`core/src/jab.cpp`) that **can't be built locally** (no MSVC/cmake) and is **JAB-verifiable only on the real desktop** (CI builds the DLL but has no interactive JAB desktop). | **infra/process decision** — build-env spend vs. a CI-artifact workflow; orch must not provision/spend or set a standing build process unattended | **(A) CI-build → local-desktop-verify (no spend):** CI uploads `naturo_core.dll` as an artifact; the local JAB desktop downloads it + runs `test_jab_recognition_932.py` before merge — unblocks **every** future native-core moat fix. Or (B) install MSVC+cmake locally, or (C) cloud build Dev. **Orc recommends (A).** Once picked, Dev lands #1096 + restores the verified `RECOGNITION.md` row. |
 | [#1077](https://github.com/AcePeak/naturo/issues/1077) | **Pick the OCR engine for `naturo find --ocr` (#1060)** — the last find-engine slice (#809). Dev parked it (2026-06-20 18:25Z) because the backend is a bundling/licensing/distribution choice. | **dependency/distribution decision** — bundle size, licensing, extra system binaries, Windows-only vs cross-platform; Orc must not pick a packaging path unattended | **Windows.Media.Ocr** (WinRT) — built into Win10/11, **no extra binary/model**, native to the Windows-first moat; keep it behind a thin interface so Tesseract can be added later as an optional cross-platform fallback. Once you pick, Dev lands #1060 in one cycle. |
