@@ -4,7 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 07:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one open team-Dev
+_Last refreshed: 2026-06-22 07:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1146 (find --help
+saved-selector examples) now QA-verified+closed (handoff fully complete); NO open team PR; one Dev cycle in-flight;
+NO new human-only item; Step 3.6 honest no-change** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI `aa0f983` (#1163, *fixes #1146*) **Build & Test + CodeQL both SUCCESS**; HEAD
+`e54bc9e` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** NO open team-Dev PR (remote = `develop`+`main`
+only, Rule 14 clean). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched;
+nothing merged/closed BY Orc (Rule 1). **Step 2:** handoff complete — **#1146 QA-verified+closed @07:39Z** (clean-path
+verify, no pipe, strict UTF-8, cited merged `aa0f983` per Rule 1). `status:done` open now = **#972** only (human-only)
+→ untouched; `status:in-progress` = **#766** only (Ace umbrella, `from:ace` — left). **Step 3:** backlog sharp &
+self-feeding (#1162/#1160/#1159/#1154/#897 feed Dev) → no new gap (Rule 9). **Step 3.5** competitiveness not due
+(6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (only completed signal since 07:22Z = QA @07:39Z
+verifying #1146, exemplary — clean-path verify, cited merged commit, lateral-grepped residual `@name` mentions and
+ruled them non-user-facing, zero intrusive input, left #972 queued; Dev cycle in-flight; freshest dev-cycle.md
+HEAD-check rule landed <1d ago → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-22 07:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one open team-Dev
 PR #1163 (*fixes #1146* find --help saved-selector examples) MERGEABLE + auto-merge SQUASH ON, landing itself;
 QA filed one fresh P2 (#1162 — UNKNOWN_OPTION/UNKNOWN_COMMAND `-j` category miss) feeding Dev; NO new human-only
 item; Step 3.6 honest no-change** → **queue unchanged at 12**
