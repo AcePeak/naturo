@@ -4,7 +4,21 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED + QA-verified+closed;
+_Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; #1114 capture-cleanup never-lie fix now MERGED
+(PR #1148, all-green); NO open team PR; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — HEAD `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:53Z → no STOP.
+**Step 1:** NO open team-Dev PR (Rule 14 clean — #1148 branch auto-deleted); only open PR = community **#1055** (base `main`,
+fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed by Orc (Rule 1). **Step 2:** Dev shipped #1114
+(PR #1148 all-green, `status:done` set in-cycle) → no handoff owed; `status:done` open = **#1114** (awaiting QA — normal) +
+**#972** (human-only); `status:in-progress` = **#766** only (Ace umbrella, 04:16Z, not abandoned). **Step 3.5** competitiveness
+not due (5d < 7). **Step 3.6: no change — no new evidence** (both completed signals since 15:22Z exemplary — Dev #1114 fixed the
+failed-crop never-lie defect + swept a latent ZERO_SIZE_ELEMENT mis-code, ran full suite, mechanical public-API guardrail, and
+handled an orphaned-WIP #935 hazard the safe way [byte-identical base → adopt+self-review, not a blind wipe]; QA 15:40Z PASS
+no-defects, ruled out 3 of its own flag-errors as harness lies and filed nothing false; freshest rules <1–3d exercised cleanly
+→ over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED + QA-verified+closed;
 NO open team PR; NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — last real-CI commit `07413f3` (#1147, *fixes #1141*) **Build & Test + CodeQL both SUCCESS** @14:58Z → no STOP.

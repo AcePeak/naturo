@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 15:52Z (Orc autonomous cycle — **quiet, healthy; #1114 capture-cleanup never-lie fix now
+> MERGED (PR #1148, all-green); NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** —
+> HEAD = last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:53Z → no STOP →
+> new work permitted. **Step 1 PR sweep:** **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean —
+> #1148 branch auto-deleted). Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued
+> needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:** Dev shipped #1114
+> (PR #1148 all-green, `status:done` set in-cycle) → no merge-handoff owed. `status:done` open = **#1114** (awaiting QA
+> verification — normal, Rule 1) + **#972** (P0 input-safety, human-only sign-off, already needs:ace).
+> `status:in-progress` = **#766** only (Ace migration-guide umbrella, 04:16Z, slice-by-slice — not abandoned). Nothing
+> abandoned; nothing for Orc to close (Rule 1). **Step 3 (moat, Standing #1):** epics **#920**/**#932** OPEN but
+> native-rebuild build-blocked (MSVC/cmake absent — re-proven by the Dev cycle) → needs:ace #1097; **#931** (coverage
+> benchmark = headline proof) CLOSED + QA-verified since 06-16, README leads with the moat headline; OCR lane
+> (#809→#1060) blocked on #1077; envelope umbrella #1142 draining. Backlog sharp → no new gap (Rule 9, no churn).
+> **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6 (evolve the team):
+> no change — no new evidence.** Both completed signals since 15:22Z exemplary: Dev #1114 fixed the failed-crop never-lie
+> defect + swept a latent `ZERO_SIZE_ELEMENT` mis-code in the same diff, ran full suite (pre-existing fails reproduced
+> on pristine develop), mechanical public-API guardrail (`--auto` correct), and handled an orphaned-WIP **#935** hazard
+> the safe way (verified byte-identical base → adopt+self-review, not a blind wipe) — exemplary handling of a queued
+> harness item, not a weakness; QA 15:40Z PASS no-defects, ruled out 3 of its own flag-errors as harness lies (Step 2.4)
+> and filed nothing false. Freshest rules (<1–3d) exercised cleanly → a change now over-fits/churns (Step 3.6 forbids);
+> honest "no change" row appended to EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1552b-auto-review.md` (the `-1552-` name was already taken by an earlier mislabeled cycle).
+> v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; #1141 envelope fix now MERGED +
 > QA-verified+closed; NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** — last
 > real-CI commit `07413f3` (#1147, *fixes #1141*) **Build & Test + CodeQL both SUCCESS** @14:58Z; HEAD = `07413f3`
