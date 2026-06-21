@@ -122,7 +122,7 @@ def visual_compare(name: str, current: str, threshold: float,
         sys.exit(1)
 
     if json_output:
-        click.echo(json_dumps(result.to_dict()))
+        click.echo(json_dumps({"success": True, **result.to_dict()}))
     else:
         status = "PASS" if result.match else "FAIL"
         color = "" if result.match else "! "
@@ -175,7 +175,7 @@ def visual_diff(image1: str, image2: str, output: Optional[str],
         sys.exit(1)
 
     if json_output:
-        click.echo(json_dumps(result.to_dict()))
+        click.echo(json_dumps({"success": True, **result.to_dict()}))
     else:
         status = "MATCH" if result.match else "DIFFER"
         click.echo(f"[{status}] Similarity: {result.similarity:.1%}")
@@ -329,7 +329,7 @@ def visual_report(names: tuple, current_dir: Optional[str], threshold: float,
                 click.echo(f"Error generating report: {e}", err=True)
 
     if json_output:
-        data = report.to_dict()
+        data = {"success": True, **report.to_dict()}
         if skipped:
             data["skipped"] = skipped
         if errors:
@@ -494,7 +494,7 @@ def visual_suite(suite_path: str, output: Optional[str], json_output: bool):
                 click.echo(f"Error generating report: {e}", err=True)
 
     if json_output:
-        click.echo(json_dumps(report.to_dict()))
+        click.echo(json_dumps({"success": True, **report.to_dict()}))
     else:
         click.echo(f"\nResults: {report.passed} passed, {report.failed} failed")
 
