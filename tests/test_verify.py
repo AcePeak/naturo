@@ -1022,11 +1022,14 @@ class TestCaptureFocusStateNonWindows:
         from naturo.verify import _capture_focus_state
 
         backend = MagicMock(spec=[])
-        state = _capture_focus_state(backend)
+        # Force the non-Windows branch deterministically. Without this patch the
+        # test only passes when the host happens to be Linux/macOS; on a real
+        # Windows desktop it takes the Win32 path and fails (#1100).
+        with patch("platform.system", return_value="Linux"):
+            state = _capture_focus_state(backend)
 
         assert "platform" in state
-        # Linux returns "Linux", macOS returns "Darwin"
-        assert state["platform"] in ("Linux", "Darwin")
+        assert state["platform"] == "Linux"
 
 
 class TestCaptureUiTextsNonWindows:
@@ -1037,7 +1040,11 @@ class TestCaptureUiTextsNonWindows:
         from naturo.verify import _capture_ui_texts
 
         backend = MagicMock(spec=[])
-        result = _capture_ui_texts(backend, app="test")
+        # Force the non-Windows branch deterministically. Without this patch the
+        # function takes the Win32 EnumChildWindows path on a real Windows
+        # desktop and returns live window texts instead of {} (#1100).
+        with patch("platform.system", return_value="Linux"):
+            result = _capture_ui_texts(backend, app="test")
 
         assert result == {}
 
