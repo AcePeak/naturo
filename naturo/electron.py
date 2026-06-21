@@ -92,9 +92,10 @@ def _get_process_command_line(pid: int) -> Optional[str]:
             ],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
         )
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             if line.startswith("CommandLine="):
                 return line[len("CommandLine=") :]
     except (subprocess.TimeoutExpired, OSError):
@@ -124,9 +125,10 @@ def _get_process_exe_path(pid: int) -> Optional[str]:
             ],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
         )
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             if line.startswith("ExecutablePath="):
                 return line[len("ExecutablePath=") :]
     except (subprocess.TimeoutExpired, OSError):
@@ -155,9 +157,14 @@ def _bulk_get_process_info() -> Dict[int, Dict[str, str]]:
             ],
             capture_output=True,
             text=True,
+            # (#1156) Decode defensively: a process whose command line or path
+            # contains non-UTF-8 bytes (common on Windows for legacy-codepage
+            # apps) would otherwise raise UnicodeDecodeError in the reader
+            # thread, leaving ``stdout`` as ``None`` and crashing the parse.
+            errors="replace",
             timeout=15,
         )
-        lines = result.stdout.strip().splitlines()
+        lines = (result.stdout or "").strip().splitlines()
         # CSV header line: Node,CommandLine,ExecutablePath,ProcessId
         header_idx = -1
         for i, line in enumerate(lines):
@@ -206,10 +213,11 @@ def _find_processes_by_name(name: str) -> List[Dict[str, Any]]:
             ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
         )
         name_lower = name.lower()
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             line = line.strip()
             if not line:
                 continue
@@ -434,6 +442,7 @@ def list_electron_apps() -> Dict[str, Any]:
             ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
         )
     except (subprocess.TimeoutExpired, OSError):
@@ -441,7 +450,7 @@ def list_electron_apps() -> Dict[str, Any]:
 
     # Group processes by executable name
     exe_groups: Dict[str, List[int]] = {}
-    for line in result.stdout.splitlines():
+    for line in (result.stdout or "").splitlines():
         line = line.strip()
         if not line:
             continue

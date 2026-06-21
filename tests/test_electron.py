@@ -43,10 +43,13 @@ class TestDetectElectronApp:
         assert result["processes"] == []
         assert result["debug_port"] is None
 
+    @patch("naturo.electron._bulk_get_process_info", return_value={})
     @patch("naturo.electron._find_debug_port_from_cmdline")
     @patch("naturo.electron._is_electron_process")
     @patch("naturo.electron._find_processes_by_name")
-    def test_electron_detected(self, mock_find, mock_is_electron, mock_port):
+    def test_electron_detected(
+        self, mock_find, mock_is_electron, mock_port, mock_bulk,
+    ):
         """Correctly identifies an Electron process."""
         from naturo.electron import detect_electron_app
 
@@ -59,9 +62,10 @@ class TestDetectElectronApp:
         assert result["debug_port"] == 9229
         assert result["main_pid"] == 1234
 
+    @patch("naturo.electron._bulk_get_process_info", return_value={})
     @patch("naturo.electron._is_electron_process")
     @patch("naturo.electron._find_processes_by_name")
-    def test_not_electron(self, mock_find, mock_is_electron):
+    def test_not_electron(self, mock_find, mock_is_electron, mock_bulk):
         """Non-Electron process correctly identified."""
         from naturo.electron import detect_electron_app
 
@@ -70,10 +74,13 @@ class TestDetectElectronApp:
         result = detect_electron_app("notepad")
         assert result["is_electron"] is False
 
+    @patch("naturo.electron._bulk_get_process_info", return_value={})
     @patch("naturo.electron._find_debug_port_from_cmdline")
     @patch("naturo.electron._is_electron_process")
     @patch("naturo.electron._find_processes_by_name")
-    def test_electron_no_debug_port(self, mock_find, mock_is_electron, mock_port):
+    def test_electron_no_debug_port(
+        self, mock_find, mock_is_electron, mock_port, mock_bulk,
+    ):
         """Electron app running without debug port."""
         from naturo.electron import detect_electron_app
 
@@ -174,6 +181,17 @@ class TestListElectronApps:
         from naturo.electron import list_electron_apps
 
         mock_run.return_value = MagicMock(stdout="")
+        result = list_electron_apps()
+        assert result["count"] == 0
+        assert result["apps"] == []
+
+    @patch("naturo.electron._bulk_get_process_info", return_value={})
+    @patch("naturo.electron.subprocess.run")
+    def test_none_stdout_yields_no_apps(self, mock_run, mock_bulk):
+        """#1156: a None tasklist stdout must not crash the scan."""
+        from naturo.electron import list_electron_apps
+
+        mock_run.return_value = MagicMock(stdout=None)
         result = list_electron_apps()
         assert result["count"] == 0
         assert result["apps"] == []
@@ -513,6 +531,58 @@ class TestInternalHelpers:
 
         mock_run.side_effect = subprocess.TimeoutExpired("wmic", 15)
         assert _bulk_get_process_info() == {}
+
+    @patch("naturo.electron.subprocess.run")
+    def test_bulk_get_process_info_none_stdout(self, mock_run):
+        """#1156: stdout=None (non-UTF-8 decode failure) must not crash.
+
+        When a process command line contains non-UTF-8 bytes, the reader
+        thread can raise ``UnicodeDecodeError`` and leave ``result.stdout``
+        as ``None``. The parse must degrade gracefully to an empty result
+        instead of raising ``AttributeError: 'NoneType' object has no
+        attribute 'strip'``.
+        """
+        from naturo.electron import _bulk_get_process_info
+
+        mock_run.return_value = MagicMock(stdout=None)
+        assert _bulk_get_process_info() == {}
+
+    @patch("naturo.electron.subprocess.run")
+    def test_find_processes_by_name_none_stdout(self, mock_run):
+        """#1156: stdout=None must yield no processes, not crash."""
+        from naturo.electron import _find_processes_by_name
+
+        mock_run.return_value = MagicMock(stdout=None)
+        assert _find_processes_by_name("Code") == []
+
+    @patch("naturo.electron.subprocess.run")
+    def test_get_process_command_line_none_stdout(self, mock_run):
+        """#1156: stdout=None must yield None, not crash."""
+        from naturo.electron import _get_process_command_line
+
+        mock_run.return_value = MagicMock(stdout=None)
+        assert _get_process_command_line(1234) is None
+
+    @patch("naturo.electron.subprocess.run")
+    def test_get_process_exe_path_none_stdout(self, mock_run):
+        """#1156: stdout=None must yield None, not crash."""
+        from naturo.electron import _get_process_exe_path
+
+        mock_run.return_value = MagicMock(stdout=None)
+        assert _get_process_exe_path(1234) is None
+
+    @patch("naturo.electron.subprocess.run")
+    def test_decode_uses_replace_errors(self, mock_run):
+        """#1156: subprocess output is decoded with errors='replace'.
+
+        Pins the defensive-decode contract so a future refactor cannot
+        silently drop it and reintroduce the reader-thread crash.
+        """
+        from naturo.electron import _bulk_get_process_info
+
+        mock_run.return_value = MagicMock(stdout="")
+        _bulk_get_process_info()
+        assert mock_run.call_args.kwargs.get("errors") == "replace"
 
     @patch("naturo.electron._get_process_command_line")
     def test_find_debug_port_from_cmdline(self, mock_cmdline):
