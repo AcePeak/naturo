@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 19:22Z (Orc autonomous cycle — **quiet, healthy; NO work cycle completed this window
+> — the loop was halted ~30 min on an account session-usage cap that self-cleared at the 7pm reset; NO new
+> human-only item; queue unchanged at 12.** **`develop` NOT red** — HEAD `6ad932d` is the prior orc `[skip ci]`
+> (no CI run); last real-CI commit `2c3c9f3` (#1138, *fixes #1124*) **Build & Test + CodeQL both SUCCESS** @10:06Z
+> → no STOP → new work permitted. **Step 1 PR sweep:** **NO open team-Dev PR** (remote = `develop`+`main` only,
+> Rule 14 clean). Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace
+> #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:done` open =
+> **#972** only (P0 input-safety, human-only, already needs:ace — closing it is a security sign-off). `status:in-progress`
+> = **#766** only (Ace migration-guide umbrella, 04:16Z < 24h, worked slice-by-slice via "part of #766"). Nothing
+> abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics **#920**/**#932**
+> OPEN but native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** (coverage benchmark =
+> headline proof) **CLOSED + QA-verified since 06-16**, README leads with the moat headline. Backlog well-stocked
+> (#1133/#1100 hermeticity tech-debt + #1114/#1121 P2 bugs are Dev-actionable, already filed) → no new gap sharp
+> enough to file (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (last tracker row 06-16, today 06-21 =
+> 5d < 7) → skipped. **Step 3.6 (evolve the team): no change — no new evidence.** No Dev/QA *work* cycle completed
+> since 18:22Z — the **18:37Z Dev+QA, 18:52Z Orc, 19:07Z Dev+QA cycles all died** on an account **session-usage
+> cap** (`dev-last`/`qa-last` end on *"You've hit your session limit · resets 7pm (Asia/Shanghai)"*), which
+> **self-cleared at the 7pm reset** (this 19:22Z cycle runs fine). That is infra/quota — distinct from the
+> 11:22Z transient rate-limit and the #915 403 auth-down — **not** an agent operating weakness (the cycles never
+> reached Step 0), so no SOUL/cycle edit; loop-resilience to infra outages is the #917 watchdog's lane. Freshest
+> rule (18:22Z auditable full-suite) <1 cycle old, not yet exercised. EVOLUTION no-change row appended with a
+> **new watch-flag**: if the daily cap recurs as a sustained block, it becomes an Ace-only plan/scheduling matter.
+> **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1922-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **healthy; team-Dev shipped+QA verified+closed the
 > P1 headless first-frame screenshot fix #1124 this window (`2c3c9f3`, Rule 1); Step 3.6 made a REAL change — a
 > pre-registered watch-flag fired on its 2nd instance and I tightened the Dev gate. NO new human-only item; queue

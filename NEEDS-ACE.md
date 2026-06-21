@@ -4,27 +4,28 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 18:22Z (Orc autonomous cycle — **healthy; team-Dev shipped + QA verified+closed the
-P1 headless first-frame screenshot fix #1124 this window (`2c3c9f3`, Rule 1); Step 3.6 made a real, pre-registered
-change to the Dev gate; NO new human-only item** → **queue unchanged at 12**
-#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `2c3c9f3` (#1138,
-*fixes #1124*) **Build & Test + CodeQL both SUCCESS** @10:06Z; prior `d7280eb` (#1137) also green → no STOP → new
-work permitted. **Step 1:** **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14 clean). Only open PR =
-community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) —
-untouched. Nothing merged/closed by Orc (Rule 1). **Step 2:** `status:done` open = **#972** only (P0 input-safety,
-human-only, already queued — QA correctly defers *closing* it as a security sign-off). `status:in-progress` =
-**#766** only (Ace umbrella, 04:16Z < 24h). #1124 closed+verified by QA this window. Nothing abandoned; nothing for
-Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics
-**[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932** OPEN but native-rebuild build-blocked
-(MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof) **CLOSED + QA-verified since 06-16**
-and the **README already leads with the moat headline + benchmark link** (#931 follow-up done). No new gap sharp
-enough (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6 CHANGE MADE — a
-pre-registered watch-flag fired on its 2nd instance:** an `--auto` PR's first CI run went red on test failures the
-full local `tests/` run would catch — #1081 (own modified test modules red) and now **#1124/#1138** (Dev ran only
-`tests/browser/` → first CI run red on 3 existing `tests/`-root mocks). Tightened `dev-cycle.md` Step 3.3 with an
-**auditable full-suite** rule (run the FULL `tests/`, never a sub-folder; paste the `pytest tests/ …` command +
-summary in the gate report) + EVOLUTION row citing both. v0.3.2 ship-gate unchanged (FULLY MET — release is your
-call, #914)._
+_Last refreshed: 2026-06-21 19:22Z (Orc autonomous cycle — **quiet, healthy; NO work cycle completed this window
+— the whole loop was halted ~30 min on an account session-usage cap that self-cleared at the 7pm reset; NO new
+human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. `develop` NOT red — HEAD `6ad932d` is the prior
+orc `[skip ci]` (no CI run); last real-CI commit `2c3c9f3` (#1138, *fixes #1124*) **Build & Test + CodeQL both
+SUCCESS** @10:06Z → no STOP → new work permitted. **Step 1:** **NO open team-Dev PR** (remote = `develop`+`main`
+only, Rule 14 clean). Only open PR = community **#1055** ([#1057](https://github.com/AcePeak/naturo/issues/1057),
+base `main`, fork, UNSTABLE) — untouched. Nothing merged/closed by Orc (Rule 1). **Step 2:** `status:done` open =
+**#972** only (P0 input-safety, human-only, already queued — closing it is a security sign-off). `status:in-progress`
+= **#766** only (Ace umbrella, 04:16Z < 24h, slice-by-slice). Nothing abandoned; nothing for Orc to close (Rule 1).
+**Step 3 (recognition moat, Standing #1):** epics **[#920](https://github.com/AcePeak/naturo/issues/920)**/**#932**
+OPEN but native-rebuild build-blocked (MSVC/cmake absent) → #1097; **#931** (coverage benchmark = headline proof)
+**CLOSED + QA-verified since 06-16** and README leads with the moat headline + benchmark link. No new gap sharp
+enough (Rule 9). **Step 3.5** competitiveness not due (5d < 7 since 06-16). **Step 3.6:** **no change — no new
+evidence.** No Dev/QA work cycle completed since 18:22Z — the 18:37Z Dev+QA, 18:52Z Orc and 19:07Z Dev+QA cycles
+all died on an account **session-usage cap** (*"You've hit your session limit · resets 7pm (Asia/Shanghai)"*) that
+self-cleared at the 7pm reset; infra/quota, not agent behavior → no prompt edit (loop-resilience = #917 watchdog
+lane), honest EVOLUTION no-change row + **new watch-flag**. **⚠️ FYI for Ace:** if this **daily session cap**
+reliably halts Dev+QA+Orch around the same window each day it becomes a plan/scheduling call (upgrade tier, or
+stagger the runner cadence so the three roles don't burn the quota together) — surfaced here but **not yet filed**
+(one ~30 min self-clearing window doesn't meet the file-an-issue bar; will escalate to `needs:ace` if it recurs as
+a sustained block on ship-gate work). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
