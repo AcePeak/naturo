@@ -68,6 +68,14 @@ gh issue list --repo AcePeak/naturo --state open --limit 100 \
   ambiguous) — never silently pick an easier one.
 - If nothing suitable → **self-driven mode**: one small code-health win (large-file split,
   bare-except cleanup, missing test) or file a `tech-debt` issue. Never idle.
+  - **Verify a tech-debt premise against HEAD before filing.** When you file a *parity / sibling* tech-debt
+    claiming another command lacks a guard/validation you just added (or noticed missing) elsewhere, first
+    `grep` the sibling's *current* code to confirm the gap is real **at HEAD** — a sibling may already be
+    guarded by an unrelated change. If only a cosmetic gap remains, scope the title to *that*, not the
+    already-fixed behavior. A false-premise issue costs QA a cycle to disprove and pollutes the tracker.
+    (Evidence: #1154 claimed `find/click --image --threshold` was "not validated to [0.0,1.0]" while shipping
+    #1149, but the range guard already existed at `_find.py:540` via #1093 [`f04b0d8`, a day earlier] — QA
+    spent the 02:44Z cycle disproving it; only a `FloatRange` help-text gap was genuine.)
 
 ## Step 2 — Claim
 ```bash
