@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **quiet, healthy; the never-lie #1089 fix shipped AND was
+> QA-verified+closed this window; Dev now on P1 #1111; NO new human-only item**. **`develop` NOT red** (HEAD `8388bf8`
+> #1130 *fixes #1089* — **Build & Test + CodeQL both SUCCESS** @~07:00Z → no STOP) → new work permitted. **Queue
+> unchanged (11) #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 1 PR sweep:** **NO open team/Dev
+> PR** — #1130 merged `8388bf8` last window, branch auto-deleted (only `develop`+`main` remain, Rule 14 clean). Only open
+> PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057, human-only → not touched.
+> Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:in-progress` = **#1111** (Dev in-flight, P1
+> record/type bug, updated 07:09Z < 24h) + **#766** (Ace umbrella, updated 04:16Z < 24h); `status:done` open = **#972**
+> only (human-only input-safety, queued). **#1089 verified+closed by QA (15:09Z)** — clean-path `-j` envelope proof
+> (window/element predicate-timeout → standard error block code=TIMEOUT/category=automation/recoverable; success path
+> keeps the #895 shape; cited merged `8388bf8` per Rule 1; 0 intrusive input). Nothing abandoned; nothing for Orc to
+> close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked
+> (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). Dev-actionable backlog left in place
+> (Rule 9, no churn): **#1124** (P1) + **#1121**/**#1123**/**#1114** (P2); Dev now hardest-first on **#1111**. No new gap
+> sharp enough. **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve
+> the team): no change — no new evidence.** Both completed signals since 14:52Z were **exemplary, not weaknesses**:
+> **Dev #1089** (merged `8388bf8` all-green) attacked the never-lie wait-timeout `-j` envelope HARDEST-FIRST — re-proved
+> the native-moat build-block fresh (`cl`/`cmake`/`nmake` absent → #1096 unbuildable, correctly deferred #1097), TDD'd 7
+> failing tests, and factored `build_error_object()` as a single-source shape (no public surface → `--auto` correct);
+> **QA #1089 (15:09Z)** verified+closed via the clean direct-`python -m naturo` no-pipe path and **honestly self-corrected
+> an inaccurate expected-behavior claim in its own original issue body** (the non-existent `--element X --gone Y`
+> mutual-exclusion) rather than filing a false positive. Freshest rules <2–3d exercised cleanly → a rule now would
+> over-fit (Step 3.6 forbids); EVOLUTION.md no-change row appended. **Step 4 (needs:ace): no new item;** queue unchanged;
+> NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-1522-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY
+> MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 14:52Z (Orc autonomous cycle — **quiet, healthy; one fresh team-Dev never-lie bugfix PR
 > landing itself; NO new human-only item**. **`develop` NOT red** (HEAD `fde7e0b` orc `[skip ci]`; last real-CI commit
 > `7809f7b` #1129 **Build & Test + CodeQL SUCCESS** @04:50Z → no run on the `[skip ci]` HEAD → no STOP) → new work

@@ -4,25 +4,27 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 14:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
-#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `fde7e0b` orc `[skip ci]`; last
-real-CI commit `7809f7b` #1129 Build & Test + CodeQL **SUCCESS** @04:50Z → no STOP) → new work permitted; nothing
-closed by Orc this cycle (Rule 1). **Step 1:** **NEW team-Dev PR #1130** (`attach standard error block to wait
-predicate-timeout -j output`, *fixes #1089*, base `develop`) — MERGEABLE, `BLOCKED` only on IN_PROGRESS CI, **auto-merge
-SQUASH already enabled** → lands itself when green (internal never-lie envelope fix, no public surface → `--auto`
-correct); **Orc did not merge it** (left to its own auto-merge). Only other open PR = community **#1055**
+_Last refreshed: 2026-06-21 15:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged (11)
+#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (HEAD `8388bf8` #1130 *fixes #1089*,
+**Build & Test + CodeQL both SUCCESS** @~07:00Z → no STOP) → new work permitted; nothing closed by Orc this cycle
+(Rule 1). **Step 1:** **NO open team/Dev PR** — #1130 merged `8388bf8` last window, branch auto-deleted (only
+`develop`+`main` remain, Rule 14 clean). Only open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
-`status:in-progress` = **#1089** (Dev in-flight, PR #1130, updated 06:52Z < 24h) + **#766** (Ace-owned umbrella, active,
-updated 04:16Z < 24h); `status:done` open = **#972** only (human-only input-safety, queued). Nothing abandoned; nothing
-for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)**
-(JAB never attaches) stays build-blocked (MSVC/cmake absent) → #1097 below; README hero = recognition matrix (#931).
-Dev-actionable backlog: **#1124**/**#1111** (P1) +
+`status:in-progress` = **#1111** (Dev in-flight, P1 record/type bug, updated 07:09Z < 24h) + **#766** (Ace-owned
+umbrella, active, updated 04:16Z < 24h); `status:done` open = **#972** only (human-only input-safety, queued). **#1089
+verified+closed by QA (15:09Z)** this window — clean-path `-j` envelope proof (window/element timeout → standard error
+block code=TIMEOUT/category=automation/recoverable, success path keeps #895 shape, 0 intrusive input; cited merged
+`8388bf8` per Rule 1). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):**
+P0 **[#1096](https://github.com/AcePeak/naturo/issues/1096)** (JAB never attaches) stays build-blocked (MSVC/cmake
+absent) → #1097 below; README hero = recognition matrix (#931). Dev-actionable backlog: **#1124** (P1) +
 **[#1121](https://github.com/AcePeak/naturo/issues/1121)**/**[#1123](https://github.com/AcePeak/naturo/issues/1123)**/**#1114**
 (P2) — all **Dev-actionable (not human-only)**, left in backlog (Rule 9 — do NOT re-open the already-MET ship-gate; Dev
-picks hardest-first). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since 06-16).
-**Step 3.6** no change — no new evidence (completed signal since 13:22Z = QA 14:39Z exemplary exploratory PASS, 0 new
-bugs, all gaps mapped to OPEN issues, 0 intrusive input; Dev #1130 a fresh in-flight never-lie fix — freshest rules
-<2–3d exercised cleanly → a rule now would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914)._
+picks hardest-first, now on #1111). No new gap sharp enough (Rule 9). **Step 3.5** competitiveness not due (<7d since
+06-16). **Step 3.6** no change — no new evidence (completed signals since 14:52Z = **Dev #1089** merged `8388bf8`
+all-green, exemplary HARDEST-FIRST/TDD with `build_error_object()` factored single-source + **QA #1089** verified+closed
+clean with an honest self-correction of its own earlier issue-body claim — both exemplary, not weaknesses; freshest
+rules <2–3d exercised cleanly → a rule now would over-fit). v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914)._
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
