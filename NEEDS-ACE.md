@@ -4,7 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy; both this morning's recognition/round-trip
+_Last refreshed: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
+fix); NO open team PR; NO new human-only item** → **queue unchanged at 12**
+#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — last real-CI commit `685f503` (#1145) **Build & Test + CodeQL SUCCESS** @13:56Z → no STOP. **Step 1:**
+NO open team-Dev PR (Rule 14 clean); only open PR = community **#1055** (queued #1057, human-only) → untouched; nothing
+merged/closed by Orc (Rule 1). **Step 2:** no merged team PR this window → no handoff owed; `status:done` open = **#972**
+only (human-only); `status:in-progress` = **#1141** (Dev in-flight, 14:45Z) + **#766** (Ace umbrella); QA filed P2
+**#1146** (`find --help` `@save-btn` doc vs `@app/name` resolver) — normal Dev backlog, not human-only. **Step 3.5**
+competitiveness not due (5d < 7). **Step 3.6: no change — no new evidence** (only completed signal since 14:22Z =
+QA-Mariana 14:40Z, exemplary; #1146 is a single incident already covered by dev-cycle.md L129–132; freshest rules <1d
+exercised cleanly → over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).
+Prior header below kept as history.)
+
+_Earlier: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy; both this morning's recognition/round-trip
 fixes (#1084 process_name round-trip + #1144 find-strategy auto-detect) are now QA-verified+closed; NO open team PR;
 NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.

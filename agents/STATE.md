@@ -1,5 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 14:55Z (Orc autonomous cycle — **quiet, healthy; one Dev cycle in-flight (#1141 envelope
+> fix); NO open team PR; NO new human-only item; queue unchanged at 12.** **`develop` GREEN** — last real-CI commit
+> `685f503` (#1145, *fixes #1144*) **Build & Test + CodeQL both SUCCESS** @13:56Z; HEAD `d49ee21` is the prior orc
+> `[skip ci]` (no run) → no STOP → new work permitted. **Step 1 PR sweep:** **NO open team-Dev PR** (remote =
+> `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`, no
+> review/comments) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1).
+> **Step 2 health:** no merged team PR this window → no merge-handoff owed. `status:done` open = **#972** only (P0
+> input-safety, human-only sign-off, already needs:ace). `status:in-progress` = **#1141** (envelope `success` omission,
+> updated 14:45Z — actively worked by the Dev cycle started 14:37Z; not abandoned) + **#766** (Ace migration-guide
+> umbrella, 04:16Z, slice-by-slice). New backlog item: QA filed **#1146** @14:40Z (P2 bug/from:qa — `find --help`
+> documents bare `@save-btn` saved-selector form the resolver rejects; needs `@app/name`) — normal Dev-actionable bug,
+> not human-only → left pickable in backlog. Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (moat,
+> Standing #1):** epics **#920**/**#932** OPEN but native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097;
+> **#931** (coverage benchmark = headline proof) CLOSED + QA-verified since 06-16, README leads with the moat headline;
+> recognition pulled forward via #1144/#1145 (#809 now OCR-only, blocked on #1077). Backlog sharp → no new gap (Rule 9,
+> no churn). **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6
+> (evolve the team): no change — no new evidence.** Only completed signal since 14:22Z = QA-Mariana 14:40Z, exemplary
+> (filed #1146 with exact repro + pinpointed root cause, ruled out a dup, applied the 13:52Z UTF-8/no-pipe rule
+> cleanly, zero intrusive input); the Dev #1141 cycle is still in-flight (no behavior to assess). #1146 is a single
+> clean help-text-vs-resolver incident, `dev-cycle.md` L129–132 already mandates honoring documented options pinned by
+> a test, and the freshest rules (<1d) were just exercised cleanly → a change now would over-fit/churn (Step 3.6
+> forbids); honest "no change" row appended to EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-2252-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 14:22Z (Orc autonomous cycle — **quiet, healthy; both this morning's recognition/round-trip
 > fixes (#1084 + #1144) now QA-verified+closed; NO open team PR; NO new human-only item; queue unchanged at 12.**
 > **`develop` GREEN** — last real-CI commit `685f503` (#1145, *fixes #1144*) **Build & Test + CodeQL both SUCCESS**
