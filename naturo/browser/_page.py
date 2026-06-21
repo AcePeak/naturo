@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from naturo.browser._frame import BrowserFrame
     from naturo.browser._network import NetworkMonitor
 
-from naturo.cdp import CDPClient, CDPError, CDPConnectionError
+from naturo.cdp import CDPClient, CDPError, CDPConnectionError, CDPTimeoutError
 from naturo.browser._element import BrowserElement
 from naturo.browser._selectors import (
     ParsedSelector,
@@ -502,6 +502,18 @@ class BrowserPage:
                 "screenshot: 'selector' and 'full_page' are mutually exclusive"
             )
 
+        # A freshly-launched headless Chrome may not have composited an
+        # on-screen frame yet, and a separately-connected CDP session (the
+        # canonical ``browser screenshot`` process after ``browser launch``)
+        # has not enabled the Page domain. The very first
+        # ``Page.captureScreenshot`` then blocks until the compositor yields a
+        # frame, timing out the user's first action after launch (#1124).
+        # Enabling the Page domain lets Chrome schedule that frame; the bounded
+        # retry in ``_capture_screenshot`` self-heals a residual first-frame
+        # stall. ``Page.enable`` is idempotent, so this is safe when the page
+        # was already navigated/reloaded on this connection.
+        self._cdp.send("Page.enable")
+
         params: Dict[str, Any] = {"format": "png"}
         if selector is not None:
             try:
@@ -540,7 +552,7 @@ class BrowserPage:
                 "scale": 1,
             }
 
-        result = self._cdp.send("Page.captureScreenshot", params)
+        result = self._capture_screenshot(params)
         data = result.get("data", "")
 
         import base64
@@ -548,6 +560,37 @@ class BrowserPage:
             f.write(base64.b64decode(data))
 
         return path
+
+    def _capture_screenshot(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Send ``Page.captureScreenshot`` with one bounded retry on timeout.
+
+        A freshly-launched headless Chrome may not have produced an on-screen
+        frame yet, so the first ``Page.captureScreenshot`` can block until the
+        compositor yields a frame. The attempt itself forces that frame, so a
+        single retry returns immediately rather than failing the user's first
+        capture after launch (#1124). The retry is bounded (exactly one) so a
+        genuinely dead connection still surfaces a ``CDPTimeoutError`` instead
+        of looping.
+
+        Args:
+            params: Parameters for the ``Page.captureScreenshot`` command.
+
+        Returns:
+            The ``result`` field of the CDP response (carries the base64
+            ``data``).
+
+        Raises:
+            CDPTimeoutError: If both the initial capture and the single retry
+                time out.
+        """
+        try:
+            return self._cdp.send("Page.captureScreenshot", params)
+        except CDPTimeoutError:
+            logger.warning(
+                "First Page.captureScreenshot stalled (headless first-frame); "
+                "retrying once (#1124)."
+            )
+            return self._cdp.send("Page.captureScreenshot", params)
 
     def evaluate(self, expression: str) -> Any:
         """Evaluate a JavaScript expression in the page context.

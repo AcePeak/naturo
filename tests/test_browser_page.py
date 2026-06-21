@@ -355,6 +355,7 @@ class TestBrowserPageScreenshot:
         fake_png = base64.b64encode(b"full").decode()
         page, cdp = _make_page()
         cdp.send.side_effect = [
+            {},  # Page.enable (headless first-frame guard, #1124)
             {"contentSize": {"width": 1920, "height": 5000}},  # getLayoutMetrics
             {"data": fake_png},  # captureScreenshot
         ]
@@ -362,7 +363,7 @@ class TestBrowserPageScreenshot:
         path = str(tmp_path / "full.png")
         page.screenshot(path, full_page=True)
 
-        # First call is getLayoutMetrics
+        # Layout metrics are queried for the full-page clip.
         cdp.send.assert_any_call("Page.getLayoutMetrics")
 
     def test_screenshot_passes_params_positionally_1119(self, tmp_path):
