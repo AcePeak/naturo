@@ -35,6 +35,7 @@ import pytest
 
 from naturo.browser import BrowserPage, launch_chrome
 from naturo.browser._stealth import apply_stealth_patches
+from naturo.cdp import CDPError
 
 pytestmark = pytest.mark.desktop
 
@@ -1334,3 +1335,133 @@ def test_dropdown_playlist_selection_equivalence(
     for item in items:
         expected = "true" if item.text in target_playlists else "false"
         assert item.attr("data-selected") == expected
+
+
+@contextmanager
+def _chrome_on_dir(user_data_dir: str) -> Iterator[BrowserPage]:
+    """Yield a headless Chrome bound to a caller-owned ``user_data_dir``.
+
+    Unlike :func:`_headless_chrome_page`, the profile directory is owned by the
+    caller and is *not* deleted on exit, so it can be reused across restarts to
+    prove persistence. Shutdown issues a graceful CDP ``Browser.close`` so Chrome
+    commits its storage (cookies, localStorage) to disk before exiting, then waits
+    for the process to leave -- on Windows a plain ``terminate()`` is an immediate
+    ``TerminateProcess`` that can drop not-yet-flushed storage and make a
+    persistence assertion flaky.
+
+    Args:
+        user_data_dir: Chrome profile directory to launch against; left in place
+            on exit for the caller to reuse or remove.
+
+    Yields:
+        A connected :class:`BrowserPage` on a freshly assigned free port.
+    """
+    port = _free_tcp_port()
+    chrome = launch_chrome(
+        port=port,
+        headless=True,
+        user_data_dir=user_data_dir,
+        timeout=30.0,
+    )
+    page = BrowserPage(port=port)
+    try:
+        yield page
+    finally:
+        # Browser.close makes Chrome flush storage and exit cleanly. The command
+        # tears the socket down as it lands, so a CDP transport error here is the
+        # expected success path -- not a failure to surface.
+        try:
+            page._cdp.send("Browser.close")
+        except CDPError:
+            pass
+        try:
+            page.close()
+        except CDPError:
+            pass
+        try:
+            chrome.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            chrome.kill()
+            chrome.wait(timeout=5)
+
+
+def test_profile_user_data_dir_persistence_equivalence(fixtures_server: str) -> None:
+    """Reproduce DrissionPage's persistent-profile (``set_user_data_path``) behaviour.
+
+    Mirrors the migration guide's "Chrome Profile Management" section. The *Before*
+    DrissionPage pattern pins a profile to a fixed directory so browser state
+    survives across process restarts::
+
+        co = ChromiumOptions()
+        co.set_user_data_path(user_data_path)   # state lives in this directory
+        page = WebPage(mode="d", chromium_options=co)
+
+    naturo's documented analogue is launching with an explicit ``user_data_dir``
+    (``naturo browser launch --user-data-dir <path>`` /
+    ``launch_chrome(user_data_dir=...)``); the matrix's row-1 claim is "Chrome
+    launches with correct user-data-dir, profile persists across restarts". This
+    row proves that claim end-to-end against a fully-offline fixture, with three
+    legs:
+
+    * **The directory is really the live profile root:** after the first launch
+      Chrome has populated it with its profile artifacts -- the top-level
+      ``Local State`` file and a ``Default`` profile subdirectory -- so the passed
+      ``user_data_dir`` is genuinely in use, not silently ignored.
+    * **State persists across a restart:** a marker written to ``localStorage`` in
+      the first browser is read back, byte-for-byte, after that browser is fully
+      shut down and a brand-new Chrome process is launched on the *same*
+      ``user_data_dir`` -- exactly the persistence ``set_user_data_path`` provides.
+    * **Persistence comes from the dir, not the page (non-vacuous control):** a
+      third launch on a *fresh* throwaway ``user_data_dir`` sees no marker, proving
+      the survival above is the profile directory carrying state rather than
+      localStorage leaking through the shared origin or the fixture server.
+
+    Scope note (never-lie / doc-vs-code): the guide's higher-level
+    ``naturo browser profile create|setup|list`` / ``ProfileManager`` surface is
+    **not** implemented; this row deliberately asserts only the implemented
+    ``user_data_dir`` mechanism those would be built on, rather than papering over
+    that gap. The named-profile-manager gap is left for separate doc/API triage.
+
+    Marked ``@pytest.mark.desktop`` (module-level): it launches real headless
+    Chrome. It owns its profile-directory lifetimes (the shared ``browser_page``
+    fixture uses a throwaway dir per launch -- the opposite of what a persistence
+    proof needs), so it is a standalone test.
+    """
+    marker_key = "naturo_migration_profile_token"
+    marker_value = "persisted-across-restart-766"
+    persistent_dir = tempfile.mkdtemp(prefix="naturo_profile_persist_")
+    fresh_dir = tempfile.mkdtemp(prefix="naturo_profile_fresh_")
+    try:
+        # Launch 1: write a marker into the persistent profile's localStorage.
+        with _chrome_on_dir(persistent_dir) as page:
+            page.navigate(f"{fixtures_server}/basic.html")
+            page.evaluate(
+                f"localStorage.setItem({marker_key!r}, {marker_value!r})"
+            )
+            # Confirm the write landed in-page before we rely on it surviving.
+            assert page.evaluate(f"localStorage.getItem({marker_key!r})") == marker_value
+
+        # The directory is the real profile root: Chrome wrote its standard
+        # artifacts there (proves --user-data-dir was honoured, not ignored).
+        profile_root = Path(persistent_dir)
+        assert (profile_root / "Local State").is_file()
+        assert (profile_root / "Default").is_dir()
+
+        # Launch 2: a brand-new Chrome process on the SAME dir reads the marker
+        # back -- the cross-restart persistence DrissionPage's set_user_data_path
+        # provides.
+        with _chrome_on_dir(persistent_dir) as page:
+            page.navigate(f"{fixtures_server}/basic.html")
+            assert (
+                page.evaluate(f"localStorage.getItem({marker_key!r})") == marker_value
+            )
+
+        # Launch 3 (non-vacuous control): a fresh profile dir, same origin and
+        # server, must NOT see the marker -- so the survival above is the profile
+        # directory carrying state, not a leak through the shared origin.
+        with _chrome_on_dir(fresh_dir) as page:
+            page.navigate(f"{fixtures_server}/basic.html")
+            assert page.evaluate(f"localStorage.getItem({marker_key!r})") is None
+    finally:
+        shutil.rmtree(persistent_dir, ignore_errors=True)
+        shutil.rmtree(fresh_dir, ignore_errors=True)
