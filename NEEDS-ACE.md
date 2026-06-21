@@ -4,7 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR; one fresh
+_Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1151
+(#1139) MERGED in-cycle + #1139 flipped status:done; one fresh QA-filed P1 (#1150) feeding Dev; NO new human-only
+item** → **queue unchanged at 12** #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+`develop` GREEN — merge commit `d27240d` (#1151, *fixes #1139*) **Build & Test SUCCESS**, CodeQL in-progress (no
+failure) @17:24Z; prior real-CI `5e1df10` (#1148) both SUCCESS; my HEAD `[skip ci]` → no STOP. **Step 1:** team-Dev PR
+**#1151** (`fix/issue-1139…`→`develop`, *fixes #1139*) **auto-merged itself green as `d27240d` @17:24Z** (squash,
+auto-merge by Ace @17:20Z; Orc left it to land on its own — never merge outside a PR). **Branch auto-deleted (Rule 14
+clean).** Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed
+by Orc (Rule 1). **Step 2:** **flipped #1139 → status:done** (Rule 1 handoff, merged `d27240d`, awaiting QA);
+`status:done` open now = **#1139** (just merged, awaiting QA) + **#972** (human-only) → #972 untouched;
+`status:in-progress` = **#766** only (Ace umbrella). QA filed **#1150** (P1 — non-ASCII window titles → U+FFFD mojibake, cp936→UTF-8
+decode data-loss, OS-ground-truth-confirmed) + **#1149** (P2 visual --threshold range-validation) — normal Dev work, no
+queue. **Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (two completed
+signals since 16:52Z both exemplary — QA @01:10Z root-caused #1150 vs independent ctypes `GetWindowTextW` ground truth,
+ruled out harness-lie/stale-egg, zero false; Dev @01:25Z completed *interrupted* #1139 by adopt-and-verify of the prior
+cycle's uncommitted branch [#935 hazard handled the safe way, not a blind reset --hard] with an auditable stash-rerun
+gate + mechanical public-API check; freshest rules <1–3d exercised cleanly → over-fit forbidden). v0.3.2 ship-gate
+unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-21 16:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR; one fresh
 QA-filed bug (#1149) feeding Dev; NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — last real-CI commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:50Z;

@@ -1,5 +1,38 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; team-Dev PR #1151
+> (#1139) MERGED in-cycle + #1139 flipped status:done (handoff done); one fresh QA-filed P1 bug (#1150) feeding Dev;
+> NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — merge commit `d27240d` (#1151, *fixes #1139*)
+> **Build & Test SUCCESS**, CodeQL in-progress (no failure) @17:24Z; prior real-CI `5e1df10` (#1148) both SUCCESS;
+> my HEAD `[skip ci]` → no STOP. **Step 1 PR sweep:** team-Dev PR **#1151** (`fix/issue-1139-resolve-user-data-dir`→
+> `develop`, *fixes #1139*) **auto-merged itself green as `d27240d` @17:24Z** (squash, auto-merge enabled by Ace @17:20Z;
+> Orc left it to land on its own, did not merge — Rule: never merge outside a PR). **Branch auto-deleted (Rule 14 clean —
+> remote = `develop`+`main` only).** Only other open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already
+> queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:** **flipped
+> #1139 → `status:done`** (Rule 1 handoff, merged SHA `d27240d`, awaiting QA — prevents premature status:done on a
+> still-red PR). `status:done` open now = **#1139** (just merged, awaiting QA) + **#972** (P0 input-safety, human-only
+> sign-off, already needs:ace) → #972 untouched. `status:in-progress` = **#766** only (Ace migration-guide umbrella,
+> 04:16Z). **New:** QA filed **#1150** (P1 — non-ASCII window titles corrupted to
+> U+FFFD mojibake in list windows/apps + app windows/find; ANSI cp936→UTF-8 decode data-loss, OS-ground-truth-confirmed
+> via ctypes; distinct from closed #894/#1025) + earlier **#1149** (P2 visual --threshold range-validation) — both normal
+> in-authority Dev work, no Orc action / no queue. Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (moat,
+> Standing #1):** epics **#920**/**#932**/JAB #1096 native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097;
+> **#931** benchmark CLOSED+verified, README leads with the moat headline; OCR (#809→#1060) blocked on #1077; #1150
+> touches the moat's window-title-matching path (CJK windows likely unreachable by title) — already a sharp QA-filed
+> Dev-actionable bug → no new gap to file (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (last row 06-16,
+> today 06-22 = 6d < 7) → skipped (due 06-23). **Step 3.6 (evolve the team): no change — no new evidence.** Two completed
+> signals since 16:52Z, both exemplary: QA @01:10Z root-caused #1150 against **independent OS ground truth** (ctypes
+> `GetWindowTextW`, not naturo stdout; proved the GBK byte-sequence → U+FFFD decode), ruled out harness-lie/stale-egg,
+> filed zero false; Dev @01:25Z completed **interrupted** #1139 by **adopting+self-reviewing** the prior cycle's
+> complete-but-uncommitted branch (the safe adopt-and-verify pattern, not a blind `reset --hard` wipe) — the already-queued
+> **#935** concurrent-worktree hazard navigated *correctly*, not a new weakness — with an auditable stash-and-rerun gate
+> + mechanical public-API check. Freshest rules <1–3d exercised cleanly → a change now over-fits/churns (forbidden).
+> Honest "no change" row appended to EVOLUTION.md. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-21-1722b-auto-review.md` (the `-1722-` name was already taken by an earlier mislabeled
+> cycle — same as the prior `-1652b-`). v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call, #914).
+> Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 16:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO open team PR; one fresh
 > QA-filed bug (#1149) feeding Dev; NO new human-only item → queue unchanged at 12.** **`develop` GREEN** — last real-CI
 > commit `5e1df10` (#1148, *fixes #1114*) **Build & Test + CodeQL both SUCCESS** @15:50Z; HEAD `07dd443` is prior orc
