@@ -304,6 +304,70 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
 }
 
 
+def build_error_object(
+    code: str,
+    message: str,
+    *,
+    category: Optional[str] = None,
+    context: Optional[dict[str, Any]] = None,
+    suggested_action: Optional[str] = None,
+    recoverable: Optional[bool] = None,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Build the canonical six-key ``error`` object (without the envelope wrapper).
+
+    This is the single source of truth for the *shape* of the ``error`` member —
+    ``code``, ``message``, ``category``, ``context``, ``suggested_action`` and
+    ``recoverable``, in that order, identical to
+    :meth:`naturo.errors.NaturoError.to_dict` (#884). :func:`json_error` wraps the
+    result in the ``{"success": False, "error": ...}`` envelope, but a command that
+    has *already* built a partial result dict and needs to merge in a standard
+    error block — without raising through ``json_error`` — calls this directly. For
+    example ``wait`` reports a predicate **timeout** as ``success:false`` without
+    raising, so it attaches the block to its existing ``mode``/``wait_time`` payload
+    rather than discarding those keys (issue #1089).
+
+    If ``category``, ``suggested_action`` or ``recoverable`` are not provided, they
+    are resolved from the error code: the category from
+    :func:`naturo.errors.category_for_code`, and the recovery hint/recoverability
+    from the local registry.
+
+    Args:
+        code: Error code string (e.g., 'INVALID_INPUT', 'TIMEOUT').
+        message: Human-readable error message.
+        category: Error class (environment/validation/automation/...). Resolved
+            from the code when None, defaulting to 'unknown'.
+        context: Structured detail for the error. Defaults to an empty dict.
+        suggested_action: Recovery hint for AI agents (auto-populated if None;
+            may remain ``null`` when the code has no registered hint).
+        recoverable: Whether retrying might help (auto-populated if None).
+        extra: Additional key-value pairs to merge into the error object on top of
+            the canonical keys.
+
+    Returns:
+        The ``error`` object as a dict, ready to embed in a JSON response.
+    """
+    # Look up defaults from registry
+    hint_action, hint_recoverable = _RECOVERY_HINTS.get(code, (None, False))
+
+    action = suggested_action if suggested_action is not None else hint_action
+    is_recoverable = recoverable if recoverable is not None else hint_recoverable
+
+    error: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "category": category if category is not None else category_for_code(code),
+        "context": context if context is not None else {},
+        "suggested_action": action,
+        "recoverable": bool(is_recoverable),
+    }
+
+    if extra:
+        error.update(extra)
+
+    return error
+
+
 def json_error(
     code: str,
     message: str,
@@ -345,24 +409,15 @@ def json_error(
     Returns:
         JSON string ready for click.echo().
     """
-    # Look up defaults from registry
-    hint_action, hint_recoverable = _RECOVERY_HINTS.get(code, (None, False))
-
-    action = suggested_action if suggested_action is not None else hint_action
-    is_recoverable = recoverable if recoverable is not None else hint_recoverable
-
-    error: dict[str, Any] = {
-        "code": code,
-        "message": message,
-        "category": category if category is not None else category_for_code(code),
-        "context": context if context is not None else {},
-        "suggested_action": action,
-        "recoverable": bool(is_recoverable),
-    }
-
-    if extra:
-        error.update(extra)
-
+    error = build_error_object(
+        code,
+        message,
+        category=category,
+        context=context,
+        suggested_action=suggested_action,
+        recoverable=recoverable,
+        extra=extra,
+    )
     return json_dumps({"success": False, "error": error})
 
 

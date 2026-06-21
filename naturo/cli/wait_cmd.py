@@ -2,7 +2,7 @@
 from naturo.cli._jsonio import json_dumps
 import time
 
-from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.error_helpers import build_error_object, json_error as _json_error_str
 from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 import sys
 import click
@@ -189,6 +189,21 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
                 "width": result.element.width,
                 "height": result.element.height,
             }
+        if not result.found:
+            # (#1089) A predicate timeout reports success:false *without* raising,
+            # so it never reaches the ``_json_error_str`` path every other failure
+            # uses. Attach the standard error block here — alongside, not in place
+            # of, the #895 canonical success-shape keys — so a ``-j`` agent gets
+            # the same code/category/message/recovery contract on the most common
+            # ``wait`` failure (target never appears) as on validation failures.
+            # ``TIMEOUT`` (category automation, recoverable) is the operation-level
+            # outcome for every appear/disappear mode; the message mirrors the
+            # human path's ``Error: Timeout after ...`` text.
+            target = element or gone or window_title
+            output["error"] = build_error_object(
+                "TIMEOUT",
+                f"Timeout after {result.wait_time:.1f}s waiting for '{target}'",
+            )
         click.echo(json_dumps(output, indent=2))
         if not result.found:
             sys.exit(1)
