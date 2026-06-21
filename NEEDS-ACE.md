@@ -4,21 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 03:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1133
-(test hermeticity) now QA-verified+closed @03:14Z on the real Windows desktop; NO open team PR; NO new human-only
-item; Step 3.6 honest no-change** → **queue unchanged at 12**
+_Last refreshed: 2026-06-22 03:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; one NEW team-Dev
+PR #1157 (fixes #1150 mojibake) MERGEABLE + auto-merge ON, landing itself; NO new human-only item; Step 3.6
+honest no-change** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
 `develop` GREEN — last real-CI `9cd33ef` (#1155, *fixes #1133*) **Build & Test + CodeQL both SUCCESS** @18:50Z;
-HEAD `931768a` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** NO open team-Dev PR (remote =
-`develop`+`main` only, Rule 14 clean). Community **#1055** (base `main`, fork, UNSTABLE → queued #1057,
-human-only) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed (Dev set #1133 →
-status:done on merge; QA verified+closed it @03:14Z). `status:done` open = **#972** only (human-only) → untouched;
-`status:in-progress` = **#766** only (Ace umbrella, `from:ace`, ~23h, not abandoned); Dev filed tech-debt **#1156**
-(test_app_ids/test_electron non-hermetic + a *genuine* `_bulk_get_process_info` non-UTF-8 crash) — backlog for Dev.
-**Step 3.5** competitiveness not due (6d < 7; due 06-23). **Step 3.6: no change — no new evidence** (both completed
-cycles — Dev #1133-merge @02:51Z + QA #1133 verify @03:14Z — exemplary; freshest dev-cycle.md HEAD-check rule
-landed <1d ago, single clean exercise → over-fit forbidden; honest no-change row appended). v0.3.2 ship-gate
-unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+HEAD `ae94328` is prior orc `[skip ci]` (no run) → no STOP. **Step 1:** one NEW team-Dev PR **#1157**
+(`fix/issue-1150-ansi-codepage-mojibake`→`develop`, *fixes #1150*) is **MERGEABLE + auto-merge ON** (full CI
+matrix green; `BLOCKED` only on 2 still-running checks) → left to land on its own (never merge outside a PR).
+Community **#1055** (base `main`, fork, UNSTABLE → queued #1057, human-only) → untouched; nothing merged/closed
+BY Orc (Rule 1). **Step 2:** no handoff owed (no team PR merged this cycle; #1157 still in CI). `status:done`
+open = **#972** only (human-only) → untouched; `status:in-progress` = **#1150** (active — PR #1157 in CI) +
+**#766** (Ace umbrella, `from:ace`, not abandoned). **Step 3.5** competitiveness not due (6d < 7; due 06-23).
+**Step 3.6: no change — no new evidence** (both completed cycles — Dev #1157 @03:37Z + QA #1150-reconfirm @03:45Z
+— exemplary; freshest dev-cycle.md HEAD-check rule landed <1d ago → over-fit forbidden; honest no-change row
+appended). **Ops note:** Orc trimmed STATE.md from ~461KB/4569 lines (64 stacked refresh blocks) back to ~24KB
+(3 recent refreshes + body) — full history retained in git/`.work/reviews/`/`naturo-loop-state.log`. v0.3.2
+ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
 
 _Earlier: 2026-06-21 18:22Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1149 now
 QA-verified+closed; NO open team PR; one Dev cycle in-flight (#1133); NO new human-only item** →
