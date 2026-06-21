@@ -165,7 +165,7 @@ Search for UI elements matching a query.
 | `--ai` | boolean | Use AI vision to find element by natural language |
 | `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
 | `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
-| `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@name`) |
+| `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@app/name`) |
 | `--screenshot` | path | Match against this existing screenshot instead of capturing live (for `--ai` and `--image`). With `--image` the screenshot is the haystack, coordinates are screenshot-relative, and window-targeting flags are rejected |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
@@ -193,7 +193,7 @@ naturo find --image btn.png --threshold 0.85      # looser match threshold
 naturo find --image btn.png --screenshot saved.png  # match offline against a saved screenshot
 naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
 naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
-naturo find --selector @login-button --all        # every match of a saved selector
+naturo find --selector @chrome/login-button --all  # every match of a saved selector
 ```
 
 Found matches get `eN` refs in the snapshot (like a normal `find`), so you can

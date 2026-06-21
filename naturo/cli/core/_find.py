@@ -29,7 +29,7 @@ def _detect_query_strategy(query: str) -> str | None:
 
     Returns:
         ``"selector"`` for a unified-selector path (an ``app://…`` URI or an
-        ``@name`` saved-selector ref), ``"image"`` for a template-image file
+        ``@app/name`` saved-selector ref), ``"image"`` for a template-image file
         path (extension in :data:`_IMAGE_QUERY_EXTENSIONS`), or ``None`` for an
         ordinary text/role query.
     """
@@ -68,7 +68,7 @@ def _detect_query_strategy(query: str) -> str | None:
                    "click/type use). "
                    'URI: app://notepad.exe/Button[@name="Save"]. '
                    'Short: //Edit[@name="Search"] (any app, descendant search). '
-                   "Saved: @name. App names are flexible: chrome, chrome.exe, Chrome.")
+                   "Saved: @app/name. App names are flexible: chrome, chrome.exe, Chrome.")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Match against this existing screenshot instead of capturing "
                    "live (for --ai and --image modes). With --image the screenshot "
@@ -112,7 +112,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     \b
     Strategy auto-detection: a bare query routes itself by shape, so you can skip
     the explicit flag —
-        app://… or @name        -> selector resolution (same as --selector)
+        app://… or @app/name    -> selector resolution (same as --selector)
         path ending .png/.jpg/… -> image template match (same as --image)
         anything else           -> UIA tree search
     Explicit --image/--selector/--ai always take precedence.
@@ -131,7 +131,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find submit.png                   # auto-detected image template match
         naturo find --image icon.png --app Notepad --all  # all matches in app
         naturo find 'app://notepad.exe/Edit'     # auto-detected selector resolution
-        naturo find @save-btn                    # auto-detected saved selector
+        naturo find @notepad/save-btn            # auto-detected saved selector (@app/name)
         naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
