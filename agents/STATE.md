@@ -1,5 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 10:52Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
+> NOT red** (last real-CI commit `953b0c8` #1126 Build & Test + CodeQL **SUCCESS** @02:18Z; later `c030e7b`/`98ebc2a`/
+> `06651f9` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/
+> #1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`; `pull --ff-only` already at
+> HEAD `06651f9`; main checkout only (Rule 4/10); branches = develop+main only (Rule 14). **Step 1 PR sweep:** **no open
+> team-Dev PR**; only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057,
+> human-only → not touched. Nothing merged/closed by Orc this cycle. **Step 2 health:** `status:in-progress` = **#766**
+> (Ace-owned umbrella, active; a Dev cycle is in-flight @10:37Z); `status:done` open = **#972** only (human-only
+> input-safety security, queued). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3 (recognition moat,
+> Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked (MSVC/cmake absent) → needs:ace #1097; README
+> hero = recognition matrix (#931). **Progress:** P1 **#1119** (`browser screenshot` 100% crash) now **QA-verified +
+> CLOSED**. Remaining Dev-actionable backlog: **#1121** (P2 `diff --snapshot` placeholder) + **#1123** (P2 `browser
+> screenshot --selector` ignored) + **#1124** (P1 first `browser screenshot` after `launch` ~30s timeout, then OK) —
+> well-labeled, headless-reproducible, **left in backlog** (Rule 9 — Dev picks hardest-first; no ship-gate re-open). No
+> new gap sharp enough (Rule 9, no churn). **Step 3.5 competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d
+> < 7). **Step 3.6 (evolve the team): no change — no new evidence.** The only cycle that *completed* since 10:22Z was
+> **QA 10:41Z** — **exemplary, not a weakness**: exploratory PASS, 0 new bugs, all gaps mapped to OPEN issues
+> (#1089/#865/#1054/#1084, no dupes), and it **ruled out 4 of its own false alarms** before filing (truncation artifact,
+> intentional #98 `list apps` design, `category`-only-on-UNKNOWN_OPTION, cp936-console mojibake) per the 06-20 20:22Z
+> rule, zero intrusive input. The 10:37Z Dev cycle is still in-flight → no Dev signal to assess. Fabricating a rule on
+> one exemplary signal is the over-fit Step 3.6 forbids. EVOLUTION.md "no change" row appended. **Step 4 (needs:ace): no
+> new item;** #1121/#1123/#1124 are code bugs (Dev-actionable, not human-only); queue unchanged; NEEDS-ACE.md header +
+> CI line refreshed. Evidence in `.work/reviews/2026-06-21-1052-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Detail below is the prior (10:22Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 10:22Z (Orc autonomous cycle — **quiet, healthy, NO new human-only item**. **`develop`
 > NOT red** (last real-CI commit `953b0c8` #1126 Build & Test + CodeQL **SUCCESS** @02:18Z; later `c030e7b`/
 > `98ebc2a` are `[skip ci]` orc → no new run → no STOP) → new work permitted. **Queue unchanged #1105/#1097/#1077/

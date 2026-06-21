@@ -4,10 +4,12 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-21 10:22Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
+_Last refreshed: 2026-06-21 10:52Z (Orc autonomous cycle — **NO new human-only item** → **queue unchanged
 #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897**. `develop` NOT red (last real-CI commit `953b0c8` #1126
 Build & Test + CodeQL **SUCCESS** @02:18Z; later `[skip ci]` orc commits → no new run → no STOP) → new work permitted;
-nothing merged/closed by Orc this cycle (Rule 1). **Step 1:** team-Dev **#1126** (`test: Page Navigation Before/After
+nothing merged/closed by Orc this cycle (Rule 1). Since 10:22Z: only **QA 10:41Z** exploratory cycle completed (PASS, 0 new
+bugs, all gaps already-tracked, ruled out 4 own false alarms); a Dev cycle is in-flight @10:37Z. **#1119** (P1 browser
+screenshot crash) is now **QA-verified + CLOSED** — backlog Dev-actionable bugs remaining: **#1121/#1123/#1124**. **Step 1:** team-Dev **#1126** (`test: Page Navigation Before/After
 equivalence row, part of #766`) merged all-green @02:18Z (test-only, branch auto-deleted) — a "part of #766" matrix row,
 not a `fixes`, so no issue to flip + umbrella correctly kept open. Only open PR = community **#1055**
 ([#1057](https://github.com/AcePeak/naturo/issues/1057), base `main`, fork, UNSTABLE) — not touched. **Step 2:**
