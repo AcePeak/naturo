@@ -1,5 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 20:52Z (Orc autonomous cycle — **quiet, healthy; NO work cycle completed this window —
+> the only completed signal was QA's clean exploratory PASS (0 bugs); the team-Dev cycle is mid-flight on #1084; NO
+> new human-only item; queue unchanged at 12.** **`develop` NOT red** — HEAD `f134a8a` is the prior orc `[skip ci]`
+> (no CI run); last real-CI commit `6f45ca5` (#1140, *fixes #1079*) **Build & Test + CodeQL both SUCCESS** @11:59Z →
+> no STOP → new work permitted. **Step 1 PR sweep:** **NO open team-Dev PR** (remote = `develop`+`main` only, Rule 14
+> clean). Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace #1057,
+> human-only → untouched. Nothing merged/closed by Orc (Rule 1). **Step 2 health:** `status:done` open = **#972**
+> only (P0 input-safety, human-only, already needs:ace — closing it is a security sign-off). `status:in-progress` =
+> **#1084** (P2 from:qa `process_name` path round-trip — Dev actively on it, `cycle START` 20:37Z no END, issue
+> touched 20:41Z < 24h) + **#766** (Ace migration-guide umbrella, 04:16Z, slice-by-slice). Nothing abandoned;
+> nothing for Orc to close (Rule 1). **Step 3 (recognition moat, Standing #1):** epics **#920**/**#932** OPEN but
+> native-rebuild build-blocked (MSVC/cmake absent) → needs:ace #1097; **#931** (coverage benchmark = headline proof)
+> **CLOSED + QA-verified since 06-16**, README leads with the moat headline. Backlog well-stocked and sharp
+> (#1084/#1139 P2 + #917/#971/#976/#987 code-only + #897 exit-code, all filed) → no new gap sharp enough (Rule 9, no
+> churn). **Step 3.5 competitiveness: NOT due** (last tracker row 06-16, today 06-21 = 5d < 7) → skipped. **Step 3.6
+> (evolve the team): no change — no new evidence.** The only completed signal since 20:22Z = QA (20:39Z),
+> **exemplary**: exploratory PASS per Rule 13 (no QA-verifiable status:done; #972 human-only untouched), 0 real bugs,
+> and — per the 20:22Z QA-harness rule — caught three "surprising defects" and ruled all three out as its **own
+> tooling** (Git Bash vs Windows-Python `/tmp` mismatch; gbk-console JSONDecodeError on valid UTF-8; gbk can't print
+> U+2022) before filing → no false bug. The 20:37Z Dev cycle is still in-flight on #1084 → no completed Dev signal.
+> A rule on one exemplary QA cycle would over-fit (Step 3.6 forbids); EVOLUTION no-change row appended. **Step 4
+> (needs:ace): no new item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897;
+> NEEDS-ACE.md refreshed. Evidence in `.work/reviews/2026-06-21-2052-auto-review.md`. v0.3.2 ship-gate unchanged
+> (FULLY MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 20:22Z (Orc autonomous cycle — **quiet, healthy; one team-Dev fix shipped + QA-verified
 > this window (#1079 clipboard never-lie); NO new human-only item; queue unchanged at 12.** **`develop` NOT red** —
 > HEAD `6f45ca5` (#1140, *fixes #1079*) **Build & Test + CodeQL both SUCCESS** @11:59Z → no STOP → new work permitted.
