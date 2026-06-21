@@ -46,6 +46,34 @@ def _free_tcp_port() -> int:
         return int(sock.getsockname()[1])
 
 
+def _png_dimensions(path: Path) -> tuple[int, int]:
+    """Return ``(width, height)`` in pixels parsed from a PNG file's header.
+
+    Validates the 8-byte PNG signature and reads the width/height big-endian
+    uint32s out of the mandatory leading ``IHDR`` chunk, so the assertion proves
+    the file is a real, structurally-valid PNG rather than an empty or truncated
+    stub. Kept dependency-free (no Pillow) to match naturo's minimum-dependency
+    principle and to stay collectable on the headless CI matrix.
+
+    Args:
+        path: Path to the PNG file to inspect.
+
+    Returns:
+        The image ``(width, height)`` in pixels.
+
+    Raises:
+        AssertionError: If the signature or the ``IHDR`` chunk is missing.
+    """
+    data = path.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{path} is not a valid PNG"
+    # The IHDR chunk is always first: [8B signature][4B length][4B "IHDR"][4B
+    # width][4B height][...]. Width/height are big-endian unsigned 32-bit ints.
+    assert data[12:16] == b"IHDR", f"{path} is missing its IHDR chunk"
+    width = int.from_bytes(data[16:20], "big")
+    height = int.from_bytes(data[20:24], "big")
+    return width, height
+
+
 @contextmanager
 def _headless_chrome_page() -> Iterator[BrowserPage]:
     """Yield a headless Chrome connected via CDP, isolated in a temp profile.
@@ -764,6 +792,98 @@ def test_scroll_equivalence(
     # target (a block:'start' scroll would put its top at ~0). The fixture's
     # trailing spacer guarantees there is room to centre.
     assert top_after >= viewport_height * 0.2
+
+
+def test_screenshot_equivalence(
+    browser_page: BrowserPage, fixtures_server: str
+) -> None:
+    """Reproduce the DrissionPage ``page.get_screenshot()`` pattern via naturo.
+
+    Mirrors the migration guide's "Screenshots" section / DrissionPage API
+    mapping: the *Before* code saves an "exception screenshot" of the current
+    page (``self.page.get_screenshot(img_path)`` in the YouTube publishing
+    project) and the full scrollable page; the *After* surface is
+    :meth:`BrowserPage.screenshot` (``page.screenshot(path)`` /
+    ``page.screenshot(path, full_page=True)``, i.e. ``naturo browser screenshot
+    --path`` and ``--full-page``).
+
+    Driven against ``scroll.html`` -- a page far taller than the viewport -- the
+    guide's row-8 criterion is that both forms produce PNG files of the expected
+    dimensions. Per naturo's never-lie contract (SOUL.md) the bytes are
+    validated as a real PNG (signature + ``IHDR`` dimensions parsed straight from
+    the file), the viewport capture matches the live viewport, and the
+    ``full_page`` capture is strictly taller -- spanning the scrollable content
+    rather than silently re-capturing the viewport. The width-derived scale makes
+    every dimension check independent of the runner's ``devicePixelRatio``.
+
+    Regression guard for #1119: ``screenshot`` crashed 100% of the time
+    (``send("Page.captureScreenshot", **params)`` against a positional-dict
+    ``send``) until #1122. This drives the real CDP path end-to-end, so a
+    reintroduction of that crash -- or a ``full_page`` that quietly captures only
+    the viewport -- fails here at the documented guide level.
+    """
+    browser_page.navigate(f"{fixtures_server}/scroll.html")
+
+    device_pixel_ratio = float(browser_page.evaluate("window.devicePixelRatio"))
+    inner_width = int(browser_page.evaluate("window.innerWidth"))
+    inner_height = int(browser_page.evaluate("window.innerHeight"))
+    content_height = int(
+        browser_page.evaluate(
+            "Math.max(document.documentElement.scrollHeight,"
+            " document.body.scrollHeight)"
+        )
+    )
+
+    # never-lie precondition: the fixture is genuinely taller than the viewport,
+    # so the full-page capture *must* exceed the viewport capture below -- this
+    # guards against the full_page assertion passing by accident on a short page.
+    assert content_height > inner_height * 1.5
+
+    # A throwaway output directory (matching this module's tempfile.mkdtemp style
+    # for browser temp dirs, so concurrent desktop runs never collide).
+    output_dir = tempfile.mkdtemp(prefix="naturo_screenshot_")
+    try:
+        # Before: self.page.get_screenshot(img_path)  ->  After: page.screenshot(path).
+        # The default capture is the visible viewport. The returned path is the
+        # one we asked for, and the file is a real PNG sized to the viewport.
+        viewport_path = Path(output_dir) / "viewport.png"
+        returned = browser_page.screenshot(str(viewport_path))
+        assert returned == str(viewport_path)
+        assert viewport_path.exists()
+        vp_width, vp_height = _png_dimensions(viewport_path)
+
+        # captureScreenshot renders in device pixels (CSS px * devicePixelRatio).
+        # Derive the scale from the width so the height check is DPR-independent,
+        # and cross-check it against the page's ratio (within the guide's +-5%).
+        assert vp_width > 0 and vp_height > 0
+        observed_scale = vp_width / inner_width
+        assert abs(observed_scale - device_pixel_ratio) <= 0.05 * device_pixel_ratio + 0.01
+        assert (
+            abs(vp_height - inner_height * observed_scale)
+            <= 0.05 * inner_height * observed_scale + 4
+        )
+
+        # Before: page.get_screenshot(full_page=True)  ->  After:
+        # page.screenshot(path, full_page=True). The full-page capture spans the
+        # entire scrollable content.
+        full_path = Path(output_dir) / "full.png"
+        browser_page.screenshot(str(full_path), full_page=True)
+        assert full_path.exists()
+        full_width, full_height = _png_dimensions(full_path)
+
+        # never-lie: the full-page capture genuinely reaches beyond the fold --
+        # strictly taller than the viewport capture -- and its height matches the
+        # page's content height (at the same width-derived scale, within +-5%). A
+        # full_page that silently re-captured the viewport would fail both.
+        assert full_height > vp_height
+        full_scale = full_width / vp_width  # same logical width, same device pixels
+        assert abs(full_scale - 1.0) <= 0.05 + 4 / vp_width
+        assert (
+            abs(full_height - content_height * observed_scale)
+            <= 0.05 * content_height * observed_scale + 4
+        )
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
 
 
 def test_javascript_execution_equivalence(
