@@ -1,5 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 17:52Z (Orc autonomous cycle — **quiet, healthy; QA verified+closed the never-lie
+> error-code taxonomy fix #1135 this window (`d7280eb`, Rule 1) and Dev is in-flight on actionable bug #1124; NO
+> new human-only item; queue unchanged at 12.** **`develop` NOT red** — HEAD `d7280eb` (#1137, *fixes #1135*)
+> **Build & Test + CodeQL both SUCCESS** @09:22Z; prior `c00227e` (#1134) also green; local HEAD `e29542b` is the
+> prior orc `[skip ci]` (no CI run) → no STOP → new work permitted. **Step 1 PR sweep:** **NO open team-Dev PR**
+> (remote = `develop`+`main` only, Rule 14 clean). Only open PR = community **#1055** (base `main`, fork,
+> `UNSTABLE`) → already queued needs:ace #1057, human-only → untouched. Nothing merged/closed by Orc (Rule 1).
+> **Step 2 health:** `status:done` open = **#972** only (P0 input-safety, human-only, already needs:ace — QA
+> correctly defers *closing* it as a security sign-off). `status:in-progress` = **#1124** (Dev in-flight, set
+> @09:42Z by the still-running 09:37Z Dev cycle — P1 headless first-frame timeout, < 24h) + **#766** (Ace
+> migration-guide umbrella, 04:16Z < 24h). Nothing abandoned; nothing for Orc to close (Rule 1). **Step 3
+> (recognition moat, Standing #1):** epics **#920**/**#932** OPEN but native-rebuild build-blocked (MSVC/cmake
+> absent) → needs:ace #1097; **#931** (coverage benchmark = headline proof) **CLOSED + QA-verified since 06-16**
+> (`b9e4180`, Chrome +37 / Electron +30 vs UIA-only) and the **README already leads with the moat headline +
+> benchmark link** (the #931 follow-up is done). No new gap sharp enough (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7) → skipped per weekly cadence. **Step 3.6
+> (evolve the team): no change — no new evidence.** The only cycle that *completed* since 17:22Z was **QA
+> (verified+closed #1135 @09:42Z)** — exemplary: `screenshot --selector '#missing' -j` → `ELEMENT_NOT_FOUND` /
+> category `automation` / recoverable (was `SCREENSHOT_FAILED`/unknown), swept the browser family (no unregistered
+> fallback codes remain), cited `d7280eb` per Rule 1, left #972 queued, zero intrusive input. The 09:37Z Dev cycle
+> is still in-flight on #1124 → no completed Dev signal. Freshest rules (16:52Z public-API trigger < 1 cycle, plus
+> #969 stale-egg / QA-harness / error-code-registration / hermeticity, all < 2–3d) exercised cleanly → a tweak now
+> would over-fit (Step 3.6 forbids churn); EVOLUTION.md no-change row appended. **Step 4 (needs:ace): no new
+> item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md
+> refreshed. Evidence in `.work/reviews/2026-06-21-1752-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET —
+> release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
 > Last refreshed: 2026-06-21 17:22Z (Orc autonomous cycle — **quiet, healthy; the team-Dev never-lie error-code
 > taxonomy fix #1135 landed itself this window (`d7280eb`, all required checks green via its own auto-merge) and is
 > now `status:done` awaiting QA; NO new human-only item; queue unchanged at 12.** **`develop` NOT red** — last
