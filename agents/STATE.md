@@ -1,5 +1,35 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
+> Last refreshed: 2026-06-21 08:52Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `2069b49` #1125 Build &
+> Test + CodeQL **SUCCESS** @00:48Z) → new work permitted. **NO new human-only item — queue unchanged
+> #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config` Orc; `git fetch`;
+> `pull --ff-only` `6350df4→2069b49` (team-Dev #1125); operated only in main checkout (Rule 4/10); branches =
+> develop+main only (Rule 14). **Step 1 PR sweep:** team-Dev **#1125** (`test: prove Screenshots Before/After
+> equivalence row (part of #766)`) **MERGED** `2069b49` @00:48Z all-green (test-only, no public surface → SQUASH
+> `--auto` correct); branch `test/766-screenshot-equivalence` auto-deleted. It is a **"part of #766"** matrix row
+> (not a `fixes`) → **no separate issue to flip**; Dev correctly did not relabel the Ace-owned umbrella → no orch
+> handoff owed. Only open PR = community **#1055** (base `main`, fork, `UNSTABLE`) → already queued needs:ace
+> #1057, human-only → not touched. **Step 2 health:** `status:in-progress` = **#766** (umbrella, active, updated
+> 00:45Z < 24h); `status:done` open = **#972** only (human-only input-safety, queued) — **#1119** was
+> verified+closed by QA @08:42Z (P1 screenshot crash, real-machine PASS). Nothing abandoned; nothing for Orc to
+> close (Rule 1). **Step 3 (recognition moat, Standing #1):** P0 **#1096** (JAB never attaches) stays build-blocked
+> (MSVC/cmake absent) → needs:ace #1097; README hero = recognition matrix (#931). Open Dev-actionable bugs in
+> backlog: **#1121** (P2 `diff --snapshot` placeholder) + **#1123** (P2 `browser screenshot --selector` ignored) +
+> **NEW #1124** (P1 — first `browser screenshot` after `launch` times out ~30s/no-file across 5 fresh launches,
+> then OK; headless first-frame-readiness gap, QA-filed 08:42Z, distinct from the #1119/#1122 param fix) — all
+> well-labeled, headless-reproducible, **left in backlog** (Rule 9 — no forced milestone; do NOT re-open the
+> already-MET v0.3.2 ship-gate; Dev picks hardest-first). No new gap sharp enough (Rule 9, no churn). **Step 3.5
+> competitiveness: NOT due** (baseline 2026-06-16, today 06-21 = 5d < 7). **Step 3.6 (evolve the team): no change —
+> no new evidence.** Both completed signals since 08:22Z were **exemplary**: Dev #1125 (HARDEST-FIRST with native
+> block re-proven this cycle; hermetic dependency-free PNG-dimension test with non-vacuous full_page>viewport
+> assertion; test-only → `--auto`; kept #766 open as "part of") and QA #1119-verify (real-machine PNG proof +
+> laterally filed genuine P1 #1124 after ruling out the harness per the 20:22Z QA-rule; no intrusive input). Freshest
+> rules <1d–2d exercised cleanly → another change would over-fit (Step 3.6 forbids churn). EVOLUTION.md "no change"
+> row appended. **Step 4 (needs:ace): no new item;** #1121/#1123/#1124 are code bugs (Dev-actionable, not
+> human-only); queue unchanged; NEEDS-ACE.md header + CI line refreshed. Evidence in
+> `.work/reviews/2026-06-21-0852-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is the prior (08:22Z) cycle's record, kept as history.)
+>
 > Last refreshed: 2026-06-21 08:22Z (Orc autonomous cycle — **`develop` NOT red** (HEAD `12d7d9c` #1122 Build &
 > Test + CodeQL **SUCCESS** @00:18Z; later `[skip ci]` orc commits → no new run → no STOP). **NO new human-only
 > item — queue unchanged #1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.** **Step 0:** `git config`
