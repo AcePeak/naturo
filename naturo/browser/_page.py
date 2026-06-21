@@ -459,18 +459,55 @@ class BrowserPage:
 
     # ── Page operations ───────────────────────────────────────────────────
 
-    def screenshot(self, path: str, full_page: bool = False) -> str:
+    def screenshot(
+        self,
+        path: str,
+        full_page: bool = False,
+        selector: Optional[str] = None,
+    ) -> str:
         """Take a screenshot of the page.
 
         Args:
             path: File path to save the screenshot (PNG).
             full_page: If True, capture the full scrollable page.
+            selector: When given, capture only the element matching this
+                CSS/XPath/text selector (cropped to its bounding box) instead
+                of the visible viewport. Cannot be combined with *full_page*.
 
         Returns:
             The path where the screenshot was saved.
+
+        Raises:
+            ValueError: If both *selector* and *full_page* are given.
+            RuntimeError: If *selector* matches no element, or the matched
+                element has no rendered layout box to crop to.
         """
+        if selector is not None and full_page:
+            raise ValueError(
+                "screenshot: 'selector' and 'full_page' are mutually exclusive"
+            )
+
         params: Dict[str, Any] = {"format": "png"}
-        if full_page:
+        if selector is not None:
+            element = self.find(selector)
+            box = element._bounding_box()
+            if box is None:
+                raise RuntimeError(
+                    f"Cannot screenshot element {selector!r}: it has no "
+                    f"rendered layout box (display:none, detached, or zero-area)"
+                )
+            params["clip"] = {
+                "x": box["x"],
+                "y": box["y"],
+                "width": box["width"],
+                "height": box["height"],
+                "scale": 1,
+            }
+            # The element may sit outside the current viewport even after
+            # scroll-into-view (e.g. taller than the window); capture beyond the
+            # viewport so the clip region is composited rather than clamped.
+            params["captureBeyondViewport"] = True
+        elif full_page:
             # Get full page dimensions
             metrics = self._cdp.send("Page.getLayoutMetrics")
             content_size = metrics.get("contentSize", {})

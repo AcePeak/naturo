@@ -26,14 +26,19 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
     Examples:
         naturo browser screenshot --path page.png
         naturo browser screenshot --full-page --path full.png
+        naturo browser screenshot --selector "#intro" --path intro.png
     """
     page = browser_cmd._get_page(ctx, json_output=json_output)
     try:
-        saved_path = page.screenshot(path, full_page=full_page)
+        saved_path = page.screenshot(
+            path, full_page=full_page, selector=selector
+        )
         if json_output:
             click.echo(json_dumps({"path": saved_path, "status": "ok"}))
         else:
             click.echo(f"Screenshot saved: {saved_path}")
+    except ValueError as exc:
+        emit_exception_error(exc, json_output, fallback_code="INVALID_INPUT")
     except RuntimeError as exc:
         emit_exception_error(exc, json_output, fallback_code="SCREENSHOT_FAILED")
     finally:

@@ -8,7 +8,7 @@ All DOM operations are performed via CDP commands on the associated page.
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from naturo.browser._page import BrowserPage
@@ -466,6 +466,55 @@ class BrowserElement:
         if not quads:
             return None
         return [float(v) for v in quads[0]]
+
+    def _bounding_box(self) -> Optional[Dict[str, float]]:
+        """Return this element's bounding box in top-document CSS pixels.
+
+        Scrolls the element into view, then resolves its rectangle the same way
+        :meth:`_get_click_point` does — preferring CDP ``DOM.getContentQuads``
+        (top-level viewport coordinates at any iframe depth) and falling back to
+        ``getBoundingClientRect`` only when the node exposes no content quad.
+        The result is directly usable as the ``clip`` for
+        ``Page.captureScreenshot`` (with ``captureBeyondViewport``).
+
+        Returns:
+            A dict with ``x``, ``y``, ``width``, ``height`` keys, or ``None``
+            when the node has no rendered layout box (``display:none``,
+            detached, or zero-area) so callers can fail loudly rather than
+            capture the wrong region (never-lie, #1083).
+        """
+        self.scroll_into_view()
+
+        quad = self._content_quad()
+        if quad is not None:
+            xs = quad[0::2]
+            ys = quad[1::2]
+            x = min(xs)
+            y = min(ys)
+            return {"x": x, "y": y, "width": max(xs) - x, "height": max(ys) - y}
+
+        # Fallback: no content quad. getBoundingClientRect is frame-relative but
+        # coincides with the top-document space for a genuinely top-level node.
+        box = self._call_function(
+            "function() {"
+            "  var r = this.getBoundingClientRect();"
+            "  return {x: r.x, y: r.y, width: r.width, height: r.height};"
+            "}"
+        )
+        if not box or not isinstance(box, dict):
+            return None
+
+        # A zero-area box means the node is not rendered (display:none, detached,
+        # visibility:collapse); there is nothing to crop to, so report no box.
+        if box["width"] == 0 and box["height"] == 0:
+            return None
+
+        return {
+            "x": box["x"],
+            "y": box["y"],
+            "width": box["width"],
+            "height": box["height"],
+        }
 
     def __repr__(self) -> str:
         desc = self._description or self._object_id[:20]
