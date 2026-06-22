@@ -1,6 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-22 07:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1146 (find --help
+> Last refreshed: 2026-06-22 16:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; two real-CI fixes
+> merged since 07:52Z (#1165 *fixes #1164*, #1166 *fixes #1162*) both now `status:done` awaiting QA; NO open team
+> PR; needs:ace queue unchanged at 12; Step 3.5 NOT due (6d<7, due 06-23) — advance star+landscape intel gathered;
+> NEW landscape signal: Microsoft Build 2026 "Windows Agent Runtime" first-party entrant.**)
+> **`develop` GREEN** — HEAD `3fb7b5d` (#1166, *fixes #1162*) **Build & Test + CodeQL both SUCCESS**; prior real-CI
+> `4721b67` (#1165, *fixes #1164*) both SUCCESS → no STOP → new work permitted. **Step 1 PR sweep:** NO open team-Dev
+> PR — #1165/#1166 auto-merged themselves green, branches auto-deleted (Rule 14 clean; remote = `main`+`develop`+one
+> dependabot branch). Open PRs = **#1167** (dependabot `actions/checkout` 6→7, base `main`, human-only per Rule 2 →
+> left). Nothing merged/closed BY Orc (Rule 1). **Step 2 health:** no handoff owed (#1162/#1164 flipped `status:done`
+> by Dev on merge → QA's verification job). `status:done` open = **#1164, #1162** (fresh, awaiting QA) + **#972** (P0
+> input-safety, human-only) → untouched. `status:in-progress` = **#766** only (Ace migration-guide umbrella,
+> author/assignee AcePeak, updated 06-21 — Ace-owned, not abandoned Dev work → label left). Nothing for Orc to close
+> (Rule 1). **Step 3 (moat, Standing #1):** native-core moat (#920/#932/JAB #1096) build-blocked (no MSVC/cmake) →
+> needs:ace #1097; OCR (#1060) blocked on #1077. Backlog sharp & self-feeding → no new gap (Rule 9, no churn).
+> **Step 3.5 competitiveness: NOT due** (last row 06-16, today 06-22 16:04Z = 6d < 7; due 06-23). Advance intel:
+> naturo ⭐5 (Δ0), Terminator 1,540 (+10), Windows-MCP 6,194 (+136), UFO² 9,084 (+70); gap → Terminator −1,535
+> (widening, naturo flat). **NEW landscape signal — Microsoft "Windows Agent Runtime"** (Build 2026, Jun 2–3):
+> first-party agentic OS substrate → commoditization risk for generic UIA automation, *sharpens* naturo's
+> multi-framework recognition moat. **Rival distribution lead** (Windows-MCP 2M+ installs / MCP Registry / `uvx`) is
+> the real widening gap → reinforces existing #922/#928/#997/#923 (no new issue, Rule 9). Posted as strategic intel
+> on competitiveness epic **#919**. **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897; NEEDS-ACE.md refreshed. Evidence in
+> `.work/reviews/2026-06-22-1604-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-22 07:52Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; #1146 (find --help
 > saved-selector examples) now QA-verified+closed (handoff fully complete); NO open team PR; one Dev cycle in-flight;
 > NO new human-only item; Step 3.6 honest no-change; queue unchanged at 12.**)
 > **`develop` GREEN** — last real-CI `aa0f983` (#1163, *fixes #1146*) **Build & Test + CodeQL both SUCCESS**; HEAD
