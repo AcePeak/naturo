@@ -121,6 +121,50 @@ class TestSubcommandUsageErrorJson:
         assert "bogus-subcmd" in data["error"]["message"]
 
 
+class TestUsageErrorCategory:
+    """Every parse-time usage error is a ``validation`` failure (#1162).
+
+    ``UNKNOWN_OPTION`` and ``UNKNOWN_COMMAND`` are user usage mistakes — a
+    typo'd flag or subcommand — exactly like the ``INVALID_INPUT`` produced by
+    the same :func:`naturo.cli._emit_usage_error_json` path. All three must carry
+    ``category: "validation"`` so ``-j`` consumers can distinguish a user-fixable
+    input mistake from a genuinely-unexpected internal failure (``"unknown"``).
+    Before #1162 the two ``UNKNOWN_*`` codes were bare string literals absent
+    from the :data:`naturo.errors._ERROR_CATEGORIES` map, so they degraded to
+    ``"unknown"``.
+    """
+
+    def _category(self, monkeypatch, capsys, argv):
+        code = _run(monkeypatch, argv)
+        data = json.loads(capsys.readouterr().out)
+        assert code == 1
+        assert data["success"] is False
+        return data["error"]["code"], data["error"]["category"]
+
+    def test_unknown_option_is_validation(self, monkeypatch, capsys):
+        code, category = self._category(
+            monkeypatch, capsys, ["type", "--bogus-flag-xyz", "-j"]
+        )
+        assert code == "UNKNOWN_OPTION"
+        assert category == "validation"
+
+    def test_unknown_command_is_validation(self, monkeypatch, capsys):
+        code, category = self._category(
+            monkeypatch, capsys, ["app", "bogus-subcmd", "-j"]
+        )
+        assert code == "UNKNOWN_COMMAND"
+        assert category == "validation"
+
+    def test_invalid_input_stays_validation(self, monkeypatch, capsys):
+        # The sibling parse error from the same function — pins the parity that
+        # #1162 restores (all three usage errors share one category).
+        code, category = self._category(
+            monkeypatch, capsys, ["see", "--hwnd", "abc", "-j"]
+        )
+        assert code == "INVALID_INPUT"
+        assert category == "validation"
+
+
 class TestFlagPositionVariants:
     """``-j`` works before or after the subcommand (issue body)."""
 

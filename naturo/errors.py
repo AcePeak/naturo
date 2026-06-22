@@ -39,6 +39,12 @@ class ErrorCode:
     INVALID_INPUT = "INVALID_INPUT"
     INVALID_COORDINATES = "INVALID_COORDINATES"
 
+    # Parse-time usage errors (Click) — a user typo'd a flag or a subcommand.
+    # Emitted by ``naturo.cli._emit_usage_error_json``; same validation class as
+    # INVALID_INPUT (#1162).
+    UNKNOWN_OPTION = "UNKNOWN_OPTION"
+    UNKNOWN_COMMAND = "UNKNOWN_COMMAND"
+
     # Image-matching errors (naturo find/click --image, #1059)
     INVALID_TEMPLATE = "INVALID_TEMPLATE"
     INVALID_SCREENSHOT = "INVALID_SCREENSHOT"
@@ -127,6 +133,10 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.REGISTRY_HAS_SUBKEYS: ErrorCategory.IO,
     ErrorCode.INVALID_INPUT: ErrorCategory.VALIDATION,
     ErrorCode.INVALID_COORDINATES: ErrorCategory.VALIDATION,
+    # A typo'd flag / subcommand is a user usage mistake — the same validation
+    # class as INVALID_INPUT, emitted by the same parse-time path (#1162).
+    ErrorCode.UNKNOWN_OPTION: ErrorCategory.VALIDATION,
+    ErrorCode.UNKNOWN_COMMAND: ErrorCategory.VALIDATION,
     # Image-matching codes (#1059): a template/screenshot the user supplied that
     # cannot be decoded is a validation fault; a missing optional matcher
     # dependency is configuration; a GUI-less platform is environment.
