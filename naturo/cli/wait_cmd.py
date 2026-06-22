@@ -1,5 +1,6 @@
 """CLI wait command — wait for a duration, or for elements/windows to appear/disappear."""
 from naturo.cli._jsonio import json_dumps
+import math
 import time
 
 from naturo.cli.error_helpers import build_error_object, json_error as _json_error_str
@@ -82,7 +83,40 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
             sys.exit(1)
             return
 
-        time.sleep(duration)
+        # (#1164) Reject non-finite durations (NaN/inf) up front. `duration < 0`
+        # above lets NaN through (every comparison with NaN is False), and both
+        # NaN and inf would otherwise crash `time.sleep` below with a raw
+        # ValueError/OverflowError — leaking a traceback and, under -j, emitting
+        # no JSON envelope at all (a broken --json contract).
+        if not math.isfinite(duration):
+            msg = f"Duration must be a finite number, got {duration}"
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+
+        # (#1164) `time.sleep` converts the duration to an int64-nanosecond
+        # deadline and raises OverflowError for values past the platform sleep
+        # limit (~9.22e9 s). Translate that into the same structured
+        # INVALID_INPUT contract as the bounds checks above so a huge duration
+        # never leaks a raw traceback (and always emits JSON under -j). The
+        # error CODE is platform-invariant even though the exact threshold is
+        # not, so the bad-input contract is identical on every OS.
+        try:
+            time.sleep(duration)
+        except (OverflowError, ValueError):
+            msg = (
+                f"Duration too large: {duration}s exceeds the maximum sleep "
+                f"supported on this platform"
+            )
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
         if json_output:
             # Canonical success envelope shared with the predicate sub-modes
             # (#895): the predicate-only ``found``/``warnings`` keys are present
