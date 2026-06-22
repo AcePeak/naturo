@@ -69,6 +69,42 @@ class TestWaitDuration:
         assert result.exit_code != 0
         assert "INVALID_INPUT" in result.output
 
+    # (#1164) Upper-bound / non-finite duration must yield a structured
+    # validation error, never a raw OverflowError/ValueError traceback — and
+    # under -j a JSON envelope must still be emitted (the broken-contract bug).
+    def test_huge_duration_rejected(self, runner):
+        """A duration past the platform sleep limit is rejected, not crashed."""
+        result = runner.invoke(wait, ["1e10"])
+        assert result.exit_code != 0
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Error" in result.output
+        assert "Traceback" not in result.output
+
+    def test_huge_duration_rejected_json(self, runner):
+        """Under -j the huge-duration error is a valid INVALID_INPUT envelope."""
+        result = runner.invoke(wait, ["1e10", "--json"])
+        assert result.exit_code != 0
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Traceback" not in result.output
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+        assert data["error"]["category"] == "validation"
+
+    def test_infinite_duration_rejected_json(self, runner):
+        result = runner.invoke(wait, ["inf", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_nan_duration_rejected_json(self, runner):
+        result = runner.invoke(wait, ["nan", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
 
 # ---------------------------------------------------------------------------
 # No arguments
