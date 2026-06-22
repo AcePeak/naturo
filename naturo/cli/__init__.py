@@ -24,6 +24,7 @@ if sys.platform == "win32" and not os.environ.get("PYTHONUTF8"):
 import click
 from naturo.version import __version__
 from naturo.cli.error_helpers import json_error
+from naturo.errors import ErrorCode
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 from naturo.cli.core import capture, list_cmd, see, find_cmd, menu_inspect, highlight
@@ -417,13 +418,13 @@ def _emit_usage_error_json(exc: click.UsageError) -> None:
     # set" for a nested subcommand.
     help_target = "naturo" if exc.ctx is None else exc.ctx.command_path
     if isinstance(exc, click.NoSuchOption):
-        code = "UNKNOWN_OPTION"
+        code = ErrorCode.UNKNOWN_OPTION
         action = f"Run '{help_target} --help' to see the available options."
     elif message.startswith("No such command"):
-        code = "UNKNOWN_COMMAND"
+        code = ErrorCode.UNKNOWN_COMMAND
         action = f"Run '{help_target} --help' for the command list."
     else:
-        code = "INVALID_INPUT"
+        code = ErrorCode.INVALID_INPUT
         action = f"Run '{help_target} --help' for usage."
     click.echo(json_error(code, message, suggested_action=action))
     # Contract exit code is 1 (runtime error), not Click's UsageError 2 — same
