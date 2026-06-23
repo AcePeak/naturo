@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-22 16:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; two real-CI fixes
+> Last refreshed: 2026-06-23 04:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO team-Dev PR;
+> needs:ace queue unchanged at 12; Step 3.5 competitiveness ran (due today) — star flatline, no new landscape signal
+> → no redundant #919 comment (Rule 9); refreshed stale pending-issues.md (was 06-01, ref'd merged #892).**)
+> **`develop` GREEN** — HEAD real-CI `3fb7b5d` (#1166, *fixes #1162*) **Build & Test + CodeQL both SUCCESS**; no STOP
+> → new work permitted. **Step 1 PR sweep:** NO open team-Dev PR (remote = `main`+`develop`+one dependabot branch,
+> Rule 14 clean). Open PRs are both `main`-targeted, **human-only (Rule 2)**: **#1167** (dependabot
+> `actions/checkout` 6→7 — all build gates PASS, only *Feishu Notification* webhook fails, not a code gate) and
+> **#1055** (community envelope fix, fork → queued needs:ace **#1057**). Nothing merged/closed BY Orc (Rule 1).
+> **Step 2 health:** `status:done` open = **#1164, #1162** (fresh, from #1165/#1166 — QA's job) + **#972** (P0
+> input-safety, human-only) → untouched. `status:in-progress` = **#766** only (Ace migration-guide umbrella,
+> AcePeak-owned, updated 06-21 — not abandoned Dev work → label left). Nothing for Orc to close (Rule 1). **Step 3
+> (moat):** native-core moat (#920/#932/JAB #1096) build-blocked locally (no MSVC/cmake) → needs:ace #1097; OCR
+> (#1060) blocked on #1077. Backlog self-feeding → no new gap (Rule 9). **Step 3.5 competitiveness (DUE 06-23):**
+> naturo ⭐5 (Δ0), Terminator 1,540 (Δ0), Windows-MCP 6,201 (+7), UFO² 9,092 (+8); gap → Terminator −1,535 (flat,
+> naturo flat). No new major landscape signal since yesterday's "Windows Agent Runtime" intel on epic #919 → no
+> redundant comment (Rule 9). **Step 4 (needs:ace): no new item;** queue unchanged at 12
+> #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. **Maintenance:** refreshed stale
+> `pending-issues.md` → current v0.3.2 snapshot. **Process note:** milestone v0.2.0 still open with 0 issues → the
+> routine's `CURRENT_MS=(open|sort|first)` would mis-resolve to v0.2.0 not v0.3.2 (harmless this cycle; closing
+> stale milestones is Ace's call). Evidence in `.work/reviews/2026-06-23-0404-auto-review.md`. v0.3.2 ship-gate
+> unchanged (FULLY MET — release is Ace's call, #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-22 16:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; two real-CI fixes
 > merged since 07:52Z (#1165 *fixes #1164*, #1166 *fixes #1162*) both now `status:done` awaiting QA; NO open team
 > PR; needs:ace queue unchanged at 12; Step 3.5 NOT due (6d<7, due 06-23) — advance star+landscape intel gathered;
 > NEW landscape signal: Microsoft Build 2026 "Windows Agent Runtime" first-party entrant.**)
