@@ -1,6 +1,26 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-23 04:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO team-Dev PR;
+> Last refreshed: 2026-06-23 07:02Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> changed since 04:04Z (~3h); develop GREEN; NO team-Dev PR; needs:ace queue unchanged at 12; Step 3.5 already run
+> today (04:04Z) → not re-run.**)
+> **`develop` GREEN** — HEAD real-CI `3fb7b5d` (#1166, *fixes #1162*) **Build & Test + CodeQL both SUCCESS**; no STOP
+> → new work permitted. **Step 1 PR sweep:** NO open team-Dev PR (remote = `main`+`develop`+one dependabot branch,
+> Rule 14 clean). Both open PRs are `main`-targeted, **human-only (Rule 2)**: **#1167** (dependabot `actions/checkout`
+> 6→7 — workflow shows *failure* but the ONLY failed job is **Feishu Notification** webhook, NOT a code gate; all
+> build/test/lint/CodeQL gates PASS → `checkout@7` safe, no develop-CI regression risk) and **#1055** (community fork
+> @muhamedfazalps → queued needs:ace **#1057**). Nothing merged/closed BY Orc (Rule 1). **Step 2 health:**
+> `status:done` open = **#1162, #1164** (fresh, awaiting QA — QA's job; sat >24h, tracked by #915) + **#972** (P0
+> input-safety, human-only) → untouched. `status:in-progress` = **#766** only (Ace migration-guide umbrella,
+> AcePeak-owned, updated 06-21 — not abandoned Dev work). Nothing for Orc to close (Rule 1). **Step 3 (moat):**
+> native-core moat (#920/#932/JAB #1096) build-blocked locally (no MSVC/cmake) → needs:ace #1097; OCR (#1060) blocked
+> on #1077. Backlog self-feeding → no new gap (Rule 9). **Step 3.5 competitiveness:** already run today (04:04Z) —
+> star flatline, gap −1,535; weekly cadence satisfied for 06-23 → not re-run (Rule 9). **Step 4 (needs:ace): no new
+> item;** queue unchanged at 12 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897. **Maintenance:**
+> pending-issues.md current (regenerated 06-23, v0.3.2 = 16 matches). Evidence in
+> `.work/reviews/2026-06-23-0702-auto-review.md`. v0.3.2 ship-gate unchanged (FULLY MET — release is Ace's call,
+> #914). Detail below is prior cycles' record, kept as history.)
+>
+> Last refreshed (prior): 2026-06-23 04:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; NO team-Dev PR;
 > needs:ace queue unchanged at 12; Step 3.5 competitiveness ran (due today) — star flatline, no new landscape signal
 > → no redundant #919 comment (Rule 9); refreshed stale pending-issues.md (was 06-01, ref'd merged #892).**)
 > **`develop` GREEN** — HEAD real-CI `3fb7b5d` (#1166, *fixes #1162*) **Build & Test + CodeQL both SUCCESS**; no STOP
