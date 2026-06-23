@@ -1,15 +1,17 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-23 07:02Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
-> changed since 04:04Z (~3h); develop GREEN; NO team-Dev PR; needs:ace queue unchanged at 12; Step 3.5 already run
-> today (04:04Z) → not re-run.**)
+> Last refreshed: 2026-06-23 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> changed since 07:02Z (~9h); develop GREEN; NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches; needs:ace
+> queue unchanged at 12; Step 3.5 weekly cadence run 04:04Z → not due. v0.3.2 ship-gate MET 06-17 → #914 is Ace's
+> release call.**)
 > **`develop` GREEN** — HEAD real-CI `3fb7b5d` (#1166, *fixes #1162*) **Build & Test + CodeQL both SUCCESS**; no STOP
 > → new work permitted. **Step 1 PR sweep:** NO open team-Dev PR (remote = `main`+`develop`+one dependabot branch,
 > Rule 14 clean). Both open PRs are `main`-targeted, **human-only (Rule 2)**: **#1167** (dependabot `actions/checkout`
 > 6→7 — workflow shows *failure* but the ONLY failed job is **Feishu Notification** webhook, NOT a code gate; all
 > build/test/lint/CodeQL gates PASS → `checkout@7` safe, no develop-CI regression risk) and **#1055** (community fork
 > @muhamedfazalps → queued needs:ace **#1057**). Nothing merged/closed BY Orc (Rule 1). **Step 2 health:**
-> `status:done` open = **#1162, #1164** (fresh, awaiting QA — QA's job; sat >24h, tracked by #915) + **#972** (P0
+> `status:done` open = **#1162, #1164** (post-ship-gate hardening, awaiting QA — QA's job; sat ~62h, NOT a ship-gate
+> blocker, tracked by #915) + **#972** (P0
 > input-safety, human-only) → untouched. `status:in-progress` = **#766** only (Ace migration-guide umbrella,
 > AcePeak-owned, updated 06-21 — not abandoned Dev work). Nothing for Orc to close (Rule 1). **Step 3 (moat):**
 > native-core moat (#920/#932/JAB #1096) build-blocked locally (no MSVC/cmake) → needs:ace #1097; OCR (#1060) blocked
