@@ -1,6 +1,22 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-24 07:03Z (Orc daily review — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> Last refreshed: 2026-06-24 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> changed since #1166 (06-22 01:55Z, ~2.6d); develop GREEN real-CI `3fb7b5d`; NO team-Dev PR; Dev-Sirius PR queue
+> empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean); session-log's "12 awaiting PR"
+> list is a STALE artifact — those merged as PRs #845–855 on 05-13, confirmed against live remote. 2 open PRs both
+> main-targeted human-only (Rule 2): #1167 dependabot checkout 6→7 (only failed job = Feishu webhook, code gates
+> PASS → safe); #1055 community fork → needs:ace #1057. status:done = #1162/#1164/#972 (untouched, QA's job);
+> status:in-progress = #766 only (Ace-owned umbrella, upd 06-21); needs:ace queue unchanged at 12; Step 3.5 weekly
+> cadence (last 06-23 04:04Z) → NOT due (~06-30); no PyPI release since (version.py still 0.3.1) → post-release sweep
+> not triggered; pending-issues.md (06-23) still accurate (v0.3.2 set unchanged at 16) — left as-is, no churn.
+> STRATEGIC SIGNAL: project is FULLY Ace-blocked & frozen ~2.6d — entire critical path runs through needs:ace.
+> #915 (QA loop 403, since 06-16, now ~8.5d, untouched) is root blocker → freezes all QA verify (#581/#773/#863/
+> #972/#1162/#1164) → freezes ship-gate #914 (also untouched 8.5d). #1097 blocks moat #920/#932/#1096; #1077 blocks
+> OCR #1060/#809. THREE Ace decisions (#915 infra, #1097 build path, #1077 OCR) would unblock ~everything. No
+> agent-side fix exists; all tracked needs:ace; re-commenting = churn (Rule 9), held. v0.3.3 (12) + v0.3.4 (31)
+> progressing normally. Evidence in `.work/reviews/2026-06-24-1603-auto-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-24 07:03Z (Orc daily review — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
 > changed since #1166 (06-22 01:55Z, ~2.2d); develop GREEN real-CI `3fb7b5d` (HEAD `076f39e` = orc review, skip-ci);
 > NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean);
 > 2 open PRs both main-targeted human-only (Rule 2): #1167 dependabot checkout 6→7 — only failed job is Feishu
