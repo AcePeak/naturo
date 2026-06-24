@@ -1,6 +1,19 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-24 04:10Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> Last refreshed: 2026-06-24 07:03Z (Orc daily review — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> changed since #1166 (06-22 01:55Z, ~2.2d); develop GREEN real-CI `3fb7b5d` (HEAD `076f39e` = orc review, skip-ci);
+> NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean);
+> 2 open PRs both main-targeted human-only (Rule 2): #1167 dependabot checkout 6→7 — only failed job is Feishu
+> webhook, CodeQL+Build&Test PASS → safe; #1055 community fork → needs:ace #1057. status:done = #1162/#1164/#972
+> (untouched, QA's job); status:in-progress = #766 only (Ace-owned umbrella); needs:ace queue unchanged at 12; Step
+> 3.5 weekly cadence (last 06-23 04:04Z) → NOT due (~06-30); pending-issues.md current (v0.3.2 still 16). v0.3.2
+> ship-gate MET 06-17 → #914 is Ace's release call. STRATEGIC SIGNAL: QA loop down ~8 days (#915 since 06-16, 403
+> errors) is the single biggest blocker — #1162/#1164/#972 unverified, ship-gate verification stuck; already tracked
+> needs:ace, no agent-side fix (Rule 9 no churn). Milestone shape: v0.3.3 (12 open, distribution/recognition) +
+> v0.3.4 (31 open, JSON-envelope family; watch umbrella #1142 vs per-subcommand drip) progressing normally. Evidence
+> in `.work/reviews/2026-06-24-0703-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-24 04:10Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
 > changed since 16:03Z (~12h); develop GREEN `3fb7b5d`; NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches
 > (remote = main+develop+1 dependabot); status:done = #1162/#1164/#972 (untouched, QA's job); status:in-progress =
 > #766 only (Ace-owned); needs:ace queue unchanged at 12; Step 3.5 weekly cadence (last 06-23 04:04Z) → not due;
