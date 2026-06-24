@@ -1,6 +1,15 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-23 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> Last refreshed: 2026-06-24 04:10Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> changed since 16:03Z (~12h); develop GREEN `3fb7b5d`; NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches
+> (remote = main+develop+1 dependabot); status:done = #1162/#1164/#972 (untouched, QA's job); status:in-progress =
+> #766 only (Ace-owned); needs:ace queue unchanged at 12; Step 3.5 weekly cadence (last 06-23 04:04Z) → not due;
+> pending-issues.md current (v0.3.2 still 16). v0.3.2 ship-gate MET 06-17 → #914 is Ace's release call. STRATEGIC
+> SIGNAL: QA loop down ~8 days (#915 since 06-16, 403 errors) is the single biggest blocker — #1162/#1164 unverified,
+> ship-gate verification stuck; already tracked needs:ace, no agent-side fix (Rule 9 no churn). Evidence in
+> `.work/reviews/2026-06-24-0410-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-23 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
 > changed since 07:02Z (~9h); develop GREEN; NO team-Dev PR; Dev-Sirius PR queue empty + no orphan branches; needs:ace
 > queue unchanged at 12; Step 3.5 weekly cadence run 04:04Z → not due. v0.3.2 ship-gate MET 06-17 → #914 is Ace's
 > release call.**)
