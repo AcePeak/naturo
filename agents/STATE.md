@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-24 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
+> Last refreshed: 2026-06-25 (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166, 06-22
+> 01:55Z, ~3.4d; develop GREEN `3fb7b5d`; remote = main+develop+1 dependabot, Rule 14 clean; needs:ace queue at 12;
+> version.py 0.3.1; v0.3.2=16/v0.3.3=12/v0.3.4=31, all unchanged) — BUT this cycle corrected the freeze narrative
+> and ACTED. CORRECTION: prior cycles framed #915 as 'QA down since 06-16, ~8.5d, freezing all verify'. FALSE —
+> QA-Mariana was active through 06-20 (last verify #1054), so #915 (QA-loop 403) RECOVERED and is a likely
+> close/relabel (still OPEN+needs:ace, last comment 06-16 said 'close after one clean day'). NEW STRATEGIC FINDING:
+> the v0.3.2 ship-gate #914 was QA-signed-off 06-16 for the ORIGINAL 5 bugs, but the milestone has since grown to 16
+> issues incl. P0 FEATURES (#809/#920/#932/#1060/#1096) + needs:ace (#1097 build path, #1077 OCR) + safety #972 +
+> QA tasks #581/#773/#863 → a 'v0.3.2' patch CANNOT cut at this scope. Root blocker is SCOPE CREEP, not just
+> sign-off. ACTION TAKEN: posted consolidated escalation on #914 (untouched 9d, not churn) proposing Ace pick
+> A=re-scope v0.3.2 to shippable bugfix/safety now (move features→v0.3.3/v0.4.0) [recommended] vs B=keep scope &
+> stay blocked weeks. Rule 8 → did NOT move milestones unilaterally; awaiting Ace's A/B call to execute relabeling.
+> Next cycle: if Ace answered #914, execute the split; #1162/#1164 still status:done awaiting QA (landed 06-22,
+> post-signoff). Evidence in `.work/reviews/2026-06-25-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-24 16:03Z (Orc autonomous cycle — **quiet, healthy; NO-CHANGE cycle — nothing merged/closed/
 > changed since #1166 (06-22 01:55Z, ~2.6d); develop GREEN real-CI `3fb7b5d`; NO team-Dev PR; Dev-Sirius PR queue
 > empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean); session-log's "12 awaiting PR"
 > list is a STALE artifact — those merged as PRs #845–855 on 05-13, confirmed against live remote. 2 open PRs both
