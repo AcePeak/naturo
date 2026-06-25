@@ -1,6 +1,22 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-25 (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166, 06-22
+> Last refreshed: 2026-06-25 ~04:30Z (Orc daily review — **quiet, healthy; NO-CHANGE on the wire (nothing merged/closed
+> since #1166, 06-22 01:55Z, ~3.4d); develop GREEN real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS); Dev-Sirius PR
+> queue empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean); session-log/pr-requests are
+> STALE artifacts (cleared 05-13). 2 open PRs both main-targeted human-only (Rule 2): #1167 (dependabot checkout 6→7,
+> only failed job = Build&Test, code gates otherwise; main-base) + #1055 (community fork → needs:ace #1057).
+> status:done = #1162/#1164/#972 (QA's job); status:in-progress = #766 only (Ace umbrella, upd 06-21); v0.3.2=16/
+> v0.3.3=12/v0.3.4=31 all unchanged; pending-issues.md current (06-23). **#914 scope escalation (posted by prior
+> cycle 04:05Z) UNANSWERED — Ace's A/B call still pending; did NOT re-post (Rule 9 churn).** ACTION TAKEN: posted
+> close-recommendation on **#915** — the 06-16 403 incident is DECISIVELY recovered (no 403 in ~9d; QA carried
+> `verified`+closed a continuous chain 06-21 #1135/#1139/#1141/#1144/#1149/#1150/#1156/#1146 + #1100 06-22), my own
+> 06-16 'close after one clean day' bar long cleared → recommend Ace close (Rule 1/8: recommend, don't close).
+> STRATEGIC SIGNAL: the loop has produced NO merges/verifications since 06-22 (~3.4d) — #1162/#1164/#972 unverified —
+> consistent with the known session-only-cron limit (Dev :07/QA :37 fire only while Orch session alive; persistent
+> scheduling = open Ace decision), NOT a 403; flagged on #915 to keep that signal distinct from the long-fixed auth
+> fault. Evidence in `.work/reviews/2026-06-25-0430-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-25 (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166, 06-22
 > 01:55Z, ~3.4d; develop GREEN `3fb7b5d`; remote = main+develop+1 dependabot, Rule 14 clean; needs:ace queue at 12;
 > version.py 0.3.1; v0.3.2=16/v0.3.3=12/v0.3.4=31, all unchanged) — BUT this cycle corrected the freeze narrative
 > and ACTED. CORRECTION: prior cycles framed #915 as 'QA down since 06-16, ~8.5d, freezing all verify'. FALSE —
