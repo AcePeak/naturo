@@ -1,6 +1,16 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-26 ~04:07Z (Orc daily review — **quiet, healthy; NO-CHANGE on the wire (nothing merged/closed
+> Last refreshed: 2026-06-26 ~07:04Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
+> wire in the ~3h since 04:07Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~4.3d). develop GREEN
+> real-CI `3fb7b5d`. PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14 clean). #1167 dependabot
+> checkout-7: real checks ALL PASS (only Feishu-notify step + skipped Release made the run read 'failure') — mainbase
+> human-only (Rule 2). status:in-progress=#766 (Ace, 06-21); status:done=#1162/#1164/#972 unverified (QA loop down,
+> #915). needs:ace pile now 12 deep (incl. #914 ship-gate, #915 403, #1077 OCR, #1097 native-core build, #1105/#1136
+> unattended-API sign-offs) — the growing decision backlog IS the bottleneck; loop has nothing self-serviceable. Did
+> NOT re-comment #914/#915 (Rule 9 churn — my 06-25 escalations only ~1.6d old). No new issues filed (version still
+> 0.3.1, nothing shipped to scan; Phase 3.5 N/A). Evidence: `.work/reviews/2026-06-26-0704-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-26 ~04:07Z (Orc daily review — **quiet, healthy; NO-CHANGE on the wire (nothing merged/closed
 > since #1166, 06-22 01:55Z, now ~4.1d); develop GREEN real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS); Dev-Sirius PR
 > queue empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean); session-log/pr-requests are
 > STALE artifacts (cleared 05-13). 2 open PRs both main-targeted human-only (Rule 2): #1167 (dependabot checkout 6→7,
