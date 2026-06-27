@@ -1,6 +1,15 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-27 ~05:00Z (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166,
+> Last refreshed: 2026-06-27 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
+> wire in the ~2h since 05:00Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~5.2d). develop GREEN real-CI
+> `3fb7b5d`. PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base
+> human-only (Rule 2): #1167 dependabot checkout-7 / #1055 community fork→#1057. status:in-progress=#766 (Ace);
+> status:done #1162/#1164/#972 still unverified (QA loop down). needs:ace=13, stars=5 flat, no external activity. #1168
+> (persistent-scheduler, needs:ace P1) filed 04:03Z is newest activity (my own) — it IS the meta-blocker; every other
+> needs:ace item is downstream. #914/#915 last comments = MY OWN 06-25 [Orc] escalations (UNANSWERED, ~2d → Rule 9, did
+> NOT re-post). No new issues (version still 0.3.1, Phase 3.5 N/A). Evidence: `.work/reviews/2026-06-27-0702-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-27 ~05:00Z (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166,
 > 06-22 01:55Z, now ~5.1d); develop GREEN real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS, last 06-22); PR queue empty
 > + no orphans (remote = main+develop+1 dependabot, Rule 14 clean); 2 open PRs both main-base human-only (Rule 2) #1167
 > dependabot checkout-7 / #1055 community fork→#1057; status:in-progress=#766 (Ace); status:done #1162/#1164/#972
