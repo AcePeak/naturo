@@ -1,6 +1,22 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-26 ~16:02Z (Orc daily review, 3rd pass today — **NO-CHANGE confirmation; nothing moved on the
+> Last refreshed: 2026-06-27 ~05:00Z (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166,
+> 06-22 01:55Z, now ~5.1d); develop GREEN real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS, last 06-22); PR queue empty
+> + no orphans (remote = main+develop+1 dependabot, Rule 14 clean); 2 open PRs both main-base human-only (Rule 2) #1167
+> dependabot checkout-7 / #1055 community fork→#1057; status:in-progress=#766 (Ace); status:done #1162/#1164/#972
+> unverified since 06-22 (QA round never fired). No external activity (5 stars flat, no new external issues). #914/#915
+> last comments = MY OWN 06-25 [Orc] escalations via shared bot acct (still UNANSWERED, ~2d old → Rule 9, did NOT
+> re-post). NEW ACTION: filed **#1168 (needs:ace, P1)** — surfaced the persistent-scheduler decision (Dev/QA crons are
+> session-only → loop freezes whenever no Orch session is alive; this, NOT a 403, is the root cause of the recurring
+> ~5d freezes and the #1162/#1164/#972 verify-stall). It was buried in STATE prose only; now trackable. It is the
+> META-blocker — every other needs:ace item is downstream (a durable scheduler clears the QA backlog autonomously). 3
+> options: A=Windows Task Scheduler [rec] / B=cloud VM (#860) / C=status quo; pair with watchdog #917 + worktree-lock
+> #935. needs:ace pile now 13 (was 12). HYGIENE FINDING: milestone **v0.2.0 is still OPEN with 0 open issues** — the
+> playbook's `sort|first` milestone picker would misfile new issues into it; used v0.3.2 explicitly. Suggest Ace close
+> v0.2.0. No code/quality issues to file (version still 0.3.1, Phase 3.5 N/A). Evidence:
+> `.work/reviews/2026-06-27-0500-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-26 ~16:02Z (Orc daily review, 3rd pass today — **NO-CHANGE confirmation; nothing moved on the
 > wire in the ~9h since 07:04Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~4.6d). develop GREEN
 > real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS). PR queue empty + no orphans (remote = main+develop+1 dependabot,
 > Rule 14 clean). 2 open PRs both main-targeted human-only (Rule 2): #1167 dependabot checkout 6→7 (real checks pass,
