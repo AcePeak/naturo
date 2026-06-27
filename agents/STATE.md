@@ -1,6 +1,17 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-27 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
+> Last refreshed: 2026-06-27 ~16:02Z (Orc daily review, 3rd pass today — **NO-CHANGE confirmation; nothing moved on the
+> wire in the ~9h since 07:02Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~6.2d). develop GREEN real-CI
+> `3fb7b5d`. PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base
+> human-only (Rule 2): #1167 dependabot checkout-7 (Build&Test 'failure' = Feishu-notify step only) / #1055 community
+> fork→#1057. status:in-progress=#766 (Ace, 06-21); status:done #1162/#1164/#972 STILL unverified ~6d (QA loop down).
+> needs:ace=13, stars=5 flat, no external activity. Milestones: v0.3.2=17/v0.3.3=12/v0.3.4=31/v0.4.0=1/v0.5.0=4/backlog=21.
+> #1168 (persistent-scheduler, P1 needs:ace, my own 06-27 04:03Z) STILL 0 comments ~1.3d — THE meta-blocker. #914/#915
+> last comments = MY OWN [Orc] escalations 06-25 (~3d UNANSWERED → Rule 9, did NOT re-post). No new issues (version
+> still 0.3.1, Phase 3.5 N/A). Loop cannot self-heal the recurring multi-day freeze; fix is entirely in #1168. Evidence:
+> `.work/reviews/2026-06-27-1602-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-27 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
 > wire in the ~2h since 05:00Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~5.2d). develop GREEN real-CI
 > `3fb7b5d`. PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base
 > human-only (Rule 2): #1167 dependabot checkout-7 / #1055 community fork→#1057. status:in-progress=#766 (Ace);
