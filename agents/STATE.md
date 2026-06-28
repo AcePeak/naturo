@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0552Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the 6th #884 output-contract gap landed — Dev shipped+merged
+> Last refreshed: 2026-06-29 ~0622Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat with one exemplary completed
+> product — QA verified+closed #1179 end-to-end since 0552Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0552Z: **(1) QA @06:10Z VERIFIED+CLOSED #1179** (`find --ai` error JSON dropped 4/6 #884 envelope keys) — a textbook **behavior** verify: real first-run path
+> `find "…" --ai --json` (no API key) now emits all six #884 keys with `suggested_action` = the API-key hint the hand-rolled `json.dumps` had dropped; all 3 codes route
+> through `_json_error_str`; old unregistered `AI_FIND_FAILED` no longer emitted. Lateral find-error-envelope sweep (--image/--image+--ai/--selector+query/--ocr) all clean,
+> area already covered by open #1183/#1184 (no false re-file); ruled out 2 own-harness false-alarms (--image arg-eating, MSYS `//` mangling) before filing; zero intrusive
+> input. This completes the 0552Z on-merge handoff end-to-end. **(2) Dev cycle (started 06:07Z) picked up #1182 + #1183** — both fresh `status:in-progress` @06:12Z, no
+> branch yet (<24h → not abandoned); identical root cause (error codes unregistered in `_ERROR_CATEGORIES`/`_RECOVERY_HINTS` → `category:"unknown"` + null `suggested_action`
+> — the #1180 structural-net target). **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector` default) re-confirmed MERGEABLE/CLEAN, **autoMerge OFF** — public-API human
+> gates → **Orc did NOT merge / did NOT enable** (guardrail); #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc
+> (Rule 1); **Rule 14 clean** (remote = main+develop+dependabot+2 live PR heads #1170/#1171; no orphans). **Step 2:** status:done open = **#972** only (human-only, parked);
+> **#1179 already QA-closed → no handoff owed**; status:in-progress = **#1182**+**#1183**(fresh Dev picks)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned;
+> closed nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; backlog actively self-serviced (Dev on #1182/#1183 error-envelope-category class; #1184 backlog; #1180
+> net open) → no new gap (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence (one watch-item logged, not encoded):**
+> the one completed product (QA's #1179 verify) = rules SUCCEEDING; Dev's #1182/#1183 in-flight (no PR, no product to audit); the novel signal — Dev set **two** issues
+> in-progress at once (#1182+#1183, identical registry root cause) — is a **first** (not recurring) and plausibly a legitimate single fix, so encoding a Rule-5 rule on an
+> in-flight outcome-unknown incident = over-fit (forbidden); logged as a watch-item to verify the resulting PR is one coherent registry fix with discriminating tests for
+> both codes; self-review 5–6 principles < ~8 distillation threshold; EVOLUTION row appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171
+> PR-held gates + #1182/#1183/#1184 in-flight/backlog; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD
+> real-CI `ad24c38` (#1185 Build&Test+CodeQL SUCCESS; orc `ff8c950` [skip ci] on top). Evidence: `.work/reviews/2026-06-29-0622-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0552Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the 6th #884 output-contract gap landed — Dev shipped+merged
 > #1179's fix (PR #1185), Orc performed the on-merge handoff. needs:ace UNCHANGED at 13.**
 > Since 0524Z: **two completed cycles, both exemplary.** **(1) Dev @05:49Z shipped+auto-merged PR #1185** (`ad24c38`, *fixes #1179* — `find --ai` error JSON dropped
 > 4/6 #884 keys via a hand-rolled `json.dumps`): routed through the canonical `_json_error_str` envelope with *registered* codes (`AI_ANALYSIS_FAILED`/
