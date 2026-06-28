@@ -41,11 +41,15 @@ waiting for Ace's release click. The loop never stalls on a human-only gate; it 
 work while the gate waits.
 
 ### Known blockers on the current sub-goal (surface, don't silently skip)
-- **#1096 JAB attach fails** — fix is in the **C++ core**; local build blocked by **no MSVC/cmake** (#1097, needs:ace).
+- ~~**#1096 JAB attach fails** — local build blocked by no MSVC/cmake (#1097)~~ — **NATIVE-BUILD BLOCK CLEARED 06-28**:
+  Ace provisioned the C++ toolchain on NATUROBOT (MSVC 14.44 + CMake + Ninja, smoke build produced `naturo_core.dll`);
+  #1097 closed; build recipe on #1097; pointer + root-cause on #1096. **#1096 is now Dev-actionable** (fix the async
+  JVM handshake in `jab_ensure_init`, build+verify locally) — no human gate remains; this is now Dev execution work.
 - ~~**#1060 --ocr** — blocked on OCR-engine choice (#1077)~~ — **RESOLVED 06-28**: Ace picked **RapidOCR** as an
-  optional extra (`pip install naturo[ocr]`; MIT/Apache, offline, Chinese-strong, bundled ONNX models); #1077 closed,
-  #1060 now Dev-actionable (spec on the issue: `OCR_NOT_AVAILABLE` recoverable error when the extra is absent).
+  optional extra (`pip install naturo[ocr]`; MIT/Apache, offline, Chinese-strong, bundled ONNX models); #1077 closed.
+  **Dev picked #1060 06-28 ~15:14Z (`status:in-progress`, in flight)** — done-criterion #2 now actively being shipped.
 - **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler, needs:ace).
+  Now the **only** human-gated blocker on done-criteria 1–4 — both #1096 (JAB) and #1060 (OCR) are pure Dev execution.
 These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
 
 ---

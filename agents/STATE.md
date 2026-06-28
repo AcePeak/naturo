@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~14:52Z (Orc autonomous cycle — **LOOP HEALTHY & MOVING POST-RESUME; develop GREEN;
+> Last refreshed: 2026-06-28 ~15:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; Ace cleared the
+> LAST native-build blocker — v0.3.2 recognition-moat work is now pure Dev execution.** Since 14:52Z: **Ace provisioned
+> the C++ toolchain on NATUROBOT** (MSVC 14.44 + CMake + Ninja; full `core` Release build proven → `naturo_core.dll`) →
+> **#1097 CLOSED 15:04Z** → **#1096 (JAB attach fix) UNBLOCKED** (now Dev-buildable+verifiable locally; build recipe on
+> #1097; pointer + async-JVM-handshake root-cause already on #1096). This clears done-criterion #1's last native block.
+> **Dev picked #1060 `find --ocr`** (done-criterion #2) → now `status:in-progress` (15:14Z, in flight, no PR yet). **QA
+> filed #1169** (P2 bug/from:qa/v0.3.2 — find short-form `//Role`: role-only never matches & 'any app' desktop-wide search
+> doesn't search; regression vs #615; Dev-actionable). **Net: done-criteria 1–4 now have NO human gate** — #1096 (JAB) +
+> #1060 (OCR) are both pure Dev work, one in flight, one pickable; only #1168 (persistent scheduler) still gates loop
+> durability. **needs:ace 12→11** (#1097 dropped): #1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897. **Step 1:**
+> NO team-Dev PR; 2 open PRs both base=`main` human-only (Rule 2) — #1167 dependabot checkout-7 (UNSTABLE), #1055
+> community fork→#1057; nothing merged/closed BY Orc (Rule 1); remote = main+develop+1 dependabot (Rule 14 clean).
+> **Step 2:** status:done open = #972 only (human-only); status:in-progress = #1060 (Dev, fresh) + #766 (Ace umbrella) →
+> no handoff owed, nothing abandoned, closed nothing (Rule 1). **Step 3:** the move (build-unblock pointer on #1096) was
+> already posted by Ace at 15:04Z → no churn (Rule 9); backlog sharp, no new gap. **Step 3.5:** NOT due (tracker row 06-28
+> current, <7d). **Step 3.6: no change — no new evidence** (one completed cycle since 14:52Z = QA filing #1169, exemplary —
+> read-only find exploration, regression-cited vs #615, ruled out harness, zero intrusive input; Dev in-flight on #1060;
+> single signal → over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (#1096 JAB
+> unblocked-not-landed; #1060 in-flight-not-shipped; #766 in-progress) → no auto-advance; remaining critical path is now
+> pure Dev execution (no human gate). GOAL.md "Known blockers" updated (native-build block struck). develop GREEN last
+> real-CI `3fb7b5d` (#1166), HEAD `[skip ci]`. Evidence: `.work/reviews/2026-06-28-1522-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-28 ~14:52Z (Orc autonomous cycle — **LOOP HEALTHY & MOVING POST-RESUME; develop GREEN;
 > Ace cleared a real convergence blocker.** Since the 14:22Z cycle: **QA verified+closed #1164 & #1162** (both
 > `--json` contract bugs, cited merged commits per Rule 1, zero intrusive input) → `status:done` queue now empty
 > except human-only #972. **Ace DECIDED #1077 (OCR engine) at 14:50Z → #1077 closed → #1060 `naturo find --ocr`
