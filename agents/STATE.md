@@ -1,6 +1,17 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-27 ~16:02Z (Orc daily review, 3rd pass today — **NO-CHANGE confirmation; nothing moved on the
+> Last refreshed: 2026-06-28 ~04:01Z (Orc daily review — **NO-CHANGE, ~6.3d frozen. Nothing merged/closed since #1166
+> (06-22 01:55Z). develop GREEN real-CI `3fb7b5d` (orc [skip ci] commits sit on top, no new CI). PR queue empty + no
+> orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base human-only (Rule 2): #1167
+> dependabot checkout-7 (Build&Test 'failure' = Feishu-notify step only) / #1055 community fork→#1057. status:in-
+> progress=#766 (Ace, 06-21); status:done #1162/#1164/#972 STILL unverified ~6d (QA loop down). needs:ace=13, stars=5
+> flat, no external activity. Milestones: v0.3.2=17/v0.3.3=12/v0.3.4=31/v0.4.0=1/v0.5.0=4. #1168 (persistent-scheduler,
+> P1 needs:ace, my own 06-27 04:03Z) STILL 0 comments ~24h — THE meta-blocker; every needs:ace item is downstream of
+> it. #914/#915 escalations 06-25 (~3d UNANSWERED → Rule 9, did NOT re-post). No new issues (version 0.3.1, Phase 3.5
+> N/A). Loop has nothing self-serviceable; the freeze is entirely an Ace-decision bottleneck (#1168 first). Evidence:
+> `.work/reviews/2026-06-28-0401-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-27 ~16:02Z (Orc daily review, 3rd pass today — **NO-CHANGE confirmation; nothing moved on the
 > wire in the ~9h since 07:02Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~6.2d). develop GREEN real-CI
 > `3fb7b5d`. PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base
 > human-only (Rule 2): #1167 dependabot checkout-7 (Build&Test 'failure' = Feishu-notify step only) / #1055 community
@@ -59,44 +70,8 @@
 > NOT re-comment #914/#915 (Rule 9 churn — my 06-25 escalations only ~1.6d old). No new issues filed (version still
 > 0.3.1, nothing shipped to scan; Phase 3.5 N/A). Evidence: `.work/reviews/2026-06-26-0704-daily-review.md`.**)
 >
-> Last refreshed (prior): 2026-06-26 ~04:07Z (Orc daily review — **quiet, healthy; NO-CHANGE on the wire (nothing merged/closed
-> since #1166, 06-22 01:55Z, now ~4.1d); develop GREEN real-CI `3fb7b5d` (Build & Test + CodeQL SUCCESS); Dev-Sirius PR
-> queue empty + no orphan branches (remote = main+develop+1 dependabot, Rule 14 clean); session-log/pr-requests are
-> STALE artifacts (cleared 05-13). 2 open PRs both main-targeted human-only (Rule 2): #1167 (dependabot checkout 6→7,
-> main-base) + #1055 (community fork → needs:ace #1057) — unchanged. status:done = #1162/#1164/#972 (QA's job);
-> status:in-progress = #766 only (Ace umbrella, upd 06-21); v0.3.2=16/v0.3.3=12/v0.3.4=31/backlog=21 all unchanged.
-> BOTH strategic threads remain UNANSWERED by Ace: #914 scope-escalation (A/B re-scope call) + #915 close-recommendation
-> (06-16 403 long recovered, ~10d clean) — last comments on both are prior Orc cycles (06-25); did NOT re-post either
-> (Rule 9 churn). NO new code/quality issues to file (nothing shipped to scan; Phase 3.5 N/A — version still 0.3.1, no
-> PyPI release since). STRATEGIC SIGNAL persists: loop produced NO merges/verifications since 06-22 (~4.1d) —
-> #1162/#1164/#972 still unverified — consistent with session-only-cron limit (Dev :07/QA :37 fire only while Orch
-> session alive; persistent scheduling = open Ace decision), NOT a 403. The two open Ace decisions (#914 scope, #915
-> close, + persistent-cron) are now the ONLY levers; agent loop has nothing actionable until one moves.
-> Evidence in `.work/reviews/2026-06-26-0407-daily-review.md`.**)
->
-> Last refreshed (prior): 2026-06-25 ~04:30Z (Orc daily review — quiet, healthy; NO-CHANGE since #1166 06-22 (~3.4d);
-> develop GREEN `3fb7b5d`; queue+branches clean (Rule 14); status:done #1162/#1164/#972; v0.3.2=16/v0.3.3=12/v0.3.4=31.
-> #914 scope escalation UNANSWERED, did not re-post (Rule 9). ACTION: posted close-recommendation on #915 (403 recovered
-> ~9d; QA chain 06-21 #1135/#1139/#1141/#1144/#1149/#1150/#1156/#1146 + #1100 06-22). Loop stalled ~3.4d = session-only-
-> cron limit, NOT a 403; flagged on #915.)
->
-> Last refreshed (prior): 2026-06-25 (Orc daily review — **NO-CHANGE on the wire (nothing merged/closed since #1166, 06-22
-> 01:55Z, ~3.4d; develop GREEN `3fb7b5d`; remote = main+develop+1 dependabot, Rule 14 clean; needs:ace queue at 12;
-> version.py 0.3.1; v0.3.2=16/v0.3.3=12/v0.3.4=31, all unchanged) — BUT this cycle corrected the freeze narrative
-> and ACTED. CORRECTION: prior cycles framed #915 as 'QA down since 06-16, ~8.5d, freezing all verify'. FALSE —
-> QA-Mariana was active through 06-20 (last verify #1054), so #915 (QA-loop 403) RECOVERED and is a likely
-> close/relabel (still OPEN+needs:ace, last comment 06-16 said 'close after one clean day'). NEW STRATEGIC FINDING:
-> the v0.3.2 ship-gate #914 was QA-signed-off 06-16 for the ORIGINAL 5 bugs, but the milestone has since grown to 16
-> issues incl. P0 FEATURES (#809/#920/#932/#1060/#1096) + needs:ace (#1097 build path, #1077 OCR) + safety #972 +
-> QA tasks #581/#773/#863 → a 'v0.3.2' patch CANNOT cut at this scope. Root blocker is SCOPE CREEP, not just
-> sign-off. ACTION TAKEN: posted consolidated escalation on #914 (untouched 9d, not churn) proposing Ace pick
-> A=re-scope v0.3.2 to shippable bugfix/safety now (move features→v0.3.3/v0.4.0) [recommended] vs B=keep scope &
-> stay blocked weeks. Rule 8 → did NOT move milestones unilaterally; awaiting Ace's A/B call to execute relabeling.
-> Next cycle: if Ace answered #914, execute the split; #1162/#1164 still status:done awaiting QA (landed 06-22,
-> post-signoff). Evidence in `.work/reviews/2026-06-25-daily-review.md`.**)
->
 > ---
-> _Older refresh history trimmed twice by Orc-Mycelium: 2026-06-22 (cascade of ~64 cycles, 2026-06-16 → 06-21 17:52Z, from ~461KB / 4569 lines) and 2026-06-26 16:02Z (entries 06-22 04:52Z → 06-24 16:03Z, ~310 lines). Only the last ~4 refresh entries are kept inline; STATE.md is read by every agent on startup. The full record is retained in git history (`git log -p agents/STATE.md`), `.work/reviews/`, and `naturo-loop-state.log`. The structural reference body follows._
+> _Older refresh history trimmed thrice by Orc-Mycelium: 2026-06-22 (cascade of ~64 cycles, 2026-06-16 → 06-21 17:52Z, from ~461KB / 4569 lines), 2026-06-26 16:02Z (entries 06-22 04:52Z → 06-24 16:03Z, ~310 lines), and 2026-06-28 04:01Z (entries 06-25 → 06-26 04:07Z). Key history from the trimmed 06-25 entries: #914 = v0.3.2 ship-gate / scope-creep escalation (milestone grew from 5 bugs to features+needs:ace+safety; proposed A=re-scope to shippable bugfix now / B=keep scope & stay blocked — Rule 8, no unilateral milestone moves); #915 = QA-loop 403 recovered (close-recommendation posted 06-25). Both UNANSWERED by Ace. Only the last ~2 refresh entries are kept inline; STATE.md is read by every agent on startup. Full record in git history (`git log -p agents/STATE.md`), `.work/reviews/`, and `naturo-loop-state.log`. The structural reference body follows._
 
 ## Current Version
 v0.3.1 (PyPI + GitHub Release). `develop` CI green.
