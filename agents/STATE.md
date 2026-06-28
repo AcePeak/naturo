@@ -1,6 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0652Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
+> Last refreshed: 2026-06-29 ~0722Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; one Dev fix landed end-to-end — #1186 closed the
+> `find --selector` error-envelope-category gaps (#1182+#1183), and the 0652Z watch-item resolved as the rules SUCCEEDING. No Orc mutations to the wire beyond an
+> [Orc] rebase-flag on #1170. needs:ace UNCHANGED at 13.**
+> Since 0652Z: **two completed cycles.** **(1) Dev @23:08Z merged PR #1186** (`1c522f8`, *fixes #1182 + #1183*) — promotes `SELECTOR_REF_ERROR`(session)/`INVALID_SELECTOR`
+> (validation)/`TREE_ERROR`(automation,recoverable) to real `ErrorCode` members registered in `_ERROR_CATEGORIES`/`_RECOVERY_HINTS`, ending the `category:"unknown"`+null
+> `suggested_action` degradation on `find --selector` error envelopes (#884→#1101 class). +173/-0 (`naturo/errors.py` + `naturo/cli/error_helpers.py` + one test file); full
+> required CI GREEN (Build & Test + CodeQL on `1c522f8`); public-API guardrail correctly did NOT fire (#1101 class — codes already emitted as raw strings, only metadata
+> corrected → `--auto` appropriate). **Dev did the complete on-merge handoff itself** (set both status:done, cited `1c522f8`, asked QA to verify) → **no Orc handoff owed.**
+> **(2) QA @07:10Z exploratory** — develop GREEN reconfirmed; live Notepad UIA recognition pass (cascade 44/cov 0.893, no mojibake, `find --image` 1.0); **re-verified+extended
+> #871** (targeting-flag matrix: all 8 app window verbs + get/set `--pid` still lack `--app-id` though `app list` advertises IDs — re-verify comment, no dup); #972 parked;
+> 0 new bugs, zero intrusive input. **Step 1:** **#1170 (`--ocr`) went CONFLICTING** (#1186's registry touch collides with #1170's `OCR_NOT_AVAILABLE`/`OCR_FAILED` adds) →
+> posted **[Orc] rebase-flag** so it doesn't rot; still a public-API gate, auto-merge OFF → **Orc did NOT merge / did NOT enable** (guardrail). #1171 (`--selector` default)
+> MERGEABLE/CLEAN, auto-merge OFF, public-API gate → untouched. #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc
+> (Rule 1); **Rule 14 clean** (#1186 branch auto-deleted; remote = main+develop+dependabot+2 live PR heads #1170/#1171). **Step 2:** no handoff owed (Dev completed the
+> #1182/#1183 handoff @23:08Z); status:done open = **#1182**+**#1183**(fresh, awaiting QA)+**#972**(human-only, parked); status:in-progress = **#1180**(self-maintaining
+> error-envelope contract test — fresh Dev pick, 23:13Z)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned; closed nothing (Rule 1). **Step 3:** criterion #1
+> stays FULLY MET; #1186 closed the #1182/#1183 category-registration gaps and #1180 (the structural net that kills the whole #884→#1172→#1179 regression class) is now in
+> flight → no new gap (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — 0652Z watch-item RESOLVED as the rules SUCCEEDING** — Dev's
+> first-ever two-issues-in-progress-at-once (#1182+#1183) landed as **ONE coherent registry fix** (one root cause, one test file with per-code BEHAVIOR assertions: concrete
+> non-UNKNOWN category + non-null/non-empty `suggested_action` + correct `recoverable` + end-to-end CLI envelopes), the justified shared-root-cause exception not Rule-5
+> sprawl; encoding a rule on a successful outcome = over-fit (forbidden); test-quality audit SOUND; self-review 5–6 principles < ~8 distillation threshold; EVOLUTION row
+> appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170 CONFLICTING+held + #1171 held public-API gates, #1180 in flight; #3 #766 in-progress; #4
+> half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `1c522f8` (#1186 Build&Test+CodeQL SUCCESS). Evidence:
+> `.work/reviews/2026-06-29-0722-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0652Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
 > since 0622Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
 > Since 0622Z: **zero Dev/QA cycles completed** — develop HEAD unchanged at real-CI `ad24c38` (#1185 Build&Test+CodeQL SUCCESS; orc `f1bcd4e` `[skip ci]` on top). A **Dev
 > cycle started 06:37Z** and is **still in flight** on the error-envelope-category backlog (#1182 + #1183, both `status:in-progress`, **no branch/PR yet** — fresh picks,
