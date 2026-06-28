@@ -194,6 +194,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         _find_with_selector(
             selector, find_all,
             app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            depth=depth, method=backend,
             limit=limit, json_output=json_output,
         )
         return
@@ -821,6 +822,8 @@ def _find_with_selector(
     window_title: str | None,
     hwnd: int | None,
     pid: int | None,
+    depth: int,
+    method: str,
     limit: int,
     json_output: bool,
 ) -> None:
@@ -847,6 +850,13 @@ def _find_with_selector(
         window_title: Target window title substring.
         hwnd: Target window handle.
         pid: Target process ID.
+        depth: Maximum tree depth to traverse (the ``--depth`` option).
+        method: Accessibility backend to use (the ``--backend``/``--method``
+            option, e.g. ``"auto"``/``"uia"``/``"msaa"``). Forwarded to
+            ``get_element_tree`` so the selector path resolves over the SAME
+            tree the text-query path does — without it the fetch silently fell
+            to the backend's ``"uia"`` default (UIA only, no hybrid fallback),
+            and selectors over WinUI/XAML apps matched nothing (#1169).
         limit: Maximum number of matches to return.
         json_output: Whether to emit JSON.
 
@@ -890,7 +900,8 @@ def _find_with_selector(
 
     try:
         tree = backend.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, pid=pid, depth=20,
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            depth=depth, backend=method,
         )
     except _common.WindowNotFoundError as exc:
         _emit_error("WINDOW_NOT_FOUND", str(exc))
