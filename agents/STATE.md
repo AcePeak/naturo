@@ -1,6 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~02:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the recognition-fidelity bug Dev shipped
+> Last refreshed: 2026-06-29 ~03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; a 4th consecutive recognition-fidelity
+> native-core data-loss bug self-serviced — Dev shipped+merged #1159 since 02:52Z; criterion #1 stays FULLY MET. Orc filed one sharp structural gap (#1180).**
+> Since 02:52Z: **Dev @02:57Z merged PR #1178** (`fix/issue-1159-wide-window-title`→develop, `2ec4dbc`, *fixes #1159*) — non-codepage window titles
+> (emoji/cross-script) were `?`-mangled by the narrow `GetWindowTextA`/`QueryFullProcessImageNameA` ANSI read path in `core/src/window.cpp` (irreversible
+> data loss before Python sees the bytes). Fix switches all three narrow read sites to wide `…W` + a new `wide_to_utf8()` in one sweep (no sibling leak;
+> Python bridge already UTF-8-decodes per #1150); **public-API guardrail correctly did NOT fire** (data-loss fix on an already-emitted field = bug, no new
+> surface); the new `@pytest.mark.desktop` test is exemplary (title built from **explicit code points** to dodge the PowerShell-ANSI-decode confounder,
+> ASCII per-PID marker, distinct UTF-8 widths, **fails on pre-fix DLL = BEHAVIOR not shape**). Full required CI GREEN, branch auto-deleted. **QA @03:11Z**
+> (read-only) filed **#1179** (`find --ai` error JSON drops 4 of 6 #884 envelope keys — hand-rolled `json.dumps` bypassing `json_error()`), correctly did
+> NOT re-file the already-tracked #1172, zero intrusive input. **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector` default) re-confirmed public-API human
+> gates, auto-merge OFF → **Orc did NOT merge/enable** (guardrail); #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing
+> merged/closed BY Orc (Rule 1); Rule 14 clean (remote=main+develop+dependabot+2 live PR heads; #1178 branch deleted on merge). **Step 2 handoff:** **flipped
+> #1159 `status:in-progress`→`status:done`** (PR base=develop ≠ default → no auto-close; merged `2ec4dbc` cited, Rule 1) — QA cycle picks it up. status:done
+> open = **#1159**(fresh) + **#972**(human-only, parked). status:in-progress = **#1172**(fresh Dev pick) + #1169/#1060(Dev PRs held) + #766(Ace) → none
+> stale/abandoned. **Step 3:** criterion #1 stays complete; #1159 closed a 4th native-core recognition-fidelity data-loss gap (after #1173/#886); **GAP FILED
+> #1180** (tech-debt/P2/v0.3.4) — self-maintaining ERROR-envelope contract test (#884 unified the 6-key error envelope but left no structural guard → #1172/
+> #1179 re-regress it; mirror the #979/#987 success-side Click-tree-walking contract for the error side, test-only, Dev-actionable). **Step 3.5:** NOT due
+> (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (two completed cycles both rules SUCCEEDING — Dev's hardest-first #1159 native
+> fix with exemplary discriminating test + correct public-API non-trigger; QA's read-only #1179 with no re-file/no intrusive input; the only structural
+> signal is a *product* coverage gap → Step-3 action #1180, not a Step-3.6 doc edit; freshest rule [01:22Z stale-DLL trap] <8h old; self-review 5 questions <
+> ~8 distillation threshold; over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held
+> human gates + #1060; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13 (#1179/#1180 are Dev-actionable, not human
+> gates). develop GREEN HEAD `2ec4dbc` (#1178 Build&Test+CodeQL SUCCESS, real CI). Evidence: `.work/reviews/2026-06-29-0322-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~02:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the recognition-fidelity bug Dev shipped
 > last cycle is now QA-VERIFIED+CLOSED end-to-end — #886 closed @02:45Z with a discriminating negative control; criterion #1 stays FULLY MET.**
 > Since 02:22Z: **QA @02:45Z VERIFIED+CLOSED #886** (`keyboardShortcut` UIA AcceleratorKey/AccessKey null) — a textbook exercise of the 01:22Z
 > stale-DLL trap: #886 is a `core/` native fix, so QA **deployed the canonical CI-built `naturo_core.dll` (129024 B) from the merged Build&Test run**

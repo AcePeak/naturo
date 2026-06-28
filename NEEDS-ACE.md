@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 02:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
-queue UNCHANGED at 13.** Since 02:22Z the loop closed out the recognition-fidelity bug end-to-end with NO human input: **QA @02:45Z VERIFIED+CLOSED
-#886** (`keyboardShortcut` UIA AcceleratorKey/AccessKey — Dev shipped it last cycle as PR #1177; now live-confirmed) with a **discriminating negative
-control** (deployed the canonical CI-built DLL, swapped only the binary → pre-fix 0 populated / fix 15 populated at identical node count ⇒ effect is the
-fix not env) + a lateral check on the persisted uiMap. Meanwhile **Dev picked up #1159** (P2 — non-codepage window titles [emoji/cross-script] corrupted
-to `?` via the native-core ANSI read path; a recognition-fidelity data-loss bug), in flight, no PR yet. Recognition moat **criterion #1 stays FULLY MET**.
+_Last refreshed: 2026-06-29 03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
+queue UNCHANGED at 13.** Since 02:52Z the loop self-serviced a recognition-fidelity bug end-to-end with NO human input: **Dev @02:57Z merged PR #1178**
+(`2ec4dbc`, *fixes #1159* — non-codepage window titles [emoji/cross-script] were `?`-mangled by the narrow ANSI read path in the native core; now read via
+the wide `…W` Win32 API + UTF-8, lossless), and **QA @03:11Z** filed #1179 (`find --ai` error JSON drops 4 of 6 #884 keys — Dev-actionable, not yours). Orc
+performed the on-merge handoff (#1159→`status:done`, awaiting QA) and filed one sharp **Dev-only** structural gap (#1180 — self-maintaining error-envelope
+contract test). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
 **Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both still MERGEABLE/CLEAN & full-green this cycle:**
 **(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
 **(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
-**Step 1:** team PRs #1170/#1171 re-confirmed MERGEABLE/CLEAN (public-API gates, auto-merge OFF) → untouched; #1167(dependabot)/#1055(community) base=`main`,
-human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+2 live PR heads). **Step 2:**
-status:done open = #972 only (human-only, parked); QA already closed #886 → no handoff owed; in-progress #1169/#1060 (PRs held) + #1159 (fresh Dev) + #766
-(Ace) → none abandoned. **Step 3.5** NOT due (<7d). **Step 3.6** no change — no new evidence (one completed cycle = QA's #886 verify, the 01:22Z stale-DLL
-trap rule succeeding on a second native-fix class; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). The decision
-table below is the durable digest. Prior header kept for continuity.)
+**Step 1:** team PRs #1170/#1171 re-confirmed public-API gates, auto-merge OFF → untouched; #1167(dependabot)/#1055(community) base=`main`,
+human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+2 live PR heads; #1178 branch
+deleted on merge). **Step 2:** on-merge handoff performed (#1159→`status:done`); status:done open = #1159(fresh)+#972(human-only, parked); in-progress
+#1172(fresh Dev)+#1169/#1060(PRs held)+#766(Ace) → none abandoned. **Step 3:** filed #1180 (Dev-only structural gap). **Step 3.5** NOT due (<7d). **Step 3.6**
+no change — no new evidence (two completed cycles both rules succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
+#914). The decision table below is the durable digest. Prior header kept for continuity.)
 
 _Earlier: 2026-06-29 01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 13.** Since 01:22Z the loop
 self-serviced one v0.3.2 quality bug end-to-end with NO human input: **Dev merged PR #1176** (`54e4ba6`, *fixes #1173* — `find --limit` now rejects
@@ -61,7 +61,7 @@ items unchanged — the two find-engine public-API sign-offs (#1170/#1171) + rel
 - **Both ship-gate requirements satisfied. The only remaining action is cutting / tagging the release (#914) — human-only (Rule 2); the loop will not tag `main`.**
 
 ## Blocks
-- **`develop` CI: not red** — HEAD `111031a` (#1177, *fixes #886*) Build & Test + CodeQL **SUCCESS** @18:22Z; prior real-CI `54e4ba6` (#1176) SUCCESS → no STOP.
+- **`develop` CI: not red** — HEAD `2ec4dbc` (#1178, *fixes #1159*) Build & Test + CodeQL **SUCCESS**; prior real-CI `111031a` (#1177) SUCCESS → no STOP.
 - **None blocking the ship-gate itself** — v0.3.2 awaits only Ace's release sign-off (#914).
 - Desktop CI runner #842 / cloud-VM #860 **CLOSED 2026-06-17 (NOT_PLANNED)** — the local QA loop on NATUROBOT superseded the offline self-hosted runner. Persistent-scheduler durability is now tracked separately as **#1168** (above).
 - _Related (not a human decision):_ [#917](https://github.com/AcePeak/naturo/issues/917) (P1, `silent-failure`) — `runner.ps1` still has no failure-streak watchdog. Code-only for Dev.
