@@ -93,6 +93,7 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
 
             def _collect_elements(el, parent_id=None):
                 child_ids = [c.id for c in (el.children or [])]
+                props = getattr(el, "properties", {}) or {}
                 ui_map[el.id] = UIElement(
                     id=el.id,
                     element_id=el.id,
@@ -102,6 +103,10 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
                     frame=(el.x, el.y, el.width, el.height),
                     parent_id=parent_id,
                     children=child_ids,
+                    # (#886) Carry the UIA keyboard shortcut into the MCP uiMap
+                    # too — without this the MCP snapshot path drops the field
+                    # the CLI path now populates.
+                    keyboard_shortcut=props.get("keyboard_shortcut"),
                 )
                 for c in (el.children or []):
                     _collect_elements(c, parent_id=el.id)

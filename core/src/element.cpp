@@ -108,6 +108,74 @@ static const char* control_type_to_role(CONTROLTYPEID type) {
 }
 
 /**
+ * @brief Read a UIA element's keyboard shortcut (AcceleratorKey, else AccessKey).
+ *
+ * The UIA backend exposes two related accessibility properties: AcceleratorKey
+ * (the directly actionable invoke chord, e.g. "Ctrl+S") and AccessKey (the
+ * navigation mnemonic, e.g. "Alt+F"). AcceleratorKey is preferred when present
+ * because it is the shortcut a keyboard-only user actually presses to invoke the
+ * element; AccessKey is the fallback for menu mnemonics that have no accelerator.
+ * Returns an empty string when neither property is set — the common case for
+ * plain controls — which callers serialize as JSON ``null`` (#886).
+ *
+ * @param element The UIA element to query.
+ * @param use_cache Read pre-fetched cached properties (true) or live Current
+ *                  properties (false). When true, the cache request must include
+ *                  ``UIA_AcceleratorKeyPropertyId`` and ``UIA_AccessKeyPropertyId``.
+ * @return JSON-escaped shortcut string, or "" when none is present.
+ */
+static std::string read_keyboard_shortcut(IUIAutomationElement* element,
+                                           bool use_cache) {
+    BSTR accelerator_bstr = NULL;
+    if (use_cache) {
+        element->get_CachedAcceleratorKey(&accelerator_bstr);
+    } else {
+        element->get_CurrentAcceleratorKey(&accelerator_bstr);
+    }
+    std::string shortcut;
+    if (accelerator_bstr && SysStringLen(accelerator_bstr) > 0) {
+        shortcut = json_escape(accelerator_bstr);
+    }
+    if (accelerator_bstr) SysFreeString(accelerator_bstr);
+
+    if (shortcut.empty()) {
+        BSTR access_bstr = NULL;
+        if (use_cache) {
+            element->get_CachedAccessKey(&access_bstr);
+        } else {
+            element->get_CurrentAccessKey(&access_bstr);
+        }
+        if (access_bstr && SysStringLen(access_bstr) > 0) {
+            shortcut = json_escape(access_bstr);
+        }
+        if (access_bstr) SysFreeString(access_bstr);
+    }
+    return shortcut;
+}
+
+/**
+ * @brief Append a ``"keyboard_shortcut"`` JSON field for the given shortcut.
+ *
+ * Emits ``,"keyboard_shortcut":null`` for an empty shortcut and
+ * ``,"keyboard_shortcut":"<value>"`` otherwise, matching the MSAA/IA2 backends
+ * which always emit the field. The value is assumed already JSON-escaped.
+ *
+ * @param shortcut JSON-escaped shortcut string (empty for none).
+ * @param out Output string to append to.
+ */
+static void append_keyboard_shortcut_field(const std::string& shortcut,
+                                           std::string& out) {
+    out += ",\"keyboard_shortcut\":";
+    if (shortcut.empty()) {
+        out += "null";
+    } else {
+        out += "\"";
+        out += shortcut;
+        out += "\"";
+    }
+}
+
+/**
  * @brief Read cached properties from a UIAutomation element and append JSON.
  *
  * Uses get_CachedXxx methods which read from the pre-fetched cache,
@@ -155,6 +223,10 @@ static void append_element_json_cached(IUIAutomationElement* element,
         rect.right - rect.left,
         rect.bottom - rect.top);
     out += buf;
+
+    // (#886) Emit the keyboard shortcut so UIA elements expose the same
+    // accessibility metadata as the MSAA/IA2 backends instead of always null.
+    append_keyboard_shortcut_field(read_keyboard_shortcut(element, true), out);
 }
 
 /**
@@ -244,6 +316,10 @@ static void build_element_json_current(IUIAutomationTreeWalker* walker,
         rect.bottom - rect.top);
     out += buf;
 
+    // (#886) Emit the keyboard shortcut (live Current properties — this is the
+    // fallback path used when the cache request could not be created).
+    append_keyboard_shortcut_field(read_keyboard_shortcut(element, false), out);
+
     out += ",\"children\":[";
     if (depth > 1) {
         IUIAutomationElement* child = NULL;
@@ -285,6 +361,11 @@ static HRESULT create_element_cache_request(
     (*cache_request)->AddProperty(UIA_ControlTypePropertyId);
     (*cache_request)->AddProperty(UIA_AutomationIdPropertyId);
     (*cache_request)->AddProperty(UIA_BoundingRectanglePropertyId);
+    // (#886) Keyboard shortcut sources — AcceleratorKey (e.g. "Ctrl+S") and
+    // AccessKey (e.g. "Alt+F"); batched here so get_CachedAcceleratorKey/
+    // get_CachedAccessKey resolve without extra cross-process COM calls.
+    (*cache_request)->AddProperty(UIA_AcceleratorKeyPropertyId);
+    (*cache_request)->AddProperty(UIA_AccessKeyPropertyId);
 
     // Fetch direct children scope for tree walking
     (*cache_request)->put_TreeScope(TreeScope_Element);
@@ -574,7 +655,7 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
     char buf[1024];
     snprintf(buf, sizeof(buf),
         "{\"id\":\"%s\",\"role\":\"%s\",\"name\":\"%s\",\"value\":null,"
-        "\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld,\"children\":[]}",
+        "\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld",
         found_aid.c_str(),
         control_type_to_role(found_ct),
         found_name.c_str(),
@@ -583,6 +664,10 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
         found_rect.bottom - found_rect.top);
 
     std::string json(buf);
+    // (#886) Surface the keyboard shortcut on find results too, so
+    // `naturo find` exposes the same accessibility metadata as `see`.
+    append_keyboard_shortcut_field(read_keyboard_shortcut(found, use_cache), json);
+    json += ",\"children\":[]}";
 
     found->Release();
     root->Release();
