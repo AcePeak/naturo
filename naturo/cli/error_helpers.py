@@ -236,6 +236,18 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "'naturo mcp install' to install MCP dependencies.",
         False,
     ),
+    "OCR_NOT_AVAILABLE": (
+        "The optional OCR engine is not installed. Install it with "
+        "'pip install naturo[ocr]' (RapidOCR — offline, bundled ONNX models), "
+        "then retry 'naturo find --ocr'.",
+        True,
+    ),
+    "OCR_FAILED": (
+        "OCR text recognition failed. Verify the target window/screenshot is "
+        "readable and contains visible text, then retry. For a saved image use "
+        "'naturo find --ocr <text> --screenshot <file>'.",
+        True,
+    ),
     "INSTALL_FAILED": (
         "Package installation failed. Check network connectivity and pip configuration.",
         True,
