@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0722Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; one Dev fix landed end-to-end — #1186 closed the
+> Last refreshed: 2026-06-29 ~0752Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1186 handoff COMPLETED end-to-end — QA
+> verified+closed #1182 + #1183; clean no-Orc-mutation cycle. needs:ace UNCHANGED at 13.**
+> Since 0722Z: **one completed cycle.** **QA @23:40Z VERIFIED+CLOSED #1182 + #1183** (PR #1186 `1c522f8`) — both per-code **BEHAVIOR**-asserted PASS:
+> `find/click/type --selector` not-found now emits `category=session` + actionable `suggested_action` (parity with `SELECTOR_NOT_FOUND`); `INVALID_SELECTOR`→
+> `category=validation`+hint (live runtime); `TREE_ERROR`→`category=automation`/`recoverable=True`+hint (registry); completeness guard `test_error_category_completeness_1101`
+> + `test_error_envelope_884` green (76 passed); **lateral scan of all raw-string `_emit_error` codes confirmed all 6 registered** (no residual `category:"unknown"`
+> gap); zero intrusive input. This completes the 0722Z on-merge handoff end-to-end. A **Dev cycle started 07:37 local**, in flight on **#1180** (structural net), no
+> branch/PR yet (<24h → not abandoned). **Step 1:** **#1170 (`--ocr`) STILL CONFLICTING/DIRTY** (collides with #1186's error-registry touch) — my 23:24Z [Orc]
+> rebase-flag is the latest comment + actionable → did **NOT re-comment** (churn), did **NOT merge/enable** (public-API gate, guardrail). #1171 (`--selector` default)
+> CLEAN/MERGEABLE, auto-merge OFF, public-API gate → untouched. #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched. Nothing merged/closed BY
+> Orc (Rule 1); **Rule 14 clean** (remote = main+develop+dependabot+2 live PR heads #1170/#1171). **Step 2:** no handoff owed (QA already verified+closed #1182/#1183);
+> status:done open = **#972** only (human-only, parked); status:in-progress = **#1180**(fresh)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned; closed
+> nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; #1182/#1183 closed the last reported `find --selector` envelope-category gaps and #1180 (the structural net
+> that kills the #884→#1172→#1179 regression class) is in flight → no new gap (Rule 9) — QA's #871 app-verb/`--app-id` targeting gap already re-verified+extended on-issue,
+> not a dup. **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence.** The one completed cycle (QA's #1182/#1183 verify) is the
+> existing rules SUCCEEDING — specifically the dev-cycle **"Error-code registration"** self-review principle (the #1086 eN-resolve evidence) is exactly what #1186 fixed
+> and QA confirmed end-to-end with per-code BEHAVIOR assertions + a registered-code completeness scan; encoding a rule atop a rule that just worked = over-fit (forbidden).
+> No new tests this heartbeat to sample (verify-only; #1186's per-code behavior tests already audited sound at 0722Z); self-review at **6 principles** (parity/attribution/
+> registration/option-coverage/validation-order/hermeticity) **< ~8 distillation threshold**; EVOLUTION row appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion
+> #1 ✅; #2 #1170 CONFLICTING+held + #1171 held public-API gates, #1180 in flight; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at
+> 13. develop GREEN HEAD real-CI `1c522f8` (#1186 Build&Test+CodeQL SUCCESS; orc `1b41632` `[skip ci]` on top). Evidence: `.work/reviews/2026-06-29-0752-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0722Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; one Dev fix landed end-to-end — #1186 closed the
 > `find --selector` error-envelope-category gaps (#1182+#1183), and the 0652Z watch-item resolved as the rules SUCCEEDING. No Orc mutations to the wire beyond an
 > [Orc] rebase-flag on #1170. needs:ace UNCHANGED at 13.**
 > Since 0652Z: **two completed cycles.** **(1) Dev @23:08Z merged PR #1186** (`1c522f8`, *fixes #1182 + #1183*) — promotes `SELECTOR_REF_ERROR`(session)/`INVALID_SELECTOR`
