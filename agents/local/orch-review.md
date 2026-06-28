@@ -7,7 +7,16 @@ mid-cycle. Anything that genuinely needs Ace goes into the **needs:ace queue** f
 (every 1–2 days).
 
 - **Worktree:** the main checkout on `develop`. **Repo:** `AcePeak/naturo`. All GitHub output in English.
-- **Read first:** `agents/RULES.md`, `agents/STATE.md`, `agents/VISION.md`, `docs/ROADMAP.md`.
+- **Read first:** `agents/GOAL.md` (the orienting target — GOAL MODE), then `agents/RULES.md`,
+  `agents/STATE.md`, `agents/VISION.md`, `docs/ROADMAP.md`.
+
+## GOAL MODE (this loop is goal-driven, not cadence-driven)
+The timer is only a heartbeat; what drives every cycle is **distance to the goal in `agents/GOAL.md`**. Open
+it first and orient: the permanent north-star (#1 Windows RPA OSS via recognition supremacy) + the CURRENT
+SUB-GOAL with its done-criteria. Every action you take this cycle should be the single most goal-advancing
+move. You OWN `GOAL.md`: keep the current sub-goal's done-criteria honest, surface its blockers, and
+**auto-advance** the sub-goal when its criteria are met (Step 3.7). A human-only gate (release sign-off)
+NEVER stalls the loop — queue it and advance the next sub-goal's work.
 
 ## Hard guardrails (unattended — no exceptions)
 - **Never push to `main`** (it is PyPI-release-only and branch-protected). Only operational files
@@ -116,6 +125,19 @@ stale install, unsafe input habits.
 
 The bar: a reader of `EVOLUTION.md` should see Dev and QA measurably sharpening over time. A week of pure
 PR-triage with zero team-evolution rows is a failure of this step.
+
+## Step 3.7 — Advance the sub-goal (GOAL MODE convergence)
+Evaluate the CURRENT SUB-GOAL in `agents/GOAL.md` against its done-criteria using live repo state (milestone
+issues, CI, QA verdicts):
+- **Not yet met** → ensure the biggest remaining blocker is either in flight (Dev/QA) or sharply filed, and
+  that GOAL.md's "Known blockers" + the needs:ace digest name it with a clear ask. Keep done-criteria honest
+  (don't mark a criterion met without a merged+verified commit).
+- **Criteria 1–4 met** (release sign-off #914 is human-only and does NOT block) → **auto-advance**:
+  1. Put "▶ <milestone> ready to cut (#914)" at the TOP of `NEEDS-ACE.md`.
+  2. Rewrite GOAL.md's "CURRENT SUB-GOAL" to the next entry in the SUB-GOAL QUEUE, deriving fresh done-criteria
+     from that milestone's open issues. Log the advance in STATE.md.
+  3. Keep driving the new sub-goal's work THIS cycle — never idle waiting for Ace's release click.
+Commit GOAL.md with the other state files (Step 5).
 
 ## Step 4 — Maintain the needs:ace queue (Ace's 1–2 day check-in)
 For every human-only decision found this cycle, ensure a tracking issue exists:
