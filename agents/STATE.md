@@ -1,6 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET: QA live-verified+closed the
+> Last refreshed: 2026-06-29 ~01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; v0.3.2 find-engine quality
+> tightened — Dev shipped + QA verified #1173 (`find --limit` validation) since 01:22Z; recognition-moat criterion #1 stays FULLY MET.**
+> Since 01:22Z: **Dev merged PR #1176** (`fix/issue-1173-limit-validation`→develop, `54e4ba6`, *fixes #1173*) — centralised `--limit >= 1`
+> validation up front (platform-invariant, before the GUI gate; emits the existing INVALID_INPUT envelope), killing the silent
+> `success:true/count:0` on non-positive `--limit` (the `[:limit]`-slice-from-end silently-wrong path); full required CI matrix GREEN,
+> Step-3.5 adversarial verifier PASS, public-API guardrail correctly NOT triggered (tightening an existing flag = bug fix, no new surface).
+> **QA @01:40Z VERIFIED+CLOSED #1173** (evidence table: `--limit 0/-3/-100` → rc1 INVALID_INPUT, inclusive boundary `--limit 1` accepted,
+> parity with `--depth -5`) and **lateral-audited the full find numeric-param family** (depth/limit/threshold) → all sound, **filed nothing
+> false**, zero intrusive input. **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector` default) re-checked **MERGEABLE/CLEAN** (no conflict
+> from #1173's `_find.py` touch), auto-merge held OFF (public-API human gates) → **Orc did NOT merge / did NOT enable** (guardrail);
+> #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); remote =
+> main+develop+dependabot+2 live PR heads (#1170/#1171) → Rule 14 clean (#1173 branch deleted). **Step 2:** no handoff owed (QA already
+> closed #1173). status:done open = **#972** only (human-only, parked). status:in-progress = #1169/#1060 (Dev PRs held) + **#886** (P1
+> from:qa keyboardShortcut/UIA, v0.3.4 — **freshly picked by the 01:37Z Dev cycle, updated ~10min before now**, NOT abandoned, no PR yet) +
+> #766 (Ace umbrella) → none stale/abandoned. **Step 3:** criterion #1 complete; the find numeric-param validation family is now closed
+> (depth/limit/threshold all reject non-positive); backlog sharp, Dev actively on #886 → no new gap filed (Rule 9). **Step 3.5:** NOT due
+> (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (two completed cycles since 01:22Z, both the existing rules
+> SUCCEEDING: Dev's hardest-first pick of #1173 over an easy additive win + correct public-API non-trigger + Step-3.5 verifier PASS; QA's
+> clean cited verify + sound numeric-param family audit + zero false, zero intrusive input; test-quality audit — #1173's 10-case test
+> asserts the INVALID_INPUT category + recoverable + inclusive boundary [BEHAVIOR not shape, not over-mocked/tautological]; the one thin spot
+> [Dev self-caught + reverted a stray write to the main checkout] is a single self-caught instance already covered by Rule 4/10 → over-fit
+> forbidden; self-review at 6 principles < ~8 distillation threshold; freshest rule [stale-DLL trap] landed <1d ago; EVOLUTION row appended).
+> **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held human gates; #3 #766 in-progress; #4 half-finished
+> PRs) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD `54e4ba6` (Build&Test+CodeQL SUCCESS, real CI). Evidence:
+> `.work/reviews/2026-06-29-0152-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET: QA live-verified+closed the
 > P0 JAB blocker #1096; develop GREEN; the recognition moat is code-complete AND live-confirmed.** Since 00:57Z: **QA @01:20Z
 > VERIFIED+CLOSED #1096** (criterion #1's last item) — live JAB attach on a real OpenJDK-21 Swing desktop, `test_jab_recognition_932.py
 > -m desktop` 4/4 PASS, concrete cascade **UIA 6 → cascade 46, delta=+40, extra_sources={'jab':40}** matching the `docs/RECOGNITION.md`

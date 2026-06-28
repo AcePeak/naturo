@@ -4,7 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET; develop GREEN; the recognition
+_Last refreshed: 2026-06-29 01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
+queue UNCHANGED at 13.** Since 01:22Z the loop self-serviced one v0.3.2 quality bug end-to-end with NO human input: **Dev merged PR #1176**
+(`54e4ba6`, *fixes #1173* — `find --limit` now rejects non-positive values with INVALID_INPUT instead of silently returning `count:0`),
+then **QA @01:40Z VERIFIED+CLOSED #1173** and lateral-audited the whole find numeric-param family (depth/limit/threshold) sound. Recognition
+moat **criterion #1 stays FULLY MET** (#1096 closed 01:20Z). **Your critical-path items are unchanged — still exactly the two find-engine
+public-API sign-offs + release:**
+**#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+**TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both re-confirmed MERGEABLE/CLEAN this cycle (no conflict
+from #1173):**
+**(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
+**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
+**Step 1:** #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14
+clean. **Step 2:** status:done open = #972 only (human-only); #886 (P1 keyboardShortcut/UIA, v0.3.4) freshly in-flight with the 01:37Z Dev
+cycle → not abandoned. **Step 3.5** NOT due (<7d). **Step 3.6** no change — no new evidence (two exemplary cycles, the existing rules
+succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-29 01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET; develop GREEN; the recognition
 moat is code-complete AND live-QA-verified.** Since 00:57Z: **QA @01:20Z VERIFIED+CLOSED #1096** (the last criterion-#1 item) — live
 JAB attach on a real OpenJDK-21 Swing desktop (`test_jab_recognition_932.py -m desktop` 4/4 PASS, **UIA 6 → cascade 46, delta=+40,
 sources={'jab':40}**) with a discriminating negative control (pre-fix DLL → delta 0, fix DLL → delta 40). Criterion #1 needs **no further
