@@ -1,6 +1,19 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~04:01Z (Orc daily review — **NO-CHANGE, ~6.3d frozen. Nothing merged/closed since #1166
+> Last refreshed: 2026-06-28 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
+> wire in the ~3h since 04:01Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~6.4d). develop GREEN real-CI
+> `3fb7b5d` (orc [skip ci] on top, no new CI). PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14
+> clean). 2 open PRs both main-base human-only (Rule 2): #1167 dependabot checkout-7 (Build&Test 'failure' = Feishu-
+> notify step only) / #1055 community fork→#1057. status:in-progress=#766 (Ace, 06-21, ~7d stale); status:done
+> #1162/#1164/#972 STILL unverified ~6d (QA loop down). needs:ace=13, stars=5 flat, no external activity. Milestones:
+> v0.3.2=17/v0.3.3=12/v0.3.4=31/v0.4.0=1/v0.5.0=4. #1168 (persistent-scheduler, P1 needs:ace, my own 06-27 04:03Z)
+> STILL 0 comments ~1.3d — THE meta-blocker; every needs:ace item is downstream of it. #914/#915 last comments = MY OWN
+> [Orc] escalations 06-25 (~3.3d UNANSWERED → Rule 9, did NOT re-post). v0.2.0 still OPEN w/ 0 open issues (sort|first
+> milestone-picker hazard — suggest Ace close). No new issues (version 0.3.1, Phase 3.5 N/A). Loop has nothing self-
+> serviceable; freeze is entirely an Ace-decision bottleneck (#1168 first). Evidence:
+> `.work/reviews/2026-06-28-0702-daily-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-28 ~04:01Z (Orc daily review — **NO-CHANGE, ~6.3d frozen. Nothing merged/closed since #1166
 > (06-22 01:55Z). develop GREEN real-CI `3fb7b5d` (orc [skip ci] commits sit on top, no new CI). PR queue empty + no
 > orphans (remote = main+develop+1 dependabot, Rule 14 clean). 2 open PRs both main-base human-only (Rule 2): #1167
 > dependabot checkout-7 (Build&Test 'failure' = Feishu-notify step only) / #1055 community fork→#1057. status:in-
