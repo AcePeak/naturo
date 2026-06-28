@@ -153,6 +153,23 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             raise SystemExit(1)
         hwnd = entry.handle
 
+    # (#1173) Validate --limit up front, before any strategy dispatch and before
+    # the platform/GUI gate. --limit feeds every find strategy — the tree/image
+    # paths pass it as a counter-based ``max_results`` (a non-positive value
+    # collapses the set to empty) and the selector path uses a literal ``[:limit]``
+    # slice (a negative value slices from the end → a non-empty but silently-wrong
+    # set). Both are silent-misleading-results, so reject ``--limit < 1`` here with
+    # the same INVALID_INPUT envelope its siblings --depth/--threshold use. Placing
+    # it before the GUI gate keeps the bad-input → error-code contract platform-
+    # invariant (same code on headless CI as on a Windows desktop).
+    if limit < 1:
+        msg = f"--limit must be a positive integer, got {limit}"
+        if json_output:
+            click.echo(_common._json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     # (#1144 / #809 §4) Strategy auto-detection — when the caller gives a bare
     # query and no explicit strategy flag, infer the locator strategy from the
     # query's shape so `naturo find button.png` and `naturo find app://…` reach
