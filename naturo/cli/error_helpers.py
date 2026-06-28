@@ -138,6 +138,28 @@ _RECOVERY_HINTS: dict[str, tuple[str, bool]] = {
         "or 'naturo selector list --builtin' for built-in templates.",
         False,
     ),
+    # find/click/type --selector resolution faults (#1182/#1183). SELECTOR_REF_ERROR
+    # reaches parity with SELECTOR_NOT_FOUND's guidance (same condition, different
+    # entry point); INVALID_SELECTOR points at the selector grammar; TREE_ERROR is a
+    # transient automation fault worth retrying once the window is confirmed present.
+    "SELECTOR_REF_ERROR": (
+        "The saved selector reference (@app/name) could not be resolved. Use "
+        "'naturo selector list' to see saved selectors, or 'naturo selector list "
+        "--builtin' for built-in templates.",
+        False,
+    ),
+    "INVALID_SELECTOR": (
+        "The selector string is malformed. Check the selector syntax — e.g. "
+        "'Role:Name', '//Button[@name=\"OK\"]', or '@app/saved-name'. Use --help "
+        "for the supported selector formats.",
+        False,
+    ),
+    "TREE_ERROR": (
+        "Failed to read the UI tree while resolving the selector. Ensure the target "
+        "window is open and responsive (use 'naturo list windows' to verify), then "
+        "retry.",
+        True,
+    ),
     "BASELINE_NOT_FOUND": (
         "Visual baseline not found. Use 'naturo visual list' to see saved baselines, "
         "or 'naturo visual baseline <name> --from <image>' to create one.",

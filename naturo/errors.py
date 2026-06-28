@@ -51,6 +51,11 @@ class ErrorCode:
     MISSING_DEPENDENCY = "MISSING_DEPENDENCY"
     PLATFORM_ERROR = "PLATFORM_ERROR"
 
+    # Selector-resolution errors (naturo find/click/type --selector, #1182/#1183)
+    SELECTOR_REF_ERROR = "SELECTOR_REF_ERROR"
+    INVALID_SELECTOR = "INVALID_SELECTOR"
+    TREE_ERROR = "TREE_ERROR"
+
     # Dialog errors
     DIALOG_NOT_FOUND = "DIALOG_NOT_FOUND"
 
@@ -144,6 +149,15 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.INVALID_SCREENSHOT: ErrorCategory.VALIDATION,
     ErrorCode.MISSING_DEPENDENCY: ErrorCategory.CONFIGURATION,
     ErrorCode.PLATFORM_ERROR: ErrorCategory.ENVIRONMENT,
+    # Selector-resolution codes on the find/click/type --selector moat path
+    # (#1182/#1183): a saved ``@app/name`` reference that does not resolve is a
+    # named session artifact, like SELECTOR_NOT_FOUND (session); a malformed
+    # selector string is a validation fault, like INVALID_INPUT (validation); a
+    # tree-fetch failure during resolution is an automation operation fault, like
+    # CAPTURE_FAILED (automation).
+    ErrorCode.SELECTOR_REF_ERROR: ErrorCategory.SESSION,
+    ErrorCode.INVALID_SELECTOR: ErrorCategory.VALIDATION,
+    ErrorCode.TREE_ERROR: ErrorCategory.AUTOMATION,
     ErrorCode.DIALOG_NOT_FOUND: ErrorCategory.AUTOMATION,
     ErrorCode.DEPENDENCY_MISSING: ErrorCategory.CONFIGURATION,
     ErrorCode.NO_DESKTOP_SESSION: ErrorCategory.ENVIRONMENT,
