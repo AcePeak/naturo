@@ -1,6 +1,34 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; v0.3.2 find-engine quality
+> Last refreshed: 2026-06-29 ~02:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; another recognition-fidelity bug
+> self-serviced end-to-end — Dev shipped + merged #886 (`keyboardShortcut` UIA null) since 01:52Z; criterion #1 stays FULLY MET.**
+> Since 01:52Z: **Dev merged PR #1177** (`fix/issue-886-uia-keyboard-shortcut`→develop, `111031a`, *fixes #886*) — the UIA C++ backend
+> (`core/src/element.cpp`) never queried `UIA_AcceleratorKey/AccessKeyPropertyId`, so `keyboardShortcut` was 100% null (a SOUL "Never Lie"/
+> silent-output-contract gap across 87k records). Fix adds a shared `read_keyboard_shortcut()` (AcceleratorKey→AccessKey→null) emitted in the
+> cached tree, Current-fallback, AND `naturo_find_element` paths, BSTRs NULL-guarded/freed; **swept the sibling MCP `_snapshot.py` uiMap builder**
+> that dropped the same field (recurring-class closure across UIA see/find + MCP). **FULL required CI GREEN** (`111031a` Build & Test + CodeQL
+> SUCCESS @18:22Z), Step-3.5 adversarial verifier PASS with a discriminating negative control (pre-fix DLL → all 4 fixture buttons null = bug
+> reproduced; post-fix → populated), public-API guardrail correctly NOT triggered (populating an ALREADY-documented field = bug fix, no new
+> surface). Dev re-proved the native build (MSVC 14.44 + CMake) and flipped **#886 → `status:done`** on merge (awaiting QA; PR base develop ≠
+> default branch → no auto-close, Rule 1 preserved) — **no Orc handoff owed.** **QA @02:15Z VERIFIED #972** (P0 input-safety guard, function-level,
+> zero live keystrokes; left for Ace sign-off, did NOT close) + a live recognition pass (Notepad 44 elements, Chinese UI no mojibake) and **caught
+> a harness-lie** (MSYS `//`→`/` arg mangling) → filed nothing false, zero intrusive input. **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector`
+> default) base=develop, public-API human gates, auto-merge OFF → **Orc did NOT merge / did NOT enable** (guardrail); #1167(dependabot)/#1055
+> (community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); remote = main+develop+dependabot+2 live PR heads
+> (#1170/#1171) → Rule 14 clean (#886 branch deleted by Dev, confirmed gone). **Step 2:** no handoff owed (Dev set #886 status:done; QA already
+> verified #972). status:done open = **#972** (human-only, parked) + **#886** (fresh, awaiting QA — QA cycle will pick up). status:in-progress =
+> #1169/#1060 (Dev PRs held) + #766 (Ace umbrella) → none stale/abandoned. **Step 3:** criterion #1 complete; #886 closed a Never-Lie recognition-
+> fidelity gap; backlog sharp, Dev cleared the v0.3.2 hermetic queue and is pulling v0.3.4 hardest-first → no new gap filed (Rule 9). **Step 3.5:**
+> NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (two completed cycles since 01:52Z, both the existing rules
+> SUCCEEDING: Dev's hardest-first #886 pick over an easy additive win + Step-3.5 negative-control verifier that FOUND+fixed the MCP sibling-leak +
+> correct public-API non-trigger; QA's clean #972 verify + caught harness-lie + zero false/zero intrusive input; test-quality audit — #886's desktop
+> test [owned WPF fixture, FAILS on pre-fix DLL = BEHAVIOR not shape, discriminating] + hermetic MCP test [mocked at the snapshot-builder carrier
+> boundary, not the field] are sound; the one harness-lie QA hit is the already-encoded msys-double-slash class → over-fit forbidden; self-review at
+> 6 principles < ~8 distillation threshold; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-
+> held human gates; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD `111031a`
+> (Build&Test+CodeQL SUCCESS, real CI). NEEDS-ACE.md header stack trimmed (~375→lean). Evidence: `.work/reviews/2026-06-29-0222-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; v0.3.2 find-engine quality
 > tightened — Dev shipped + QA verified #1173 (`find --limit` validation) since 01:22Z; recognition-moat criterion #1 stays FULLY MET.**
 > Since 01:22Z: **Dev merged PR #1176** (`fix/issue-1173-limit-validation`→develop, `54e4ba6`, *fixes #1173*) — centralised `--limit >= 1`
 > validation up front (platform-invariant, before the GUI gate; emits the existing INVALID_INPUT envelope), killing the silent
