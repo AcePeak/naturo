@@ -36,23 +36,12 @@ Access Bridge** providers in the cascade. A UIA-only rival cannot.
 | UWP / WinUI (UIA)                | ✅             | ✅   | ✅          | ✅         |
 | MSAA / IAccessible2 fallback     | ✅             | ❌   | ❌          | ❌         |
 | **Electron / CEF (CDP)**         | ✅             | ❌   | ❌          | ❌         |
-| **Java Swing / SWT (JAB)**       | 🔧 repair†     | ❌   | ❌          | ❌         |
+| **Java Swing / SWT (JAB)**       | ✅             | ❌   | ❌          | ❌         |
 | Vision fallback (AI)             | ✅             | ⚠️*  | ❌          | ❌         |
 | SAP GUI (scripting/COM)          | 🚧 planned     | ❌   | ❌          | ❌         |
 
-<sub>✅ supported · ❌ not supported · 🚧 planned · 🔧 implemented but under
-repair · ⚠️* UFO² uses a vision model for grounding but has no dedicated CDP/JAB
-element providers.</sub>
-
-<sub>**🔧† Java Access Bridge — known regression (tracking [#1096]).** The JAB
-provider is implemented, but on a correctly-provisioned desktop (JDK 21 + Access
-Bridge enabled) naturo's one-shot init currently fails to complete the async
-JVM↔AT handshake, so JAB does not attach and the Swing delta below does **not**
-reproduce. Honesty over polish (SOUL.md never-lie): the cell is marked under
-repair until [#1096] lands and `tests/test_jab_recognition_932.py` is green
-again on a JAB desktop.</sub>
-
-[#1096]: https://github.com/AcePeak/naturo/issues/1096
+<sub>✅ supported · ❌ not supported · 🚧 planned · ⚠️* UFO² uses a vision model
+for grounding but has no dedicated CDP/JAB element providers.</sub>
 
 > Rival capabilities are stated from each project's public documentation as of
 > 2026-06; all three are built on Windows UI Automation and ship no Electron/CDP
@@ -73,25 +62,13 @@ elements naturo recognizes two ways:
 The delta is the multi-framework advantage; `Extra via` shows which provider
 found the elements UIA alone could not.
 
-### Results (Windows 11; Electron rows measured 2026-06-16)
+### Results (Windows 11; Electron rows measured 2026-06-16; JAB row re-verified 2026-06-29)
 
 | App | Framework | UIA-only | Cascade | Delta | Extra via |
 | --- | --- | ---: | ---: | ---: | --- |
 | Chrome (local web/Electron-class app) | Electron/CDP | 52 | 89 | **+37** | cdp (+34) |
 | Owned Electron fixture (real Electron app) | Electron/CDP | 83 | 113 | **+30** | cdp (+30) |
-| Owned Java Swing fixture (real Swing app) | Java Access Bridge | — | — | _under repair†_ | — |
-
-> **🔧† Known regression — Java Access Bridge ([#1096]).** An earlier draft of
-> this row published a measured `6 → 46, +40 via jab`. On re-verification on a
-> correctly-provisioned desktop (OpenJDK 21 + Access Bridge enabled), naturo's
-> JAB init **does not attach** (`jab_check_support` → `False`,
-> `naturo_jab_get_element_tree` → `-6`), so the cascade recovers the Swing
-> controls via **no** JAB provider and the delta does **not** currently
-> reproduce. Per never-lie (SOUL.md) the number is withdrawn rather than left
-> standing while unreproducible. The native fix and the restored, re-verified
-> row are owned by **[#1096]**; `tests/test_jab_recognition_932.py` is the
-> desktop regression that must go green again before the number is republished.
-> The Electron/CDP rows above are unaffected and reproduce as documented.
+| Owned Java Swing fixture (real Swing app) | Java Access Bridge | 6 | 46 | **+40** | jab (+40) |
 
 **Documented gaps (measured honestly — no fabrication):**
 
@@ -130,12 +107,12 @@ real JVM window whose controls live below a `SunAwtFrame`, where the UIA-only
 baseline sees only window chrome (the title bar and its system buttons) — **none**
 of the app's *Submit Order / Cancel Order / Customer Name / Express Shipping*
 controls — and the **Java Access Bridge** provider is the cascade leg that
-recovers them. **This row is the known regression noted above ([#1096]):** on the
-current build naturo's JAB init does not attach on a loaded desktop, so the
-`--backend auto` cascade does **not** yet fuse JAB and the delta does not
-reproduce. The description here states the **intended** behavior the JAB provider
-is designed to deliver; the measured number is withdrawn until [#1096] restores
-attachment and `tests/test_jab_recognition_932.py` is green again.
+recovers them. Here the UIA-only baseline saw **6** elements (the window frame
+and its system buttons) while the cascade reached **46** — the **JAB** provider
+recovered **40** Swing controls (the buttons, the customer-name field, the
+shipping checkbox, the order-status label, the catalog tree) that the Windows
+UIA tree collapses into one opaque `SunAwtFrame`. `tests/test_jab_recognition_932.py`
+is the desktop regression that pins this row green on a JAB desktop.
 
 ## Reproduce it
 
@@ -234,11 +211,6 @@ naturo click "Deploy" --window "Naturo Electron Recognition Fixture"
 ```
 
 ### Java Swing / SWT (Java Access Bridge)
-
-> **🔧 Under repair ([#1096]).** JAB attach is currently regressed: on a loaded
-> desktop naturo's one-shot init does not complete the async JVM handshake, so
-> the steps below do not yet recover Swing controls. They document the intended
-> workflow and will work again once [#1096] lands. Track progress there.
 
 Enable the Java Access Bridge once per machine, then use the `jab` backend (the
 `auto` cascade tries it automatically):

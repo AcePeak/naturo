@@ -80,8 +80,10 @@ typedef void  (__cdecl *FN_ReleaseJavaObject)(long vmID, JOBJECT64 object);
 
 struct JABState {
     HMODULE dll = nullptr;
-    bool initialized = false;
-    bool init_failed = false;
+    bool loaded = false;         ///< DLL + function pointers resolved (one-shot).
+    bool load_failed = false;    ///< DLL/functions permanently unavailable.
+    bool bridge_started = false; ///< Windows_run + handshake has been attempted.
+    bool attached = false;       ///< A live Java window has been confirmed via the bridge.
 
     FN_Windows_run               pInitialize = nullptr;
     FN_shutdownAccessBridge      pShutdown = nullptr;
@@ -95,9 +97,28 @@ struct JABState {
 
 static JABState g_jab;
 
-/// Milliseconds to pump the message queue after starting the bridge, giving the
-/// asynchronous JVM-discovery handshake time to complete before the first query.
-static const DWORD JAB_INIT_SETTLE_MS = 1000;
+/// Upper bound, in milliseconds, on the first attempt to complete the
+/// asynchronous AT<->JVM discovery handshake. The first @c Windows_run + single
+/// pump frequently does NOT finish the handshake on a loaded desktop, so the
+/// attach loop re-invokes @c Windows_run and keeps draining the message queue up
+/// to this budget. Only the first JAB query in a process can pay this cost.
+static const DWORD JAB_ATTACH_TIMEOUT_MS = 5000;
+
+/// How long to drain the message queue between discovery probes within the
+/// attach loop. JAB answers arrive as window messages, so the queue must be
+/// pumped between probes for the handshake to make progress.
+static const DWORD JAB_ATTACH_POLL_MS = 150;
+
+/// How often, within the attach loop, to re-invoke @c Windows_run. The decisive
+/// in-process A/B (issue #1096) showed the JVM handshake completing only after a
+/// *second* @c Windows_run; a single call plus a long pump never attaches.
+static const DWORD JAB_RERUN_INTERVAL_MS = 800;
+
+/// Short pump applied on follow-up queries once the bridge is already started,
+/// so a JVM that registered after the first attempt is still discovered without
+/// paying the full handshake timeout on every query (e.g. the cascade @c auto
+/// path probes JAB for every window UIA cannot read).
+static const DWORD JAB_REFRESH_PUMP_MS = 150;
 
 /**
  * @brief Pump this thread's Windows message queue for up to @p budget_ms.
@@ -127,12 +148,19 @@ static void jab_pump_messages(DWORD budget_ms) {
 }
 
 /**
- * @brief Attempt to load and initialize the Java Access Bridge.
- * @return true on success, false if JAB is not available.
+ * @brief Load WindowsAccessBridge and resolve the JAB entry points.
+ *
+ * This is the one-shot, cacheable part of bringing JAB up: the DLL and its
+ * exported functions never change for the life of the process. Starting the
+ * bridge (the asynchronous JVM handshake) is handled separately by
+ * jab_ensure_init(), because — unlike loading the library — that handshake can
+ * fail transiently and must be retried.
+ *
+ * @return true if the DLL and the required functions are available.
  */
-static bool jab_ensure_init() {
-    if (g_jab.initialized) return true;
-    if (g_jab.init_failed) return false;
+static bool jab_load_library() {
+    if (g_jab.loaded) return true;
+    if (g_jab.load_failed) return false;
 
     // Try 64-bit first, then legacy name
     const char* dll_names[] = {
@@ -147,7 +175,7 @@ static bool jab_ensure_init() {
     }
 
     if (!g_jab.dll) {
-        g_jab.init_failed = true;
+        g_jab.load_failed = true;
         return false;
     }
 
@@ -167,24 +195,107 @@ static bool jab_ensure_init() {
         !g_jab.pGetChild || !g_jab.pReleaseObject) {
         FreeLibrary(g_jab.dll);
         g_jab.dll = nullptr;
-        g_jab.init_failed = true;
+        g_jab.load_failed = true;
         return false;
     }
 
-    // Start the bridge. `Windows_run` registers this process as an assistive
-    // technology and kicks off JVM discovery; it returns void, so its result
-    // must not be treated as a success flag (the previous code did, gating
-    // initialization on indeterminate stack garbage).
-    g_jab.pInitialize();
+    g_jab.loaded = true;
+    return true;
+}
 
-    // Discovery and every later accessibility query are answered
-    // asynchronously over window messages delivered to this thread, so the
-    // message queue must be pumped for the handshake to complete — a bare
-    // Sleep() starves it and isJavaWindow()/getAccessibleContextFromHWND()
-    // then always fail. Pump for a bounded settle window.
-    jab_pump_messages(JAB_INIT_SETTLE_MS);
+/**
+ * @brief Probe whether the bridge can currently see any live Java window.
+ *
+ * Used as the completion test for the discovery handshake: once @c isJavaWindow
+ * answers true for a real window, the AT<->JVM channel is up. The foreground
+ * window is checked first as the common fast path, then all top-level windows.
+ *
+ * @return true if at least one Java window is discoverable right now.
+ */
+static BOOL CALLBACK jab_probe_enum(HWND hwnd, LPARAM lParam) {
+    if (g_jab.pIsJavaWindow(hwnd)) {
+        *reinterpret_cast<bool*>(lParam) = true;
+        return FALSE; // stop enumerating
+    }
+    return TRUE;
+}
 
-    g_jab.initialized = true;
+static bool jab_bridge_sees_java_window() {
+    HWND fg = GetForegroundWindow();
+    if (fg && g_jab.pIsJavaWindow(fg)) return true;
+    bool found = false;
+    EnumWindows(jab_probe_enum, reinterpret_cast<LPARAM>(&found));
+    return found;
+}
+
+/**
+ * @brief Ensure the Java Access Bridge is loaded and its JVM handshake pumped.
+ *
+ * The handshake by which @c WindowsAccessBridge registers this process as an
+ * assistive technology and discovers running JVMs is asynchronous: its replies
+ * arrive as window messages on the calling thread and must be pumped. The
+ * previous implementation called @c Windows_run exactly once, pumped for a fixed
+ * 1000&nbsp;ms, then cached success forever — on a loaded desktop the handshake
+ * routinely did not complete in that window, so @c isJavaWindow returned false
+ * permanently and every query short-circuited to @c -6 (#1096).
+ *
+ * This replaces that fire-and-forget init with a bounded pump-and-retry that
+ * actually confirms attachment:
+ *  - The first attempt re-invokes @c Windows_run periodically and drains the
+ *    message queue until a Java window becomes discoverable or
+ *    @c JAB_ATTACH_TIMEOUT_MS elapses. (The decisive A/B on #1096 showed the
+ *    handshake completing only after a *second* @c Windows_run.)
+ *  - Success is recorded stickily (@c attached); it is never cached on a
+ *    handshake that produced no Java window, so a JVM that starts later is still
+ *    picked up — follow-up queries do a short pump rather than the full retry,
+ *    keeping the no-Java case (hit by the cascade @c auto path for every window
+ *    UIA cannot read) cheap.
+ *
+ * @return true if the bridge is available for queries; false only if the DLL or
+ *         its required functions are missing. A true return does not promise a
+ *         Java window exists — the caller still resolves and validates the HWND.
+ */
+static bool jab_ensure_init() {
+    if (!jab_load_library()) return false;
+
+    // Already confirmed up: drain any freshly delivered messages and proceed.
+    if (g_jab.attached) {
+        jab_pump_messages(JAB_REFRESH_PUMP_MS);
+        return true;
+    }
+
+    if (!g_jab.bridge_started) {
+        // First attempt: complete the asynchronous handshake. Re-invoke
+        // Windows_run on an interval and keep pumping until a Java window is
+        // discoverable or the bounded budget is exhausted.
+        DWORD start = GetTickCount();
+        DWORD last_run = 0;
+        bool first_pass = true;
+        for (;;) {
+            // Unsigned subtraction is wrap-safe across the GetTickCount rollover.
+            if (first_pass || (GetTickCount() - last_run) >= JAB_RERUN_INTERVAL_MS) {
+                g_jab.pInitialize(); // Windows_run — (re)start the bridge
+                last_run = GetTickCount();
+                first_pass = false;
+            }
+            jab_pump_messages(JAB_ATTACH_POLL_MS);
+            if (jab_bridge_sees_java_window()) {
+                g_jab.attached = true;
+                break;
+            }
+            if (GetTickCount() - start >= JAB_ATTACH_TIMEOUT_MS) break;
+        }
+        g_jab.bridge_started = true;
+        return true;
+    }
+
+    // Bridge already started but not yet attached (no Java window on the first
+    // attempt). A JVM may have registered since: do a cheap pump + probe so it
+    // is picked up without paying the full handshake timeout on every query.
+    jab_pump_messages(JAB_REFRESH_PUMP_MS);
+    if (jab_bridge_sees_java_window()) {
+        g_jab.attached = true;
+    }
     return true;
 }
 

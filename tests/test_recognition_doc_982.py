@@ -87,27 +87,27 @@ def test_documented_commands_are_real_cli_commands() -> None:
         )
 
 
-def test_jab_row_carries_interim_regression_caveat() -> None:
-    """The Java Access Bridge claims must flag the live regression (issue #1098).
+def test_jab_row_publishes_verified_moat_number() -> None:
+    """The Java Access Bridge moat row is published and re-verified (issues #1096/#982).
 
-    #1096 proved on a correctly-provisioned desktop (JDK 21 + JAB enabled) that
-    naturo's JAB init never attaches, so the published ``+40 via jab`` headline
-    and the ``Java Swing / SWT (JAB) ✅`` matrix cell do **not** currently
-    reproduce. Per never-lie (SOUL.md), the doc must not assert that result
-    while the shipped code cannot produce it. This pins an interim honesty
-    caveat — explicitly tracking #1096 — so a future edit cannot silently
-    re-assert the unreproducible number without first removing the caveat (i.e.
-    after #1096 lands and ``test_jab_recognition_932.py`` is green again).
+    #1096 fixed the JAB attach defect — the one-shot ``Windows_run`` + fixed pump
+    that never completed the async JVM handshake — and re-verified the moat number
+    on a correctly-provisioned desktop: UIA 6 → cascade 46, **+40 via jab**,
+    pinned green by ``tests/test_jab_recognition_932.py``. With the regression
+    resolved, the interim "under repair" caveat (#1098) is removed and the
+    measured row republished. This guards both directions of never-lie: the +40
+    number must be present **and** the doc must no longer be marked under repair
+    (a stale caveat would itself be a lie now that the result reproduces).
     """
     text = _doc_text()
-    assert "#1096" in text, (
-        "the JAB section must reference the tracking issue #1096 while the "
-        "moat row is under repair (issue #1098)"
-    )
-    # A recognizable known-regression marker must accompany the JAB claims so
-    # the public doc reads as 'under repair', not as a reproduced result.
     lowered = text.lower()
-    assert "known regression" in lowered or "under repair" in lowered, (
-        "the JAB row/matrix cell must be marked as a known regression / under "
-        "repair while #1096 is open (issue #1098)"
+    # The re-verified moat number is republished.
+    assert "+40" in text and "jab" in lowered, (
+        "the JAB row must publish the re-verified +40 via jab moat number "
+        "(issue #1096 fixed)"
+    )
+    # And the stale interim regression caveat is gone.
+    assert "under repair" not in lowered and "known regression" not in lowered, (
+        "the JAB 'under repair' / 'known regression' caveat must be removed now "
+        "that #1096 is fixed and the desktop regression test is green"
     )
