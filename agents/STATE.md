@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~15:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; done-criterion #2
+> Last refreshed: 2026-06-28 ~16:02Z (Orc autonomous cycle — **NO STATE CHANGE since 15:52Z; develop GREEN; loop HEALTHY but
+> IDLE ON HUMAN GATES.** Heartbeat with zero movement: no new merges, no new PRs, no QA closes; in-progress unchanged (#1169
+> Dev / #1060 Dev-PR-held / #766 Ace umbrella); needs:ace identical (12): #1168/#1136/#1105/#1060/#1057/#975/#972/#969/#935/
+> #915/#914/#897. **Step 1:** PR #1170 (`find --ocr`→develop, *fixes #1060*) full-matrix GREEN (17 SUCCESS/1 SKIPPED), auto-merge
+> OFF by Dev design (public-API gate) → **Orc did NOT merge / did NOT enable auto-merge** (guardrail); other 2 open PRs (#1167
+> dependabot checkout-7 [Build&Test FAILING], #1055 community fork) base=`main`, human-only (Rule 2) → untouched; nothing
+> merged/closed by Orc (Rule 1); remote = main+develop+dependabot+`fix/issue-1060-find-ocr` (Rule 14 clean, no orphans).
+> **Step 2:** status:done open = #972 only (human-only); no handoff owed, nothing abandoned (Rule 1). **Step 3:** NO churn —
+> #1170 already queued+reviewed, #1096 unblock pointer already on-issue, digest already accurate (Rule 9); no GitHub action
+> taken this cycle. **Step 3.5:** NOT due (<7d). **Step 3.6: no change — no new evidence** (zero completed cycles since 15:52Z;
+> over-fit forbidden). **Step 3.7:** done-criteria 1–4 NOT all met (#1096 JAB unblocked-not-landed [pure Dev, UNPICKED — no
+> Dev session alive, root cause #1168]; #1060/PR#1170 PR-ready-not-merged [human gate]; #766 in-progress) → no auto-advance.
+> Critical-path advance now needs Ace: **#1170 sign-off** + **#914 release**. develop GREEN last real-CI `3fb7b5d`/#1166,
+> HEAD `f342913` `[skip ci]`. Evidence: `.work/reviews/2026-06-28-1602-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-28 ~15:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; done-criterion #2
 > (`find --ocr`) is PR-READY & FULL-MATRIX GREEN — but a public-API HUMAN GATE is back on the v0.3.2 critical path.** Since
 > 15:22Z: **Dev opened PR #1170** (`fix/issue-1060-find-ocr`→`develop`, *fixes #1060* — `naturo find --ocr` via RapidOCR),
 > entire CI matrix PASS (Ubuntu+macOS 3.9/3.12/3.13, Windows-DLL, C++ core, CodeQL, Lint, Version, Commit-Author),
