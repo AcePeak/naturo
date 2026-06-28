@@ -28,7 +28,9 @@ A week with no movement on the scoreboard is a failure of the north-star, even i
 ## 🎯 CURRENT SUB-GOAL: ship v0.3.2 — complete, not a half-product
 **Done-criteria (ALL must hold; this is the convergence test):**
 1. **Recognition moat hardened beyond UIA for the v0.3.2 set:** Electron/CDP (#933 ✅) + Java Access Bridge
-   (#932/#1096) both prove real-app recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅).
+   (#932/**#1096 — fix LANDED 06-29 via PR #1174 `45768c1`; `status:done` awaiting QA verify**) both prove real-app
+   recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅). **Recognition moat is now
+   CODE-COMPLETE for v0.3.2** — only QA's live-JAB confirmation of #1096 (republished `+40` row) remains on criterion #1.
 2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **PR #1170 OPEN & FULL-MATRIX GREEN
    06-28; Dev correctly held auto-merge OFF (new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED`
    error codes, `naturo.ocr_match` module, `naturo[ocr]` extra) → awaiting Ace public-API sign-off + merge, then QA
@@ -52,18 +54,21 @@ work while the gate waits.
   `OCR_FAILED`, `naturo.ocr_match`, `naturo[ocr]` extra), a **human-only public-API sign-off** (same class as #1136/#1105).
   **→ NOW A HUMAN GATE on done-criterion #2**: Ace signs off the surface + merges #1170 (the loop will not, Rule guardrail),
   then QA verifies end-to-end with `naturo[ocr]` installed. Tracked via #1060's `needs:ace` label.
-- **#1096 JAB attach fix** — criterion-#1's last unlanded recognition item. Native build is Dev-actionable (MSVC/CMake/Ninja
-  provisioned 06-28; build recipe on #1097 — activate `vcvars` first, the toolchain is not on the bare cron PATH). **HONEST
-  CORRECTION to the prior "pure Dev, no human gate" framing:** two consecutive headless Dev cycles (06-28 16:04 + prior)
-  deferred it — each cited (a) MSVC vcvars-gated (surmountable) and (b) **a headless/RDP-disconnected cron session cannot
-  honestly verify a live JAB attach against a running Java-Swing app** (no live GUI render → Never-Lie). So landing #1096 is
-  NOT pure headless Dev: it needs an actual build+verify *attempt* (vcvars per #1097) and, if the live verify is truly
-  impossible unattended, an **attended/live-desktop verify session OR an explicit "build-landed, live-verify-deferred with an
-  honest RECOGNITION.md caveat" decision** (Ace). Next Dev cycle must PROVE the block (build + verify attempt, pasted output),
-  not assert it — [Orc] nudge posted on #1096.
+- ~~**#1096 JAB attach fix** — criterion-#1's last unlanded recognition item~~ — **RESOLVED 06-29: fix LANDED via PR #1174
+  (`45768c1`).** The prior cycle's [Orc] nudge ("PROVE the block, don't assert it") worked exactly as intended: Dev built the
+  native core locally (MSVC 14.44 + CMake, surmounting the vcvars block the two prior cycles deferred on), **reproduced the bug
+  first** with the pre-fix DLL, then **live-verified on a provisioned desktop** (OpenJDK 21 + Access Bridge: UIA 6 → cascade 46,
+  **delta=40, extra_sources={'jab':40}**) with an independent fresh-context adversarial verifier PASS (incl. bounded-cost perf:
+  call1 5.05s one-time handshake, call2/3 0.156s — no per-query hang). Root cause was a one-shot `Windows_run` that never completed
+  the async AT↔JVM handshake; the fix is a bounded pump-and-retry that never caches a failed handshake. `docs/RECOGNITION.md` `+40`
+  row republished, `test_recognition_doc_982.py` re-pinned (never-lie both directions). #1096 flipped `status:done`; **only QA's
+  live-JAB re-confirmation from a Java-Swing desktop remains** (not a human gate). The "attended/live-verify-deferred-with-caveat"
+  escalation the prior cycle pre-registered is **no longer needed** — Dev proved it live.
 - **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler durability, needs:ace).
-  Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. The two critical-path human gates on
-  done-criteria 1–4 are now **#1060/PR#1170 (public-API sign-off)** + release sign-off #914 (criterion #5, expected).
+  Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. With #1096 landed, the critical-path human gates on
+  done-criteria 1–4 are now the **two PR-ready public-API sign-offs on criterion #2 — #1060/PR#1170 (`--ocr`) + #1169/PR#1171
+  (`find --selector` default `uia`→`auto`)** — plus release sign-off #914 (criterion #5, expected). Criterion #1 needs only QA's
+  live-JAB verify of the merged #1096 (not a human gate).
 These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
 
 ---

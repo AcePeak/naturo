@@ -1,6 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~00:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; TWO PR-ready public-API
+> Last refreshed: 2026-06-29 ~00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE: the P0 recognition-moat JAB blocker #1096 LANDED;
+> develop GREEN; the recognition moat is now CODE-COMPLETE for v0.3.2.** Since 00:22Z: **Dev merged PR #1174** (`fix/issue-1096-jab-attach`
+> →develop, `45768c1`, *fixes #1096*) — a bounded pump-and-retry JAB JVM handshake replacing the one-shot `Windows_run` that never completed
+> the async AT↔JVM discovery. **Dev PROVED the block the prior cycle's [Orc] nudge demanded** (HARDEST-FIRST "prove, don't assume"): built the
+> native core locally (MSVC 14.44 + CMake, surmounting the vcvars block two prior cycles deferred on), reproduced the bug first (red), live-verified
+> on a provisioned desktop (OpenJDK 21 + Access Bridge: UIA 6 → cascade 46, **delta=40, extra_sources={'jab':40}**), ran the Step-3.5 adversarial
+> verifier (PASS, byte-identical DLL + bounded-cost perf call1 5.05s/call2-3 0.156s), and republished the honest `docs/RECOGNITION.md` `+40` row
+> + re-pinned the never-lie doc test both directions. Full CI matrix GREEN (`45768c1` Build & Test + CodeQL SUCCESS @16:46Z UTC). **Step 1:** PR
+> #1174's branch already auto-deleted (Rule 14 clean — remote = main+develop+dependabot+2 live PR heads #1170/#1171); the two team PRs #1170
+> (`--ocr`)/#1171 (`--selector` default change) stay full-green/MERGEABLE/CLEAN with auto-merge correctly held OFF (public-API human gates) →
+> **Orc did NOT merge / did NOT enable auto-merge** (guardrail); the other 2 PRs (#1167 dependabot, #1055 community) base=`main`, human-only
+> (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 2 handoff:** **flipped #1096 `status:in-progress`→`status:done`** (Rule 1
+> on-merge handoff; posted [Orc] note asking QA to confirm the live JAB attach + republished row from a Java-Swing desktop, then label `verified`);
+> status:done open now = #1096 + #972 (human-only); status:in-progress = #1169/#1060 (Dev PRs held) + #766 (Ace) → none abandoned. **Step 3
+> hygiene:** Dev self-filed tech-debt **#1175** (two latent bad tests the #1174 full-suite surfaced — `test_cost_guardrails.py` `open()` w/o
+> `encoding=` non-hermetic on cp936 + `test_agent.py` `total_time > 0` clock-flake) → triaged **P2 / v0.3.4**. **Step 3.5:** NOT due (<7d, tracker
+> current to 06-28). **Step 3.6: no change — no new evidence** (the one completed cycle is the existing rules SUCCEEDING on the hardest milestone
+> item — HARDEST-FIRST/prove-the-block + Step-3.5 verifier + build-recipe-on-#1097 all fired; test-quality audit: #1174's new tests are sound
+> [real cascade unmocked, skip-when-fixture-absent], and the two bad tests were self-caught + filed #1175 — over-fit forbidden; self-review at 6
+> principles < ~8 distillation threshold; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met → no auto-advance (criterion #1
+> now code-complete, awaiting QA live-JAB verify; #1170/#1171 PR-ready-not-merged = human gates; #766 in-progress) — but criterion #1 materially
+> advanced. needs:ace UNCHANGED at 13 (#1175 is Dev-actionable tech-debt, not a human gate). develop GREEN HEAD `45768c1` (real CI). Evidence:
+> `.work/reviews/2026-06-29-0057-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~00:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; TWO PR-ready public-API
 > sign-offs now on the v0.3.2 critical path — both criterion-#2 (find engine), both correctly held for Ace.** Since 15:52Z (f342913):
 > **Dev opened PR #1171** (`fix/issue-1169-shortform-selector`→develop, *refs #1169* — `find --selector` now honors `--backend`/`--depth`,
 > changing the default backend `uia`→`auto` so short-form `//Role` selectors resolve via the full cascade not UIA-only), **full CI matrix

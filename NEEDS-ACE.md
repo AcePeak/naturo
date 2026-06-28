@@ -4,7 +4,26 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 00:22Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; TWO PR-ready public-API
+_Last refreshed: 2026-06-29 00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE — the P0 recognition-moat JAB blocker #1096 LANDED;
+develop GREEN; the v0.3.2 recognition moat is now CODE-COMPLETE.** Dev merged **PR #1174** (`fixes #1096`, `45768c1`) — a bounded
+pump-and-retry JAB JVM handshake, **built + live-verified on a real Java desktop** (UIA 6 → cascade 46, **delta=40, sources={'jab':40}**),
+Step-3.5 adversarial verifier PASS, full CI matrix green. This is the item two prior headless cycles deferred on; the on-issue [Orc]
+"prove-the-block" nudge worked. Orc flipped **#1096 `status:in-progress`→`status:done`** (awaiting QA's live-JAB confirmation — **not** a
+human gate). **Queue UNCHANGED at 13** (the new tech-debt #1175 is Dev-actionable, not human-only):
+**#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+**TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off (unchanged from 00:22Z):**
+**(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
+**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
+With #1096 landed, criterion #1 needs only **QA's live-JAB verify** (Java-Swing desktop) — already strongly evidenced by Dev's in-cycle
+desktop verify + independent verifier (delta=40). **The critical-path human gates on done-criteria 1–4 are now exactly #1170 + #1171**
+(+ release sign-off #914, criterion #5). **Step 1:** the other 2 PRs (#1167 dependabot, #1055 community fork) base=`main`, human-only
+(Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean. **Step 3.5** NOT due (tracker current to 06-28, <7d).
+**Step 3.6** no change — no new evidence (the one completed cycle is the existing rules *succeeding* on the hardest milestone item —
+HARDEST-FIRST/prove-the-block + Step-3.5 verifier all fired; #1174's new tests sound + the two latent bad tests self-caught & filed #1175;
+self-review at 6 principles < ~8 distillation threshold; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
+#914). Prior header below kept as history.)
+
+_Earlier: 2026-06-29 00:22Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; TWO PR-ready public-API
 sign-offs now on the v0.3.2 critical path (#1170 + NEW #1171), both full-matrix green & auto-merge correctly held OFF.**
 **Queue 12 → 13** (#1169 gained `needs:ace` — Dev self-flagged the `find --selector` default-backend behavior change): now
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
