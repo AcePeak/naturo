@@ -4,22 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-28 15:22Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; you cleared the
-LAST native-build blocker — recognition moat work is now pure Dev execution.** **Queue 12 → 11** (you RESOLVED #1097
-at 15:04Z): now #1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
-**Thank you — #1097 is resolved: you provisioned the C++ toolchain on NATUROBOT** (MSVC 14.44 + CMake + Ninja; smoke
-build proven → `naturo_core.dll`) and gave Dev the build recipe. This **unblocks #1096 (JAB attach fix)** — the last
-unfinished v0.3.2 recognition criterion — which is now Dev-buildable+verifiable locally (pointer + async-handshake
-root-cause already on the issue). **Net: done-criteria 1–4 now have NO human gate left** — both remaining items are
-pure Dev work and already moving: **#1060 `find --ocr`** is `status:in-progress` (Dev picked it 15:14Z, in flight),
-and **#1096 JAB** is now pickable. The only human-gated item still touching the loop's durability is **#1168**
-(persistent scheduler) — keep it top of mind; everything on the v0.3.2 critical path is now self-serviceable.
-**Also since 14:52Z:** QA filed **#1169** (P2, find short-form `//Role` selector — role-only never matches & desktop-wide
-search doesn't search; Dev-actionable, v0.3.2) — normal backlog, no action from you. **Step 1:** NO team-Dev PR; the only
-2 open PRs (#1167 dependabot checkout-7, #1055 community fork) are base=`main`, human-only (Rule 2) → untouched; nothing
-merged/closed BY Orc (Rule 1). **Step 3.5** NOT due (tracker current to 06-28). **Step 3.6** no change — no new evidence
-(one exemplary QA cycle #1169; Dev in-flight on #1060; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET —
-release is your call, #914). Prior header below kept as history.)
+_Last refreshed: 2026-06-28 15:52Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; done-criterion #2
+(`find --ocr`) is PR-ready & full-matrix green — and now needs ONE sign-off from you.** **Queue 11 → 12** (#1060 gained
+`needs:ace` — Dev self-flagged the OCR public surface): now **#1060(PR#1170)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+**TOP ACTIONABLE — #1060 / PR #1170 (`naturo find --ocr` via RapidOCR):** Dev opened it full-matrix green
+(Ubuntu+macOS 3.9/3.12/3.13, Windows-DLL, C++ core, CodeQL, Lint, Version all pass), `MERGEABLE`/`CLEAN`, and
+**correctly held auto-merge OFF** because it adds new public CLI/API surface (`--ocr` flag, `OCR_NOT_AVAILABLE`/
+`OCR_FAILED` codes, `naturo.ocr_match` module, `naturo[ocr]` extra) — a **public-API sign-off**, same class as
+#1136/#1105. **The loop will NOT merge it (guardrail).** This is the closest-to-done item on the v0.3.2 critical path:
+**sign off + merge #1170**, then QA verifies end-to-end with `pip install naturo[ocr]`. **Correction to the 15:22Z note:**
+done-criteria 1–4 are **NOT** "no human gate left" — #1170 reintroduces this public-API gate on criterion #2.
+**#1096 (JAB)** remains pure Dev execution (native build cleared) — the only criterion-#1 recognition item still to land.
+**#1168** (persistent scheduler) is about *future* loop durability, not a 1–4 blocker.
+**Also since 15:22Z:** QA evidenced open P2 #1154 as already-resolved (range validation predates the issue) — no action
+from you. **Step 1:** the other 2 open PRs (#1167 dependabot checkout-7, #1055 community fork) are base=`main`, human-only
+(Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1). **Step 3.5** NOT due (tracker current to 06-28). **Step 3.6**
+no change — no new evidence (two exemplary cycles; the public-API self-gate is the existing rule succeeding; over-fit
+forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). Prior header below kept as history.)
 
 _Earlier: 2026-06-28 14:22Z (Orc autonomous cycle, **first since the loop resumed** — **develop GREEN; queue
 unchanged at 13; ROOT-CAUSE CORRECTION on the 6-day freeze; weekly competitiveness row finally caught up (was 12d
@@ -295,6 +296,7 @@ no-defects, ruled out 3 of its own flag-errors as harness lies and filed nothing
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
+| [#1060](https://github.com/AcePeak/naturo/issues/1060) → **PR [#1170](https://github.com/AcePeak/naturo/pull/1170)** | **Sign off + merge `naturo find --ocr` (RapidOCR).** Dev opened PR #1170 (done-criterion #2 of v0.3.2), **full CI matrix green**, `MERGEABLE`/`CLEAN`, and **held auto-merge OFF on purpose** because it adds new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED` error codes, `naturo.ocr_match` module (`find_text`/`TextMatch`/`load_engine`), and the `naturo[ocr]` optional extra. | **public-API sign-off** (same class as #1136/#1105) — a new CLI flag + new exported module + new packaging extra; the loop will not merge it unattended. | **Ratify + merge (recommended).** It implements exactly your #1077 RapidOCR decision and #1060 spec; additive, fail-loud (`OCR_NOT_AVAILABLE` recoverable with install hint when the extra is absent), offline/no-network, 20 hermetic tests + injectable engine (covers logic without the dep), `--collect-only` clean when `rapidocr` absent (no cross-platform break). After merge, QA verifies end-to-end with `pip install naturo[ocr]`. Or revise (rename/un-export module) before merge. |
 | [#1136](https://github.com/AcePeak/naturo/issues/1136) | **Sign off (or revise/revert) the public API that landed unattended in #1134.** Team-Dev added a `selector` parameter to the public `BrowserPage.screenshot()` method + made the inert `naturo browser screenshot --selector` flag functional, merged `c00227e` (*fixes #1123*) with auto-merge **ON** before Orc could hold it. | **public-API sign-off** — a new public method parameter + an activated CLI contract; the guardrail holds even though the migration guide already promised `--selector` (the alternative, shrinking the doc / removing the flag, is yours). | **Ratify (recommended)** — small, additive, fail-loud (no-match / no-box / `--selector`+`--full-page` → exit 1, never a silent full-page fallback), 10 hermetic tests + real-Chrome e2e, honors the already-shipped flag; removing it would be breaking. Or revise (keyword-only/narrow) / revert (drop param + flag, amend guide). |
 | [#1105](https://github.com/AcePeak/naturo/issues/1105) | **Sign off (or revert) the public API that landed unattended in #1104.** Team-Dev added `BrowserPage.set_download_dir()`/`wait_for_download()` + a `DownloadResult` dataclass **exported from `naturo.browser`**, merged `41b81ad` (part of #766). Dev correctly flagged it as public-API but auto-merged anyway. | **public-API sign-off** — a new public contract; even one that honors a committed doc is yours (shrinking the doc is the alternative). Process gap closed this cycle in `dev-cycle.md`. | **Ratify (recommended)** — the surface is small, additive, matches the committed migration guide, byte-parity tested; confirm and close #1105. Or revise (rename/un-export) / revert (drop methods + amend guide). |
 | ~~#1097~~ | **RESOLVED 2026-06-28 (you provisioned the toolchain)** — MSVC 14.44 + CMake + Ninja installed on NATUROBOT, full `core` Release build proven (`naturo_core.dll`). #1097 closed; build recipe on #1097; pointer + async-handshake root-cause on #1096. **#1096 (JAB) is now Dev-buildable+verifiable locally** — every future native-core moat fix is unblocked. | — | _Done — no action needed; Dev will land #1096 + restore the verified `RECOGNITION.md` JAB row, QA will verify._ |

@@ -1,6 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~15:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; Ace cleared the
+> Last refreshed: 2026-06-28 ~15:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; done-criterion #2
+> (`find --ocr`) is PR-READY & FULL-MATRIX GREEN — but a public-API HUMAN GATE is back on the v0.3.2 critical path.** Since
+> 15:22Z: **Dev opened PR #1170** (`fix/issue-1060-find-ocr`→`develop`, *fixes #1060* — `naturo find --ocr` via RapidOCR),
+> entire CI matrix PASS (Ubuntu+macOS 3.9/3.12/3.13, Windows-DLL, C++ core, CodeQL, Lint, Version, Commit-Author),
+> `MERGEABLE`/`CLEAN`, and **deliberately held auto-merge OFF** — it adds new public CLI/API surface (`--ocr` flag,
+> `OCR_NOT_AVAILABLE`/`OCR_FAILED` codes, `naturo.ocr_match` module, `naturo[ocr]` extra), a human-only public-API sign-off
+> (same class as #1136/#1105). **Orc did NOT merge / did NOT enable auto-merge** (guardrail); posted one `[Orc]` review
+> comment + queued it. **CORRECTION to the 15:22Z claim "done-criteria 1–4 now have NO human gate":** #1170 reintroduces a
+> public-API gate on criterion #2 — it is now the closest-to-done critical-path item and the TOP needs:ace actionable.
+> **needs:ace 11→12** (#1060 gained the label): **#1060(PR#1170)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+> **Step 1:** the other 2 open PRs (#1167 dependabot checkout-7, #1055 community fork) are base=`main`, human-only (Rule 2)
+> → untouched; nothing merged/closed BY Orc (Rule 1); remote = main+develop+dependabot+`fix/issue-1060-find-ocr` (#1170's
+> live head — Rule 14 clean, no orphans). **Step 2:** status:done open = #972 only (human-only); status:in-progress = #1169
+> (Dev, fresh) + #1060 (Dev, PR held) + #766 (Ace umbrella) → none abandoned, no handoff owed, closed nothing (Rule 1).
+> **Step 3:** `--ocr` is the in-flight find-engine moat piece (reaches canvas/game controls the a11y tree can't); backlog
+> sharp, no new gap (Rule 9). **Step 3.5:** NOT due (tracker row 06-28 current, <7d). **Step 3.6: no change — no new
+> evidence** (two completed cycles since 15:22Z both exemplary — Dev self-gated the public-API PR per the guardrail [the
+> existing rule succeeding, not a gap] + 20 hermetic tests + full-suite 6772 passed; QA evidenced #1154 already-resolved,
+> read-only, zero intrusive input, no false close; over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria
+> 1–4 NOT all met (#1096 JAB unblocked-not-landed [pure Dev]; #1060 `--ocr` PR-ready-not-merged [human gate]; #766
+> in-progress) → no auto-advance. GOAL.md "Known blockers" + criterion #2 updated. develop GREEN last real-CI `3fb7b5d`
+> (#1166), HEAD `31e09b9` `[skip ci]`. Evidence: `.work/reviews/2026-06-28-1552-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-28 ~15:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; Ace cleared the
 > LAST native-build blocker — v0.3.2 recognition-moat work is now pure Dev execution.** Since 14:52Z: **Ace provisioned
 > the C++ toolchain on NATUROBOT** (MSVC 14.44 + CMake + Ninja; full `core` Release build proven → `naturo_core.dll`) →
 > **#1097 CLOSED 15:04Z** → **#1096 (JAB attach fix) UNBLOCKED** (now Dev-buildable+verifiable locally; build recipe on

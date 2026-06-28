@@ -29,8 +29,10 @@ A week with no movement on the scoreboard is a failure of the north-star, even i
 **Done-criteria (ALL must hold; this is the convergence test):**
 1. **Recognition moat hardened beyond UIA for the v0.3.2 set:** Electron/CDP (#933 ✅) + Java Access Bridge
    (#932/#1096) both prove real-app recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅).
-2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **OCR engine decided 06-28: RapidOCR
-   optional extra `naturo[ocr]`, #1077 closed; now Dev-actionable, not yet shipped**) all shipped & QA-verified.
+2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **PR #1170 OPEN & FULL-MATRIX GREEN
+   06-28; Dev correctly held auto-merge OFF (new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED`
+   error codes, `naturo.ocr_match` module, `naturo[ocr]` extra) → awaiting Ace public-API sign-off + merge, then QA
+   verify**) all shipped & QA-verified.
 3. **Migration validation** (#766 fixtures + #763 rpa-client equivalence) green.
 4. **All ship-gate bugs QA-verified+closed**, develop CI green, no half-finished feature.
 5. **Release sign-off (#914) is HUMAN-ONLY** → queue it in needs:ace; do NOT block the loop on it.
@@ -45,11 +47,16 @@ work while the gate waits.
   Ace provisioned the C++ toolchain on NATUROBOT (MSVC 14.44 + CMake + Ninja, smoke build produced `naturo_core.dll`);
   #1097 closed; build recipe on #1097; pointer + root-cause on #1096. **#1096 is now Dev-actionable** (fix the async
   JVM handshake in `jab_ensure_init`, build+verify locally) — no human gate remains; this is now Dev execution work.
-- ~~**#1060 --ocr** — blocked on OCR-engine choice (#1077)~~ — **RESOLVED 06-28**: Ace picked **RapidOCR** as an
-  optional extra (`pip install naturo[ocr]`; MIT/Apache, offline, Chinese-strong, bundled ONNX models); #1077 closed.
-  **Dev picked #1060 06-28 ~15:14Z (`status:in-progress`, in flight)** — done-criterion #2 now actively being shipped.
-- **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler, needs:ace).
-  Now the **only** human-gated blocker on done-criteria 1–4 — both #1096 (JAB) and #1060 (OCR) are pure Dev execution.
+- **#1060 --ocr** — engine resolved (RapidOCR `naturo[ocr]`, #1077 closed). **PR #1170 OPEN & FULL-MATRIX GREEN
+  (06-28); auto-merge OFF by Dev's design** — it adds new public CLI/API surface (`--ocr` flag, `OCR_NOT_AVAILABLE`/
+  `OCR_FAILED`, `naturo.ocr_match`, `naturo[ocr]` extra), a **human-only public-API sign-off** (same class as #1136/#1105).
+  **→ NOW A HUMAN GATE on done-criterion #2**: Ace signs off the surface + merges #1170 (the loop will not, Rule guardrail),
+  then QA verifies end-to-end with `naturo[ocr]` installed. Tracked via #1060's `needs:ace` label.
+- **#1096 JAB attach fix** — native-build block cleared 06-28; **pure Dev execution** (fix async JVM handshake, build+verify
+  locally), no human gate. The last criterion-#1 recognition item not yet landed.
+- **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler durability, needs:ace).
+  Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. The two critical-path human gates on
+  done-criteria 1–4 are now **#1060/PR#1170 (public-API sign-off)** + release sign-off #914 (criterion #5, expected).
 These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
 
 ---
