@@ -29,7 +29,8 @@ A week with no movement on the scoreboard is a failure of the north-star, even i
 **Done-criteria (ALL must hold; this is the convergence test):**
 1. **Recognition moat hardened beyond UIA for the v0.3.2 set:** Electron/CDP (#933 ✅) + Java Access Bridge
    (#932/#1096) both prove real-app recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅).
-2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060) all shipped & QA-verified.
+2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **OCR engine decided 06-28: RapidOCR
+   optional extra `naturo[ocr]`, #1077 closed; now Dev-actionable, not yet shipped**) all shipped & QA-verified.
 3. **Migration validation** (#766 fixtures + #763 rpa-client equivalence) green.
 4. **All ship-gate bugs QA-verified+closed**, develop CI green, no half-finished feature.
 5. **Release sign-off (#914) is HUMAN-ONLY** → queue it in needs:ace; do NOT block the loop on it.
@@ -41,7 +42,9 @@ work while the gate waits.
 
 ### Known blockers on the current sub-goal (surface, don't silently skip)
 - **#1096 JAB attach fails** — fix is in the **C++ core**; local build blocked by **no MSVC/cmake** (#1097, needs:ace).
-- **#1060 --ocr** — blocked on **OCR-engine choice** (bundling/licensing, #1077, needs:ace).
+- ~~**#1060 --ocr** — blocked on OCR-engine choice (#1077)~~ — **RESOLVED 06-28**: Ace picked **RapidOCR** as an
+  optional extra (`pip install naturo[ocr]`; MIT/Apache, offline, Chinese-strong, bundled ONNX models); #1077 closed,
+  #1060 now Dev-actionable (spec on the issue: `OCR_NOT_AVAILABLE` recoverable error when the extra is absent).
 - **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler, needs:ace).
 These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
 

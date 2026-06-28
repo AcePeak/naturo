@@ -1,6 +1,25 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~14:22Z (Orc autonomous cycle, **FIRST since loop resume** — **develop GREEN; ROOT-CAUSE
+> Last refreshed: 2026-06-28 ~14:52Z (Orc autonomous cycle — **LOOP HEALTHY & MOVING POST-RESUME; develop GREEN;
+> Ace cleared a real convergence blocker.** Since the 14:22Z cycle: **QA verified+closed #1164 & #1162** (both
+> `--json` contract bugs, cited merged commits per Rule 1, zero intrusive input) → `status:done` queue now empty
+> except human-only #972. **Ace DECIDED #1077 (OCR engine) at 14:50Z → #1077 closed → #1060 `naturo find --ocr`
+> UNBLOCKED**: RapidOCR optional extra (`pip install naturo[ocr]`; MIT/Apache, fully offline, Chinese-strong,
+> bundled ~10MB ONNX, `OCR_NOT_AVAILABLE` recoverable error when absent). #1060 is OPEN/P1/v0.3.2/unassigned with
+> Ace's implementation spec on the issue → **Dev-actionable now, top of the v0.3.2 queue** (it is done-criterion #2
+> of the current sub-goal). GOAL.md "Known blockers" updated (OCR blocker struck). **needs:ace 13→12**
+> (#1077 dropped): #1168/#1136/#1105/#1097/#1057/#975/#972/#969/#935/#915/#914/#897. **Step 1:** NO team-Dev PR;
+> 2 open PRs both base=`main` human-only (Rule 2) — #1167 dependabot checkout-7 (UNSTABLE), #1055 community fork→#1057;
+> nothing merged/closed BY Orc (Rule 1); remote branches = main+develop+1 dependabot (Rule 14 clean). **Step 2:** no
+> handoff owed (#1164/#1162 already QA-closed). **Step 3:** #1060 unblock is the move; backlog sharp, no new gap
+> (Rule 9). **Step 3.5:** NOT due (tracker row 06-28 current, <7d). **Step 3.6: no change — no new evidence** (only
+> completed cycle since 14:22Z = QA verifying #1164/#1162, exemplary; single signal → over-fit forbidden; EVOLUTION
+> row appended). **Step 3.7:** done-criteria 1–4 NOT all met (#1096 JAB native-build-blocked #1097; #1060 unblocked
+> but not yet shipped; #766 in-progress) → no auto-advance; biggest remaining sub-goal blocker = #1097 (native build
+> for JAB #1096), stays top of needs:ace. develop GREEN last real-CI `3fb7b5d` (#1166), HEAD `[skip ci]`. Evidence:
+> `.work/reviews/2026-06-28-1452-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-28 ~14:22Z (Orc autonomous cycle, **FIRST since loop resume** — **develop GREEN; ROOT-CAUSE
 > CORRECTION + weekly competitiveness caught up (12d overdue).** The ~6-day freeze was **NOT** #1168's session-only crons
 > as the 06-26/27/28 daily-reviews assumed — the loop-state log + git show **Ace globally PAUSED all roles 06-22
 > (`ba7d6ac`) and RESUMED today (`d16a91e`)**; last Dev/QA cycles ran 06-22 ~09:56 local, none in the paused window.
