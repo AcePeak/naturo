@@ -1,6 +1,30 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0524Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
+> Last refreshed: 2026-06-29 ~0552Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the 6th #884 output-contract gap landed — Dev shipped+merged
+> #1179's fix (PR #1185), Orc performed the on-merge handoff. needs:ace UNCHANGED at 13.**
+> Since 0524Z: **two completed cycles, both exemplary.** **(1) Dev @05:49Z shipped+auto-merged PR #1185** (`ad24c38`, *fixes #1179* — `find --ai` error JSON dropped
+> 4/6 #884 keys via a hand-rolled `json.dumps`): routed through the canonical `_json_error_str` envelope with *registered* codes (`AI_ANALYSIS_FAILED`/
+> `AI_PROVIDER_UNAVAILABLE`/`CAPTURE_FAILED`, retiring off-taxonomy `AI_FIND_FAILED`→`unknown`), so category/`suggested_action`/`recoverable`/`context` now resolve and the
+> API-key hint reaches the user; **public-API guardrail correctly did NOT fire** (restoring an existing #884 contract = bug fix, no new surface → auto-merge ON, same class
+> as #1172/#1181). Full required CI GREEN (Build & Test + CodeQL on `ad24c38`). **(2) QA @05:42Z** ran a non-intrusive recognition live-verify (Notepad UIA cascade 44
+> elems/cov 0.893 WORKING), **PASS-no-close on human-only #972**, **ruled out a cp936-console mojibake harness false-alarm** (checked on-disk UTF-8 bytes), filed genuine
+> root-caused **#1184** (`find` JSON omits the reusable `selector` field `see` emits — output-contract family, Dev-actionable), **zero keystrokes**. **Step 1:** team PRs
+> #1170(`--ocr`)/#1171(`--selector` default) re-confirmed public-API human gates, auto-merge OFF → **Orc did NOT merge / did NOT enable** (guardrail); #1167(dependabot)/
+> #1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (#1185 branch `fix/issue-1179-ai-error-envelope`
+> auto-deleted on merge; remote = main+develop+dependabot+2 live PR heads #1170/#1171; no orphans). **Step 2 handoff:** PR #1185 base=`develop`≠default → no auto-close, so
+> Orc **flipped #1179 `status:in-progress`→`status:done`** citing `ad24c38` (Rule 1) + [Orc] note asking QA to verify the six-key envelope (esp. `suggested_action`) on a
+> failing `find --ai` path, no-DLL so stale-DLL trap N/A. status:done open now = **#1179**(fresh, awaiting QA)+**#972**(human-only, parked); status:in-progress = #1169/#1060
+> (Dev PRs held)+#766(Ace umbrella) → none stale/abandoned; closed nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; #1179 closes the 6th output-contract-fidelity
+> gap of the run (after #1173/#886/#1159/#1172); structural net #1180 already filed; QA's #1184 is the success-side instance (Dev backlog) → backlog sharp, no new gap (Rule 9).
+> **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (two completed cycles, both the existing rules SUCCEEDING — Dev's #1185
+> behavior-asserting test [six keys AND category-resolves AND `suggested_action` non-empty AND message content, fails on old 2-key shape; not over-mocked/tautological; sibling
+> #894 CJK test correctly updated `AI_FIND_FAILED`→`AI_ANALYSIS_FAILED`] + correct public-API non-trigger; QA's read-only verify + anti-false discipline + zero intrusive input;
+> test-quality audit SOUND; encoding a rule atop the #1180-covered class = over-fit, forbidden; self-review 5–6 principles < ~8 distillation threshold; EVOLUTION row appended).
+> **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held gates + #1060/#1169 in-flight, #1179 awaiting QA; #3 #766 in-progress; #4 half-finished
+> PRs) → **no auto-advance**. needs:ace UNCHANGED at 13 (#1179/#1180/#1184 are Dev-actionable, not human gates). develop GREEN HEAD real-CI `ad24c38` (#1185 Build&Test+CodeQL
+> SUCCESS; orc [skip ci] on top). Evidence: `.work/reviews/2026-06-29-0552-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0524Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
 > since 0453Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
 > Since 0453Z: **zero Dev/QA cycles completed** — no new merge, no new verify, no new loop-state marker past QA's 04:10Z #1172 entry. Dev's **#1179** (`find --ai`
 > error JSON drops 4 of 6 #884 envelope keys) remains `status:in-progress` with **no PR branch yet** (fresh pick, well within 24h → not abandoned). **Step 1:** team
