@@ -4,23 +4,20 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 0453Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
-queue UNCHANGED at 13.** Since 03:52Z the loop self-serviced one item with NO human input: **QA @04:08Z VERIFIED+CLOSED #1172** (saved-selector not-found leaked
-`KeyError`'s repr quotes into the envelope `message`; behavior verify on the clean path across all consumers, cited merged `e087c64`), and **Dev @04:12Z picked up
-#1179** (`find --ai` error JSON drops 4 of 6 #884 envelope keys — `status:in-progress`, no PR yet). The two remaining find-engine PRs (#1170/#1171) still
-need YOUR public-API sign-off (below); the #1172 fix landed last cycle and is now QA-closed. Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
+_Last refreshed: 2026-06-29 0524Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing new for you;
+queue UNCHANGED at 13.** Nothing merged/closed/verified since the 0453Z cycle; Dev's **#1179** (`find --ai` drops 4/6 #884 envelope keys) is still
+`status:in-progress` with no PR yet (fresh, not abandoned). The two find-engine PRs (#1170/#1171) still need YOUR public-API sign-off (below).
+Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
 **Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
-**TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both still MERGEABLE/CLEAN & full-green this cycle:**
-**(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
-**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
-**Step 1:** team PRs #1170/#1171 re-confirmed public-API gates, auto-merge OFF → untouched; #1181 auto-merge ON by Dev (message-only fix, no public surface) →
-left to self-land, **Orc did NOT merge** (guardrail); #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY
-Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+3 live PR heads #1170/#1171/#1181). **Step 2:** no handoff owed (QA already closed #1159; #1181 not
-yet merged → #1172 stays `status:in-progress`); status:done open = #972 only (human-only, parked); in-progress #1172(PR #1181 pending)+#1169/#1060(PRs held)+#766
-(Ace) → none abandoned. **Step 3:** backlog sharp, structural net already filed (#1180) → no new gap (Rule 9). **Step 3.5** NOT due (<7d). **Step 3.6** no change —
-no new evidence (two completed cycles both rules succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
-#914). The decision table below is the durable digest. Prior header kept for continuity.)
+**TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both MERGEABLE/CLEAN & full-green:**
+**(1) #1060 / PR #1170 (`naturo find --ocr`)** — auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
+**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
+**Step 1:** team PRs #1170/#1171 public-API gates, auto-merge OFF → untouched; #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched;
+nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+2 live PR heads #1170/#1171). **Step 2:** no handoff owed (#1172 already
+QA-closed); status:done open = #972 only (human-only, parked); in-progress #1179(fresh, no PR)+#1169/#1060(PRs held)+#766(Ace) → none abandoned.
+**Step 3:** backlog sharp, structural net already filed (#1180) → no new gap (Rule 9). **Step 3.5** NOT due (<7d). **Step 3.6** no change — no new evidence
+(zero completed cycles this heartbeat; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). The decision table below is the durable digest.)
 
 _Earlier: 2026-06-29 03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 13.** Since 02:52Z: **Dev @02:57Z merged PR
 #1178** (`2ec4dbc`, *fixes #1159* — non-codepage window titles `?`-mangled by the narrow ANSI read path, now read via the wide `…W` Win32 API + UTF-8, lossless),

@@ -1,6 +1,21 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0453Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now QA-VERIFIED+CLOSED
+> Last refreshed: 2026-06-29 ~0524Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
+> since 0453Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0453Z: **zero Dev/QA cycles completed** — no new merge, no new verify, no new loop-state marker past QA's 04:10Z #1172 entry. Dev's **#1179** (`find --ai`
+> error JSON drops 4 of 6 #884 envelope keys) remains `status:in-progress` with **no PR branch yet** (fresh pick, well within 24h → not abandoned). **Step 1:** team
+> PRs #1170(`--ocr`)/#1171(`--selector` default) re-confirmed public-API human gates, auto-merge OFF → **Orc did NOT merge / did NOT enable** (guardrail);
+> #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (remote = main+develop+
+> dependabot+2 live PR heads #1170/#1171; no orphans). **Step 2:** status:done open = **#972** only (human-only, parked) — no handoff owed (#1172 already QA-closed
+> last cycle); status:in-progress = **#1179**(fresh, no PR)+#1169/#1060(Dev PRs held)+#766(Ace umbrella) → none stale/abandoned; closed nothing (Rule 1). **Step 3:**
+> criterion #1 stays FULLY MET; backlog sharp (6 output-contract-fidelity gaps self-serviced this run; structural net #1180 already filed) → no new gap (Rule 9).
+> **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (zero completed cycles this heartbeat → no product to audit, no new
+> tests to sample; freshest rules just succeeded last cycle = validation not gap; over-fit forbidden; self-review 5–6 principles < ~8 distillation threshold;
+> EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held gates + #1060/#1169 + #1179 in-flight; #3 #766
+> in-progress; #4 half-finished PRs) → **no auto-advance**. develop GREEN HEAD real-CI `e087c64` (#1181 Build&Test+CodeQL SUCCESS; orc [skip ci] on top). Evidence:
+> `.work/reviews/2026-06-29-0524-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0453Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now QA-VERIFIED+CLOSED
 > end-to-end, and Dev has picked up the next envelope-fidelity gap (#1179). No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
 > Since 03:52Z: **(1) QA @04:08Z VERIFIED+CLOSED #1172** (saved-selector not-found leaked `KeyError`'s repr quotes into the envelope `message`) — a textbook
 > **behavior** verify (QA-Mariana): ran each consumer on the clean path (direct invocation, JSON-to-file, the saved-selector resolver) and confirmed the user
