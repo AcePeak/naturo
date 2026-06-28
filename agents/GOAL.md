@@ -52,8 +52,15 @@ work while the gate waits.
   `OCR_FAILED`, `naturo.ocr_match`, `naturo[ocr]` extra), a **human-only public-API sign-off** (same class as #1136/#1105).
   **→ NOW A HUMAN GATE on done-criterion #2**: Ace signs off the surface + merges #1170 (the loop will not, Rule guardrail),
   then QA verifies end-to-end with `naturo[ocr]` installed. Tracked via #1060's `needs:ace` label.
-- **#1096 JAB attach fix** — native-build block cleared 06-28; **pure Dev execution** (fix async JVM handshake, build+verify
-  locally), no human gate. The last criterion-#1 recognition item not yet landed.
+- **#1096 JAB attach fix** — criterion-#1's last unlanded recognition item. Native build is Dev-actionable (MSVC/CMake/Ninja
+  provisioned 06-28; build recipe on #1097 — activate `vcvars` first, the toolchain is not on the bare cron PATH). **HONEST
+  CORRECTION to the prior "pure Dev, no human gate" framing:** two consecutive headless Dev cycles (06-28 16:04 + prior)
+  deferred it — each cited (a) MSVC vcvars-gated (surmountable) and (b) **a headless/RDP-disconnected cron session cannot
+  honestly verify a live JAB attach against a running Java-Swing app** (no live GUI render → Never-Lie). So landing #1096 is
+  NOT pure headless Dev: it needs an actual build+verify *attempt* (vcvars per #1097) and, if the live verify is truly
+  impossible unattended, an **attended/live-desktop verify session OR an explicit "build-landed, live-verify-deferred with an
+  honest RECOGNITION.md caveat" decision** (Ace). Next Dev cycle must PROVE the block (build + verify attempt, pasted output),
+  not assert it — [Orc] nudge posted on #1096.
 - **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler durability, needs:ace).
   Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. The two critical-path human gates on
   done-criteria 1–4 are now **#1060/PR#1170 (public-API sign-off)** + release sign-off #914 (criterion #5, expected).

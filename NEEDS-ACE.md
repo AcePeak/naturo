@@ -4,7 +4,35 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-28 15:52Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; done-criterion #2
+_Last refreshed: 2026-06-29 00:22Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; TWO PR-ready public-API
+sign-offs now on the v0.3.2 critical path (#1170 + NEW #1171), both full-matrix green & auto-merge correctly held OFF.**
+**Queue 12 → 13** (#1169 gained `needs:ace` — Dev self-flagged the `find --selector` default-backend behavior change): now
+**#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+**TOP-2 ACTIONABLE — both close criterion #2 (find engine) and both need ONE sign-off:**
+**(1) #1060 / PR #1170 (`naturo find --ocr` via RapidOCR)** — full CI matrix green, `MERGEABLE`/`CLEAN`, auto-merge OFF: new public
+surface (`--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED`, `naturo.ocr_match`, `naturo[ocr]` extra). **Ratify + merge** (recommended),
+then QA verifies with `pip install naturo[ocr]`.
+**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`)** — full CI matrix green, `MERGEABLE`/`CLEAN`, auto-merge OFF
+**because it changes a public CLI default** (`find --selector` default backend `uia` → `auto`, so a short-form selector now resolves via
+the full cascade, not UIA-only). Behavior change on a shipped command = public-contract sign-off (same class as #1170). **Ratify + merge**
+(recommended — it makes `find --selector` consistent with the query path's auto-cascade; refs #1169, facet-2 + live verify remain), or
+revise the default. **The loop will NOT merge either (guardrail).**
+**CRITERION-#1 watch — #1096 (JAB attach):** the last recognition item not yet landed. **Honest reclassification this cycle:** it is
+NOT "pure headless Dev" — two consecutive headless cycles deferred it (build is vcvars-gated but doable per #1097; the binding gate is
+that an unattended/RDP-disconnected cron session can't honestly verify a live JAB attach against a running Java-Swing app). Posted an
+[Orc] nudge on #1096 directing the next Dev cycle to **prove the block** (actually build via vcvars + attempt the live verify, paste
+output). If the live verify is truly impossible unattended → I'll escalate a `needs:ace` env gate next cycle (attended-console verify
+run, or land build-only with an honest `RECOGNITION.md` JAB caveat). **Not yet a hard human gate — proving it first (no premature
+escalation).**
+**Also since 15:52Z:** QA filed P2 #1172 (saved-selector "not found" leaks Python `KeyError` quotes into the user message across
+find/click/type) — normal Dev backlog work, single source-side fix, no action from you. **Step 1:** the other 2 open PRs (#1167
+dependabot checkout-7, #1055 community fork) are base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1).
+**Step 3.5** NOT due (tracker current to 06-28, <7d). **Step 3.6** no change — no new evidence (two exemplary cycles — Dev self-gated the
+#1171 public-default change + ran the full suite auditably; QA root-caused #1172 read-only with zero intrusive input; self-review
+checklist at 6 principles, < the ~8 distillation threshold; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-28 15:52Z (Orc autonomous cycle — **loop healthy & converging; develop GREEN; done-criterion #2
 (`find --ocr`) is PR-ready & full-matrix green — and now needs ONE sign-off from you.** **Queue 11 → 12** (#1060 gained
 `needs:ace` — Dev self-flagged the OCR public surface): now **#1060(PR#1170)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP ACTIONABLE — #1060 / PR #1170 (`naturo find --ocr` via RapidOCR):** Dev opened it full-matrix green
@@ -297,6 +325,7 @@ no-defects, ruled out 3 of its own flag-errors as harness lies and filed nothing
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
 | [#1060](https://github.com/AcePeak/naturo/issues/1060) → **PR [#1170](https://github.com/AcePeak/naturo/pull/1170)** | **Sign off + merge `naturo find --ocr` (RapidOCR).** Dev opened PR #1170 (done-criterion #2 of v0.3.2), **full CI matrix green**, `MERGEABLE`/`CLEAN`, and **held auto-merge OFF on purpose** because it adds new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED` error codes, `naturo.ocr_match` module (`find_text`/`TextMatch`/`load_engine`), and the `naturo[ocr]` optional extra. | **public-API sign-off** (same class as #1136/#1105) — a new CLI flag + new exported module + new packaging extra; the loop will not merge it unattended. | **Ratify + merge (recommended).** It implements exactly your #1077 RapidOCR decision and #1060 spec; additive, fail-loud (`OCR_NOT_AVAILABLE` recoverable with install hint when the extra is absent), offline/no-network, 20 hermetic tests + injectable engine (covers logic without the dep), `--collect-only` clean when `rapidocr` absent (no cross-platform break). After merge, QA verifies end-to-end with `pip install naturo[ocr]`. Or revise (rename/un-export module) before merge. |
+| [#1169](https://github.com/AcePeak/naturo/issues/1169) → **PR [#1171](https://github.com/AcePeak/naturo/pull/1171)** | **Sign off + merge `find --selector` honoring `--backend`/`--depth`.** Dev root-caused #1169 (short-form `//Role` selectors miss on WinUI/XAML): `_find_with_selector` called `get_element_tree` **without** forwarding `--backend`/`--depth`, so it ran UIA-only @ depth 20 while the query path uses `auto` (UIA→hybrid→IA2/JAB/MSAA). PR #1171 threads the flags through; full CI matrix green, `MERGEABLE`/`CLEAN`, auto-merge **OFF**. | **public CLI-contract sign-off** — it changes the **default backend** of a shipped command (`find --selector` `uia` → `auto`), a behavior change on public output (same class as #1170/#1136). | **Ratify + merge (recommended)** — it aligns `find --selector` with the query path's auto-cascade (the moat behavior), is hermetically tested (4 cases asserting the forwarded kwargs + `auto` default), and refs #1169 (facet-2 desktop-wide "any app" search + live verify still remain). Or revise the default if you want `--selector` to stay UIA-only. |
 | [#1136](https://github.com/AcePeak/naturo/issues/1136) | **Sign off (or revise/revert) the public API that landed unattended in #1134.** Team-Dev added a `selector` parameter to the public `BrowserPage.screenshot()` method + made the inert `naturo browser screenshot --selector` flag functional, merged `c00227e` (*fixes #1123*) with auto-merge **ON** before Orc could hold it. | **public-API sign-off** — a new public method parameter + an activated CLI contract; the guardrail holds even though the migration guide already promised `--selector` (the alternative, shrinking the doc / removing the flag, is yours). | **Ratify (recommended)** — small, additive, fail-loud (no-match / no-box / `--selector`+`--full-page` → exit 1, never a silent full-page fallback), 10 hermetic tests + real-Chrome e2e, honors the already-shipped flag; removing it would be breaking. Or revise (keyword-only/narrow) / revert (drop param + flag, amend guide). |
 | [#1105](https://github.com/AcePeak/naturo/issues/1105) | **Sign off (or revert) the public API that landed unattended in #1104.** Team-Dev added `BrowserPage.set_download_dir()`/`wait_for_download()` + a `DownloadResult` dataclass **exported from `naturo.browser`**, merged `41b81ad` (part of #766). Dev correctly flagged it as public-API but auto-merged anyway. | **public-API sign-off** — a new public contract; even one that honors a committed doc is yours (shrinking the doc is the alternative). Process gap closed this cycle in `dev-cycle.md`. | **Ratify (recommended)** — the surface is small, additive, matches the committed migration guide, byte-parity tested; confirm and close #1105. Or revise (rename/un-export) / revert (drop methods + amend guide). |
 | ~~#1097~~ | **RESOLVED 2026-06-28 (you provisioned the toolchain)** — MSVC 14.44 + CMake + Ninja installed on NATUROBOT, full `core` Release build proven (`naturo_core.dll`). #1097 closed; build recipe on #1097; pointer + async-handshake root-cause on #1096. **#1096 (JAB) is now Dev-buildable+verifiable locally** — every future native-core moat fix is unblocked. | — | _Done — no action needed; Dev will land #1096 + restore the verified `RECOGNITION.md` JAB row, QA will verify._ |

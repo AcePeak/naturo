@@ -1,6 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~16:02Z (Orc autonomous cycle — **NO STATE CHANGE since 15:52Z; develop GREEN; loop HEALTHY but
+> Last refreshed: 2026-06-29 ~00:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; TWO PR-ready public-API
+> sign-offs now on the v0.3.2 critical path — both criterion-#2 (find engine), both correctly held for Ace.** Since 15:52Z (f342913):
+> **Dev opened PR #1171** (`fix/issue-1169-shortform-selector`→develop, *refs #1169* — `find --selector` now honors `--backend`/`--depth`,
+> changing the default backend `uia`→`auto` so short-form `//Role` selectors resolve via the full cascade not UIA-only), **full CI matrix
+> green / MERGEABLE / CLEAN / auto-merge OFF by Dev design** (public-CLI default change → human gate, same class as #1170). **Orc did NOT
+> merge / did NOT enable auto-merge** (guardrail). **QA filed P2 #1172** (saved-selector "not found" leaks Python `KeyError` repr quotes
+> into the user message across find/click/type — single source-side fix; Dev backlog, not human-only). **needs:ace 12→13** (#1169 gained
+> the label): #1060(PR#1170)/#1169(PR#1171)/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897. **Step 1:** both team PRs
+> (#1170 OCR, #1171 selector) full-green/held-OFF → untouched; the other 2 PRs (#1167 dependabot, #1055 community fork) base=`main`,
+> human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); remote = main+develop+dependabot+2 live PR heads (Rule 14 clean,
+> no orphans). **Step 2:** status:done open = #972 only (human-only); status:in-progress = #1169/#1096/#1060 (Dev) + #766 (Ace) → none
+> abandoned, no handoff owed (Rule 1). **Step 3/3.7: HONEST RECLASSIFICATION of #1096 (criterion-#1 JAB, the last unlanded recognition
+> item).** Prior "pure Dev execution / no human gate" framing is wrong — two consecutive headless Dev cycles deferred it: build is
+> Dev-actionable (vcvars per #1097) but an unattended/RDP-disconnected cron session cannot honestly verify a live JAB attach against a
+> running Java-Swing app. Corrected GOAL.md known-blockers; posted [Orc] nudge on #1096 to PROVE the block next cycle (build + live-verify
+> attempt, paste output) per HARDEST-FIRST — **not yet a hard needs:ace gate** (prove first, no premature escalation). Done-criteria 1–4
+> NOT all met → no auto-advance; critical-path advance needs Ace (#1170 + #1171 sign-off, #914 release). **Step 3.5:** NOT due (<7d).
+> **Step 3.6: no change — no new evidence** (two exemplary cycles — Dev self-gated #1171's public default + auditable full suite + hermetic
+> test; QA root-caused #1172 read-only, zero intrusive input; new test spot-checked sound [forwarded-kwargs assert, not shape/tautology];
+> self-review checklist at 6 principles < ~8 distillation threshold; the #1096 build-not-attempted thin-spot handled on-issue not as a
+> prompt edit; over-fit forbidden; EVOLUTION row appended). develop GREEN last real-CI `3fb7b5d`/#1166; HEAD `3350a54` `[skip ci]`.
+> Evidence: `.work/reviews/2026-06-29-0022-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-28 ~16:02Z (Orc autonomous cycle — **NO STATE CHANGE since 15:52Z; develop GREEN; loop HEALTHY but
 > IDLE ON HUMAN GATES.** Heartbeat with zero movement: no new merges, no new PRs, no QA closes; in-progress unchanged (#1169
 > Dev / #1060 Dev-PR-held / #766 Ace umbrella); needs:ace identical (12): #1168/#1136/#1105/#1060/#1057/#975/#972/#969/#935/
 > #915/#914/#897. **Step 1:** PR #1170 (`find --ocr`→develop, *fixes #1060*) full-matrix GREEN (17 SUCCESS/1 SKIPPED), auto-merge
