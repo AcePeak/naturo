@@ -113,6 +113,18 @@ behavior/process — NOT a product bug). Examples: Dev avoiding the hardest task
 class, thin self-review, a flaky gate; QA re-filing the same class, skipping a surface, false verdicts from a
 stale install, unsafe input habits.
 
+**Test-case quality is an evolution dimension too (Ace 2026-06-29).** Don't only watch agent behavior — audit
+whether the **tests themselves are sound**, because a bad test is worse than none (it gives false confidence).
+Sample a few recently-added/changed tests and look for: asserting **envelope SHAPE not BEHAVIOR** (passes on
+wrong output); **over-mocking** that neutralizes the very thing under test or hides host-dependence (the #1068/
+#1069 non-hermetic class — green headless, red on a real desktop); **tautological / vacuous** tests (assert a
+mock returns what it was told); tests **pinned to implementation details** that break on any refactor without
+catching a real regression; a **shipped feature with no test** for its non-default paths; **flaky / order-
+dependent / slow** tests; **redundant** near-duplicates. When you find a recurring test-quality weakness:
+encode a **testing principle** in `dev-cycle.md` (Step 3 "write a failing test first" / self-review) and/or
+file a sharp `tech-debt` issue to fix the specific bad tests — then log it as a ledger row. Good tests that
+**fail for the right reason** are part of "Dev & QA measurably sharpening."
+
 - **If you find one backed by evidence** (cite the cycles/PRs/issues): **implement a small, surgical fix** to
   the relevant operating doc — `agents/local/dev-cycle.md`, `agents/local/qa-cycle.md`, `agents/dev/SOUL.md`,
   `agents/qa/SOUL.md`, or `agents/RULES.md` — and commit it `[skip ci]`. **One change per cycle**, English,
