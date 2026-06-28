@@ -1,6 +1,31 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE: the P0 recognition-moat JAB blocker #1096 LANDED;
+> Last refreshed: 2026-06-29 ~01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET: QA live-verified+closed the
+> P0 JAB blocker #1096; develop GREEN; the recognition moat is code-complete AND live-confirmed.** Since 00:57Z: **QA @01:20Z
+> VERIFIED+CLOSED #1096** (criterion #1's last item) — live JAB attach on a real OpenJDK-21 Swing desktop, `test_jab_recognition_932.py
+> -m desktop` 4/4 PASS, concrete cascade **UIA 6 → cascade 46, delta=+40, extra_sources={'jab':40}** matching the `docs/RECOGNITION.md`
+> `+40` row, with a **discriminating negative control** (redeployed pre-fix DLL → delta 0/tests FAIL; swapped fix DLL back → delta 40/4-4
+> PASS — proves the attach is the fix's effect, not env). Notably QA **did NOT trust the worktree's untracked DLL** (reset-to-develop left
+> the OLD 122880-B pre-fix binary) — it **downloaded the canonical CI-built `naturo-core-dll` from the merged run** (md5 7036e02…) first.
+> `verified` added, evidence comment posted, closed against `45768c1` (Rule 1). **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector`
+> default) both CLEAN/MERGEABLE, full-green, auto-merge held OFF (public-API human gates) → **Orc did NOT merge / did NOT enable
+> auto-merge** (guardrail); #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc
+> (Rule 1); remote = main+develop+dependabot+2 live PR heads (#1170/#1171) → Rule 14 clean, no orphans. **Step 2:** no handoff owed (QA
+> already closed #1096); status:done open now = **#972** only (human-only, parked); status:in-progress = #766(Ace) + #1060/#1169(Dev PRs
+> held) + **#1173** (QA-filed `--limit` validation P2, **freshly picked up by Dev — status:in-progress set 17:11Z, ~12min before now**, NOT
+> abandoned) → none stale/abandoned. **Step 3:** recognition moat criterion #1 COMPLETE; backlog sharp, Dev actively on #1173 → no new gap
+> filed (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: CHANGE MADE (evidence-backed, not churn).** QA's #1096
+> verify exposed a real structural hermeticity trap: `naturo_core.dll` is **not git-tracked**, so QA's Step-0 `reset --hard` leaves a STALE
+> pre-fix DLL and Step 0 only copies the DLL *when absent* → a future QA could silently verify a native fix against a stale binary (false
+> verdict; the DLL *is* the thing under test for every `core/`-touching moat fix). QA handled it by diligence this once but the doc didn't
+> encode it. **Fix:** added the stale-`naturo_core.dll` trap to `qa-cycle.md` Step 2.4's harness-lies enumeration (beside the #969
+> editable-install sibling — different mechanism, not redundant) + a directive to **deploy the canonical CI-built DLL from the merged run**
+> for native fixes. One surgical change (Step-2.4 list 3→4 lies, no checklist bloat); EVOLUTION row appended. **Step 3.7:** done-criteria
+> 1–4 NOT all met (criterion #1 ✅ NOW; #2 #1170/#1171 PR-held human gates; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**,
+> but criterion #1 converged. needs:ace UNCHANGED at 13. develop GREEN HEAD `45768c1` (Build&Test+CodeQL SUCCESS, real CI). Evidence:
+> `.work/reviews/2026-06-29-0122-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE: the P0 recognition-moat JAB blocker #1096 LANDED;
 > develop GREEN; the recognition moat is now CODE-COMPLETE for v0.3.2.** Since 00:22Z: **Dev merged PR #1174** (`fix/issue-1096-jab-attach`
 > →develop, `45768c1`, *fixes #1096*) — a bounded pump-and-retry JAB JVM handshake replacing the one-shot `Windows_run` that never completed
 > the async AT↔JVM discovery. **Dev PROVED the block the prior cycle's [Orc] nudge demanded** (HARDEST-FIRST "prove, don't assume"): built the

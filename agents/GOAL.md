@@ -28,9 +28,11 @@ A week with no movement on the scoreboard is a failure of the north-star, even i
 ## 🎯 CURRENT SUB-GOAL: ship v0.3.2 — complete, not a half-product
 **Done-criteria (ALL must hold; this is the convergence test):**
 1. **Recognition moat hardened beyond UIA for the v0.3.2 set:** Electron/CDP (#933 ✅) + Java Access Bridge
-   (#932/**#1096 — fix LANDED 06-29 via PR #1174 `45768c1`; `status:done` awaiting QA verify**) both prove real-app
-   recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅). **Recognition moat is now
-   CODE-COMPLETE for v0.3.2** — only QA's live-JAB confirmation of #1096 (republished `+40` row) remains on criterion #1.
+   (#932/**#1096 ✅ — fix landed 06-29 via PR #1174 `45768c1`, then QA-VERIFIED+CLOSED 06-29 01:20Z: live JAB attach
+   on a real OpenJDK-21 Swing desktop, UIA 6 → cascade 46, delta=+40, `extra_sources={'jab':40}`, with a
+   discriminating negative control [pre-fix DLL → delta 0, fix DLL → delta 40 proves it's the fix, not env]**) both
+   prove real-app recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅). **Criterion #1 is
+   now FULLY MET** — the recognition moat is code-complete AND live-QA-verified for v0.3.2.
 2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **PR #1170 OPEN & FULL-MATRIX GREEN
    06-28; Dev correctly held auto-merge OFF (new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED`
    error codes, `naturo.ocr_match` module, `naturo[ocr]` extra) → awaiting Ace public-API sign-off + merge, then QA
@@ -61,14 +63,16 @@ work while the gate waits.
   **delta=40, extra_sources={'jab':40}**) with an independent fresh-context adversarial verifier PASS (incl. bounded-cost perf:
   call1 5.05s one-time handshake, call2/3 0.156s — no per-query hang). Root cause was a one-shot `Windows_run` that never completed
   the async AT↔JVM handshake; the fix is a bounded pump-and-retry that never caches a failed handshake. `docs/RECOGNITION.md` `+40`
-  row republished, `test_recognition_doc_982.py` re-pinned (never-lie both directions). #1096 flipped `status:done`; **only QA's
-  live-JAB re-confirmation from a Java-Swing desktop remains** (not a human gate). The "attended/live-verify-deferred-with-caveat"
-  escalation the prior cycle pre-registered is **no longer needed** — Dev proved it live.
+  row republished, `test_recognition_doc_982.py` re-pinned (never-lie both directions). **QA VERIFIED+CLOSED #1096 06-29 01:20Z**
+  (live JAB attach on a real OpenJDK-21 Swing desktop + discriminating negative control: pre-fix DLL → delta 0, fix DLL → delta 40,
+  proving the attach is the fix's effect not env; QA deployed the canonical CI-built DLL, not the worktree's stale untracked binary)
+  → **criterion #1 is now FULLY MET** (code-complete AND live-verified). The "attended/live-verify-deferred-with-caveat" escalation
+  the prior cycle pre-registered is **no longer needed** — Dev proved it live, QA confirmed it live.
 - **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler durability, needs:ace).
   Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. With #1096 landed, the critical-path human gates on
   done-criteria 1–4 are now the **two PR-ready public-API sign-offs on criterion #2 — #1060/PR#1170 (`--ocr`) + #1169/PR#1171
-  (`find --selector` default `uia`→`auto`)** — plus release sign-off #914 (criterion #5, expected). Criterion #1 needs only QA's
-  live-JAB verify of the merged #1096 (not a human gate).
+  (`find --selector` default `uia`→`auto`)** — plus release sign-off #914 (criterion #5, expected). Criterion #1 is **fully met**
+  (#1096 QA-verified+closed 01:20Z — no further action).
 These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
 
 ---

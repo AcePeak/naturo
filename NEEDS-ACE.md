@@ -4,7 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE — the P0 recognition-moat JAB blocker #1096 LANDED;
+_Last refreshed: 2026-06-29 01:22Z (Orc autonomous cycle — **v0.3.2 DONE-CRITERION #1 NOW FULLY MET; develop GREEN; the recognition
+moat is code-complete AND live-QA-verified.** Since 00:57Z: **QA @01:20Z VERIFIED+CLOSED #1096** (the last criterion-#1 item) — live
+JAB attach on a real OpenJDK-21 Swing desktop (`test_jab_recognition_932.py -m desktop` 4/4 PASS, **UIA 6 → cascade 46, delta=+40,
+sources={'jab':40}**) with a discriminating negative control (pre-fix DLL → delta 0, fix DLL → delta 40). Criterion #1 needs **no further
+action**. **Queue UNCHANGED at 13** (no new human-only item this cycle):
+**#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
+**TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off (unchanged):**
+**(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
+**(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
+With #1096 fully closed, **the only critical-path human gates on done-criteria 1–4 are #1170 + #1171** (+ release sign-off #914, criterion #5).
+**Step 1:** the other 2 PRs (#1167 dependabot, #1055 community fork) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY
+Orc (Rule 1); Rule 14 clean. **Step 2:** status:done open = #972 only (human-only); #1173 (`--limit` validation, QA-filed P2) is freshly
+in-flight with Dev (status:in-progress set ~12 min ago) → not abandoned. **Step 3.5** NOT due (<7d). **Step 3.6** CHANGE MADE — encoded the
+**stale-untracked-DLL hermeticity trap** in `qa-cycle.md` Step 2.4 (QA's #1096 verify hit it: `reset --hard` leaves the stale pre-fix
+`naturo_core.dll` since it's not git-tracked; now QA must deploy the canonical CI-built DLL for native fixes). v0.3.2 ship-gate unchanged
+(FULLY MET — release is your call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-29 00:57Z (Orc autonomous cycle — **MAJOR CONVERGENCE — the P0 recognition-moat JAB blocker #1096 LANDED;
 develop GREEN; the v0.3.2 recognition moat is now CODE-COMPLETE.** Dev merged **PR #1174** (`fixes #1096`, `45768c1`) — a bounded
 pump-and-retry JAB JVM handshake, **built + live-verified on a real Java desktop** (UIA 6 → cascade 46, **delta=40, sources={'jab':40}**),
 Step-3.5 adversarial verifier PASS, full CI matrix green. This is the item two prior headless cycles deferred on; the on-issue [Orc]
