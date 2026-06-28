@@ -1060,13 +1060,19 @@ def _find_with_ai(
         )
     except Exception as e:
         msg = str(e)
-        code = "AI_FIND_FAILED"
+        # Route through the canonical six-key error envelope (#884) so the
+        # category / context / suggested_action / recoverable keys are populated,
+        # not just code + message (#1179). Each branch uses a *registered* error
+        # code so its category and recovery hint resolve automatically — the
+        # generic branch uses AI_ANALYSIS_FAILED (category "ai") rather than the
+        # old unregistered "AI_FIND_FAILED", which would degrade to "unknown".
+        code = "AI_ANALYSIS_FAILED"
         if "unavailable" in msg.lower() or "api key" in msg.lower():
             code = "AI_PROVIDER_UNAVAILABLE"
         elif "capture" in msg.lower():
             code = "CAPTURE_FAILED"
         if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": code, "message": msg}}))
+            click.echo(_common._json_error_str(code, msg))
         else:
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)

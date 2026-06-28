@@ -229,11 +229,12 @@ class TestElementTreeSurfacesKeepCjkLiteral:
     """The element-tree ``-j`` surfaces #1025 called out echo CJK literally."""
 
     def test_find_ai_error_envelope_keeps_cjk_literal(self, runner):
-        """``find --ai`` JSON error envelope (``_find.py:294``) stays literal.
+        """``find --ai`` JSON error envelope stays literal.
 
-        This callsite — one of the raw ``json_module.dumps`` sites #1025
-        flagged — echoes the underlying failure message; a CJK message must
-        survive without ``\\uXXXX`` escaping.
+        This callsite echoes the underlying failure message; a CJK message must
+        survive without ``\\uXXXX`` escaping. The generic-failure branch now emits
+        the registered ``AI_ANALYSIS_FAILED`` code via the canonical six-key
+        envelope (#1179), replacing the old unregistered ``AI_FIND_FAILED``.
         """
         with patch("naturo.ai_find.ai_find_element",
                    side_effect=RuntimeError(f"detector crashed: {_CJK}")):
@@ -243,6 +244,6 @@ class TestElementTreeSurfacesKeepCjkLiteral:
             )
 
         assert result.exit_code != 0
-        assert "AI_FIND_FAILED" in result.output
+        assert "AI_ANALYSIS_FAILED" in result.output
         assert _CJK in result.output
         assert "\\u" not in result.output
