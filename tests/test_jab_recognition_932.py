@@ -13,6 +13,7 @@ When that environment is absent the whole module is skipped.
 from __future__ import annotations
 
 import platform
+import time
 
 import pytest
 
@@ -90,6 +91,34 @@ def test_uia_only_is_blind_to_swing_controls(swing_app):
     assert EXPECTED_CONTROLS.isdisjoint(uia_names), (
         "UIA unexpectedly saw Swing controls: "
         f"{sorted(EXPECTED_CONTROLS & uia_names)}"
+    )
+
+
+@requires_fixture
+def test_jab_attaches_to_live_jvm(swing_app):
+    """JAB completes its asynchronous handshake and attaches to the live JVM.
+
+    Direct regression for the #1096 attach defect: the pre-fix init called
+    ``Windows_run`` exactly once, pumped the message queue for a fixed 1 s, then
+    cached ``initialized=True`` *without confirming attachment*. On a loaded
+    desktop the asynchronous JVM handshake did not finish in that window, so
+    ``isJavaWindow`` returned false permanently and ``jab_check_support`` was
+    ``False`` forever. The fix pumps-and-retries (re-invoking ``Windows_run``)
+    until a Java window is discoverable, so support must now resolve true — and
+    well within the bounded attach budget rather than hanging.
+    """
+    _app, window = swing_app
+    from naturo.bridge import NaturoCore
+
+    core = NaturoCore()
+    start = time.monotonic()
+    assert core.jab_check_support(window.hwnd) is True, (
+        "JAB did not attach to the live Swing JVM (issue #1096 regression)"
+    )
+    elapsed = time.monotonic() - start
+    assert elapsed < 10.0, (
+        f"JAB attach took {elapsed:.1f}s; expected to complete within the "
+        "bounded handshake budget, not hang"
     )
 
 
