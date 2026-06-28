@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -171,6 +171,65 @@ class TestResolveNamedSelector:
     def test_resolve_empty_parts_raises_value_error(self, tmp_selectors):
         with pytest.raises(ValueError, match="must be non-empty"):
             selector_cmd.resolve_named_selector("@/name")
+
+
+# ── #1172: not-found message must not leak KeyError repr quotes ──────────────
+
+
+class TestSelectorNotFoundMessageNoQuoteLeak1172:
+    """#1172: a saved-selector not-found failure must report a clean message.
+
+    ``resolve_named_selector`` raised a bare ``KeyError`` for the not-found case,
+    and ``str(KeyError("msg"))`` returns ``"'msg'"`` — ``KeyError`` is the one
+    builtin whose ``__str__`` wraps its argument in ``repr`` quotes. Every
+    consumer that built a user-facing message via ``str(exc)`` — ``find``,
+    ``click``, and ``type`` — therefore leaked stray single quotes into the JSON
+    envelope's ``message`` (``"'Selector not found: @app/name'"``). The sibling
+    malformed-format failure (a ``ValueError``) was already clean, so the two
+    paths reported the same error code with inconsistent message formatting.
+    """
+
+    def test_resolve_message_has_no_repr_quotes(self, tmp_selectors):
+        """The raised exception's ``str()`` is the clean message, unquoted."""
+        with pytest.raises(KeyError) as excinfo:
+            selector_cmd.resolve_named_selector("@noapp/nosel")
+        assert str(excinfo.value) == "Selector not found: @noapp/nosel"
+
+    def test_find_at_ref_not_found_message_is_clean(self, runner, tmp_selectors):
+        """``find @app/name`` (selector strategy) emits an unquoted message."""
+        from naturo.cli.core._find import find_cmd
+
+        result = runner.invoke(find_cmd, ["@noapp/nobtn", "-j"])
+        payload = json.loads(result.output)
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "SELECTOR_REF_ERROR"
+        assert payload["error"]["message"] == "Selector not found: @noapp/nobtn"
+
+    def test_click_type_resolver_at_ref_not_found_message_is_clean(
+        self, tmp_selectors, capsys
+    ):
+        """The click/type family's resolver emits the same unquoted message.
+
+        ``_resolve_selector_target`` dereferences the ``@app/name`` ref before it
+        touches the backend, so a ``MagicMock`` backend is never used — the path
+        fails fast at resolution, exactly as ``click``/``type`` do at runtime.
+        """
+        from naturo.cli.interaction import _common
+
+        with pytest.raises(SystemExit):
+            _common._resolve_selector_target(
+                "@noapp/nobtn",
+                MagicMock(),
+                app=None,
+                window_title=None,
+                hwnd=None,
+                pid=None,
+                json_output=True,
+            )
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "SELECTOR_REF_ERROR"
+        assert payload["error"]["message"] == "Selector not found: @noapp/nobtn"
 
 
 # ── @app/name resolution in interaction commands ────────────────────────────

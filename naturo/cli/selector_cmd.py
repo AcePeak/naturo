@@ -24,6 +24,24 @@ SELECTORS_DIR = Path.home() / ".naturo" / "selectors"
 BUILTIN_DIR = Path(__file__).parent.parent / "selectors_builtin"
 
 
+class SelectorNotFoundError(KeyError):
+    """Raised when an ``@app/name`` selector reference cannot be resolved.
+
+    Subclasses :class:`KeyError` so existing callers that catch ``KeyError`` to
+    distinguish the not-found case from a malformed reference (a ``ValueError``)
+    keep working unchanged. It overrides ``__str__`` because ``KeyError`` is the
+    one builtin whose ``__str__`` wraps its argument in ``repr`` quotes
+    (``str(KeyError("msg")) == "'msg'"``): consumers that build a user-facing
+    error message via ``str(exc)`` — ``find``/``click``/``type`` — would
+    otherwise leak stray single quotes into the JSON envelope's ``message``
+    (#1172), inconsistent with the clean ``ValueError`` malformed-format path.
+    """
+
+    def __str__(self) -> str:
+        """Return the message verbatim, without ``KeyError``'s repr quoting."""
+        return self.args[0] if self.args else super().__str__()
+
+
 def _ensure_dir(d: Path) -> Path:
     d.mkdir(parents=True, exist_ok=True)
     return d
@@ -96,7 +114,10 @@ def resolve_named_selector(reference: str) -> str:
         The selector string stored under that name.
 
     Raises:
-        KeyError: If the reference cannot be found in user or built-in selectors.
+        SelectorNotFoundError: If the reference cannot be found in user or
+            built-in selectors. This is a :class:`KeyError` subclass with a
+            clean ``__str__`` (no repr quotes), so ``except KeyError`` callers
+            are unaffected while ``str(exc)`` yields a clean message (#1172).
         ValueError: If the reference format is invalid.
     """
     ref = reference.lstrip("@")
@@ -121,7 +142,7 @@ def resolve_named_selector(reference: str) -> str:
         info = builtin_sels[name]
         return info.get("selector", info) if isinstance(info, dict) else info
 
-    raise KeyError(f"Selector not found: @{app_name}/{name}")
+    raise SelectorNotFoundError(f"Selector not found: @{app_name}/{name}")
 
 
 @click.group("selector", cls=FuzzyGroup)
