@@ -1,6 +1,22 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0622Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat with one exemplary completed
+> Last refreshed: 2026-06-29 ~0652Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing merged/closed/verified
+> since 0622Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0622Z: **zero Dev/QA cycles completed** — develop HEAD unchanged at real-CI `ad24c38` (#1185 Build&Test+CodeQL SUCCESS; orc `f1bcd4e` `[skip ci]` on top). A **Dev
+> cycle started 06:37Z** and is **still in flight** on the error-envelope-category backlog (#1182 + #1183, both `status:in-progress`, **no branch/PR yet** — fresh picks,
+> well within 24h → not abandoned). **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector` default) re-confirmed **MERGEABLE/CLEAN, autoMerge OFF** — public-API human gates
+> → **Orc did NOT merge / did NOT enable** (guardrail); #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1);
+> **Rule 14 clean** (remote = main+develop+dependabot+2 live PR heads #1170/#1171; no orphans). **Step 2:** status:done open = **#972** only (human-only, parked) → no handoff
+> owed (#1179 already QA-closed @06:10Z last run); status:in-progress = **#1182**+**#1183**(fresh Dev picks, no branch)+#1169/#1060(PRs held)+#766(Ace umbrella) → none
+> stale/abandoned; closed nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; backlog actively self-serviced (Dev in flight on #1182/#1183; #1184 backlog; #1180 net
+> open) → no new gap (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** — the 0622Z watch-item (Dev's first-ever
+> two-issues-in-progress-at-once #1182+#1183: one coherent registry fix vs Rule-5 sprawl?) **remains unresolved** (still no PR, no product to audit) → keep it open, re-check
+> when the PR lands; acting now would over-fit an outcome-unknown incident (forbidden). No new tests authored → nothing to sample; self-review 5–6 principles < ~8 distillation
+> threshold; EVOLUTION row appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held gates + #1182/#1183/#1184 in-flight/backlog; #3 #766
+> in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `ad24c38` (orc `[skip ci]` on top). Evidence:
+> `.work/reviews/2026-06-29-0652-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0622Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat with one exemplary completed
 > product — QA verified+closed #1179 end-to-end since 0552Z; no Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
 > Since 0552Z: **(1) QA @06:10Z VERIFIED+CLOSED #1179** (`find --ai` error JSON dropped 4/6 #884 envelope keys) — a textbook **behavior** verify: real first-run path
 > `find "…" --ai --json` (no API key) now emits all six #884 keys with `suggested_action` = the API-key hint the hand-rolled `json.dumps` had dropped; all 3 codes route

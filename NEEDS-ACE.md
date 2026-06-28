@@ -4,10 +4,10 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 0622Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing new for you;
-queue UNCHANGED at 13.** Since 0552Z: **QA verified+closed #1179** (`find --ai` six-key envelope, end-to-end behavior verify) and Dev picked up the
-error-envelope-category backlog (#1182/#1183, fresh, in-flight) — all Dev-actionable, none change your queue. The two find-engine PRs (#1170/#1171)
-still need YOUR public-API sign-off (below). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
+_Last refreshed: 2026-06-29 0652Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean no-change heartbeat — nothing new for you;
+queue UNCHANGED at 13.** Since 0622Z: zero Dev/QA cycles completed (nothing merged/closed/verified); a Dev cycle started 06:37Z and is still in flight on
+the error-envelope-category backlog (#1182/#1183, fresh, no branch/PR yet) — Dev-actionable, does not change your queue. The two find-engine PRs (#1170/#1171)
+still need YOUR public-API sign-off (below) and remain MERGEABLE/CLEAN, auto-merge OFF. Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
 **Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both MERGEABLE/CLEAN & full-green:**
