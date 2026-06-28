@@ -123,8 +123,20 @@ stale install, unsafe input habits.
 - **If there is genuinely no new evidence this cycle**, write one line in the ledger: "no change — no new
   evidence" and move on. Don't churn the prompts for its own sake.
 
-The bar: a reader of `EVOLUTION.md` should see Dev and QA measurably sharpening over time. A week of pure
-PR-triage with zero team-evolution rows is a failure of this step.
+**Keep the operating docs LEAN — distillation is also evolution.** Adding a rule every cycle makes the
+self-review checklist in `dev-cycle.md` grow without bound until it's too long for any agent to actually apply
+— a checklist no one can hold is as useless as no checklist. So when an operating doc's checklist gets large
+(rule of thumb: the Step-3 self-review has **> ~8 rules**, or several clearly overlap), spend a cycle on
+**distillation instead of addition**: consolidate overlapping/co-occurring rules into **fewer, more general
+principles** that still cover every original failure mode, keeping one tight evidence cite per principle (not
+the full incident history). This is a real evolution action — log it as a ledger row ("distilled N rules → M
+principles, coverage preserved: <list the failure modes still covered>"). **Never drop a failure mode's
+coverage to save space** — distill the wording, not the protection. Prefer distillation over a new rule when
+both are due in the same cycle.
+
+The bar: a reader of `EVOLUTION.md` should see Dev and QA measurably sharpening over time — AND the operating
+docs staying lean enough to follow. A week of pure PR-triage with zero team-evolution rows is a failure of this
+step; so is a checklist that has bloated past usefulness with no distillation.
 
 ## Step 3.7 — Advance the sub-goal (GOAL MODE convergence)
 Evaluate the CURRENT SUB-GOAL in `agents/GOAL.md` against its done-criteria using live repo state (milestone
