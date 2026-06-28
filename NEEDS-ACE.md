@@ -4,7 +4,29 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-22 16:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; two real-CI fixes
+_Last refreshed: 2026-06-28 14:22Z (Orc autonomous cycle, **first since the loop resumed** — **develop GREEN; queue
+unchanged at 13; ROOT-CAUSE CORRECTION on the 6-day freeze; weekly competitiveness row finally caught up (was 12d
+overdue).** Queue: #1168/#1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.
+**Freeze root cause (corrected):** the ~6-day stall (no merge/verify since #1166, 06-22) was NOT (only) #1168's
+session-only crons as the 06-26/27/28 daily-reviews assumed — the loop-state log shows **you globally PAUSED all
+roles on 06-22 (`ba7d6ac`) and RESUMED today (`d16a91e`)**. The loop is now live again; Dev/QA will resume on their
+crons. #1168 (persistent scheduler) remains valid and is still THE meta-blocker for *future* unattended durability,
+but it did not cause this particular window. **develop GREEN** — last real-CI `3fb7b5d` (#1166) Build & Test + CodeQL
+both SUCCESS; everything since is `[skip ci]` orc/runner → no STOP. **Step 1:** NO open team-Dev PR; the only 2 open PRs
+(#1167 dependabot checkout-7, #1055 community fork) are both base=`main`, human-only (Rule 2) → untouched; nothing
+merged/closed BY Orc (Rule 1). **Step 2:** no handoff owed (nothing merged this window); `status:done` open =
+#1164/#1162 (unverified ~6.4d — QA was paused, will pick up now) + #972 (human-only); `status:in-progress` = #766 (Ace
+umbrella) → left. **Step 3:** backlog sharp & self-feeding → no new gap (Rule 9). **Step 3.5 competitiveness — RAN
+(12d overdue; last row 06-16): Trend = FURTHER.** naturo ⭐5 (flat), Terminator 1,542 (+12), Windows-MCP 6,262 (+204),
+UFO² 9,153 (+139); **gap → Terminator −1,537 (was −1,525, widened +12)**. Landscape: **UFO² → UFO³ "Galaxy"**
+(multi-device agent orchestration — an *orchestration-layer* move, doesn't touch naturo's recognition-depth moat);
+**Terminator shipped NodeJS SDK + YAML workflows + OS-event→YAML recording**. The widening axis remains
+**distribution** (#922/#927 — not yet on MCP registries / uvx). Tracker row + HTML report
+(`naturo-competitive-report-2026-06.html`) refreshed to 06-28. **Step 3.6: no change — no new evidence** (no Dev/QA
+cycle ran in the paused window; EVOLUTION ledger row appended). v0.3.2 ship-gate unchanged (FULLY MET — release is your
+call, #914). Prior header below kept as history.)
+
+_Earlier: 2026-06-22 16:04Z (Orc autonomous cycle — **quiet, healthy; develop GREEN; two real-CI fixes
 merged since 07:52Z (#1165 *fixes #1164*, #1166 *fixes #1162*) both now `status:done` awaiting QA; NO open team PR;
 NO new human-only item** → **queue unchanged at 12**
 #1136/#1105/#1097/#1077/#1057/#975/#972/#969/#935/#915/#914/#897.

@@ -1,6 +1,23 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-28 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
+> Last refreshed: 2026-06-28 ~14:22Z (Orc autonomous cycle, **FIRST since loop resume** — **develop GREEN; ROOT-CAUSE
+> CORRECTION + weekly competitiveness caught up (12d overdue).** The ~6-day freeze was **NOT** #1168's session-only crons
+> as the 06-26/27/28 daily-reviews assumed — the loop-state log + git show **Ace globally PAUSED all roles 06-22
+> (`ba7d6ac`) and RESUMED today (`d16a91e`)**; last Dev/QA cycles ran 06-22 ~09:56 local, none in the paused window.
+> #1168 stays valid as the *future*-durability meta-blocker but did not cause this stall; loop is live again now.
+> develop GREEN real-CI `3fb7b5d` (#1166, [skip ci] orc/runner on top, no new CI). **Step 1:** NO team-Dev PR; 2 open PRs
+> both main-base human-only (Rule 2): #1167 dependabot checkout-7 / #1055 community fork→#1057; nothing merged/closed BY
+> Orc (Rule 1, Rule 14 clean). **Step 2:** no handoff owed; status:done #1164/#1162 unverified ~6.4d (QA was paused →
+> resumes now) + #972 (human-only); status:in-progress #766 (Ace umbrella) → left. **Step 3:** backlog sharp, no new gap
+> (Rule 9). **Step 3.5 RAN (Trend FURTHER):** naturo ⭐5 flat, Terminator 1,542 (+12), Windows-MCP 6,262 (+204), UFO²
+> 9,153 (+139); gap→Terminator **−1,537** (was −1,525, widened). Landscape: **UFO²→UFO³ "Galaxy"** (orchestration-layer,
+> doesn't touch recognition moat); Terminator shipped NodeJS SDK + YAML workflows + OS-event→YAML recording; widening
+> axis = distribution (#922/#927). Tracker row + HTML report refreshed to 06-28. **Step 3.6: no change — no new evidence**
+> (no Dev/QA cycle in the paused window; EVOLUTION row appended). needs:ace=13 unchanged, stars=5 flat. Milestones:
+> v0.3.2=17/v0.3.3=12/v0.3.4=31/v0.4.0=1/v0.5.0=4. v0.3.2 ship-gate FULLY MET (release is Ace's call, #914). Evidence:
+> `.work/reviews/2026-06-28-1422-auto-review.md`.**)
+>
+> Last refreshed (prior): 2026-06-28 ~07:02Z (Orc daily review, 2nd pass today — **NO-CHANGE confirmation; nothing moved on the
 > wire in the ~3h since 04:01Z. Still nothing merged/closed since #1166 (06-22 01:55Z, now ~6.4d). develop GREEN real-CI
 > `3fb7b5d` (orc [skip ci] on top, no new CI). PR queue empty + no orphans (remote = main+develop+1 dependabot, Rule 14
 > clean). 2 open PRs both main-base human-only (Rule 2): #1167 dependabot checkout-7 (Build&Test 'failure' = Feishu-

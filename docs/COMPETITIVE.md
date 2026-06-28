@@ -36,8 +36,8 @@ only and **fail on Java (Swing/SWT), SAP GUI, and deep Electron**. This is where
 
 | Tier | Projects | Note |
 |------|----------|------|
-| **Agent framework / AgentOS** (a layer above engines) | microsoft/**UFO²** (9.0k⭐) | HostAgent/AppAgent orchestration + hybrid GUI–API + OmniParser vision + PiP isolated desktop. Microsoft-backed. |
-| **Automation engine** (eyes+hands for any LLM) — *naturo's tier* | **Windows-MCP** (CursorTouch, 6.0k⭐) · **Terminator** (mediar-ai, 1.5k⭐) · **naturo (5⭐)** | UIA/accessibility tree + MCP. naturo is clearly last. |
+| **Agent framework / AgentOS** (a layer above engines) | microsoft/**UFO²→UFO³** (9.2k⭐) | HostAgent/AppAgent orchestration + hybrid GUI–API + OmniParser vision + PiP isolated desktop. Now **UFO³ "Galaxy"** — multi-device / cross-platform agent orchestration (repo retitled "Weaving the Digital Agent Galaxy"). Microsoft-backed. |
+| **Automation engine** (eyes+hands for any LLM) — *naturo's tier* | **Windows-MCP** (CursorTouch, 6.3k⭐) · **Terminator** (mediar-ai, 1.5k⭐) · **naturo (5⭐)** | UIA/accessibility tree + MCP. naturo is clearly last. Terminator's recent release adds a NodeJS SDK, YAML workflows, and OS-event→YAML recording. |
 | **Classic libraries** (pre-AI) | pywinauto (6.1k⭐) · pyautogui (12.5k⭐, stale) | Mature but not AI-native (no MCP/vision/agent layer). |
 | **Cross-platform sibling** | Peekaboo 3 (4.7k⭐, macOS) | Design north-star ("eyes+hands for AI"), different platform. |
 
@@ -69,6 +69,7 @@ or grow (further) since last week. Orc appends one row every 7 days.
 | Date | naturo ⭐ | Terminator ⭐ | Windows-MCP ⭐ | UFO² ⭐ | naturo Δ/wk | gap → Terminator | Trend |
 |------|----------|---------------|----------------|---------|-------------|------------------|-------|
 | 2026-06-16 | 5 | 1,530 | 6,058 | 9,014 | — (baseline) | −1,525 | — baseline |
+| 2026-06-28 | 5 | 1,542 | 6,262 | 9,153 | 0 (12d span) | −1,537 | **further** (gap +12; tracker missed 06-23 during the 6-day Ace-decision freeze) |
 
 ### How Orc updates this (weekly, headless)
 On an Orch cycle where ≥7 days have passed since the last tracker row:
