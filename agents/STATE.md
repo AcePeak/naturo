@@ -1,6 +1,32 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; a 4th consecutive recognition-fidelity
+> Last refreshed: 2026-06-29 ~03:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now in flight — Dev opened PR #1181
+> (auto-merge ON, lands itself when green); QA closed #1159 end-to-end. needs:ace UNCHANGED at 13.**
+> Since 03:22Z: **(1) QA @03:42Z VERIFIED+CLOSED #1159** (non-codepage window-title corruption) — an exemplary exercise of the 01:22Z stale-DLL trap: deployed the
+> canonical CI-built DLL (`f2979d9`, 130048 B) from the merged #1178 run, kept the stale pre-#1159 binary as a **discriminating negative control** (pre-fix `✳→?`/
+> `😀→??`; post-fix raw bytes `e29cb3`+`f09f9880` lossless ⇒ effect is the fix not env; astral 4-byte survival proves the wide-API+UTF-8 path), lateral-checked
+> list/app windows all lossless, cited merged `2ec4dbc` (Rule 1), zero keystrokes. **(2) Dev @03:50Z opened PR #1181** (`fix/issue-1172-selector-keyerror-quotes`→
+> develop, *fixes #1172* — saved-selector not-found leaked `KeyError`'s repr quotes into the envelope `message`) with **auto-merge ON (SQUASH)** — correct, because the
+> fix is **message-only** (new `SelectorNotFoundError` = `KeyError` subclass whose `__str__` drops the repr quotes; the error CODE `SELECTOR_REF_ERROR`/category/six-key
+> #884 envelope all unchanged, every `except KeyError` caller still works), so the **public-API guardrail correctly did NOT fire** → Dev let it self-land. Currently
+> **BLOCKED only on in-flight CI** (Ubuntu/Windows-DLL/lint/version/commit-author all green; macOS 3.9/3.12/3.13 + Analyze c-cpp pending) → lands itself when green;
+> **Orc did NOT merge** (guardrail — auto-merge is already Dev's). New test `TestSelectorNotFoundMessageNoQuoteLeak1172` asserts the clean message across resolver+find+
+> click/type (BEHAVIOR not shape); fresh-context adversarial verifier PASS. **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector` default) re-confirmed CLEAN, public-API
+> human gates, auto-merge OFF → Orc did NOT merge/enable (guardrail); #1181 auto-merge ON by Dev (message-only, not a public gate) → left to self-land; #1167(dependabot)/
+> #1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+3 live PR heads
+> #1170/#1171/#1181; #1178 branch deleted on merge last cycle). **Step 2:** no handoff owed (QA already closed #1159; #1181 not yet merged → #1172 stays
+> `status:in-progress`, flip deferred to merge per dev-cycle handoff). status:done open = **#972** only (human-only, parked). status:in-progress = **#1172**(PR #1181
+> auto-merge pending)+#1169/#1060(Dev PRs held)+#766(Ace umbrella) → none stale/abandoned. **Step 3:** criterion #1 stays complete; #1172's fix in flight closes the
+> 5th output-contract fidelity gap of the run (after #1173/#886/#1159/#1179), and the **structural net is already filed (#1180** — self-maintaining error-envelope
+> contract test) → backlog sharp, no new gap (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (two completed
+> cycles both rules SUCCEEDING: Dev's #1181 correct message-only fix + public-API non-trigger + behavior-asserting test + auto-merge-ON discernment; QA's #1159 verify =
+> the freshest rule [01:22Z stale-DLL trap] exercised cleanly a **3rd time on a 3rd native fix class** [JAB→UIA→window-title] = validation not gap; test-quality audit —
+> #1181's new test asserts the message TEXT [behavior, not envelope shape], not tautological/over-mocked, sound; self-review 5 questions < ~8 distillation threshold;
+> over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held human gates + #1060; #3 #766
+> in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13 (#1172/#1180/#1179 are Dev-actionable, not human gates). develop GREEN HEAD
+> `2ec4dbc` (#1178 Build&Test+CodeQL SUCCESS, real CI; `f61f6ec` orc [skip ci] on top). Evidence: `.work/reviews/2026-06-29-0352-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; a 4th consecutive recognition-fidelity
 > native-core data-loss bug self-serviced — Dev shipped+merged #1159 since 02:52Z; criterion #1 stays FULLY MET. Orc filed one sharp structural gap (#1180).**
 > Since 02:52Z: **Dev @02:57Z merged PR #1178** (`fix/issue-1159-wide-window-title`→develop, `2ec4dbc`, *fixes #1159*) — non-codepage window titles
 > (emoji/cross-script) were `?`-mangled by the narrow `GetWindowTextA`/`QueryFullProcessImageNameA` ANSI read path in `core/src/window.cpp` (irreversible

@@ -4,31 +4,30 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
-queue UNCHANGED at 13.** Since 02:52Z the loop self-serviced a recognition-fidelity bug end-to-end with NO human input: **Dev @02:57Z merged PR #1178**
-(`2ec4dbc`, *fixes #1159* — non-codepage window titles [emoji/cross-script] were `?`-mangled by the narrow ANSI read path in the native core; now read via
-the wide `…W` Win32 API + UTF-8, lossless), and **QA @03:11Z** filed #1179 (`find --ai` error JSON drops 4 of 6 #884 keys — Dev-actionable, not yours). Orc
-performed the on-merge handoff (#1159→`status:done`, awaiting QA) and filed one sharp **Dev-only** structural gap (#1180 — self-maintaining error-envelope
-contract test). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
+_Last refreshed: 2026-06-29 03:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
+queue UNCHANGED at 13.** Since 03:22Z the loop self-serviced two items with NO human input: **QA @03:42Z VERIFIED+CLOSED #1159** (non-codepage window-title
+corruption — discriminating negative control via the canonical CI-built DLL, lossless emoji/cross-script round-trip), and **Dev @03:50Z opened PR #1181**
+(`fixes #1172` — saved-selector not-found leaked `KeyError`'s repr quotes into the envelope `message`; fix is a `KeyError` subclass with a clean `__str__`,
+**message-only, no API change**, so Dev correctly enabled auto-merge — it lands itself when CI goes green). The two remaining find-engine PRs (#1170/#1171) still
+need YOUR public-API sign-off (below); #1181 does not (no new surface). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
 **Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both still MERGEABLE/CLEAN & full-green this cycle:**
 **(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
 **(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
-**Step 1:** team PRs #1170/#1171 re-confirmed public-API gates, auto-merge OFF → untouched; #1167(dependabot)/#1055(community) base=`main`,
-human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+2 live PR heads; #1178 branch
-deleted on merge). **Step 2:** on-merge handoff performed (#1159→`status:done`); status:done open = #1159(fresh)+#972(human-only, parked); in-progress
-#1172(fresh Dev)+#1169/#1060(PRs held)+#766(Ace) → none abandoned. **Step 3:** filed #1180 (Dev-only structural gap). **Step 3.5** NOT due (<7d). **Step 3.6**
-no change — no new evidence (two completed cycles both rules succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
+**Step 1:** team PRs #1170/#1171 re-confirmed public-API gates, auto-merge OFF → untouched; #1181 auto-merge ON by Dev (message-only fix, no public surface) →
+left to self-land, **Orc did NOT merge** (guardrail); #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY
+Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+3 live PR heads #1170/#1171/#1181). **Step 2:** no handoff owed (QA already closed #1159; #1181 not
+yet merged → #1172 stays `status:in-progress`); status:done open = #972 only (human-only, parked); in-progress #1172(PR #1181 pending)+#1169/#1060(PRs held)+#766
+(Ace) → none abandoned. **Step 3:** backlog sharp, structural net already filed (#1180) → no new gap (Rule 9). **Step 3.5** NOT due (<7d). **Step 3.6** no change —
+no new evidence (two completed cycles both rules succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
 #914). The decision table below is the durable digest. Prior header kept for continuity.)
 
-_Earlier: 2026-06-29 01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 13.** Since 01:22Z the loop
-self-serviced one v0.3.2 quality bug end-to-end with NO human input: **Dev merged PR #1176** (`54e4ba6`, *fixes #1173* — `find --limit` now rejects
-non-positive values with INVALID_INPUT instead of silently returning `count:0`), then **QA @01:40Z VERIFIED+CLOSED #1173** and lateral-audited the
-whole find numeric-param family (depth/limit/threshold) sound. Recognition moat **criterion #1 stays FULLY MET** (#1096 closed 01:20Z). Critical-path
-items unchanged — the two find-engine public-API sign-offs (#1170/#1171) + release (#914). Both re-confirmed MERGEABLE/CLEAN (no conflict from #1173).
-**Step 3.6** no change — no new evidence (two exemplary cycles; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
-#914).)
+_Earlier: 2026-06-29 03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 13.** Since 02:52Z: **Dev @02:57Z merged PR
+#1178** (`2ec4dbc`, *fixes #1159* — non-codepage window titles `?`-mangled by the narrow ANSI read path, now read via the wide `…W` Win32 API + UTF-8, lossless),
+and **QA @03:11Z** filed #1179 (`find --ai` error JSON drops 4 of 6 #884 keys — Dev-actionable). Orc performed the on-merge handoff (#1159→`status:done`) and filed
+one sharp **Dev-only** structural gap (#1180 — self-maintaining error-envelope contract test). Recognition moat **criterion #1 stays FULLY MET**. **Step 3.6** no
+change — no new evidence (over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914).)
 
 ## Open decisions
 | # | Decision | Why it's yours | Orc recommendation |
