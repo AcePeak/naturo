@@ -1,6 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~02:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; another recognition-fidelity bug
+> Last refreshed: 2026-06-29 ~02:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the recognition-fidelity bug Dev shipped
+> last cycle is now QA-VERIFIED+CLOSED end-to-end — #886 closed @02:45Z with a discriminating negative control; criterion #1 stays FULLY MET.**
+> Since 02:22Z: **QA @02:45Z VERIFIED+CLOSED #886** (`keyboardShortcut` UIA AcceleratorKey/AccessKey null) — a textbook exercise of the 01:22Z
+> stale-DLL trap: #886 is a `core/` native fix, so QA **deployed the canonical CI-built `naturo_core.dll` (129024 B) from the merged Build&Test run**
+> (artifact `naturo-core-dll`), rejecting the worktree's stale untracked binary (124928 B), then ran a **discriminating negative control** (same window
+> + `--backend uia`, swapped ONLY the DLL → pre-fix 43 nodes/0 populated; fix 43 nodes/15 populated — identical node count ⇒ effect is the fix not env)
+> + a **lateral check on the persisted uiMap** (the issue's original repro vector also honors the fix: 15 vs 0). Cited merged `111031a` (Rule 1), added
+> `verified`, closed #886, left human-only #972 parked. Read-only `see`, **zero keystrokes**. Meanwhile **Dev @02:37Z picked up #1159** (P2 from:qa —
+> non-codepage window titles [emoji/cross-script] corrupted to `?` via the ANSI A-API read path in native core; a recognition-fidelity data-loss
+> lateral to #1150) → `status:in-progress` set ~11min ago, no PR yet, **fresh not abandoned**. **Step 1:** team PRs #1170(`--ocr`)/#1171(`--selector`
+> default) re-confirmed **MERGEABLE/CLEAN**, public-API human gates, auto-merge OFF → **Orc did NOT merge / did NOT enable** (guardrail); #1167(dependabot)/
+> #1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); remote = main+develop+dependabot+2 live PR heads
+> (#1170/#1171) → Rule 14 clean (#886 branch deleted by Dev on merge last cycle). **Step 2:** no handoff owed (QA already closed #886). status:done open =
+> **#972** only (human-only, parked). status:in-progress = #1169/#1060 (Dev PRs held) + **#1159** (fresh Dev pick) + #766 (Ace umbrella) → none stale/abandoned.
+> **Step 3:** criterion #1 stays complete; #886 closes the UIA output-fidelity gap; Dev is on another recognition-fidelity data-loss bug (#1159) hardest-
+> first → backlog sharp, no new gap filed (Rule 9). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (one
+> completed cycle since 02:22Z = QA's #886 verify, which is the freshest rule [01:22Z stale-DLL trap, <1.5h old] SUCCEEDING on a *second, different* native
+> fix class [#886 UIA vs its originating #1096 JAB] — validation, not a gap; encoding a rule atop a rule that just worked is the over-fit Step 3.6 forbids;
+> no new tests this cycle [verify-only]; self-review at 6 principles < ~8 distillation threshold; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4
+> NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held human gates; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED
+> at 13. develop GREEN HEAD `2e5d85f` (orc [skip ci] atop `111031a` #1177 Build&Test+CodeQL SUCCESS @18:22Z, real CI). Evidence:
+> `.work/reviews/2026-06-29-0252-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~02:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; another recognition-fidelity bug
 > self-serviced end-to-end — Dev shipped + merged #886 (`keyboardShortcut` UIA null) since 01:52Z; criterion #1 stays FULLY MET.**
 > Since 01:52Z: **Dev merged PR #1177** (`fix/issue-886-uia-keyboard-shortcut`→develop, `111031a`, *fixes #886*) — the UIA C++ backend
 > (`core/src/element.cpp`) never queried `UIA_AcceleratorKey/AccessKeyPropertyId`, so `keyboardShortcut` was 100% null (a SOUL "Never Lie"/

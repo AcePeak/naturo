@@ -4,23 +4,23 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 02:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
-queue UNCHANGED at 13.** Since 01:52Z the loop self-serviced one recognition-fidelity bug end-to-end with NO human input: **Dev merged PR #1177**
-(`111031a`, *fixes #886* — `keyboardShortcut` was 100% null because the UIA backend never read `AcceleratorKey/AccessKey`; now populated across
-`see`/`find` + the MCP snapshot, a SOUL "Never Lie" output-contract gap closed), now `status:done` awaiting QA. **QA @02:15Z verified #972**
-(the P0 input-safety guard — function-level, zero live keystrokes; left for your sign-off, not closed) and caught + ruled out a harness-lie (MSYS
-`//` arg-mangling), filing nothing false. Recognition moat **criterion #1 stays FULLY MET** (#1096 closed 01:20Z). **Your critical-path items are
-unchanged — still exactly the two find-engine public-API sign-offs + release:**
+_Last refreshed: 2026-06-29 02:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; nothing new for you this cycle —
+queue UNCHANGED at 13.** Since 02:22Z the loop closed out the recognition-fidelity bug end-to-end with NO human input: **QA @02:45Z VERIFIED+CLOSED
+#886** (`keyboardShortcut` UIA AcceleratorKey/AccessKey — Dev shipped it last cycle as PR #1177; now live-confirmed) with a **discriminating negative
+control** (deployed the canonical CI-built DLL, swapped only the binary → pre-fix 0 populated / fix 15 populated at identical node count ⇒ effect is the
+fix not env) + a lateral check on the persisted uiMap. Meanwhile **Dev picked up #1159** (P2 — non-codepage window titles [emoji/cross-script] corrupted
+to `?` via the native-core ANSI read path; a recognition-fidelity data-loss bug), in flight, no PR yet. Recognition moat **criterion #1 stays FULLY MET**.
+**Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both still MERGEABLE/CLEAN & full-green this cycle:**
 **(1) #1060 / PR #1170 (`naturo find --ocr`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (new public surface). **Ratify + merge**, then QA verifies with `pip install naturo[ocr]`.
 **(2) #1169 / PR #1171 (`find --selector` honors `--backend`/`--depth`, default `uia`→`auto`)** — full CI green, MERGEABLE/CLEAN, auto-merge OFF (public-CLI default change). **Ratify + merge**, or revise the default. **The loop will NOT merge either (guardrail).**
-**Step 1:** #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean
-(#886 branch deleted; remote = main+develop+dependabot+2 live PR heads). **Step 2:** status:done open = #972 (human-only) + #886 (fresh, awaiting
-QA — not abandoned); #886 was set status:done by Dev on merge (no Orc handoff owed). **Step 3.5** NOT due (<7d). **Step 3.6** no change — no new
-evidence (two exemplary cycles, the existing rules succeeding; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call,
-#914). The decision table below is the durable digest; the long per-cycle header history was trimmed this cycle to keep this file lean (full
-history in `git log -p NEEDS-ACE.md`). Prior header kept for continuity.)
+**Step 1:** team PRs #1170/#1171 re-confirmed MERGEABLE/CLEAN (public-API gates, auto-merge OFF) → untouched; #1167(dependabot)/#1055(community) base=`main`,
+human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+2 live PR heads). **Step 2:**
+status:done open = #972 only (human-only, parked); QA already closed #886 → no handoff owed; in-progress #1169/#1060 (PRs held) + #1159 (fresh Dev) + #766
+(Ace) → none abandoned. **Step 3.5** NOT due (<7d). **Step 3.6** no change — no new evidence (one completed cycle = QA's #886 verify, the 01:22Z stale-DLL
+trap rule succeeding on a second native-fix class; over-fit forbidden). v0.3.2 ship-gate unchanged (FULLY MET — release is your call, #914). The decision
+table below is the durable digest. Prior header kept for continuity.)
 
 _Earlier: 2026-06-29 01:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 13.** Since 01:22Z the loop
 self-serviced one v0.3.2 quality bug end-to-end with NO human input: **Dev merged PR #1176** (`54e4ba6`, *fixes #1173* — `find --limit` now rejects
