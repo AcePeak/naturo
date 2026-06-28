@@ -124,6 +124,35 @@ class TestCreateSnapshot:
         assert data["element_count"] == 2  # root + child
         mock_manager.store_detection_result.assert_called_once()
 
+    def test_snapshot_carries_keyboard_shortcut_886(self, server, mock_backend, tmp_path):
+        """The MCP snapshot uiMap carries the UIA keyboard_shortcut (#886).
+
+        Mirrors the CLI snapshot path: a populated ``keyboard_shortcut`` on the
+        element tree must reach the stored ``UIElement`` so MCP agents see the
+        shortcut instead of a silent null.
+        """
+        png_file = tmp_path / "snap.png"
+        png_file.write_bytes(b"\x89PNGfake")
+
+        root = _make_element(id="e1", role="Button", name="Save")
+        root.properties = {"keyboard_shortcut": "Ctrl+S"}
+
+        mock_manager = MagicMock()
+        mock_manager.create_snapshot.return_value = "snap-886"
+        mock_snapshot = MagicMock()
+        mock_snapshot.screenshot_path = str(png_file)
+        mock_manager.get_snapshot.return_value = mock_snapshot
+        mock_backend.get_element_tree.return_value = root
+
+        mock_ui_element_cls = MagicMock()
+        with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager), \
+             patch("naturo.models.snapshot.UIElement", mock_ui_element_cls):
+            _call_tool(server, "create_snapshot", {"depth": 5})
+
+        # The UIElement built for the element must carry the shortcut.
+        kwargs = mock_ui_element_cls.call_args.kwargs
+        assert kwargs.get("keyboard_shortcut") == "Ctrl+S"
+
     def test_no_base64_when_screenshot_missing(self, server, mock_backend):
         mock_manager = MagicMock()
         mock_manager.create_snapshot.return_value = "snap-003"
