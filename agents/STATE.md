@@ -1,6 +1,27 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~03:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now in flight — Dev opened PR #1181
+> Last refreshed: 2026-06-29 ~0453Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now QA-VERIFIED+CLOSED
+> end-to-end, and Dev has picked up the next envelope-fidelity gap (#1179). No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 03:52Z: **(1) QA @04:08Z VERIFIED+CLOSED #1172** (saved-selector not-found leaked `KeyError`'s repr quotes into the envelope `message`) — a textbook
+> **behavior** verify (QA-Mariana): ran each consumer on the clean path (direct invocation, JSON-to-file, the saved-selector resolver) and confirmed the user
+> message no longer carries the repr quotes, cited the merged `e087c64` (Rule 1), zero keystrokes; the fix is message-only (no DLL) so the 01:22Z stale-DLL trap
+> was correctly N/A. This completes the 03:52Z on-merge handoff (Orc flip→status:done + [Orc] ask) end-to-end. **(2) Dev @04:12Z picked up #1179** (`find --ai`
+> error JSON drops 4 of 6 #884 envelope keys — hand-rolled `json.dumps` bypassing `json_error()`) → `status:in-progress`, **fresh (no PR yet), not abandoned**;
+> this is the QA-filed gap from the 03:22Z cycle now in Dev's hands (hardest-first on the output-contract fidelity class). **Step 1:** team PRs #1170(`--ocr`)/
+> #1171(`--selector` default) re-confirmed CLEAN/MERGEABLE, **autoMerge OFF**, public-API human gates → **Orc did NOT merge / did NOT enable** (guardrail);
+> #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched; nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (remote = main+
+> develop+dependabot+2 live PR heads #1170/#1171; #1181 branch deleted on merge last cycle — no orphans). **Step 2:** status:done open = **#972** only (human-only,
+> parked); **#1172 QA-verified+closed → no handoff owed**; status:in-progress = **#1179**(fresh Dev pick)+#1169/#1060(Dev PRs held)+#766(Ace umbrella) → none
+> stale/abandoned; closed nothing (Rule 1). **Step 3:** criterion #1 stays complete; #1179 in flight closes the 6th output-contract-fidelity gap of the run (after
+> #1173/#886/#1159/#1172) and the **structural net is already filed (#1180** — self-maintaining error-envelope contract test) → backlog sharp, no new gap (Rule 9).
+> **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (one completed work product = QA's #1172 behavior verify, the
+> existing rules SUCCEEDING; stale-DLL trap correctly N/A on a no-DLL fix; Dev's #1179 still in-flight, no product to audit; verify-only cycle → no new tests to
+> sample; self-review 5–6 principles < ~8 distillation threshold; over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met
+> (criterion #1 ✅; #2 #1170/#1171 PR-held human gates + #1060/#1169 + #1179 in-flight; #3 #766 in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace
+> UNCHANGED at 13. develop GREEN HEAD real-CI `e087c64` (#1181 Build&Test+CodeQL SUCCESS; orc `c7a0784`/`1d7c8e7` [skip ci] on top). Evidence:
+> `.work/reviews/2026-06-29-0453-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~03:52Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1172 fix is now in flight — Dev opened PR #1181
 > (auto-merge ON, lands itself when green); QA closed #1159 end-to-end. needs:ace UNCHANGED at 13.**
 > Since 03:22Z: **(1) QA @03:42Z VERIFIED+CLOSED #1159** (non-codepage window-title corruption) — an exemplary exercise of the 01:22Z stale-DLL trap: deployed the
 > canonical CI-built DLL (`f2979d9`, 130048 B) from the merged #1178 run, kept the stale pre-#1159 binary as a **discriminating negative control** (pre-fix `✳→?`/
