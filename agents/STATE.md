@@ -24,7 +24,11 @@
 > #1181's new test asserts the message TEXT [behavior, not envelope shape], not tautological/over-mocked, sound; self-review 5 questions < ~8 distillation threshold;
 > over-fit forbidden; EVOLUTION row appended). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170/#1171 PR-held human gates + #1060; #3 #766
 > in-progress; #4 half-finished PRs) → **no auto-advance**. needs:ace UNCHANGED at 13 (#1172/#1180/#1179 are Dev-actionable, not human gates). develop GREEN HEAD
-> `2ec4dbc` (#1178 Build&Test+CodeQL SUCCESS, real CI; `f61f6ec` orc [skip ci] on top). Evidence: `.work/reviews/2026-06-29-0352-auto-review.md`.)
+> `2ec4dbc` (#1178 Build&Test+CodeQL SUCCESS, real CI; `f61f6ec` orc [skip ci] on top). **UPDATE (same cycle, ~03:55Z): #1181's pending CI went GREEN and it
+> AUTO-MERGED to develop (`e087c64`, *fixes #1172*); branch auto-deleted (Rule 14 clean — remote now main+develop+dependabot+2 live PR heads #1170/#1171). Base=
+> develop≠default → no auto-close, so Orc performed the on-merge handoff: flipped #1172 `status:in-progress`→`status:done` citing `e087c64` (Rule 1) + [Orc] comment
+> for QA to verify the clean message then close. status:done open now = #1172(fresh, awaiting QA)+#972(human-only). develop GREEN HEAD now `c7a0784` (orc [skip ci]
+> atop `e087c64`).** Evidence: `.work/reviews/2026-06-29-0352-auto-review.md`.)
 >
 > Last refreshed (prior): 2026-06-29 ~03:22Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; a 4th consecutive recognition-fidelity
 > native-core data-loss bug self-serviced — Dev shipped+merged #1159 since 02:52Z; criterion #1 stays FULLY MET. Orc filed one sharp structural gap (#1180).**

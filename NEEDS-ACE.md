@@ -9,7 +9,8 @@ queue UNCHANGED at 13.** Since 03:22Z the loop self-serviced two items with NO h
 corruption — discriminating negative control via the canonical CI-built DLL, lossless emoji/cross-script round-trip), and **Dev @03:50Z opened PR #1181**
 (`fixes #1172` — saved-selector not-found leaked `KeyError`'s repr quotes into the envelope `message`; fix is a `KeyError` subclass with a clean `__str__`,
 **message-only, no API change**, so Dev correctly enabled auto-merge — it lands itself when CI goes green). The two remaining find-engine PRs (#1170/#1171) still
-need YOUR public-API sign-off (below); #1181 does not (no new surface). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
+need YOUR public-API sign-off (below); #1181 does not (no new surface) — and indeed it **auto-merged to develop mid-cycle** (`e087c64`, *fixes #1172*; Orc did the
+on-merge handoff → #1172 now `status:done`, awaiting QA). Recognition moat **criterion #1 stays FULLY MET**. None of this changes your queue.
 **Your critical-path items are unchanged — still exactly the two find-engine public-API sign-offs + release:**
 **#1060(PR#1170)**/**#1169(PR#1171)**/#1168/#1136/#1105/#1057/#975/#972/#969/#935/#915/#914/#897.
 **TOP-2 ACTIONABLE — both close criterion #2 (find engine), both need ONE sign-off, both still MERGEABLE/CLEAN & full-green this cycle:**
