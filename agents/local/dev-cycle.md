@@ -124,6 +124,16 @@ git checkout -b fix/issue-N-short-desc origin/develop
    *accepted* is not enough if the *semantics* diverge. Pin the parity with a cross-command test. (Evidence:
    the #871 harmonization aligned the accepted flags but left `--app` = process-name in `see`/`capture`/`list
    windows` yet title-only in `app focus/move/…` → QA filed #1058 then #1065 in back-to-back cycles.)
+   **Output-schema parity (parallel result builders):** when the same logical SUCCESS payload is produced by
+   more than one builder — different *commands* (`see`/`find`/MCP) or different *strategies* within one command
+   (`find`'s UIA / `--image` / `--ocr`) — every builder must emit the **same element/envelope schema**: the same
+   field set AND the same field *semantics* (a field that is computed/populated by one builder must not be absent
+   or `null` from another that holds the same information). This is the success-side mirror of error-code
+   registration — the envelope *shape* can look fine while a consumer is forced to branch on which builder
+   answered. Pin it with a cross-builder parity test asserting the key sets and shared-field semantics match.
+   (Evidence: #886 dropped `keyboard_shortcut` across see/find/MCP; #1184 `find` omitted the reusable `selector`
+   field `see` emits; #1195 `find`'s UIA path omits `center_x`/`center_y` and reports `coordinate_frame:null`
+   while `--image` populates both — three success-payload drifts across parallel builders, >1 day apart.)
    **Error attribution:** when a code path has more than one distinct failure source (e.g. load a *template
    file* AND *capture the screen*), give each its **own** `try`/`except` so the error CODE + message names the
    real culprit — never let one operation's failure inherit a sibling's code via a shared `try` or a broad
