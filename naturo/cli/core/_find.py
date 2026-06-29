@@ -357,6 +357,36 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         mgr.store_detection_result(snapshot_id, ui_map)
         mgr.store_ref_map(snapshot_id, ref_map)
 
+        # (#1184) Build the reusable unified ``app://…`` selector for each
+        # result so ``find`` output round-trips into ``selector save`` /
+        # ``find <selector>`` / ``click --selector`` without falling back to
+        # ``see``.  Uses the SAME SelectorBuilder + element-dict shape +
+        # app-default as ``see`` (_see.py), and the ancestor chain threaded
+        # through SearchResult, so ``find`` and ``see`` emit an identical
+        # selector for the same node.
+        import re as _re_mod
+
+        from naturo.selector import SelectorBuilder
+
+        _sel_builder = SelectorBuilder()
+        _selector_app = app or "*"
+
+        def _el_to_selector_dict(el: Any) -> dict[str, str]:
+            """Convert an ElementInfo to a dict for SelectorBuilder (#1184)."""
+            raw_id = str(el.id) if el.id else ""
+            aid = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+            return {
+                "role": el.role or "*",
+                "name": el.name or "",
+                "automationid": aid,
+            }
+
+        def _build_result_selector(r: Any) -> str:
+            """Build the unified selector for a SearchResult (#1184)."""
+            ancestors_dicts = [_el_to_selector_dict(a) for a in r.ancestors]
+            return _sel_builder.build_uri(
+                _el_to_selector_dict(r.element), ancestors_dicts, app=_selector_app)
+
         if json_output:
             data = [
                 {
@@ -369,6 +399,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                     "y": r.element.y,
                     "width": r.element.width,
                     "height": r.element.height,
+                    "selector": _build_result_selector(r),
                     "breadcrumb": r.breadcrumb_str,
                     "keyboard_shortcut": r.element.keyboard_shortcut,
                 }
@@ -393,6 +424,9 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 shortcut = f" [{el.keyboard_shortcut}]" if el.keyboard_shortcut else ""
                 click.echo(f"  {ref}. [{el.role}]{name_str} {pos_str}{shortcut}")
                 click.echo(f"     {r.breadcrumb_str}")
+                # (#1184) Show the reusable unified selector so the human
+                # output is also discover-then-save friendly, not just JSON.
+                click.echo(f"     selector: {_build_result_selector(r)}")
 
             click.echo(f"\n{len(results)} element(s) found.")
             click.echo(f"Snapshot: {snapshot_id}")
