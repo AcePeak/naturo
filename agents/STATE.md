@@ -1,6 +1,28 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0752Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1186 handoff COMPLETED end-to-end — QA
+> Last refreshed: 2026-06-29 ~0852Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1180 STRUCTURAL NET LANDED — Dev merged PR #1187 (`3ffd8f6`,
+> *fixes #1180*), the self-maintaining error-envelope SOURCE GUARD that kills the #884→#1172→#1179 regression class. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0752Z: **one completed Dev cycle.** **Dev @00:33Z merged PR #1187** (`3ffd8f6`, *fixes #1180*) — an AST source-guard test (`tests/test_error_envelope_source_guard_1180.py`)
+> that fails CI if any `naturo/cli/**` module outside `error_helpers.py` hand-rolls a `{"success": False, ...}` error literal, **plus the 6 CLI fixes it surfaced** (ai/config/snapshot/
+> clipboard/diagnostics/lifecycle now route through the canonical `json_error`/`emit_error`). A new command physically cannot ship a truncated `-j` error envelope and pass CI. Full
+> required CI GREEN (Build & Test + CodeQL on `3ffd8f6`); public-API guardrail correctly did NOT fire (test + internal routing, no new surface); **Dev did the complete on-merge handoff
+> itself** (PR #1187 MERGED comment, set #1180 `status:done` @00:34Z, asked QA to verify) → **no Orc handoff owed.** **Step 1:** **#1170 (`--ocr`) STILL CONFLICTING/DIRTY** (now collides
+> with #1186 AND #1187's error-helper touches) — my 23:24Z [Orc] rebase-flag is still #1170's latest comment + actionable → did **NOT re-comment** (churn), did **NOT merge/enable**
+> (public-API gate, guardrail). #1171 (`--selector` default) re-confirmed **MERGEABLE/CLEAN**, auto-merge OFF, public-API gate → untouched. #1167(dependabot)/#1055(community) base=`main`
+> human-only (Rule 2) → untouched. Nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (`fix/issue-1180-error-envelope-guard` auto-deleted on merge; remote = main+develop+dependabot+
+> 2 live PR heads #1170/#1171). **Step 2:** no handoff owed (Dev set #1180 status:done); status:done open = **#1180**(fresh, awaiting QA)+**#972**(human-only, parked); status:in-progress =
+> **#1175**(fresh Dev pick — the two host-locale/clock-dependent bad tests self-filed off #1174, updated 00:41Z)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned; closed
+> nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; #1180 landing closes the structural-net gap **Orc itself filed** (the #884→#1172→#1179 error-envelope regression class now has
+> a source-level guard) → backlog converging, no new gap (Rule 9) — the MCP-tool error surface (#882 `isError`) is explicitly out of #1180's scope and shows no recent drift, so a symmetric
+> guard now would be speculative churn. **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence.** The one completed cycle (#1180/#1187) is the existing
+> rules SUCCEEDING with an **exemplary** test: `test_no_handrolled_error_envelopes_in_cli` AST-scans real source (BEHAVIOR not shape) paired with `test_guard_detects_a_synthetic_handrolled_envelope`
+> — a **positive control** that defeats the #1-risk vacuous-pass failure mode (a weakened detector would be caught) — plus a negative control (`success:True` must not trip). Test-quality
+> audit SOUND; encoding a rule atop a successful outcome = over-fit (forbidden); self-review at 6 principles < ~8 distillation threshold; EVOLUTION row appended. **Step 3.7:** done-criteria
+> 1–4 NOT all met (criterion #1 ✅; #2 #1170 CONFLICTING+held + #1171 held public-API gates; #3 #766 in-progress; #4 half-finished PRs — though #1180's net materially de-risks criterion #4's
+> regression surface) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `3ffd8f6` (#1187 Build&Test+CodeQL SUCCESS). Evidence:
+> `.work/reviews/2026-06-29-0852-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0752Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1186 handoff COMPLETED end-to-end — QA
 > verified+closed #1182 + #1183; clean no-Orc-mutation cycle. needs:ace UNCHANGED at 13.**
 > Since 0722Z: **one completed cycle.** **QA @23:40Z VERIFIED+CLOSED #1182 + #1183** (PR #1186 `1c522f8`) — both per-code **BEHAVIOR**-asserted PASS:
 > `find/click/type --selector` not-found now emits `category=session` + actionable `suggested_action` (parity with `SELECTOR_NOT_FOUND`); `INVALID_SELECTOR`→
