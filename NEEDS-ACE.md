@@ -4,18 +4,17 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 1052Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue 13→8 after your check-in.**
-Since 1022Z: **your check-in landed + one QA cycle.** **You @02:39Z merged PR #1171** (`3a5df92`, "honor `--backend`/`--depth` in `find --selector`, refs #1169")
-— that **signs off the `find --selector` public-CLI-default gate** (`uia`→`auto`); develop CI GREEN; branch auto-deleted. It was "refs" (partial), so **#1169 stays
-`status:in-progress`** for the remaining facet-2 work (role-only match + desktop-wide "any app" search) — normal Dev work now, off your queue. You also **closed #972**
-(input-content safety guard) + **#975** (QA re-enable ratified), and **removed `needs:ace` from #915** (QA-403 recovery, left open) and **#1060** (`--ocr`; PR #1170 still
-**CONFLICTING/unmerged** — you appear to be handling `--ocr` directly, so the loop will NOT re-queue it or touch the PR beyond the standing rebase flag). **Queue is now 8.**
-**QA @02:45Z filed NEW P1 #1190** — the reusable `app://*`-wildcard-host selector that `see`/`find` emit does **NOT round-trip standalone** (paste into
-`click`/`type`/`find --selector` with no `--hwnd`/`--app` → `SELECTOR_NOT_FOUND`), breaking the advertised see→copy→click workflow. **Dev-actionable, not a human gate**
-— flagged below only because it bears on the v0.3.2 ship decision (#914). Recognition moat **criterion #1 stays FULLY MET**.
-**Step 1:** #1170(`--ocr`, CONFLICTING, you de-queued) untouched; #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing merged/closed BY
-Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+`fix/issue-1060-find-ocr`). **Step 3.6** ONE change shipped (qa-cycle.md verify-completeness principle from the
-#1184-verified-then-#1190-broke round-trip). The decision table below is the durable digest.)
+_Last refreshed: 2026-06-29 1152Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 8.**
+Since 1052Z: **one Dev fix landed + one QA cycle — both Dev-actionable, nothing new for you.** **Dev merged PR #1191** (`2cb623c`, *fixes #1058*) — the
+`list windows --app` `--help`/docstring now honestly state `--app` matches process name **OR** window title (the intentional family-wide rule shared with
+`see`/`capture`/`click`; applied option (A) per your triage); Orc flipped #1058 → `status:done` for QA (no human gate — your earlier triage already cleared it as
+non-human-only). **QA filed P2 #1193** — `find ""`/`find -q ""` (empty/whitespace query) silently matches **all** elements as `success:true`, while `--selector ""`/
+`--image ""`/missing-arg all reject empty → `INVALID_INPUT`; a footgun for `find "$VAR"` with an empty var. **Dev-actionable, not a human gate.** No new human-only
+decision surfaced this cycle. Recognition moat **criterion #1 stays FULLY MET**; the carried quality flag (**P1 #1190**, reusable selector standalone round-trip) is
+unchanged and still noted under #914 below.
+**Step 1:** #1170(`--ocr`, CONFLICTING, you de-queued/own) untouched; #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing
+merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+`fix/issue-1060-find-ocr`; #1058 branch auto-deleted). **Step 3.6** no change — both
+signals are the existing rules succeeding (#1191 shipped an exemplary both-directions help-text test; QA's #1193 found via anti-false discipline). The decision table below is the durable digest.)
 
 ## Open decisions (8)
 | # | Decision | Why it's yours | Orc recommendation |
@@ -46,7 +45,7 @@ Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+`fix/issue-1060-fi
 - **⚠️ Fresh quality flag (not a formal gate item):** **P1 #1190** — reusable `app://*` selector doesn't round-trip standalone. Dev-actionable; consider landing before cutting (see #914 row).
 
 ## Blocks
-- **`develop` CI: not red** — HEAD `3a5df92` (#1171, *honor `--backend`/`--depth` in `find --selector`*) Build & Test + CodeQL **SUCCESS** → no STOP.
+- **`develop` CI: not red** — HEAD `2cb623c` (#1191, *correct `list windows --app` help, fixes #1058*) Build & Test + CodeQL **SUCCESS** → no STOP.
 - **None blocking the formal ship-gate** — v0.3.2 awaits only Ace's release sign-off (#914); #1190 is a quality judgment call, not a gate requirement.
 - _Related (not a human decision):_ [#917](https://github.com/AcePeak/naturo/issues/917) (P1, `silent-failure`) — `runner.ps1` still has no failure-streak watchdog. Code-only for Dev.
 
