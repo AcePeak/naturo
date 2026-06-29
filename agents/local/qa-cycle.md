@@ -87,7 +87,15 @@ testing** and file any NEW bug (`--label "bug,from:qa,P?"`) with steps / actual 
    worktree's untracked binary or Dev's local build) before trusting a recognition result. Trust OS
    ground-truth over your harness's rendering. If the signal vanishes on the clean path, it was the harness —
    don't file.
-5. Decide:
+5. **Verify the advertised workflow itself, not a privileged proxy for it.** When a fix's value is that an
+   output is *reusable* — a selector / path / id the docs say to copy-paste, or a round-trip — exercise it the
+   way a user actually reuses it: paste the **exact emitted string** into a fresh invocation with **no extra
+   scoping flags or ambient context**, not via a helper path that quietly supplies scope. A round-trip that only
+   passes because the harness happened to scope it is a **false PASS**. Evidence: QA verified+closed #1184's
+   selector round-trip, then one cycle later #1190 (P1) showed the same `app://*`-wildcard-host selector fails
+   standalone (no `--hwnd`/`--app`), breaking the headline see→copy→click workflow. (Mirror of #4: #4 stops false
+   FAILs from a lying harness; this stops false PASSes from a privileged verification path.)
+6. Decide:
    - **PASS** →
      ```bash
      gh issue edit N --repo AcePeak/naturo --add-label "verified"
