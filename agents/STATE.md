@@ -1,6 +1,29 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0852Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1180 STRUCTURAL NET LANDED — Dev merged PR #1187 (`3ffd8f6`,
+> Last refreshed: 2026-06-29 ~0927Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean convergence heartbeat — QA verified+closed #1180 (the error-envelope
+> source guard) AND Dev opened PR #1188 for #1184, both since 0852. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0852Z: **two work signals, both rules SUCCEEDING.** **(1) QA @01:11Z VERIFIED+CLOSED #1180** (`verified`, against `3ffd8f6`) — the self-maintaining error-envelope **source
+> guard** Orc itself filed (03:22Z) to kill the #884→#1172→#1179 truncated-`-j`-envelope regression class is now landed AND QA-confirmed end-to-end; the error-side output-contract
+> surface is structurally guarded. **(2) Dev @01:24Z opened PR #1188** (`fix/issue-1184-find-selector-field`→develop, *fixes #1184*) — `find` now emits the reusable unified `app://`
+> `selector` field that `see` already emits (restores the discover-then-`selector save` workflow). **Auto-merge ON (squash)** — correct: additive output-contract parity field (same
+> class as #886/#1172/#1179), NOT new public surface, so the public-API guardrail correctly did NOT fire → self-lands when CI is green; currently BLOCKED only on in-flight CI (Lint/
+> Version/Author green; Ubuntu/macOS/Win tests + C++ build + CodeQL pending). **Orc did NOT merge** (auto-merge is Dev's; guardrail). **Step 1:** **#1188** team PR auto-merge ON,
+> MERGEABLE → self-lands, untouched. **#1170 (`--ocr`) STILL CONFLICTING/DIRTY** (collides with #1186+#1187 error-helper touches); my 23:24Z [Orc] rebase-flag is still its latest
+> comment + actionable → did **NOT re-comment** (churn), did **NOT merge/enable** (public-API gate). #1171 (`--selector` default) CLEAN/MERGEABLE, auto-merge OFF, public-API gate →
+> untouched. #1167(dependabot)/#1055(community) base=`main` human-only (Rule 2) → untouched. Nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (remote = main+develop+dependabot
+> +3 live PR heads #1170/#1171/#1188; no orphans). **Step 2:** no handoff owed (#1180 already QA-verified+closed); status:done open = **#972** only (human-only, parked); status:in-progress
+> = **#1184**(PR #1188 in flight)+**#1175**(host-locale/clock bad-test fix, fresh 00:41Z)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned; closed nothing (Rule 1).
+> **Step 3:** criterion #1 stays FULLY MET; #1180 net landed+verified, #1184 success-side parity fix in flight → backlog converging, **no new gap (Rule 9)**. Logged a **watch-item**:
+> success-side element-payload parity (#886 see/find/MCP all dropped `keyboardShortcut`; #1184 find omits `selector`) hints at a "parallel payload builders drift" theme = the success-side
+> mirror of #1180's net — **holding** until #1188 lands + a clear 3rd recurrence (filing now = speculative churn; prior cycle already deliberated this). **Step 3.5:** NOT due (<7d;
+> tracker current to 06-28). **Step 3.6: no change — no new evidence.** Both signals are the existing rules SUCCEEDING; **test-quality audit** sampled #1188's new
+> `test_find_selector_field_1184.py` — **SOUND** (mocks at the `_get_backend` boundary not the selector-builder under test; asserts the actual `app://` selector + find↔see parity =
+> BEHAVIOR not shape; lateral `--all`/`--role`/`--actionable` + CJK fixture names). Encoding a rule atop successful outcomes = over-fit (forbidden); self-review 6 principles < ~8
+> distillation threshold; EVOLUTION row appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170 CONFLICTING+held + #1171 held public-API gates; #3 #766
+> in-progress; #4 half-finished PRs #1170/#1171/#1188) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `3ffd8f6` (#1187 Build&Test+CodeQL SUCCESS; orc
+> `bd6a1c9` `[skip ci]` on top). Evidence: `.work/reviews/2026-06-29-0927-auto-review.md`.)
+>
+> Last refreshed (prior): 2026-06-29 ~0852Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1180 STRUCTURAL NET LANDED — Dev merged PR #1187 (`3ffd8f6`,
 > *fixes #1180*), the self-maintaining error-envelope SOURCE GUARD that kills the #884→#1172→#1179 regression class. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
 > Since 0752Z: **one completed Dev cycle.** **Dev @00:33Z merged PR #1187** (`3ffd8f6`, *fixes #1180*) — an AST source-guard test (`tests/test_error_envelope_source_guard_1180.py`)
 > that fails CI if any `naturo/cli/**` module outside `error_helpers.py` hand-rolls a `{"success": False, ...}` error literal, **plus the 6 CLI fixes it surfaced** (ai/config/snapshot/
