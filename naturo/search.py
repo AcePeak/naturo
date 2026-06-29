@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from naturo.bridge import ElementInfo
@@ -22,11 +22,16 @@ class SearchResult:
         element: The matched ElementInfo.
         breadcrumb: List of (role, name) tuples from root to this element.
         breadcrumb_str: Human-readable breadcrumb string.
+        ancestors: List of ancestor ElementInfo objects from root to the
+            matched element's parent (root-first, excluding the element
+            itself). Threaded so callers can rebuild the unified ``app://``
+            selector with the same ancestor context ``see`` uses (#1184).
     """
 
     element: ElementInfo
     breadcrumb: List[tuple]
     breadcrumb_str: str = ""
+    ancestors: List[ElementInfo] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.breadcrumb_str and self.breadcrumb:
@@ -72,7 +77,7 @@ def search_elements(
         parsed_role = role_filter
 
     results: List[SearchResult] = []
-    _search_recursive(root, parsed_role, parsed_name, actionable_only, [], results, max_results)
+    _search_recursive(root, parsed_role, parsed_name, actionable_only, [], [], results, max_results)
     return results
 
 
@@ -162,10 +167,16 @@ def _search_recursive(
     name_filter: Optional[str],
     actionable_only: bool,
     path: List[tuple],
+    ancestor_path: List[ElementInfo],
     results: List[SearchResult],
     max_results: int,
 ) -> None:
-    """Recursively search the element tree."""
+    """Recursively search the element tree.
+
+    ``ancestor_path`` is the chain of ElementInfo objects from the root down
+    to (but excluding) ``el``; it is recorded on each match so callers can
+    rebuild the unified selector with the same ancestor context (#1184).
+    """
     if len(results) >= max_results:
         return
 
@@ -193,7 +204,10 @@ def _search_recursive(
     if match_any and actionable_match:
         # For "match all" queries (no filters), skip if both name and role empty
         if role_filter or name_filter or (el.name or el.role):
-            results.append(SearchResult(element=el, breadcrumb=current_path))
+            results.append(SearchResult(
+                element=el, breadcrumb=current_path, ancestors=list(ancestor_path)))
 
+    child_ancestor_path = ancestor_path + [el]
     for child in el.children:
-        _search_recursive(child, role_filter, name_filter, actionable_only, current_path, results, max_results)
+        _search_recursive(child, role_filter, name_filter, actionable_only,
+                          current_path, child_ancestor_path, results, max_results)
