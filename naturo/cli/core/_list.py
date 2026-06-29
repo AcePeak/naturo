@@ -27,7 +27,7 @@ def apps(ctx, show_all, json_output) -> None:
 
 
 @list_cmd.command()
-@click.option("--app", help="Target application (name or partial match)")
+@click.option("--app", help="Target application: process name or window title (partial match)")
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--window", "window_title", default=None,
               help="Window title pattern (substring match)")
@@ -44,9 +44,11 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
 
     Window-targeting filters (``--window``/``--hwnd``/``--app-id``) mirror the
     flag family used by ``see``/``capture``/``click`` so a window can be
-    narrowed the same way everywhere. ``--app`` matches the application name or
-    process name; ``--window`` matches the window title only. Filters combine
-    with AND.
+    narrowed the same way everywhere. ``--app`` is broad targeting: it matches
+    a window whose process name **or** window title contains the term — the
+    same rule ``see``/``capture``/``click`` use, so a window in a multi-window
+    process can be picked by title. ``--window`` narrows to the window title
+    only. Filters combine with AND.
     """
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Window listing")
