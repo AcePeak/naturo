@@ -18,7 +18,7 @@ import sys
 
 import click
 
-from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.error_helpers import emit_error, emit_exception_error, json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 logger = logging.getLogger(__name__)
@@ -31,11 +31,7 @@ def _get_backend(json_output: bool = False):
         return get_backend()
     except Exception as exc:
         if json_output:
-            click.echo(json_dumps({
-                "success": False,
-                "error": "BACKEND_ERROR",
-                "message": str(exc),
-            }))
+            click.echo(json_error("BACKEND_ERROR", str(exc)))
             sys.exit(1)
         raise click.UsageError(str(exc))
 

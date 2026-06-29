@@ -334,9 +334,24 @@ class TestClipboardBackendError:
     def test_get_backend_error_json(self, runner):
         with patch("naturo.backends.base.get_backend", side_effect=RuntimeError("no backend")):
             result = runner.invoke(clipboard, ["get", "--json"])
+        assert result.exit_code != 0
         data = json.loads(result.output)
         assert data["success"] is False
-        assert data["error"] == "BACKEND_ERROR"
+        # Canonical six-key error envelope (#884/#1180): ``error`` is an object,
+        # not a bare string. The prior flat shape (``error == "BACKEND_ERROR"``)
+        # silently dropped category/context/suggested_action/recoverable; the
+        # backend-error path now routes through ``json_error`` like every other
+        # ``-j`` error path.
+        assert data["error"]["code"] == "BACKEND_ERROR"
+        assert set(data["error"]) == {
+            "code",
+            "message",
+            "category",
+            "context",
+            "suggested_action",
+            "recoverable",
+        }
+        assert isinstance(data["error"]["recoverable"], bool)
 
 
 # ---------------------------------------------------------------------------
