@@ -490,6 +490,80 @@ def _elementinfo_to_dict(el) -> dict:
     return result
 
 
+def _resolve_wildcard_host_forest(
+    backend,
+    ast,
+    depth: int,
+    method: Optional[str] = None,
+) -> Optional[list[dict]]:
+    """Build a window-tree forest for an emitted wildcard-host selector (#1190).
+
+    A selector that ``see``/``find`` emit leads with a concrete
+    ``Window[@name="…"]`` segment under the portable wildcard host ``app://*``
+    (e.g. ``app://*/Window[@name="无标题 - Notepad"]/Document[@name="…"]``). For
+    that emitted selector to round-trip without an extra ``--hwnd``/``--app``
+    flag, the named window must be located across ALL top-level windows — not
+    just the foreground window ``get_element_tree`` returns when no target is
+    given (which is usually NOT the window the selector names, hence the
+    ``SELECTOR_NOT_FOUND`` reported in #1190).
+
+    The leading ``Window`` title narrows the search via ``_resolve_hwnds`` so
+    only the matching window's tree is fetched. The function deliberately acts
+    ONLY on this concrete-leading-window shape: it returns ``None`` for any other
+    selector (a bare ``//Role`` short-form, a wildcard/empty leading title, a
+    non-wildcard host), leaving the caller's normal single-window resolution path
+    — and its existing behavior — entirely untouched.
+
+    Args:
+        backend: Platform backend exposing ``_resolve_hwnds`` and
+            ``get_element_tree``.
+        ast: Parsed selector AST.
+        depth: Maximum tree depth to fetch per window.
+        method: Accessibility backend to forward to ``get_element_tree``
+            (``None`` lets the backend pick its default).
+
+    Returns:
+        A list of window element dicts (a forest the resolver can walk), or
+        ``None`` when this narrow shape does not apply or no window matched.
+    """
+    if ast.app != "*" or not ast.nodes:
+        return None
+    leading = ast.nodes[0]
+    if leading.role.lower() != "window":
+        return None
+    title = leading.name
+    if not title or "*" in title or "?" in title:
+        return None
+    if not (hasattr(backend, "_resolve_hwnds")
+            and hasattr(backend, "get_element_tree")):
+        return None
+
+    try:
+        hwnds = backend._resolve_hwnds(window_title=title)
+    except Exception:
+        # A window-enumeration fault must not escape uncaught — fall through to
+        # the caller's normal single-window path, which attributes its own tree
+        # faults to TREE_ERROR (error-attribution discipline, #1047/#1067).
+        return None
+    if not hwnds:
+        return None
+
+    tree_kwargs: dict = {"depth": depth}
+    if method is not None:
+        tree_kwargs["backend"] = method
+
+    forest: list[dict] = []
+    for hwnd in hwnds:
+        try:
+            subtree = backend.get_element_tree(hwnd=hwnd, **tree_kwargs)
+        except Exception:
+            # A single unreadable window must not abort the whole search.
+            continue
+        if subtree is not None:
+            forest.append(_elementinfo_to_dict(subtree))
+    return forest or None
+
+
 def _resolve_selector_target(
     selector_str: str,
     backend,
@@ -556,30 +630,43 @@ def _resolve_selector_target(
         )
         return None
 
-    try:
-        tree = backend.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-            depth=20,
-        )
-    except Exception as exc:
-        _json_err(
-            f"Failed to get UI tree for selector resolution: {exc}",
-            json_output,
-            code="TREE_ERROR",
-        )
-        return None
+    # An emitted wildcard-host selector (app://*/Window[@name="…"]/…) with no
+    # explicit window target resolves across all top-level windows so it
+    # round-trips straight back from see/find (#1190); the helper returns None
+    # for every other selector shape, leaving the normal single-window path
+    # (and its behavior) unchanged.
+    forest = None
+    if (ast.app == "*" and app is None and window_title is None
+            and hwnd is None and pid is None):
+        forest = _resolve_wildcard_host_forest(backend, ast, depth=20)
 
-    if tree is None:
-        _json_err(
-            "No window found for selector resolution. "
-            "Check that the target application is running and visible.",
-            json_output,
-            code="WINDOW_NOT_FOUND",
-        )
-        return None
+    if forest is not None:
+        tree_dict = forest
+    else:
+        try:
+            tree = backend.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=20,
+            )
+        except Exception as exc:
+            _json_err(
+                f"Failed to get UI tree for selector resolution: {exc}",
+                json_output,
+                code="TREE_ERROR",
+            )
+            return None
 
-    # Convert ElementInfo tree to dict tree for the resolver
-    tree_dict = [_elementinfo_to_dict(tree)]
+        if tree is None:
+            _json_err(
+                "No window found for selector resolution. "
+                "Check that the target application is running and visible.",
+                json_output,
+                code="WINDOW_NOT_FOUND",
+            )
+            return None
+
+        # Convert ElementInfo tree to dict tree for the resolver
+        tree_dict = [_elementinfo_to_dict(tree)]
 
     # Resolve
     resolver = SelectorResolver()
