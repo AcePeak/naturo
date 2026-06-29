@@ -1,7 +1,24 @@
 # Naturo Project Status
 > Maintained by Orc-Mycelium. Agents: read on every startup.
-> Last refreshed: 2026-06-29 ~0927Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean convergence heartbeat — QA verified+closed #1180 (the error-envelope
-> source guard) AND Dev opened PR #1188 for #1184, both since 0852. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Last refreshed: 2026-06-29 ~0952Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; clean convergence heartbeat — the #1188/#1184 handoff COMPLETED end-to-end:
+> QA verified+closed #1184 (find↔see selector parity), and Dev picked up #1058. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
+> Since 0927Z: **one completed cycle + one Dev pick.** **(1) QA @~01:4XZ VERIFIED+CLOSED #1184** (PR #1188 `6e91ddd`) — `find` now emits the reusable unified `app://` `selector` field
+> `see` emits; textbook **behavior** verify on live Win11 UIA: `find` Document selector **BYTE-IDENTICAL** to `see`'s for the same node (`app://*/Window[@name="无标题 - Notepad"]/Document
+> [@name="文本编辑器"]`), round-trip `find <selector>` resolves the same node, `--all` 44 elems 0 missing, human output prints the `selector:` line, full discover→`selector save`→reuse chain
+> works with the probe selector cleaned up (no residue), `test_find_selector_field_1184.py` 7/7; no-DLL fix → stale-DLL trap N/A; removed `status:done`+added `verified`+CLOSED. This
+> completes the 0927Z on-merge handoff end-to-end. **(2) Dev cycle (ended 09:50 local) picked up #1058** (`list windows --app` help says "application name or process name" but it also
+> substring-matches the window title, overlapping `--window`) — `status:in-progress` @01:41Z, **no branch/PR yet** (fresh, <24h → not abandoned); honest-output/help-accuracy family.
+> **Step 1:** **#1170 (`--ocr`) re-confirmed CONFLICTING/DIRTY**, auto-merge OFF; my 23:24Z [Orc] rebase-flag is still its latest actionable comment → did **NOT** re-comment (churn), did
+> **NOT** merge/enable (public-API gate, guardrail). **#1171 (`--selector` default)** CLEAN, auto-merge OFF, public-CLI-default gate → untouched. #1167(dependabot)/#1055(community) base=
+> `main` human-only (Rule 2) → untouched. Nothing merged/closed BY Orc (Rule 1); **Rule 14 clean** (remote = main+develop+dependabot+2 live PR heads #1170/#1171; no orphans). **Step 2:**
+> no handoff owed (#1184 QA-verified+closed); status:done open = **#972** only (human-only, parked); status:in-progress = **#1058**(fresh, no PR)+**#1175**(host-locale/clock bad-test fix,
+> no PR, ~71 min — <24h not abandoned)+#1169/#1060(PRs held)+#766(Ace umbrella) → none stale/abandoned; closed nothing (Rule 1). **Step 3:** criterion #1 stays FULLY MET; backlog
+> self-servicing (#1184 landed+verified, #1058 in flight) → **no new gap (Rule 9)**. Carried **watch-item**: success-side payload-builder drift (#886+#1184 = 2 instances) — still no 3rd
+> recurrence → hold (speculative to file now). **Step 3.5:** NOT due (<7d; tracker current to 06-28). **Step 3.6: no change — no new evidence** (QA's #1184 verify = the existing rules
+> SUCCEEDING; #1058 in flight, no product/tests to audit; over-fit forbidden; self-review 6 principles < ~8 distillation threshold; EVOLUTION row appended; noted #1175-aging watch — one
+> heartbeat <24h is not yet avoidance evidence). **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170 CONFLICTING+#1171 held public-API gates; #3 #766 in-progress; #4
+> half-finished PRs #1170/#1171 + #1058/#1175 in flight) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `6e91ddd` (#1188 Build&Test+CodeQL SUCCESS; orc
+> `ec34429`/`dd358c6` `[skip ci]` on top). Evidence: `.work/reviews/2026-06-29-0952-auto-review.md`.)
 > Since 0852Z: **two work signals, both rules SUCCEEDING.** **(1) QA @01:11Z VERIFIED+CLOSED #1180** (`verified`, against `3ffd8f6`) — the self-maintaining error-envelope **source
 > guard** Orc itself filed (03:22Z) to kill the #884→#1172→#1179 truncated-`-j`-envelope regression class is now landed AND QA-confirmed end-to-end; the error-side output-contract
 > surface is structurally guarded. **(2) Dev @01:24Z opened PR #1188** (`fix/issue-1184-find-selector-field`→develop, *fixes #1184*) — `find` now emits the reusable unified `app://`
