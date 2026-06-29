@@ -4,22 +4,24 @@
 > This file is the short list of things **only Ace can decide**. Refreshed by the Orchestrator each
 > review cycle. Read this first on a check-in. Each item also has a GitHub issue labelled `needs:ace`.
 
-_Last refreshed: 2026-06-29 1152Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; queue UNCHANGED at 8.**
-Since 1052Z: **one Dev fix landed + one QA cycle — both Dev-actionable, nothing new for you.** **Dev merged PR #1191** (`2cb623c`, *fixes #1058*) — the
-`list windows --app` `--help`/docstring now honestly state `--app` matches process name **OR** window title (the intentional family-wide rule shared with
-`see`/`capture`/`click`; applied option (A) per your triage); Orc flipped #1058 → `status:done` for QA (no human gate — your earlier triage already cleared it as
-non-human-only). **QA filed P2 #1193** — `find ""`/`find -q ""` (empty/whitespace query) silently matches **all** elements as `success:true`, while `--selector ""`/
-`--image ""`/missing-arg all reject empty → `INVALID_INPUT`; a footgun for `find "$VAR"` with an empty var. **Dev-actionable, not a human gate.** No new human-only
-decision surfaced this cycle. Recognition moat **criterion #1 stays FULLY MET**; the carried quality flag (**P1 #1190**, reusable selector standalone round-trip) is
-unchanged and still noted under #914 below.
+_Last refreshed: 2026-06-29 1225Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; ONE NEW HUMAN GATE — queue 8→9.**
+Since 1202Z: **Dev opened PR #1194 (`fixes #1190`, the P1 reusable-selector round-trip fix) with auto-merge deliberately OFF + queued it `needs:ace`** — the fix
+activates the emitted `app://*` wildcard-host selector's **round-trip resolution semantics** (a target-less wildcard host now resolves across **all** top-level windows),
+which Dev correctly treats as a **public-surface sign-off** (same #1134 guardrail class as #1136/#1105). This is the new item #1190 below. The loop did **not** enable
+auto-merge / merge it (guardrail — public-API hold). CI was green-in-flight on the PR (Lint/Version/Author/Win-C++ build SUCCESS; cross-platform pytest + CodeQL still
+running at review time). **Orc recommendation: ratify + merge** — it restores the advertised see→copy→click reuse promise (criterion #2 headline), is additive (a
+previously-erroring path now resolves; fail-loud preserved), and ships an **exemplary hermetic round-trip regression test** with a discriminating negative control (the
+foreground window is a *different* app lacking the target, so a pass proves the across-windows search, not the ambient desktop). The only judgment is the "search all
+windows for a wildcard host" scope — semantically what `app://*` means.
 **Step 1:** #1170(`--ocr`, CONFLICTING, you de-queued/own) untouched; #1167(dependabot)/#1055(community) base=`main`, human-only (Rule 2) → untouched; nothing
-merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+`fix/issue-1060-find-ocr`; #1058 branch auto-deleted). **Step 3.6** no change — both
-signals are the existing rules succeeding (#1191 shipped an exemplary both-directions help-text test; QA's #1193 found via anti-false discipline). The decision table below is the durable digest.)
+merged/closed BY Orc (Rule 1); Rule 14 clean (remote = main+develop+dependabot+`fix/issue-1060-find-ocr`+`fix/issue-1190-wildcard-host-roundtrip`; no orphans). **Step 3.6**
+no change — #1194's hold is the existing public-API guardrail SUCCEEDING and its test embodies the 1052Z qa-cycle "verify the advertised workflow itself" principle. The decision table below is the durable digest.)
 
-## Open decisions (8)
+## Open decisions (9)
 | # | Decision | Why it's yours | Orc recommendation |
 |---|----------|----------------|--------------------|
-| [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** — cut release / tag `main`. | release / tag to `main` = PyPI publish (Rule 2) | **Formal ship-gate is MET** (req 1 epic #885 + req 2 the 5 status:done bugs, all verified+closed; recognition criterion #1 FULLY MET; develop CI green). **⚠️ One judgment call before you cut:** QA just filed **P1 #1190** — the *reusable selector* that `see`/`find` emit doesn't round-trip standalone (the `app://*` host fails with no `--hwnd`/`--app`). It's not a formal ship-gate requirement, but it dents the v0.3.2 find-engine "copy a selector and reuse it" story. **Recommend: let Dev land #1190 (it's P1, repro + fix options in the issue, a round-trip regression test requested) before cutting**, or cut now and treat #1190 as a v0.3.2.1 follow-up — your call. Tag→`main` is yours; the loop will not (Rule 2). |
+| [#1190](https://github.com/AcePeak/naturo/issues/1190) | **Sign off the public-surface semantics in PR #1194 (`fixes #1190`)** — the emitted `app://*` wildcard-host selector now **round-trips by resolving across all top-level windows** (previously `SELECTOR_NOT_FOUND` without `--hwnd`/`--app`). Dev held auto-merge OFF + queued this per the #1134 public-surface guardrail. | **public-API/contract sign-off** — changes how a target-less wildcard host resolves (a new resolution scope), Ace's call | **Ratify + merge (recommended)** — fixes the P1 that broke the advertised see→copy→click reuse promise (criterion #2 headline); additive (a previously-erroring path now resolves, fail-loud preserved elsewhere); shared `_resolve_wildcard_host_forest` helper used by both `find --selector` and the click family; **exemplary hermetic round-trip test with a negative control** (foreground = a *different* app lacking the target → a pass proves the across-windows search, not the ambient desktop). The one judgment: searching **all** windows for a wildcard host — semantically what `app://*` means. Or revise (narrower scope) / revert. After you merge, QA verifies end-to-end. |
+| [#914](https://github.com/AcePeak/naturo/issues/914) | **v0.3.2 ship-gate sign-off** — cut release / tag `main`. | release / tag to `main` = PyPI publish (Rule 2) | **Formal ship-gate is MET** (req 1 epic #885 + req 2 the 5 status:done bugs, all verified+closed; recognition criterion #1 FULLY MET; develop CI green). **⚠️ One judgment call before you cut:** the **P1 #1190** reusable-selector round-trip gap now has a **fix PR ready (#1194)** — but it's **gated to you** (public-surface sign-off, row above). **Recommend: sign off + merge #1194 (then let QA verify) before cutting**, or cut now and treat #1190 as a v0.3.2.1 follow-up — your call. Tag→`main` is yours; the loop will not (Rule 2). |
 | [#1168](https://github.com/AcePeak/naturo/issues/1168) | **Pick a persistent scheduler.** Dev/QA crons are **session-only** — they fire only while an Orch Claude session is alive and auto-expire after 7 days, so the loop freezes (no merges/verifies) whenever no Orch session runs. The meta-blocker behind recurring multi-day freezes. | infra / scheduling decision (Windows Task Scheduler vs cloud VM vs status-quo) | **(A) Windows Task Scheduler** [recommended — durable, local, free] / (B) cloud VM (#860) / (C) status quo. Pair with watchdog #917 + worktree-lock #935. |
 | [#1136](https://github.com/AcePeak/naturo/issues/1136) | **Sign off (or revise/revert) the public API that landed unattended in #1134** — a `selector` param on `BrowserPage.screenshot()` + an activated `naturo browser screenshot --selector` flag (merged `c00227e`, *fixes #1123*, auto-merge ON before Orc could hold it). | **public-API sign-off** — new public method param + activated CLI contract | **Ratify (recommended)** — small, additive, fail-loud (no-match / no-box / `--selector`+`--full-page` → exit 1, never a silent full-page fallback), 10 hermetic tests + real-Chrome e2e, honors the already-shipped flag. Or revise (keyword-only/narrow) / revert (drop param + flag, amend guide). |
 | [#1105](https://github.com/AcePeak/naturo/issues/1105) | **Sign off (or revert) the public API that landed unattended in #1104** — `BrowserPage.set_download_dir()`/`wait_for_download()` + a `DownloadResult` dataclass **exported from `naturo.browser`** (merged `41b81ad`, part of #766; Dev flagged it but auto-merged anyway). | **public-API sign-off** — a new public contract | **Ratify (recommended)** — small, additive, matches the committed migration guide, byte-parity tested; confirm + close #1105. Or revise (rename/un-export) / revert (drop methods + amend guide). |
@@ -42,11 +44,11 @@ signals are the existing rules succeeding (#1191 shipped an exemplary both-direc
 - (1) Epic **#885** (silent-failure cluster): **CLOSED + verified 2026-06-16**. **Requirement (1) MET.**
 - (2) The 5 `status:done` bugs (#786/#788/#807/#840/#843): **ALL VERIFIED + CLOSED 2026-06-17.** **Requirement (2) MET.**
 - **Recognition moat (separate done-criterion #1): FULLY MET** — Electron/CDP (#933), Java Access Bridge (#1096, live-verified+closed 06-29 01:20Z), `docs/RECOGNITION.md` matrix (#982).
-- **⚠️ Fresh quality flag (not a formal gate item):** **P1 #1190** — reusable `app://*` selector doesn't round-trip standalone. Dev-actionable; consider landing before cutting (see #914 row).
+- **⚠️ Fresh quality flag (not a formal gate item):** **P1 #1190** — reusable `app://*` selector doesn't round-trip standalone. **Fix PR #1194 now ready, gated to you** (public-surface sign-off — see the #1190 row above); sign off + merge before cutting, or treat as v0.3.2.1.
 
 ## Blocks
 - **`develop` CI: not red** — HEAD `2cb623c` (#1191, *correct `list windows --app` help, fixes #1058*) Build & Test + CodeQL **SUCCESS** → no STOP.
-- **None blocking the formal ship-gate** — v0.3.2 awaits only Ace's release sign-off (#914); #1190 is a quality judgment call, not a gate requirement.
+- **None blocking the formal ship-gate** — v0.3.2 awaits only Ace's release sign-off (#914); #1190 is a quality judgment call (now with a sign-off-gated fix PR #1194), not a gate requirement.
 - _Related (not a human decision):_ [#917](https://github.com/AcePeak/naturo/issues/917) (P1, `silent-failure`) — `runner.ps1` still has no failure-streak watchdog. Code-only for Dev.
 
 ---
