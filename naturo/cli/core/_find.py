@@ -242,6 +242,20 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         )
         return
 
+    # (#1193) Treat an empty / whitespace-only query the same as a missing one.
+    # Left as-is, "" / "   " falls through to the search layer, which normalizes
+    # it to the "*" wildcard and matches *every* element with success:true — the
+    # silent-wrong class QA guards against (an unpopulated `naturo find "$VAR"`
+    # would dump the whole tree as a "success"). Selector- and image-mode already
+    # reject empty input (INVALID_SELECTOR / FILE_NOT_FOUND); this aligns the
+    # default text path with them and with the argument-omitted path. Callers
+    # that want every element opt in explicitly via --all (or narrow with
+    # --role/--actionable, which keep the match-all intent below).
+    if query is not None and not query.strip():
+        query = None
+    if query_opt is not None and not query_opt.strip():
+        query_opt = None
+
     # Resolve query: --all flag → wildcard, --query option → override positional
     if find_all:
         query = "*"
@@ -250,11 +264,14 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     # else: query is the positional arg (may be None)
 
     if query is None:
-        # When --actionable or --role is set, treat missing query as wildcard
+        # When --actionable or --role is set, treat a missing or empty query as a
+        # wildcard — the explicit filter already narrows the match-all intent.
         if actionable or role:
             query = "*"
         else:
-            msg = "Missing argument 'QUERY'. Provide as positional arg or --query/-q option."
+            msg = ("Missing or empty argument 'QUERY'. Provide a non-empty query "
+                   "as a positional arg or --query/-q option, or use --all to "
+                   "match every element.")
             if json_output:
                 click.echo(_common._json_error_str("INVALID_INPUT", msg))
             else:
