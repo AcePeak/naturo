@@ -40,7 +40,32 @@ public final class SwingControlsFixture {
     /** Stable window title used by the recognition harness to find this window. */
     public static final String WINDOW_TITLE = "Naturo Swing Recognition Fixture";
 
+    /** Initial status-label text (and accessible name) before any action. */
+    public static final String STATUS_PENDING = "Order Status: Pending";
+    /** Status after the Submit Order button is actuated — the success-action proof. */
+    public static final String STATUS_SUBMITTED = "Order Status: Submitted";
+    /** Status after the Cancel Order button is actuated. */
+    public static final String STATUS_CANCELLED = "Order Status: Cancelled";
+
     private SwingControlsFixture() {
+    }
+
+    /**
+     * Update a status label's text and keep its accessible name in lock-step.
+     *
+     * <p>Swing does not propagate {@link javax.swing.JLabel#setText} to the
+     * label's accessible name automatically, and the Java Access Bridge reports
+     * a control's accessible name — so a test that re-reads the label through
+     * JAB after a click only observes the change if the accessible name is
+     * updated alongside the visible text. Updating both keeps the on-screen UI
+     * and the JAB-visible accessibility tree honest and consistent.
+     *
+     * @param label  the status label to update.
+     * @param status the new status text (also set as the accessible name).
+     */
+    private static void setStatus(JLabel label, String status) {
+        label.setText(status);
+        label.getAccessibleContext().setAccessibleName(status);
     }
 
     /**
@@ -54,12 +79,23 @@ public final class SwingControlsFixture {
 
         JPanel controls = new JPanel(new GridLayout(0, 1, 4, 4));
 
+        // Created first so the button action listeners below can mutate it; it
+        // is still added to the panel in its original visual position.
+        JLabel statusLabel = new JLabel(STATUS_PENDING);
+        statusLabel.getAccessibleContext().setAccessibleName(STATUS_PENDING);
+
         JButton submitButton = new JButton("Submit Order");
         submitButton.getAccessibleContext().setAccessibleName("Submit Order");
+        // Actuating the button changes a JAB-observable property (the status
+        // label's accessible name), so a test can prove naturo's click reached
+        // the real Swing control — verify-after-action through Java Access
+        // Bridge, not just recognition.
+        submitButton.addActionListener(event -> setStatus(statusLabel, STATUS_SUBMITTED));
         controls.add(submitButton);
 
         JButton cancelButton = new JButton("Cancel Order");
         cancelButton.getAccessibleContext().setAccessibleName("Cancel Order");
+        cancelButton.addActionListener(event -> setStatus(statusLabel, STATUS_CANCELLED));
         controls.add(cancelButton);
 
         JTextField customerField = new JTextField("Ada Lovelace");
@@ -70,8 +106,6 @@ public final class SwingControlsFixture {
         expressCheck.getAccessibleContext().setAccessibleName("Express Shipping");
         controls.add(expressCheck);
 
-        JLabel statusLabel = new JLabel("Order Status: Pending");
-        statusLabel.getAccessibleContext().setAccessibleName("Order Status: Pending");
         controls.add(statusLabel);
 
         DefaultTableModel tableModel = new DefaultTableModel(
