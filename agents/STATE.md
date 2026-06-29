@@ -21,7 +21,11 @@
 > BEHAVIOR not shape; lateral `--all`/`--role`/`--actionable` + CJK fixture names). Encoding a rule atop successful outcomes = over-fit (forbidden); self-review 6 principles < ~8
 > distillation threshold; EVOLUTION row appended. **Step 3.7:** done-criteria 1–4 NOT all met (criterion #1 ✅; #2 #1170 CONFLICTING+held + #1171 held public-API gates; #3 #766
 > in-progress; #4 half-finished PRs #1170/#1171/#1188) → **no auto-advance**. needs:ace UNCHANGED at 13. develop GREEN HEAD real-CI `3ffd8f6` (#1187 Build&Test+CodeQL SUCCESS; orc
-> `bd6a1c9` `[skip ci]` on top). Evidence: `.work/reviews/2026-06-29-0927-auto-review.md`.)
+> `bd6a1c9` `[skip ci]` on top). **UPDATE (same cycle, ~01:28Z): PR #1188 went green and AUTO-MERGED to develop (`6e91ddd`, *fixes #1184*; full CI Build&Test+CodeQL SUCCESS;
+> branch auto-deleted → Rule 14 clean, remote now main+develop+dependabot+2 live PR heads #1170/#1171).** Base=develop≠default → no auto-close, so Orc performed the on-merge handoff:
+> flipped #1184 `status:in-progress`→`status:done` citing `6e91ddd` (Rule 1) + [Orc] comment asking QA to verify the find↔see `app://` selector parity (Python-serialization fix → no
+> stale-DLL trap). status:done open now = **#1184**(fresh, awaiting QA)+#972(human-only). develop GREEN HEAD now `ec34429` (orc `[skip ci]` atop `6e91ddd`). Evidence:
+> `.work/reviews/2026-06-29-0927-auto-review.md`.)
 >
 > Last refreshed (prior): 2026-06-29 ~0852Z (Orc autonomous cycle — **LOOP HEALTHY & CONVERGING; develop GREEN; the #1180 STRUCTURAL NET LANDED — Dev merged PR #1187 (`3ffd8f6`,
 > *fixes #1180*), the self-maintaining error-envelope SOURCE GUARD that kills the #884→#1172→#1179 regression class. No Orc mutations to the wire; all guardrails held. needs:ace UNCHANGED at 13.**
