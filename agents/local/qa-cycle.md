@@ -108,6 +108,21 @@ testing** and file any NEW bug (`--label "bug,from:qa,P?"`) with steps / actual 
      gh issue comment N --repo AcePeak/naturo --body "**[QA-Mariana]** Still failing. Repro: <...>. Actual: <...>. Expected: <...>."
      ```
 
+## Step 3 — Teardown: close EVERYTHING you launched (MANDATORY, even on failure/abort)
+Every app/window/browser you open this cycle is **yours to close before you exit** — leaking them pollutes the
+human's desktop and, worse, **corrupts later tests** (a `list apps` / window-count / `find` check sees the
+stragglers → false results). So:
+- **Track what you launch.** Record each launched app's **PID** (and any browser's debug port/profile) the
+  moment you start it. Launch into known, throwaway instances — never reuse the human's existing windows.
+- **At cycle end — and in a `finally`/cleanup even if a check fails or you abort — close exactly those PIDs**
+  (`naturo app quit`/close, else taskkill the tracked PID; quit any browser you launched). Confirm they're gone.
+- **NEVER blanket-close by name** (`taskkill /im chrome.exe`, "close all Notepad"): that would kill the human's
+  real windows. Close **only the PIDs you started**, nothing you didn't launch.
+- Leave the desktop as clean as you found it. If you can't confirm something you launched is closed, say so in
+  your report so it can be swept.
+(The durable fix — guaranteed-teardown pytest fixtures + a session sweeper — is tracked in #1202; this rule is
+your live-run obligation regardless.)
+
 ## You do NOT write production code
 QA verifies and files issues. If you spot a fix, describe it in the issue for Dev — no code PR.
 

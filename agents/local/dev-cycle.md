@@ -100,6 +100,10 @@ gh issue edit N --repo AcePeak/naturo --add-assignee @me --add-label "status:in-
 git checkout -b fix/issue-N-short-desc origin/develop
 ```
 1. **Write a failing test first** (`tests/`). Mark `@pytest.mark.desktop` if it touches real UI/DLL.
+   **Test hygiene — close what you open:** a test that launches an app/browser MUST use a guaranteed-teardown
+   fixture (`yield` + `finally` that quits/kills the **tracked PID**, runs even on failure) so it leaves **zero**
+   orphaned processes — never raw-launch without teardown, and never blanket-kill by name (kills the human's real
+   windows). Leaking instances pollute the desktop and corrupt later window-count/`list apps`/`find` tests. (#1202)
 2. Implement the **minimal** fix. Read files before changing them.
 3. **Quality gate — ALL must pass** (run from the worktree root so local code wins):
    ```bash
