@@ -15,6 +15,7 @@ Commands
 from __future__ import annotations
 
 from naturo.cli._jsonio import json_dumps
+from naturo.cli.error_helpers import emit_error, json_error
 import os
 from typing import Optional
 
@@ -82,7 +83,7 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
     if token is None:
         if json_output:
             msg = "Token required when using --json. Pass --token <value>."
-            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
+            click.echo(json_error("INVALID_INPUT", msg))
             raise SystemExit(1)
 
         if mode == "api_key":
@@ -98,11 +99,7 @@ def setup_anthropic(mode: Optional[str], token: Optional[str], json_output: bool
     token = token.strip()
     if not token:
         msg = "Token cannot be empty."
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        emit_error("INVALID_INPUT", msg, json_output)
 
     # Persist
     creds = load_credentials()

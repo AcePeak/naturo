@@ -15,6 +15,7 @@ Commands
 from __future__ import annotations
 
 from naturo.cli._jsonio import json_dumps
+from naturo.cli.error_helpers import emit_error
 
 import click
 
@@ -137,19 +138,11 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
     """
     if not clean_all and days is None:
         msg = "Specify --days N or --all.  Run with --help for usage."
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        emit_error("INVALID_INPUT", msg, json_output)
 
     if days is not None and days < 0:
         msg = f"--days must be >= 0, got {days}"
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        emit_error("INVALID_INPUT", msg, json_output)
 
     # Determine which sessions to clean
     if session == "all":

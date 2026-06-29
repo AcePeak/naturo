@@ -1,6 +1,7 @@
 """MCP command for AI agent integration."""
 import click
 from naturo.cli._jsonio import json_dumps
+from naturo.cli.error_helpers import emit_error
 import sys
 from naturo.cli.fuzzy_group import FuzzyGroup
 
@@ -34,11 +35,7 @@ def start(transport, host, port, json_output) -> None:
         from naturo.mcp_server import run_server
     except ImportError:
         msg = "MCP dependencies not installed. Run: pip install naturo[mcp]"
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_error("MISSING_DEPENDENCY", msg, json_output)
 
     try:
         # (#810) stdio transport uses stdout for JSON-RPC — any logging
@@ -57,17 +54,9 @@ def start(transport, host, port, json_output) -> None:
         msg = str(e)
         if "already in use" in msg.lower() or "address already in use" in msg.lower() or getattr(e, 'errno', 0) in (10048, 98):
             msg = f"Port {port} already in use"
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "SERVER_ERROR", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_error("SERVER_ERROR", msg, json_output)
     except Exception as e:
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "SERVER_ERROR", "message": str(e)}}))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+        emit_error("SERVER_ERROR", str(e), json_output)
 
 
 @mcp.command()
@@ -94,17 +83,9 @@ def install(json_output) -> None:
                 click.echo("✅ MCP dependencies installed. Run 'naturo mcp start' to launch the server.")
         else:
             msg = result.stderr.strip() or result.stdout.strip() or "pip install failed"
-            if json_output:
-                click.echo(json_dumps({"success": False, "error": {"code": "INSTALL_FAILED", "message": msg}}))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            sys.exit(1)
+            emit_error("INSTALL_FAILED", msg, json_output)
     except Exception as e:
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "INSTALL_FAILED", "message": str(e)}}))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+        emit_error("INSTALL_FAILED", str(e), json_output)
 
 
 @mcp.command()
@@ -133,8 +114,4 @@ def tools(json_output) -> None:
                 click.echo(f"  {t['name']:20s}  {desc}")
     except ImportError:
         msg = "MCP dependencies not installed. Run: pip install naturo[mcp]"
-        if json_output:
-            click.echo(json_dumps({"success": False, "error": {"code": "MISSING_DEPENDENCY", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_error("MISSING_DEPENDENCY", msg, json_output)

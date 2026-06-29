@@ -107,15 +107,11 @@ def app_inspect(ctx, name, app_name, pid, scan_all, quick, json_output) -> None:
                     f"Connect via RDP or Console to interact with desktop apps."
                 )
                 if json_output:
-                    click.echo(json_dumps({
-                        "success": False,
-                        "error": {
-                            "code": "NO_DESKTOP_SESSION",
-                            "message": msg,
-                            "pid": session0_proc.pid,
-                            "session": 0,
-                        },
-                    }, indent=2))
+                    click.echo(_json_error_str(
+                        "NO_DESKTOP_SESSION",
+                        msg,
+                        extra={"pid": session0_proc.pid, "session": 0},
+                    ))
                 else:
                     _safe_echo(f"Error: {msg}", err=True)
                 sys.exit(1)
