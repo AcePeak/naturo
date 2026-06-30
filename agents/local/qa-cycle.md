@@ -133,3 +133,14 @@ Append to the machine-local state log your orchestrator points you at:
 - verdict: PASS (closed) | FAIL (kicked back) | DEFERRED | intrusive input: yes/no
 ```
 Final message = a concise verification report.
+
+### Round report (human-readable — append EVERY cycle)
+Also append a short plain-language block to `C:\Users\Naturobot\naturo-progress.md` (append-only; Ace reads
+this on check-in). Format:
+```
+## [QA <YYYY-MM-DD HH:mm>] <one-line: what this round verified/found>
+- ✅ This round: <what you proved works (capability verified) or the NEW bug(s) you found, in plain words>
+- 🎯 Sub-goal "<current GOAL.md sub-goal>" distance: <which gate items are now verified; what still needs verifying>
+- ➡️ Next: <single highest-leverage next move>
+```
+Write it for a human skimming progress — name the *capability verified / bug found*, not just the issue #.

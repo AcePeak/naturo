@@ -263,3 +263,14 @@ Append to the machine-local state log your orchestrator points you at:
 - branch | PR #<num> (<auto-merge state>) | gate: ruff/mypy/pytest <result> | status: status:done / blocked
 ```
 Final message = a concise report (issue, change, PR #, gate result).
+
+### Round report (human-readable — append EVERY cycle)
+Also append a short plain-language block to the machine-local progress digest
+`C:\Users\Naturobot\naturo-progress.md` (append-only; Ace reads this on check-in). Format:
+```
+## [Dev <YYYY-MM-DD HH:mm>] <one-line: what this round delivered>
+- ✅ This round: <the capability completed/landed in plain words — what now works that didn't, or "fix-first: cleared <problem>">
+- 🎯 Sub-goal "<current GOAL.md sub-goal>" distance: <done-criteria N/M met; what's still missing>
+- ➡️ Next: <single highest-leverage next move>
+```
+Write it for a human skimming progress, not a log parser — name the *capability/outcome*, not just the issue #.

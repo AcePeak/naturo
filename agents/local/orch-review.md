@@ -188,8 +188,20 @@ Then **refresh `NEEDS-ACE.md`** at the repo root: a dated digest of every open `
 This file is what Ace reads first on a check-in — keep it short, current, and decision-oriented.
 
 ## Step 5 — Persist state
-Update `agents/STATE.md` (milestone counts, ship-gate, what moved, top-3 next). Write a brief review to
-`.work/reviews/YYYY-MM-DD-HHmm-auto-review.md`. Then:
+Update `agents/STATE.md` (milestone counts, ship-gate, what moved, top-3 next).
+
+**Round report (human-readable — append EVERY cycle).** Append a plain-language block to the machine-local
+progress digest `C:\Users\Naturobot\naturo-progress.md` (append-only; Ace reads this on check-in). As Orch you
+own the **consolidated distance-to-goal** view — make this the richest of the three roles:
+```
+## [Orch <YYYY-MM-DD HH:mm>] <one-line: net movement this round>
+- ✅ This round: <what landed/verified/was unblocked across the team since last cycle, in plain words>
+- 🎯 Sub-goal "<current GOAL.md sub-goal>" distance: <done-criteria N/M met — list each criterion's state + what's left>
+- ⛔ Blockers: <human-gated / env / hung items holding progress, with the ask> (or "none")
+- ➡️ Next: <the highest-leverage next move(s) toward the sub-goal>
+```
+Write for a human skimming progress — capabilities/outcomes, not log shorthand. Then write a brief review to
+`.work/reviews/YYYY-MM-DD-HHmm-auto-review.md` and:
 ```bash
 git add agents/STATE.md NEEDS-ACE.md .work/reviews/
 git commit -m "orc: autonomous review <YYYY-MM-DD-HHmm> [skip ci]"
