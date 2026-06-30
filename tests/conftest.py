@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import platform
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -16,7 +15,7 @@ import pytest
 # we monkeypatch the constructors to auto-skip on CI Windows.
 
 _ON_CI = os.environ.get("CI") == "true"
-_IS_WINDOWS = platform.system() == "Windows"
+_IS_WINDOWS = os.name == "nt"
 _CI_WINDOWS = _ON_CI and _IS_WINDOWS
 
 if _CI_WINDOWS:
@@ -73,7 +72,7 @@ def _has_desktop_session() -> bool:
 
     Always returns False on non-Windows platforms.
     """
-    if platform.system() != "Windows":
+    if os.name != "nt":
         return False
     try:
         import ctypes
@@ -210,10 +209,10 @@ def cli_stdout(result):
 
 @pytest.fixture
 def is_windows():
-    return platform.system() == "Windows"
+    return os.name == "nt"
 
 
 @pytest.fixture
 def skip_if_not_windows():
-    if platform.system() != "Windows":
+    if os.name != "nt":
         pytest.skip("Windows-only test")
