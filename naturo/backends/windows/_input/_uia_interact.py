@@ -517,6 +517,123 @@ class UIAInteractMixin:
             logger.debug("SetValue unexpected error: %s", exc)
             return False
 
+    def get_element_value_uia(
+        self,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read an element's current value via UIA patterns (Python/comtypes).
+
+        Mirrors :meth:`set_element_value`'s resolution so naturo can READ the
+        value of an element it already located even when that element has no
+        AutomationId and no name — resolving it inside its source window's own
+        UIA tree at the cached point (occlusion-independent) and querying
+        ValuePattern, then TextPattern, TogglePattern, and finally the Name
+        property. (#1208)
+
+        Args:
+            hwnd: Window handle to scope identity/tree search. 0 = desktop root.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId of the target element.
+            role: UIA control type (e.g. ``"Edit"``).
+            x: Screen X of the cached element centre (point fallback).
+            y: Screen Y of the cached element centre (point fallback).
+
+        Returns:
+            A dict with ``value``, ``pattern``, ``role``, ``name`` and
+            ``automation_id``, or ``None`` if no element or value was found.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot read value via UIA")
+            return None
+
+        _CTRL_TYPE_TO_ROLE = {
+            50000: "Button", 50002: "CheckBox", 50003: "ComboBox",
+            50004: "Edit", 50007: "ListItem", 50008: "List",
+            50020: "Text", 50026: "Group", 50030: "Document",
+        }
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
+            if elem is None:
+                return None
+
+            try:
+                _role = _CTRL_TYPE_TO_ROLE.get(elem.CurrentControlType)
+            except (COMError, AttributeError):
+                _role = None
+            try:
+                _name = elem.CurrentName or ""
+            except (COMError, AttributeError):
+                _name = ""
+            try:
+                _aid = elem.CurrentAutomationId or ""
+            except (COMError, AttributeError):
+                _aid = ""
+
+            value = None
+            pattern = None
+            try:
+                pat = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
+                if pat is not None:
+                    value = pat.QueryInterface(
+                        mod.IUIAutomationValuePattern).CurrentValue
+                    pattern = "ValuePattern"
+            except (COMError, AttributeError):
+                pass
+            # Multiline WinForms edits often expose an empty ValuePattern but
+            # carry the real text in TextPattern — so fall through on an empty
+            # (not just None) value. (#1208)
+            if not value:
+                try:
+                    pat = elem.GetCurrentPattern(mod.UIA_TextPatternId)
+                    if pat is not None:
+                        rng = pat.QueryInterface(
+                            mod.IUIAutomationTextPattern).DocumentRange
+                        _text = rng.GetText(-1)
+                        if _text:
+                            value = _text
+                            pattern = "TextPattern"
+                except (COMError, AttributeError):
+                    pass
+            if not value:
+                try:
+                    pat = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
+                    if pat is not None:
+                        state = pat.QueryInterface(
+                            mod.IUIAutomationTogglePattern).CurrentToggleState
+                        value = {0: "Off", 1: "On", 2: "Indeterminate"}.get(
+                            state, "Unknown")
+                        pattern = "TogglePattern"
+                except (COMError, AttributeError):
+                    pass
+            if not value and _name:
+                value = _name
+                pattern = "Name"
+            if value is None:
+                return None
+
+            return {
+                "value": value,
+                "pattern": pattern,
+                "role": _role,
+                "name": _name,
+                "automation_id": _aid,
+            }
+        except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
+            logger.debug("get_element_value_uia failed: %s", exc)
+            return None
+
     def toggle_element(
         self,
         hwnd: int = 0,

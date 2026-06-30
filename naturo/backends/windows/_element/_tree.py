@@ -392,6 +392,8 @@ class ElementTreeMixin:
         resolved_role = role
         resolved_name = name
         target_hwnd = hwnd or 0
+        coords = None
+        snap_hwnd = None
 
         if ref and not resolved_aid:
             from naturo.snapshot import get_snapshot_manager
@@ -409,10 +411,24 @@ class ElementTreeMixin:
                     resolved_role = elem.role
                     resolved_name = elem.label
                 else:
-                    raise NaturoError(
-                        f"Element {ref} has no AutomationId, role, or name "
-                        f"for value lookup"
-                    )
+                    # (#1208) No identifier/name: capture the cached point and
+                    # source window so the value can be read live from the
+                    # element inside its own window's UIA tree (handled below),
+                    # instead of refusing for an element naturo already found.
+                    frame = getattr(elem, "frame", None)
+                    if frame and (frame[2] > 0 or frame[3] > 0):
+                        coords = (frame[0] + frame[2] // 2,
+                                  frame[1] + frame[3] // 2)
+                    try:
+                        _snap = mgr.get_snapshot(_snap_id)
+                        snap_hwnd = getattr(_snap, "window_handle", None)
+                    except Exception:
+                        snap_hwnd = None
+                    if coords is None:
+                        raise NaturoError(
+                            f"Element {ref} has no AutomationId, name, or "
+                            f"location for value lookup"
+                        )
             else:
                 raise StaleSnapshotCacheError(ref)
 
@@ -426,6 +442,24 @@ class ElementTreeMixin:
         # (the CLI analog of the MCP #957 ``require_hwnd`` contract).
         if (app or window_title) and not target_hwnd:
             target_hwnd = self._resolve_hwnd(app=app, window_title=window_title)
+
+        # (#1208) Cached-point value read for an element with no AutomationId
+        # and no name: resolve it live inside its source window's UIA tree and
+        # read the value via ValuePattern/TextPattern. Mirrors the set-value
+        # resolution so naturo can READ anything it already located.
+        # NOTE: this is a Python/comtypes fallback layered on top of the C++
+        # core reader below; consolidating the two onto one layer is tracked
+        # as tech debt.
+        if coords is not None and not resolved_aid and not (
+                resolved_role and resolved_name):
+            if not target_hwnd and snap_hwnd:
+                target_hwnd = snap_hwnd
+            if hasattr(self, "get_element_value_uia"):
+                _uia_val = self.get_element_value_uia(
+                    hwnd=target_hwnd or 0, x=coords[0], y=coords[1],
+                )
+                if _uia_val is not None:
+                    return _uia_val
 
         if not resolved_aid and not resolved_role and not resolved_name:
             # (#242) Fallback: when no element identifiers are provided but
