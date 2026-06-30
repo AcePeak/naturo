@@ -34,6 +34,65 @@ def _get_screen_bound() -> int:
     return 65535
 
 
+def _window_root_at_point(x: int, y: int):
+    """Return the top-level window actually under screen point ``(x, y)``.
+
+    Lets the click command report which window a coordinate click really
+    landed on, so naturo never claims success when an overlapping window — or
+    a failed foreground switch — silently received the click instead (#1207).
+
+    Args:
+        x: Screen X coordinate.
+        y: Screen Y coordinate.
+
+    Returns:
+        ``(root_hwnd, title, pid)`` for the top-level window at the point, or
+        ``None`` if it cannot be determined (e.g. non-Windows or no window).
+    """
+    import sys
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        user32.WindowFromPoint.restype = wintypes.HWND
+        user32.WindowFromPoint.argtypes = [wintypes.POINT]
+        user32.GetAncestor.restype = wintypes.HWND
+        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+        hwnd = user32.WindowFromPoint(wintypes.POINT(int(x), int(y)))
+        if not hwnd:
+            return None
+        root = user32.GetAncestor(hwnd, 2) or hwnd  # GA_ROOT = 2
+        length = user32.GetWindowTextLengthW(root)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(root, buf, length + 1)
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(root, ctypes.byref(pid))
+        return int(root), buf.value, int(pid.value)
+    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
+        logger.debug("WindowFromPoint(%s, %s) failed: %s", x, y, exc)
+        return None
+
+
+def _window_pid(hwnd: int):
+    """Return the process ID owning ``hwnd``, or ``None`` if undeterminable."""
+    import sys
+    if sys.platform != "win32" or not hwnd:
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        pid = wintypes.DWORD()
+        ctypes.windll.user32.GetWindowThreadProcessId(
+            wintypes.HWND(int(hwnd)), ctypes.byref(pid)
+        )
+        return int(pid.value) or None
+    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
+        logger.debug("GetWindowThreadProcessId(%s) failed: %s", hwnd, exc)
+        return None
+
+
 @click.command("click")
 @click.argument("query", required=False)
 @click.option("--on", "on_text", help="Target element (eN ref or text label)")
@@ -454,12 +513,42 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         "x": x, "y": y, "button": button, "double_click": double,
     })
 
+    # (#1207) Honesty check: confirm the click actually reached its target.
+    # For coordinate-based clicks, find the top-level window now under the
+    # point.  When a specific target window was known (--app/--hwnd/--pid or a
+    # cached snapshot) and the click landed on a *different process'* window,
+    # the target was occluded or never came to the foreground — fail loudly
+    # instead of reporting a success that did not happen.
+    _hit = None
+    if x is not None and y is not None:
+        _hit = _window_root_at_point(x, y)
+    if _hit and _focus_hwnd:
+        _target_pid = _window_pid(_focus_hwnd)
+        if _target_pid and _hit[2] and _hit[2] != _target_pid:
+            _common._json_err(
+                f"Click at ({x}, {y}) landed on window {_hit[1]!r} "
+                f"(hwnd {_hit[0]}, pid {_hit[2]}), not the target window "
+                f"(hwnd {_focus_hwnd}, pid {_target_pid}). The target is "
+                f"occluded or failed to come to the foreground; the click did "
+                f"not reach it.",
+                json_output,
+                code="CLICK_WRONG_WINDOW",
+            )
+            return
+
     action = "double-clicked" if double else "clicked"
     if _zero_bounds_element is not None:
         loc = f"{_zero_bounds_element.title or _zero_bounds_element.role} (via UIA Invoke)"
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data: dict[str, Any] = {"action": action, "target": str(loc), "button": button}
+    # (#1207) Disclose which window actually received a coordinate click, so a
+    # caller can see when a raw --coords click hit something other than what
+    # they intended (naturo cannot know intent for bare coordinates).
+    if _hit:
+        result_data["hit_window"] = {
+            "hwnd": _hit[0], "title": _hit[1], "pid": _hit[2],
+        }
     if _image_match_info is not None:
         result_data["image_match"] = _image_match_info
     if _clipboard_action:
