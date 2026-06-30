@@ -305,6 +305,23 @@ class TestElementInfo:
         )
         assert e.hwnd == 65540
 
+    def test_states_default_none(self):
+        """states defaults to None for elements without accessibility states."""
+        e = ElementInfo(
+            id="e1", role="Edit", name="Input", value=None,
+            x=0, y=0, width=200, height=25,
+        )
+        assert e.states is None
+
+    def test_with_states(self):
+        """A checkbox-like element can carry its JAB accessibility states (#1200)."""
+        e = ElementInfo(
+            id="chk1", role="CheckBox", name="Express Shipping", value=None,
+            x=0, y=0, width=120, height=24,
+            states="enabled,focusable,visible,checked",
+        )
+        assert e.states == "enabled,focusable,visible,checked"
+
     def test_children_are_independent_lists(self):
         """Each ElementInfo should have its own children list."""
         e1 = ElementInfo(id="a", role="A", name="A", value=None, x=0, y=0, width=0, height=0)
@@ -358,6 +375,42 @@ class TestParseElement:
         assert elem.width == 80
         assert elem.height == 30
         assert elem.keyboard_shortcut == "Enter"
+
+    def test_states_absent_defaults_none(self):
+        """A native element JSON without a ``states`` key yields ``states=None``."""
+        elem = _parse_element({"id": "x", "role": "Button", "name": "OK"})
+        assert elem.states is None
+
+    def test_reads_states(self):
+        """``_parse_element`` surfaces the native ``states`` field (#1200).
+
+        The Java Access Bridge layer (``core/src/jab.cpp``) writes a ``states``
+        string into the per-element JSON, but the parser previously discarded it,
+        so a Swing ``JCheckBox``'s checked/unchecked state never reached any
+        Python consumer. Surfacing it unblocks honest verify-after-action for
+        JAB-driven checkbox/toggle automation (#932).
+        """
+        data = {
+            "id": "chk1",
+            "role": "CheckBox",
+            "name": "Express Shipping",
+            "x": 758, "y": 407, "width": 404, "height": 26,
+            "states": "enabled,focusable,visible,showing,checked",
+        }
+        elem = _parse_element(data)
+        assert elem.states == "enabled,focusable,visible,showing,checked"
+
+    def test_states_propagate_to_children(self):
+        """Each parsed child independently carries its own ``states``."""
+        data = {
+            "id": "panel", "role": "Pane", "name": "Form",
+            "children": [
+                {"id": "c1", "role": "CheckBox", "name": "A", "states": "checked"},
+                {"id": "c2", "role": "CheckBox", "name": "B", "states": "unchecked"},
+            ],
+        }
+        elem = _parse_element(data)
+        assert [c.states for c in elem.children] == ["checked", "unchecked"]
 
     def test_with_children(self):
         data = {

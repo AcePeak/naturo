@@ -137,6 +137,10 @@ class ElementInfo:
         parent_id: Parent element's id (filled by Python-layer traversal).
         keyboard_shortcut: Keyboard shortcut string (e.g., "Ctrl+S").
         hwnd: Win32 window handle (Windows only, for hybrid mode and direct messaging).
+        states: Accessibility state string emitted by the native layer, if any
+            (e.g., "enabled,focusable,visible,checked"). Currently populated by the
+            Java Access Bridge backend, which exposes a control's checked/selected
+            state; ``None`` for backends that do not emit states. (#1200)
     """
     id: str
     role: str
@@ -150,6 +154,7 @@ class ElementInfo:
     parent_id: Optional[str] = None
     keyboard_shortcut: Optional[str] = None
     hwnd: Optional[int] = None
+    states: Optional[str] = None
 
 
 def _parse_element(data: dict) -> ElementInfo:
@@ -174,6 +179,7 @@ def _parse_element(data: dict) -> ElementInfo:
         children=children,
         parent_id=data.get("parent_id"),
         keyboard_shortcut=data.get("keyboard_shortcut"),
+        states=data.get("states"),
     )
 
 

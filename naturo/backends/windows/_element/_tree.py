@@ -329,6 +329,10 @@ class ElementTreeMixin:
                 k: v for k, v in {
                     "parent_id": el.parent_id,
                     "keyboard_shortcut": el.keyboard_shortcut,
+                    # (#1200) Accessibility states (e.g. a JAB checkbox's
+                    # checked/unchecked) are emitted by the native layer and must
+                    # survive the bridge→backend conversion to reach consumers.
+                    "states": el.states,
                 }.items() if v is not None
             }
 
