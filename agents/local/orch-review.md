@@ -64,7 +64,7 @@ gh issue list --repo AcePeak/naturo --label "status:in-progress" --state open --
 - `status:in-progress` with no update >24h and no open PR → likely abandoned; remove the label so it's pickable.
 - Never close anything here.
 - **Loop-health scan (runner self-recovery must not silently mask a chronic hang).** The runner now
-  watchdog-kills a wedged cycle (lock age > 25m) and logs a `WATCHDOG — <role> cycle HUNG …` line. Grep the
+  watchdog-kills a wedged cycle (lock age > 50m) and logs a `WATCHDOG — <role> cycle HUNG …` line. Grep the
   state log for these + repeated `cycle ERROR`/auth-fail lines:
   `grep -E 'WATCHDOG|cycle ERROR' C:\Users\Naturobot\naturo-loop-state.log | tail -40`.
   Self-recovery handles a one-off, but **a role watchdog-killed ≥3× in ~24h (or erroring every round) is a real

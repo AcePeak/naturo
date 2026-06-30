@@ -90,7 +90,10 @@ if (Get-NetTCPConnection -LocalPort $ProxyPort -State Listen -ErrorAction Silent
 # wedged claude/pytest) — the old guard would then skip this role FOREVER, silently freezing it. So:
 # reclaim a hung cycle by killing its whole process tree, and reclaim a stale (dead-pid) lock. This is
 # the loop's self-recovery from a wedged cycle (part of #917). Age comes from the lock file's mtime.
-$MaxCycleMin = 25                                  # cadence is 30m; a cycle older than this is wedged
+$MaxCycleMin = 50    # cadence is 30m; a healthy (even slow build+verify) cycle finishes well under one
+                     # cadence, so a lock older than ~50m has survived a full skipped fire → genuinely
+                     # wedged. Kept comfortably above real cycle time (~8-13m observed) to never kill a
+                     # healthy-but-slow cycle, and below "obviously hung" so recovery still fires fast.
 $Lock = Join-Path $WorkDir "$Role.lock"
 if (Test-Path $Lock) {
   $oldPid = (Get-Content $Lock -ErrorAction SilentlyContinue | Select-Object -First 1)
