@@ -63,6 +63,15 @@ gh issue list --repo AcePeak/naturo --label "status:in-progress" --state open --
 - `status:done` aging with no QA pickup → note in STATE.md (QA cycle will get it; it needs the desktop).
 - `status:in-progress` with no update >24h and no open PR → likely abandoned; remove the label so it's pickable.
 - Never close anything here.
+- **Loop-health scan (runner self-recovery must not silently mask a chronic hang).** The runner now
+  watchdog-kills a wedged cycle (lock age > 25m) and logs a `WATCHDOG — <role> cycle HUNG …` line. Grep the
+  state log for these + repeated `cycle ERROR`/auth-fail lines:
+  `grep -E 'WATCHDOG|cycle ERROR' C:\Users\Naturobot\naturo-loop-state.log | tail -40`.
+  Self-recovery handles a one-off, but **a role watchdog-killed ≥3× in ~24h (or erroring every round) is a real
+  bug being masked** → file/refresh a sharp `ops`/`tech-debt` issue naming the role + the hang signature (the
+  wedged subprocess if identifiable, e.g. the #1204 `cmd /c ver` conftest hang) so Dev fixes the root cause.
+  Surface it in NEEDS-ACE only if it needs Ace; otherwise it's Dev-actionable. Never let a chronic hang hide
+  behind the auto-kill.
 
 ## Step 3 — Drive the product (self-evolution — this is the point)
 Think like the technical founder. The loop must **find its own best next move**, not just react.

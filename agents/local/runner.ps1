@@ -84,14 +84,30 @@ if (Get-NetTCPConnection -LocalPort $ProxyPort -State Listen -ErrorAction Silent
   Write-State "WARNING: no proxy listening on 127.0.0.1:$ProxyPort — if this network needs it, the cycle may fail to reach the Claude API / GitHub"
 }
 
-# --- Overlap guard: skip if a previous cycle for this role is still running ---
+# --- Watchdog + overlap guard ---------------------------------------------------------------------
+# A healthy in-flight cycle => skip (don't double-run). But a cycle that is still "alive" yet has run
+# PAST the max cycle time is HUNG (e.g. a subprocess like `cmd /c ver` that never returns, #1204, or a
+# wedged claude/pytest) — the old guard would then skip this role FOREVER, silently freezing it. So:
+# reclaim a hung cycle by killing its whole process tree, and reclaim a stale (dead-pid) lock. This is
+# the loop's self-recovery from a wedged cycle (part of #917). Age comes from the lock file's mtime.
+$MaxCycleMin = 25                                  # cadence is 30m; a cycle older than this is wedged
 $Lock = Join-Path $WorkDir "$Role.lock"
 if (Test-Path $Lock) {
   $oldPid = (Get-Content $Lock -ErrorAction SilentlyContinue | Select-Object -First 1)
-  if ($oldPid -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)) {
-    Write-State "SKIP — previous $Role cycle still running (pid $oldPid)"
+  $alive  = $oldPid -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)
+  $ageMin = [int]((Get-Date) - (Get-Item $Lock).LastWriteTime).TotalMinutes
+  if ($alive -and $ageMin -lt $MaxCycleMin) {
+    Write-State "SKIP — previous $Role cycle still running (pid $oldPid, age ${ageMin}m)"
     exit 0
   }
+  if ($alive) {
+    Write-State "WATCHDOG — $Role cycle HUNG (pid $oldPid, age ${ageMin}m > ${MaxCycleMin}m): killing process tree + reclaiming"
+    & taskkill.exe /PID $oldPid /T /F 2>&1 | Out-Null   # /T kills the wedged child subprocess too
+    Start-Sleep -Seconds 2
+  } else {
+    Write-State "stale lock for $Role (pid $oldPid not running) — reclaiming"
+  }
+  Remove-Item $Lock -ErrorAction SilentlyContinue
 }
 $PID | Out-File -FilePath $Lock -Encoding ascii
 
