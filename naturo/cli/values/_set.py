@@ -37,30 +37,59 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
         name: Element name (passthrough if already set).
 
     Returns:
-        Tuple of (automation_id, role, name) with ref resolved.
+        Tuple of (automation_id, role, name, coords, window_handle) with ref
+        resolved, where ``coords`` is the cached ``(x, y)`` element centre (or
+        ``None``) and ``window_handle`` is the source window's HWND (or
+        ``None``) — both used to resolve the element inside its own window's
+        UIA tree when it has no AutomationId/name (#1208).
 
     Raises:
-        NaturoError: If ref cannot be resolved.
+        NaturoError: If ref resolves to an element with no AutomationId, name,
+            *or* usable coordinates.
+        StaleSnapshotCacheError: If the ref is not in the current snapshot.
     """
+    coords = None
+    snap_hwnd = None
     if ref and not automation_id:
         from naturo.snapshot import get_snapshot_manager
         mgr = get_snapshot_manager()
         result = mgr.resolve_ref_element(ref)
         if result:
             elem, _snap_id = result
+            # Source window handle: lets the backend resolve the element inside
+            # that window's own UIA tree (occlusion-independent), instead of a
+            # screen-point hit test that an overlapping window would hijack.
+            try:
+                _snap = mgr.get_snapshot(_snap_id)
+                snap_hwnd = getattr(_snap, "window_handle", None)
+            except Exception:
+                snap_hwnd = None
+            # naturo already located this element, so capture its cached
+            # bounding-box centre. This lets set/toggle/select/expand act on
+            # elements that have no AutomationId and no name (e.g. an unnamed
+            # Edit or ComboBox) by resolving them live inside their source
+            # window's own UIA tree, instead of refusing and pushing identifier
+            # discovery onto the user (#1208).
+            frame = getattr(elem, "frame", None)
+            if frame and (frame[2] > 0 or frame[3] > 0):
+                coords = (frame[0] + frame[2] // 2, frame[1] + frame[3] // 2)
             if elem.identifier:
                 automation_id = elem.identifier
             elif elem.role and (elem.title or elem.label):
                 role = role or elem.role
                 name = name or elem.title or elem.label
+            elif coords is not None:
+                # Unnamed element with a known location: keep its role as a hint
+                # for pattern selection; resolution falls back to the point.
+                role = role or elem.role
             else:
                 raise NaturoError(
-                    f"Element {ref} has no AutomationId, role, or name "
+                    f"Element {ref} has no AutomationId, name, or location "
                     f"for value setting"
                 )
         else:
             raise StaleSnapshotCacheError(ref)
-    return automation_id, role, name
+    return automation_id, role, name, coords, snap_hwnd
 
 
 @click.command("set")
@@ -206,8 +235,9 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
     try:
         backend = _get_backend()
 
-        # Resolve ref to identifiers
-        resolved_aid, resolved_role, resolved_name = (
+        # Resolve ref to identifiers (+ cached point/window fallback, #1208)
+        (resolved_aid, resolved_role, resolved_name, resolved_coords,
+         resolved_snap_hwnd) = (
             _resolve_element_identifiers(ref, automation_id, role, name)
         )
 
@@ -215,24 +245,31 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
         target_hwnd = hwnd or 0
         if (app or window_title) and not target_hwnd:
             target_hwnd = _resolve_hwnd(backend, app, window_title)
+        # Fall back to the snapshot's source window so point resolution can walk
+        # the correct window's UIA tree (occlusion-independent). (#1208)
+        if not target_hwnd and resolved_snap_hwnd:
+            target_hwnd = resolved_snap_hwnd
 
         if toggle:
             _do_toggle(backend, target_hwnd, resolved_aid, resolved_role,
-                       resolved_name, ref, json_output)
+                       resolved_name, ref, json_output, coords=resolved_coords)
         elif select:
             _do_select(backend, target_hwnd, resolved_aid, resolved_role,
-                       resolved_name, ref, json_output)
+                       resolved_name, ref, json_output, coords=resolved_coords)
         elif expand:
             _do_expand_collapse(backend, target_hwnd, resolved_aid,
                                 resolved_role, resolved_name, ref,
-                                json_output, expanding=True)
+                                json_output, expanding=True,
+                                coords=resolved_coords)
         elif collapse:
             _do_expand_collapse(backend, target_hwnd, resolved_aid,
                                 resolved_role, resolved_name, ref,
-                                json_output, expanding=False)
+                                json_output, expanding=False,
+                                coords=resolved_coords)
         else:
             _do_set_value(backend, target_hwnd, resolved_aid, resolved_role,
-                          resolved_name, ref, value, json_output)
+                          resolved_name, ref, value, json_output,
+                          coords=resolved_coords)
 
     except NaturoError as exc:
         emit_exception_error(exc, json_output)
@@ -267,7 +304,7 @@ def _resolve_hwnd(backend, app, window_title):
 
 
 def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
-                  json_output) -> None:
+                  json_output, coords=None) -> None:
     """Set text value via UIA ValuePattern.
 
     Args:
@@ -280,12 +317,14 @@ def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
         value: Text value to set.
         json_output: Whether to output JSON.
     """
+    point = {"x": coords[0], "y": coords[1]} if coords else {}
     success = backend.set_element_value(
         text=value,
         hwnd=hwnd,
         name=name,
         automation_id=automation_id,
         role=role,
+        **point,
     )
 
     if not success:
@@ -314,7 +353,8 @@ def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
         click.echo(f"Set value on {target_str}: {value!r}")
 
 
-def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output) -> None:
+def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output,
+               coords=None) -> None:
     """Toggle element via UIA TogglePattern.
 
     Args:
@@ -326,11 +366,13 @@ def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output) -> No
         ref: Original ref string (for display).
         json_output: Whether to output JSON.
     """
+    point = {"x": coords[0], "y": coords[1]} if coords else {}
     result = backend.toggle_element(
         hwnd=hwnd,
         automation_id=automation_id,
         role=role,
         name=name,
+        **point,
     )
 
     if result is None:
@@ -358,7 +400,8 @@ def _do_toggle(backend, hwnd, automation_id, role, name, ref, json_output) -> No
         click.echo(f"Toggled {target_str} → {result}")
 
 
-def _do_select(backend, hwnd, automation_id, role, name, ref, json_output) -> None:
+def _do_select(backend, hwnd, automation_id, role, name, ref, json_output,
+               coords=None) -> None:
     """Select element via UIA SelectionItemPattern.
 
     Args:
@@ -370,11 +413,13 @@ def _do_select(backend, hwnd, automation_id, role, name, ref, json_output) -> No
         ref: Original ref string (for display).
         json_output: Whether to output JSON.
     """
+    point = {"x": coords[0], "y": coords[1]} if coords else {}
     success = backend.select_element(
         hwnd=hwnd,
         automation_id=automation_id,
         role=role,
         name=name,
+        **point,
     )
 
     if not success:
@@ -403,7 +448,7 @@ def _do_select(backend, hwnd, automation_id, role, name, ref, json_output) -> No
 
 
 def _do_expand_collapse(backend, hwnd, automation_id, role, name, ref,
-                        json_output, expanding) -> None:
+                        json_output, expanding, coords=None) -> None:
     """Expand or collapse element via UIA ExpandCollapsePattern.
 
     Args:
@@ -417,12 +462,14 @@ def _do_expand_collapse(backend, hwnd, automation_id, role, name, ref,
         expanding: True to expand, False to collapse.
     """
     action = "expand" if expanding else "collapse"
+    point = {"x": coords[0], "y": coords[1]} if coords else {}
     success = backend.expand_collapse_element(
         hwnd=hwnd,
         automation_id=automation_id,
         role=role,
         name=name,
         expand=expanding,
+        **point,
     )
 
     if not success:

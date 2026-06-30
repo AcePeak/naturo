@@ -308,6 +308,130 @@ class UIAInteractMixin:
 
         return root.FindFirst(mod.TreeScope_Descendants, cond)
 
+    def _resolve_interaction_element(
+        self,
+        uia,
+        mod,
+        *,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+    ):
+        """Resolve a live UIA element for interaction, by identity then point.
+
+        Resolution order, most precise first:
+
+        1. **Specific identity** (``name`` / ``automation_id``) — survives small
+           coordinate drift, so it is preferred when available.
+        2. **Screen point** (``x``, ``y``) — ``ElementFromPoint`` against the
+           cached bounding-box centre. This lets naturo act on *any* element it
+           previously located, even one with no ``AutomationId`` and no name
+           (e.g. the Property Tab Builder ``Message`` Edit). Tried before a
+           role-only match because a point is unambiguous (#1208).
+        3. **Role-only match** — last resort; ambiguous when several elements
+           share a role, so it runs only when nothing more specific resolved.
+
+        Args:
+            uia: The UI Automation root object from ``_init_comtypes_uia``.
+            mod: The comtypes UIAutomationClient module.
+            hwnd: Window handle to scope identity searches. 0 = desktop root.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId of the target element.
+            role: UIA control type (e.g. ``"Edit"``).
+            x: Screen X of the cached element centre, or ``None``.
+            y: Screen Y of the cached element centre, or ``None``.
+
+        Returns:
+            The resolved UIA element, or ``None`` if every strategy failed.
+        """
+        elem = None
+        if name or automation_id:
+            elem = self._find_uia_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role,
+            )
+        if elem is None and x is not None and y is not None:
+            # Occlusion-independent: match the cached point inside the *target
+            # window's own* UIA tree. ElementFromPoint is avoided because it
+            # returns whichever window is topmost at the screen point, so an
+            # overlapping window (e.g. a terminal) would hijack the hit (#1208).
+            elem = self._find_element_in_window_at_point(
+                uia, mod, hwnd, int(x), int(y),
+            )
+            if elem is None and not hwnd:
+                # No window scope to walk — last-resort screen hit test.
+                from ctypes import wintypes
+                try:
+                    elem = uia.ElementFromPoint(wintypes.POINT(int(x), int(y)))
+                except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
+                    logger.debug("ElementFromPoint(%s, %s) failed: %s", x, y, exc)
+                    elem = None
+            if elem is not None:
+                logger.debug(
+                    "Resolved interaction element by cached point (%d, %d) (#1208)",
+                    int(x), int(y),
+                )
+        if elem is None and role and not name and not automation_id:
+            elem = self._find_uia_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role,
+            )
+        return elem
+
+    def _find_element_in_window_at_point(self, uia, mod, hwnd, x, y):
+        """Find the element in ``hwnd``'s UIA tree whose bounds enclose ``(x, y)``.
+
+        Walks the *target window's* own subtree via ``ElementFromHandle`` and
+        returns the smallest element whose bounding rectangle contains the
+        point (i.e. the most specific leaf control there). Unlike
+        ``ElementFromPoint``, this is unaffected by other windows overlapping
+        the target on screen, so it resolves cached snapshot elements even when
+        the window is occluded or not foreground (#1208).
+
+        Args:
+            uia: UI Automation root object.
+            mod: comtypes UIAutomationClient module.
+            hwnd: Target window handle. ``0``/falsy returns ``None``.
+            x: Screen X of the cached element centre.
+            y: Screen Y of the cached element centre.
+
+        Returns:
+            The smallest enclosing UIA element, or ``None`` if none was found.
+        """
+        if not hwnd:
+            return None
+        try:
+            root = uia.ElementFromHandle(hwnd)
+            if root is None:
+                return None
+            elements = root.FindAll(
+                mod.TreeScope_Descendants, uia.CreateTrueCondition()
+            )
+        except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
+            logger.debug("ElementFromHandle/FindAll for point match failed: %s", exc)
+            return None
+
+        best = None
+        best_area = None
+        length = elements.Length if elements is not None else 0
+        for i in range(length):
+            try:
+                el = elements.GetElement(i)
+                rect = el.CurrentBoundingRectangle
+            except Exception:  # noqa: BLE001 — skip elements that error
+                continue
+            left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+            if right <= left or bottom <= top:
+                continue
+            if left <= x <= right and top <= y <= bottom:
+                area = (right - left) * (bottom - top)
+                if best_area is None or area < best_area:
+                    best, best_area = el, area
+        return best
+
     def set_element_value(
         self,
         text: str,
@@ -315,6 +439,8 @@ class UIAInteractMixin:
         name: Optional[str] = None,
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
     ) -> bool:
         """Set text on a UI element using UIA ValuePattern.SetValue().
 
@@ -328,6 +454,8 @@ class UIAInteractMixin:
             name: Accessible name of the target element.
             automation_id: UIA AutomationId of the target element.
             role: UIA control type (e.g. "Edit").
+            x: Screen X of the cached element centre (point fallback). (#1208)
+            y: Screen Y of the cached element centre (point fallback). (#1208)
 
         Returns:
             True if SetValue succeeded, False otherwise.
@@ -339,11 +467,13 @@ class UIAInteractMixin:
             return False
 
         try:
-            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
-                                          automation_id=automation_id, role=role)
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
             if elem is None:
-                # If targeting by name/automation_id failed, try finding the
-                # first editable element (e.g. Edit control) in the window
+                # If targeting by name/automation_id/point failed, try finding
+                # the first editable element (e.g. Edit control) in the window
                 if hwnd and role:
                     root = uia.ElementFromHandle(hwnd)
                     # Map common role names to UIA ControlTypeId
@@ -393,6 +523,8 @@ class UIAInteractMixin:
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
     ) -> Optional[str]:
         """Toggle a UI element via UIA TogglePattern.
 
@@ -416,8 +548,10 @@ class UIAInteractMixin:
         try:
             from comtypes import COMError  # type: ignore[import-untyped]
 
-            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
-                                          automation_id=automation_id, role=role)
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
             if elem is None:
                 logger.debug("Toggle: target element not found")
                 return None
@@ -449,6 +583,8 @@ class UIAInteractMixin:
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
     ) -> bool:
         """Select a UI element via UIA SelectionItemPattern.
 
@@ -470,8 +606,10 @@ class UIAInteractMixin:
         try:
             from comtypes import COMError  # type: ignore[import-untyped]
 
-            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
-                                          automation_id=automation_id, role=role)
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
             if elem is None:
                 logger.debug("Select: target element not found")
                 return False
@@ -500,6 +638,8 @@ class UIAInteractMixin:
         role: Optional[str] = None,
         name: Optional[str] = None,
         expand: bool = True,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
     ) -> bool:
         """Expand or collapse a UI element via UIA ExpandCollapsePattern.
 
@@ -522,8 +662,10 @@ class UIAInteractMixin:
         try:
             from comtypes import COMError  # type: ignore[import-untyped]
 
-            elem = self._find_uia_element(uia, mod, hwnd=hwnd, name=name,
-                                          automation_id=automation_id, role=role)
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
             if elem is None:
                 logger.debug("ExpandCollapse: target element not found")
                 return False
