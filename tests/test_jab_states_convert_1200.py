@@ -18,16 +18,19 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from naturo.backends.windows._element._tree import ElementTreeMixin
 from naturo.bridge._models import ElementInfo
 
 
-def _make_backend(tree: ElementInfo) -> ElementTreeMixin:
+def _make_backend(tree: ElementInfo):
     """Build a minimal backend whose JAB tree fetch returns ``tree``.
 
     Mirrors the real Windows backend's resolution path while stubbing the native
-    core and the coordinate fixup (which needs a live window handle).
+    core and the coordinate fixup (which needs a live window handle). The Windows
+    backend mixin is imported inside this function (not at module top) so the test
+    module still collects on non-Windows CI, matching ``test_find_element_window_scoping_963``.
     """
+    from naturo.backends.windows._element._tree import ElementTreeMixin
+
     class _Harness(ElementTreeMixin):
         def __init__(self) -> None:
             self._core = MagicMock()
