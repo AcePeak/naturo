@@ -44,10 +44,16 @@ def _make_mock_backend(
     return mock
 
 
-def _mock_resolve_identifiers(aid=None, role=None, name=None):
-    """Return a mock for _resolve_element_identifiers."""
+def _mock_resolve_identifiers(aid=None, role=None, name=None, coords=None,
+                              snap_hwnd=None):
+    """Return a mock for _resolve_element_identifiers.
+
+    Mirrors the 5-tuple contract (aid, role, name, coords, window_handle)
+    introduced in #1208; ``coords``/``snap_hwnd`` default to ``None`` so
+    existing identity-based tests are unaffected.
+    """
     def _resolve(ref, automation_id, r, n):
-        return (aid or automation_id, role or r, name or n)
+        return (aid or automation_id, role or r, name or n, coords, snap_hwnd)
     return _resolve
 
 
