@@ -161,10 +161,13 @@ def adaptation_degree(result: "CoverageResult") -> str:
     See docs/design/software-adaptation-degree.md §2. This is a coarse class,
     never a false-precision score:
 
-    * ``full``           -- a deterministic non-UIA framework (cdp/jab/com/ia2/
-      msaa) adds net elements (``delta > 0``). The moat case.
-    * ``uncertain-only`` -- the only non-UIA contribution is image/OCR/AI.
-    * ``uia-only``       -- only UIA adds value (a UIA-only rival would tie).
+    * ``full-tree``   -- a deterministic non-UIA framework (cdp/jab/com/ia2/
+      msaa) adds net elements (``delta > 0``): the fused tree recovers content
+      UIA collapses. The moat case.
+    * ``vision-only`` -- the only non-UIA contribution is image/OCR/AI (uncertain).
+    * ``partial``     -- only UIA adds value (a UIA-only rival would tie); UIA
+      typically sees just the accessible subset, not the framework's content.
+    * ``none``        -- nothing recognized (empty tree).
 
     ``blocked: needs env`` is decided at collection time (a framework that
     cannot be exercised on the host), not here.
@@ -175,11 +178,13 @@ def adaptation_degree(result: "CoverageResult") -> str:
         if technique_class(t) == DETERMINISTIC and t != "uia"
     ]
     uncertain = [t for t in techniques if technique_class(t) != DETERMINISTIC]
+    if not techniques and result.cascade_count == 0:
+        return "none"
     if deterministic_non_uia and result.delta > 0:
-        return "full"
+        return "full-tree"
     if uncertain and not deterministic_non_uia and result.delta > 0:
-        return "uncertain-only"
-    return "uia-only"
+        return "vision-only"
+    return "partial"
 
 
 def measure_window(

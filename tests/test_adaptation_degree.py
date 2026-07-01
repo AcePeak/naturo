@@ -24,30 +24,35 @@ def _result(uia, cascade, techniques):
 
 def test_degree_full_when_deterministic_non_uia_adds_elements():
     # cdp is deterministic + non-UIA + positive delta -> the moat case.
-    assert adaptation_degree(_result(20, 34, ["uia", "cdp"])) == "full"
+    assert adaptation_degree(_result(20, 34, ["uia", "cdp"])) == "full-tree"
 
 
 def test_degree_uia_only_when_only_uia():
-    assert adaptation_degree(_result(20, 20, ["uia"])) == "uia-only"
+    assert adaptation_degree(_result(20, 20, ["uia"])) == "partial"
 
 
 def test_degree_uncertain_only_when_non_uia_is_ai_or_image():
     # vision adds elements but it is uncertain, not deterministic.
-    assert adaptation_degree(_result(20, 26, ["uia", "vision"])) == "uncertain-only"
+    assert adaptation_degree(_result(20, 26, ["uia", "vision"])) == "vision-only"
 
 
 def test_degree_uia_only_when_non_uia_framework_adds_no_net_elements():
     # cdp fired but delta == 0 (all corroborating) -> no measured advantage.
-    assert adaptation_degree(_result(20, 20, ["uia", "cdp"])) == "uia-only"
+    assert adaptation_degree(_result(20, 20, ["uia", "cdp"])) == "partial"
 
 
 def test_degree_full_prefers_deterministic_over_present_uncertain():
     # Both a deterministic non-UIA (jab) and an uncertain (vision) fired,
     # with a positive delta -> deterministic wins the classification.
-    assert adaptation_degree(_result(10, 30, ["uia", "jab", "vision"])) == "full"
+    assert adaptation_degree(_result(10, 30, ["uia", "jab", "vision"])) == "full-tree"
 
 
 # ── _degree_fields_from_summary (derives table fields from M1 summary) ─────
+
+def test_degree_none_when_nothing_recognized():
+    # empty tree (no techniques, zero elements) -> nothing recognized.
+    assert adaptation_degree(_result(0, 0, [])) == "none"
+
 
 def test_degree_fields_orders_deterministic_first_and_counts_correctness():
     summary = {
@@ -82,6 +87,6 @@ def test_coverage_result_to_dict_carries_new_fields():
     d = r.to_dict()
     assert d["techniques"] == ["uia", "cdp"]
     assert d["correctness_counts"] == {"deterministic": 34, "uncertain": 0}
-    assert d["degree"] == "full"
+    assert d["degree"] == "full-tree"
     # existing fields still present
     assert d["delta"] == 14

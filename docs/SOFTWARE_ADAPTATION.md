@@ -23,19 +23,20 @@ honest coarse class, never a false-precision score:
 
 | degree           | meaning                                                                       |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `full`           | a **deterministic** non-UIA framework (cdp/jab/com/…) recovers net elements.   |
-| `uncertain-only` | the only non-UIA contribution is image/OCR (recovered, but **warned**).        |
-| `uia-only`       | only UIA adds value (a UIA-only rival would tie).                              |
+| `full-tree`           | a **deterministic** non-UIA framework (cdp/jab/com/…) recovers net elements.   |
+| `vision-only` | the only non-UIA contribution is image/OCR (recovered, but **warned**).        |
+| `partial`       | only UIA adds value (a UIA-only rival would tie).                              |
+| `none`          | nothing recognized; the cascade returns an empty tree for this window. |
 | `blocked / candidate` | the framework is not exercisable / not wired on this host — **not counted**. |
 
 ## Measured coverage (host: this dev machine, 2026-07-01)
 
 | Software | Framework | UIA-only | Cascade | Delta | Correctness | Degree | Source (re-runnable) |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| Chrome (local web app) | Electron/CDP (`cdp`) | 51 | 88 | **+37** | deterministic | `full` | `run_benchmark` (ChromiumFixtureApp) |
-| Owned Java Swing app | Java Access Bridge (`jab`) | 6 | 46 | **+40** | deterministic | `full` | `run_benchmark` (JavaSwingFixtureApp) |
-| Microsoft Excel workbook | Excel COM (`com`) | 596 | 604 | **+8** | deterministic | `full` | `naturo see --cascade --json` on a running Excel window † |
-| Text baked into an image | Local OCR (`ocr`) | 20 | 25 | **+5** | uncertain (warned) | `uncertain-only` | `naturo see --cascade --ocr --json` ‡ |
+| Chrome (local web app) | Electron/CDP (`cdp`) | 51 | 88 | **+37** | deterministic | `full-tree` | `run_benchmark` (ChromiumFixtureApp) |
+| Owned Java Swing app | Java Access Bridge (`jab`) | 6 | 46 | **+40** | deterministic | `full-tree` | `run_benchmark` (JavaSwingFixtureApp) |
+| Microsoft Excel workbook | Excel COM (`com`) | 596 | 604 | **+8** | deterministic | `full-tree` | `naturo see --cascade --json` on a running Excel window † |
+| Text baked into an image | Local OCR (`ocr`) | 20 | 25 | **+5** | uncertain (warned) | `vision-only` | `naturo see --cascade --ocr --json` ‡ |
 
 - **cdp** contributes +34 web-content elements (New/Open/Save/Inbox/… inside the
   Chromium content layer UIA collapses to one node).
