@@ -38,6 +38,13 @@ $StateLog = 'C:\Users\Naturobot\naturo-loop-state.log'
 $WorkDir  = 'C:\Users\Naturobot\naturo-loop-locks'
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
+# === GLOBAL PAUSE (Ace 2026-07-01): the entire naturo loop is paused. ALL roles (dev/qa/orch) no-op until
+# this block is removed. Paused after a ~24h session-degradation freeze (QA hung on a CIM proxy check, Dev/Orch
+# stopped firing); Ace killed the wedged processes. Resume only after the machine session is healthy (reboot +
+# no-sleep/no-lock) AND the runner proxy check is hardened against the CIM hang. To RESUME: delete this block. ===
+Add-Content -Path $StateLog -Value ("{0}  [runner:{1}]  PAUSED by Ace — cycle skipped (global pause)" -f (Get-Date).ToString('o'), $Role)
+exit 0
+
 # QA re-enabled 2026-06-17 with Ace's explicit authorization, after the live-injection-test gate was MET:
 #   1. CULPRIT fixed at the SOURCE — tests/QA_AGENT.md 第七轮 (the standing-playbook origin, added 2026-03-21
 #      in 2006314) is now locked to argv/pytest-level only, NEVER reproduced via live `naturo type` (7a10b18);
