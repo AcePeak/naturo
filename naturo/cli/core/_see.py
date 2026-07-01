@@ -32,6 +32,9 @@ import naturo.cli.core._common as _common
               help="Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision")
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered UI regions (requires AI provider)")
+@click.option("--ocr", "run_ocr", is_flag=True,
+              help="Run local OCR (rapidocr) to recover text baked into images/canvas; "
+                   "nodes are tagged 'ocr' (uncertain) and warned")
 @click.option("--stats", "show_stats", is_flag=True,
               help="Show per-provider recognition statistics after output")
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
@@ -58,7 +61,7 @@ import naturo.cli.core._common as _common
               help="AI provider API key (overrides env var / credentials file)")
 def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | None,
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
-        session: str | None, cascade: bool, fill_gaps: bool, show_stats: bool,
+        session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
         json_output: bool, backend: str, app_id: str | None,
         ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
@@ -199,6 +202,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     cascade_capture_result.scale_factor
                     if cascade_capture_result else 1.0
                 ),
+                run_ocr=run_ocr,
             )
             tree = cascade_result.tree
             cascade_stats = cascade_result.stats

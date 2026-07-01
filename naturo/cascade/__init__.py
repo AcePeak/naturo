@@ -67,6 +67,7 @@ from naturo.cascade._com_excel import (
     fetch_excel_cells as _fetch_excel_cells,
     is_excel_window as _is_excel_window,
 )
+from naturo.cascade._ocr import fetch_ocr_elements as _fetch_ocr_elements
 from naturo.cascade._correctness import (
     DETERMINISTIC,
     DETERMINISTIC_TECHNIQUES,
@@ -121,6 +122,7 @@ __all__ = [
     "_fetch_cdp_elements",
     "_fetch_excel_cells",
     "_is_excel_window",
+    "_fetch_ocr_elements",
     # Correctness / fusion tagging (M1 Unified Auto Element Tree)
     "DETERMINISTIC",
     "DETERMINISTIC_TECHNIQUES",

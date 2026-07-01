@@ -171,6 +171,7 @@ def run_cascade(
     ai_api_key: Optional[str] = None,
     screenshot_path: Optional[str] = None,
     screenshot_scale_factor: float = 1.0,
+    run_ocr: bool = False,
 ) -> CascadeResult:
     """Run progressive recognition and return a merged element tree.
 
@@ -527,6 +528,38 @@ def run_cascade(
                 stats.providers.append(ProviderStat(
                     name="vision", elapsed_ms=elapsed, status="skipped"
                 ))
+
+    # Provider 4: local OCR fallback (text baked into images/canvas that
+    # accessibility APIs cannot see).  UNCERTAIN by construction — merged with
+    # the same IoU/text dedup as AI vision, so OCR that overlaps a deterministic
+    # node corroborates it (deterministic stays preferred) and only genuinely
+    # image-only text is added as an uncertain, warned node (M2).
+    if run_ocr and root_tree is not None and screenshot_path:
+        t0 = time.monotonic()
+        bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+        ocr_elements: List[ElementInfo] = []
+        try:
+            ocr_elements = _get_cascade_pkg()._fetch_ocr_elements(
+                screenshot_path, bounds,
+            )
+        except Exception as exc:
+            logger.debug("OCR provider failed: %s", exc)
+        elapsed = (time.monotonic() - t0) * 1000
+        if ocr_elements:
+            novel, added_count, skipped_count = _get_cascade_pkg()._merge_ai_into_tree(
+                root_tree, ocr_elements,
+            )
+            merged_elements.extend(novel)
+            stats.providers.append(ProviderStat(
+                name="ocr", elements=added_count, elapsed_ms=elapsed, status="ok",
+            ))
+            logger.info(
+                "OCR: %d added, %d duplicates skipped", added_count, skipped_count,
+            )
+        else:
+            stats.providers.append(ProviderStat(
+                name="ocr", elapsed_ms=elapsed, status="no_elements",
+            ))
 
     # ── Assemble final stats ─────────────────────────────────────────────────
     stats.total_elements = len(merged_elements)
