@@ -88,7 +88,12 @@ def node_correctness(techniques: list[str]) -> str:
 
 
 def node_confidence(props: dict, techniques: list[str]) -> float:
-    """Max confidence across a node's techniques (deterministic ⇒ 1.0)."""
+    """Max confidence across a node's techniques (deterministic ⇒ 1.0).
+
+    Clamped to ``[0.0, 1.0]`` (ADR §3.1): a vision model's self-reported score
+    is passed through untrusted (see ``_providers.py``), so an out-of-range
+    value must never leak into ``see --json`` and contradict the schema.
+    """
     best = 0.0
     for t in techniques:
         if technique_class(t) == DETERMINISTIC:
@@ -100,7 +105,7 @@ def node_confidence(props: dict, techniques: list[str]) -> float:
             except (TypeError, ValueError):
                 score = _DEFAULT_UNCERTAIN_CONFIDENCE
             best = max(best, score)
-    return best
+    return max(0.0, min(1.0, best))
 
 
 def annotate(props: dict) -> Optional[dict]:

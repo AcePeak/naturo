@@ -72,6 +72,15 @@ def test_node_confidence_rules():
     assert C.node_confidence({"confidence": 0.8}, ["uia", "vision"]) == 1.0
 
 
+def test_node_confidence_clamped_to_unit_range():
+    # ADR §3.1: confidence is [0.0, 1.0]. A vision model's score is untrusted
+    # (passed through from provider JSON) and must never leak out of range.
+    assert C.node_confidence({"confidence": 95}, ["vision"]) == 1.0
+    assert C.node_confidence({"confidence": -0.3}, ["vision"]) == 0.0
+    fusion = C.annotate({"source": "vision", "confidence": 1.5})
+    assert fusion["confidence"] == 1.0
+
+
 def test_annotate_tagged_node():
     fusion = C.annotate({"source": "uia"})
     assert fusion == {
