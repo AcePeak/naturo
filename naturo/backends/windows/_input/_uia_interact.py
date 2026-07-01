@@ -243,10 +243,29 @@ class UIAInteractMixin:
         Ensures comtypes gen modules are generated before importing from them.
         Returns a tuple of (IUIAutomation instance, module reference).
 
+        On many deployed/enterprise hosts ``site-packages`` is read-only, so a
+        stale generated typelib in ``comtypes/gen`` cannot be regenerated in
+        place — comtypes raises ``PermissionError`` / a "Typelib different than
+        module" error and naturo's whole UIA layer (SetValue, ValuePattern
+        reads, …) silently dies (#1219). If the normal path fails for any
+        reason, redirect codegen to a writable per-user dir and retry once.
+
         Raises:
             ImportError: If comtypes is not available.
-            Exception: If UIA COM initialization fails.
+            Exception: If UIA COM initialization fails even after the retry.
         """
+        import comtypes.client  # type: ignore[import-untyped]  # noqa: F401
+        try:
+            return self._create_uia_via_comtypes()
+        except (ImportError, ModuleNotFoundError):
+            raise
+        except Exception:
+            self._redirect_comtypes_gen_dir()
+            return self._create_uia_via_comtypes()
+
+    @staticmethod
+    def _create_uia_via_comtypes():
+        """Build the IUIAutomation instance from the (possibly regenerated) gen."""
         import comtypes.client  # type: ignore[import-untyped]
         try:
             from comtypes.gen import UIAutomationClient as mod  # type: ignore[import-untyped]
@@ -259,6 +278,36 @@ class UIAInteractMixin:
             interface=mod.IUIAutomation,
         )
         return uia, mod
+
+    @staticmethod
+    def _redirect_comtypes_gen_dir():
+        """Point comtypes codegen at a writable per-user dir and drop stale gen.
+
+        Fixes the read-only-``site-packages`` + stale-cache deadlock (#1219): a
+        fresh writable ``gen_dir`` lets ``GetModule`` regenerate the typelib, and
+        restricting ``comtypes.gen.__path__`` to it prevents a stale read-only
+        cached module from shadowing the fresh one.
+        """
+        import os
+        import sys
+        import tempfile
+
+        import comtypes.client  # type: ignore[import-untyped]
+        import comtypes.gen  # type: ignore[import-untyped]
+
+        target = os.path.join(tempfile.gettempdir(), "naturo_comtypes_gen")
+        os.makedirs(target, exist_ok=True)
+        comtypes.client.gen_dir = target
+        comtypes.gen.__path__[:] = [target]
+        # Drop any already-imported (stale) gen submodules so the retry
+        # regenerates them into the writable dir instead of reusing the cache.
+        for name in [n for n in sys.modules if n.startswith("comtypes.gen.")]:
+            del sys.modules[name]
+        logger.warning(
+            "comtypes gen cache was unusable (stale/read-only); redirected "
+            "codegen to %s to keep the UIA ValuePattern path working (#1219)",
+            target,
+        )
 
     def _find_uia_element(self, uia, mod, hwnd: int = 0,
                           name: Optional[str] = None,
@@ -515,6 +564,53 @@ class UIAInteractMixin:
             return False
         except Exception as exc:
             logger.debug("SetValue unexpected error: %s", exc)
+            return False
+
+    def set_focused_element_value(self, text: str, append: bool = True) -> bool:
+        """IME-immune text entry: write to the focused element via ValuePattern.
+
+        Keystroke injection (SendInput) is intercepted by CJK/TSF IMEs and can
+        corrupt typed text (#1219: "naturo" -> "nature"). When the focused
+        control exposes a writable ValuePattern, set its value directly through
+        UIA — bypassing the keyboard and the IME entirely. Returns False (so the
+        caller falls back to keystrokes) when there is no focused element, no
+        ValuePattern, or the pattern is read-only.
+
+        Args:
+            text: Text to insert.
+            append: When True, append to the element's current value so a
+                ``type`` after existing text matches keystroke semantics; when
+                False, replace the whole value.
+
+        Returns:
+            True if the value was set via ValuePattern, False otherwise.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            return False
+        try:
+            elem = uia.GetFocusedElement()
+            if elem is None:
+                return False
+            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
+            if pat_unk is None:
+                return False
+            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+            if vp.CurrentIsReadOnly:
+                return False
+            new_value = ((vp.CurrentValue or "") + text) if append else text
+            vp.SetValue(new_value)
+            logger.info(
+                "type: set focused element via ValuePattern (IME-immune, len=%d)",
+                len(text),
+            )
+            return True
+        except (OSError, AttributeError) as exc:
+            logger.debug("set_focused_element_value failed: %s", exc)
+            return False
+        except Exception as exc:
+            logger.debug("set_focused_element_value unexpected error: %s", exc)
             return False
 
     def get_element_value_uia(

@@ -317,6 +317,22 @@ class Backend(ABC):
         """
         return False
 
+    def set_focused_element_value(self, text: str, append: bool = True) -> bool:
+        """IME-immune text entry via the focused element's UIA ValuePattern.
+
+        Returns True if the text was set directly through accessibility
+        (bypassing keystroke injection and any active IME), False if
+        unavailable — in which case the caller should fall back to
+        :meth:`type_text`. The default returns False; Windows overrides it
+        to make ``type`` reliable on CJK/IME hosts (#1219).
+
+        Args:
+            text: Text to insert.
+            append: Append to the element's current value (keystroke-like) when
+                True, else replace the whole value.
+        """
+        return False
+
     @abstractmethod
     def type_text(self, text: str, delay_ms: int = 5, profile: str = "human",
                   wpm: int = 120, input_mode: str = "normal") -> None:
