@@ -142,7 +142,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
-        if cascade or backend == "auto" or backend == "hybrid":
+        if cascade or backend in ("auto", "hybrid", "cdp"):
             # (#275) Auto-capture screenshot for cascade mode so AI vision
             # fallback can trigger when UIA tree is too shallow.
             # (#694) Use capture_window with resolved hwnd so the screenshot

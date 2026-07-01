@@ -282,6 +282,37 @@ class TestRunCascade:
         # CDP path was entered (no exception)
         assert result.tree is not None
 
+    def test_cdp_elements_grafted_onto_tree(self):
+        """Auto-cascade CDP elements must be attached to the fused tree, not
+        merely counted for coverage.
+
+        Regression: the auto CDP branch appended fetched elements only to the
+        internal coverage list and dropped the ``root_tree.children.append``
+        step the JAB branch performs, so ``see --cascade --json`` recognized
+        web DOM content (cdp: ok/N in stats) but never emitted a cdp-tagged
+        node — no uia+cdp fusion ever reached the tree.
+        """
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+        cdp_el = _make_el(id="cdp_1", role="Button", name="Save Order",
+                          x=10, y=10, w=80, h=30, props={"source": "cdp"})
+
+        with patch("naturo.cascade._fetch_cdp_elements", return_value=[cdp_el]), \
+             patch("naturo.cascade.find_cdp_port", return_value=9222):
+            result = run_cascade(be, backend_name="auto", pid=1234)
+
+        from naturo.cascade import _flatten, recognition_summary
+        ids = [e.id for e in _flatten(result.tree)]
+        assert "cdp_1" in ids, "CDP node was discarded instead of grafted onto the tree"
+        summary = recognition_summary(result.tree)
+        assert summary["by_technique"].get("cdp") == 1
+        # cdp is deterministic — the fused node must be preferred deterministically.
+        cdp_node = next(e for e in _flatten(result.tree) if e.id == "cdp_1")
+        from naturo.cascade import annotate
+        fusion = annotate(cdp_node.properties)
+        assert fusion["correctness"] == "deterministic"
+        assert fusion["techniques"] == ["cdp"]
+
     def test_ai_fill_gaps_skipped_without_screenshot(self):
         """AI vision not attempted when no screenshot_path provided."""
         tree = _make_el(id="root")
