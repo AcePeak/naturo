@@ -91,6 +91,56 @@ def server(mock_backend, snapshot_mgr):
 # ── see_ui_tree ──────────────────────────────────────────────────────
 
 
+class TestSeeUiTreeCascade:
+    """The unified see --cascade tree must be reachable via MCP (M3 criterion 1)."""
+
+    def test_cascade_returns_fused_correctness_tagged_tree(self, server):
+        from naturo.backends.base import ElementInfo
+        from naturo.cascade._types import CascadeResult, CascadeStats
+
+        root = ElementInfo(
+            id="w", role="Window", name="App", value=None,
+            x=0, y=0, width=200, height=200,
+            properties={"source": "uia"},
+            children=[
+                ElementInfo(id="b", role="Button", name="Save", value=None,
+                            x=0, y=0, width=100, height=50, children=[],
+                            properties={"source": "uia"}),
+                ElementInfo(id="c", role="Link", name="Open", value=None,
+                            x=100, y=0, width=40, height=40, children=[],
+                            properties={"source": "cdp"}),
+            ],
+        )
+        result = CascadeResult(tree=root, stats=CascadeStats(), primary_provider="uia")
+
+        with patch("naturo.cascade.run_cascade", return_value=result) as mock_cascade:
+            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123})
+
+        mock_cascade.assert_called_once()
+        data = json.loads(out[0].text)
+        assert data["success"] is True
+        tree = data["tree"]
+        # every fused node carries techniques[] + correctness + confidence
+        assert tree["techniques"] == ["uia"]
+        assert tree["correctness"] == "deterministic"
+        assert tree["confidence"] == 1.0
+        child_techs = {tuple(ch["techniques"]) for ch in tree["children"]}
+        assert ("uia",) in child_techs and ("cdp",) in child_techs
+        # deterministic preferred, no false uncertain
+        assert all(ch["correctness"] == "deterministic" for ch in tree["children"])
+        # structured recognition summary is exposed to the agent
+        assert "recognition_summary" in data
+        assert data["recognition_summary"]["by_technique"].get("cdp") == 1
+        assert data["recognition_summary"]["has_uncertain"] is False
+
+    def test_non_cascade_tree_has_no_fusion_tags(self, server, mock_backend):
+        # plain (single-backend) path stays unchanged — no techniques/correctness.
+        out = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(out[0].text)
+        assert "techniques" not in data["tree"]
+        assert "recognition_summary" not in data
+
+
 class TestSeeUiTree:
 
     def test_returns_tree_structure(self, server, mock_backend):

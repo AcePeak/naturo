@@ -21,6 +21,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         pid: Optional[int] = None,
         depth: int = 7,
         accessibility_backend: str = "uia",
+        cascade: bool = False,
     ) -> dict:
         """Inspect the UI accessibility tree of a window.
 
@@ -38,6 +39,13 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             accessibility_backend: "uia" (default), "msaa" (for legacy apps like
                 MFC, VB6, Delphi), "ia2" (for Firefox, Thunderbird, LibreOffice),
                 "jab" (for Java/Swing/AWT), or "auto" (try UIA → IA2 → JAB → MSAA).
+            cascade: When True, run the unified multi-framework cascade (UIA plus
+                the CDP/JAB/COM additive providers) and tag every node with
+                ``techniques[]`` + ``correctness`` (deterministic vs uncertain) +
+                ``confidence``; deterministic sources are preferred. Also returns
+                a top-level ``recognition_summary``. This is the moat: it recovers
+                web (CDP), Java (JAB) and Excel-cell (COM) content that UIA
+                collapses, so the agent sees one fused, correctness-tagged tree.
 
         Returns:
             Dict with the element tree structure.
@@ -48,9 +56,20 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"accessibility_backend must be uia, msaa, ia2, jab, or auto, got {accessibility_backend}"}}
         backend = _get_backend()
 
+        cascade_result = None
+        if cascade:
+            # (M3) Expose the unified see --cascade fused tree over MCP: run the
+            # multi-framework cascade so every node carries techniques[] +
+            # correctness + confidence and the caller gets a recognition_summary.
+            from naturo.cascade import run_cascade
+            cascade_result = run_cascade(
+                backend, app=app, window_title=window_title,
+                hwnd=hwnd, pid=pid, depth=depth, backend_name="auto",
+            )
+            tree = cascade_result.tree
         # (#737) When --app is used without --hwnd, enumerate ALL windows
         # of the application and merge their UI trees (matching CLI behavior).
-        if app and not hwnd and hasattr(backend, "_resolve_hwnds"):
+        elif app and not hwnd and hasattr(backend, "_resolve_hwnds"):
             hwnds = backend._resolve_hwnds(app=app)
             if not hwnds:
                 return {"success": False, "error": {"code": "NO_WINDOW", "message": f"No windows found for app '{app}'"}}
@@ -129,6 +148,11 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         display_ref_map: dict[str, str] = {}
         _counter = [1]
 
+        # (M3) Cascade nodes carry a ``source``; annotate derives techniques[] +
+        # correctness + confidence. Non-cascade nodes have no source, so annotate
+        # returns None and no fusion fields are added (behavior unchanged).
+        from naturo.cascade import annotate as _annotate_correctness
+
         def _serialize(el) -> dict:
             stable_ref = element_obj_to_ref.get(id(el), el.id)
             display_ref = f"e{_counter[0]}"
@@ -142,11 +166,24 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 "bounds": {"x": el.x, "y": el.y, "width": el.width, "height": el.height},
                 "properties": el.properties,
             }
+            _fusion = _annotate_correctness(el.properties or {})
+            if _fusion is not None:
+                d["techniques"] = _fusion["techniques"]
+                d["correctness"] = _fusion["correctness"]
+                d["confidence"] = _fusion["confidence"]
             if el.children:
                 d["children"] = [_serialize(c) for c in el.children]
             return d
 
         result = {"success": True, "tree": _serialize(tree), "snapshot_id": snapshot_id}
+
+        # (M3) Expose the structured recognition summary alongside the fused tree
+        # so an agent can branch on correctness without walking every node.
+        if cascade_result is not None:
+            from naturo.cascade import recognition_summary
+            _summary = recognition_summary(tree)
+            if _summary["total_nodes"] > 0:
+                result["recognition_summary"] = _summary
 
         # Store display ref mapping so sequential refs from tree output
         # can be translated to stable refs during click resolution.
