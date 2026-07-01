@@ -76,6 +76,25 @@ def _text_proximity_match(
     return None
 
 
+def _record_corroboration(node: ElementInfo, ai_el: ElementInfo) -> None:
+    """Record that an uncertain hit corroborated a deterministic node (M1).
+
+    The duplicate AI/image element is *not* added to the tree, but the technique
+    that saw it is appended to the matched node's ``corroborated_by`` list so the
+    fused node reports every technique that recognized it
+    (``docs/RECOGNITION_TREE.md`` §4).  Deterministic ordering/preference is
+    applied later by :mod:`naturo.cascade._correctness`.
+    """
+    ai_props = getattr(ai_el, "properties", {}) or {}
+    technique = ai_props.get("source", "vision")
+    node_props = node.properties
+    if not isinstance(node_props, dict):
+        return
+    corroborated = node_props.setdefault("corroborated_by", [])
+    if technique not in corroborated:
+        corroborated.append(technique)
+
+
 def _merge_ai_into_tree(
     root: ElementInfo,
     ai_elements: List[ElementInfo],
@@ -147,6 +166,8 @@ def _merge_ai_into_tree(
                 break
 
         if is_duplicate:
+            if best_match is not None:
+                _record_corroboration(best_match, ai_el)
             skipped += 1
             logger.debug(
                 "AI merge: skip '%s' (%d,%d %dx%d) IoU=%.2f with UIA '%s'",
@@ -158,6 +179,7 @@ def _merge_ai_into_tree(
         # --- Pass 2: text + proximity dedup (#702) ---
         text_match = _text_proximity_match(ai_el, uia_visible, proximity_px)
         if text_match is not None:
+            _record_corroboration(text_match, ai_el)
             skipped += 1
             logger.debug(
                 "AI merge: skip '%s' (%d,%d %dx%d) text+proximity match "
