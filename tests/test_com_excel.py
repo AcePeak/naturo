@@ -105,6 +105,22 @@ def test_fetch_maps_nonempty_cells_and_skips_empty():
     assert by_addr["B2"].value == "42"                  # coerced to str
 
 
+def test_get_running_excel_prefers_class_moniker():
+    import naturo.cascade._com_excel as ce
+    with patch.object(ce, "_get_excel_via_class_moniker", return_value="FAST"), \
+         patch.object(ce, "_get_excel_from_rot", return_value="ROT"):
+        assert ce._get_running_excel() == "FAST"
+
+
+def test_get_running_excel_falls_back_to_rot_when_class_moniker_absent():
+    # The licensing-degraded-host case: GetActiveObject fails, but an open
+    # workbook is bindable via the ROT document moniker.
+    import naturo.cascade._com_excel as ce
+    with patch.object(ce, "_get_excel_via_class_moniker", return_value=None), \
+         patch.object(ce, "_get_excel_from_rot", return_value="ROT_APP"):
+        assert ce._get_running_excel() == "ROT_APP"
+
+
 def test_fetch_empty_when_no_excel_running():
     with patch("naturo.cascade._com_excel._get_running_excel", return_value=None):
         assert fetch_excel_cells(123) == []

@@ -43,15 +43,64 @@ def is_excel_window(hwnd: int) -> bool:
     return _win32_class_name(hwnd) == "XLMAIN"
 
 
-def _get_running_excel():
-    """Return the running Excel ``Application`` COM object, or ``None``."""
+#: Workbook file extensions whose ROT document monikers identify an open Excel.
+_EXCEL_DOC_SUFFIXES = (".xlsx", ".xlsm", ".xlsb", ".xls", ".csv")
+
+
+def _get_excel_via_class_moniker():
+    """Fast path: bind the ``Excel.Application`` class moniker (may be slow or
+    absent on licensing-degraded hosts, raising MK_E_UNAVAILABLE)."""
     try:
         import win32com.client
 
         return win32com.client.GetActiveObject("Excel.Application")
     except Exception as exc:
-        logger.debug("COM/Excel: no running Excel Application: %s", exc)
+        logger.debug("COM/Excel: GetActiveObject(Excel.Application) failed: %s", exc)
         return None
+
+
+def _get_excel_from_rot():
+    """Fallback: find a running Excel ``Application`` by enumerating the Running
+    Object Table for an open workbook.
+
+    Document monikers register reliably even when the ``Excel.Application``
+    class moniker is slow/absent (observed on an "unauthorized product" Excel:
+    GetActiveObject transiently raised MK_E_UNAVAILABLE while a workbook was
+    open and only the document moniker was in the ROT).
+    """
+    try:
+        import pythoncom
+    except Exception:  # pragma: no cover - dep guard
+        return None
+    try:
+        rot = pythoncom.GetRunningObjectTable()
+        ctx = pythoncom.CreateBindCtx(0)
+        for moniker in rot.EnumRunning():
+            try:
+                name = moniker.GetDisplayName(ctx, None)
+            except Exception:
+                continue
+            if name and name.lower().endswith(_EXCEL_DOC_SUFFIXES):
+                try:
+                    workbook = rot.GetObject(moniker)
+                    app = getattr(workbook, "Application", None)
+                    if app is not None:
+                        return app
+                except Exception as exc:
+                    logger.debug("COM/Excel: ROT bind '%s' failed: %s", name, exc)
+    except Exception as exc:
+        logger.debug("COM/Excel: ROT enumeration failed: %s", exc)
+    return None
+
+
+def _get_running_excel():
+    """Return a running Excel ``Application`` COM object, or ``None``.
+
+    Tries the class moniker first (fast), then the ROT document-moniker
+    fallback so binding is reliable even when the class moniker is slow/absent
+    on a licensing-degraded host.
+    """
+    return _get_excel_via_class_moniker() or _get_excel_from_rot()
 
 
 def _window_for_hwnd(xl, hwnd: int):
