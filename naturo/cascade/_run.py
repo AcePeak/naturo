@@ -353,9 +353,15 @@ def run_cascade(
 
             elapsed = (time.monotonic() - t0) * 1000
             if cdp_elements:
-                # Tag and add CDP elements as children of root
+                # Tag and graft CDP elements onto the tree as children of the
+                # root, mirroring the JAB branch below.  Appending only to
+                # ``merged_elements`` (coverage math) dropped them from the
+                # fused tree, so ``see --cascade --json`` recognized web DOM
+                # content but never emitted a cdp-tagged node (no uia+cdp
+                # fusion).  Same graft as ``_run_cdp_only``.
                 for el in cdp_elements:
                     tagged_el = _tag_source(el, "cdp")
+                    root_tree.children.append(tagged_el)
                     merged_elements.append(tagged_el)
 
                 stats.providers.append(ProviderStat(

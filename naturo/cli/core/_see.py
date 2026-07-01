@@ -142,7 +142,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
-        if cascade or backend == "auto" or backend == "hybrid":
+        if cascade or backend in ("auto", "hybrid", "cdp"):
             # (#275) Auto-capture screenshot for cascade mode so AI vision
             # fallback can trigger when UIA tree is too shallow.
             # (#694) Use capture_window with resolved hwnd so the screenshot
@@ -349,6 +349,17 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             el_dict = _el_to_selector_dict(el)
             return _sel_builder.build_uri(el_dict, ancestors_dicts, app=_selector_app)
 
+        # (M1) Unified Auto Element Tree: fusion tags + AI/image warning.
+        # recognition_summary only counts cascade-tagged nodes, so a plain
+        # (non-cascade) tree yields an empty summary and no false warning.
+        from naturo.cascade._correctness import (
+            annotate as _fusion_annotate,
+            recognition_summary as _fusion_summary,
+            uncertain_warning as _fusion_warning,
+        )
+        _recognition = _fusion_summary(tree)
+        _recognition_warning = _fusion_warning(_recognition)
+
         if json_output:
             # (#237) Use a sequential counter matching _flatten() DFS order
             # to assign unique display IDs.  The previous reverse-map approach
@@ -438,6 +449,13 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
                     d["source"] = props["source"]
+                # (M1) Correctness-tagged fusion: every cascade node carries
+                # techniques[] + correctness + confidence; deterministic first.
+                _fusion = _fusion_annotate(props)
+                if _fusion is not None:
+                    d["techniques"] = _fusion["techniques"]
+                    d["correctness"] = _fusion["correctness"]
+                    d["confidence"] = _fusion["confidence"]
                 return d
             out = to_dict(tree)
             assert out is not None, "Root element should never be filtered"
@@ -445,6 +463,10 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 out["snapshot_id"] = snapshot_id
             if cascade_stats:
                 out["cascade_stats"] = cascade_stats.to_dict()
+            # (M1) Structured recognition summary so agents can branch on
+            # correctness without parsing the stderr warning.
+            if _recognition["total_nodes"] > 0:
+                out["recognition_summary"] = _recognition
 
             # Add DPI context so AI agents know coordinate scaling
             try:
@@ -462,6 +484,9 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
 
             click.echo(json_dumps(out, indent=2))
+            # (M1) Correctness warning to stderr keeps --json stdout pure.
+            if _recognition_warning:
+                click.echo(_recognition_warning, err=True)
         else:
             # BUG-071: include short element IDs (e1, e2, ...) that can be
             # passed to ``naturo click e3`` for quick interaction.
@@ -520,6 +545,9 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     print_tree(child, indent + 1, child_ancestors)
 
             print_tree(tree)
+            # (M1) Warn (stderr) when any node is AI/image-only (uncertain).
+            if _recognition_warning:
+                click.echo(_recognition_warning, err=True)
             if snapshot_id:
                 click.echo(f"\nSnapshot: {snapshot_id}")
                 if show_selectors:

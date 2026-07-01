@@ -63,6 +63,18 @@ from naturo.cascade._coverage import (
     _is_shallow_tree,
 )
 from naturo.cascade._providers import _fetch_ai_elements, _fetch_cdp_elements
+from naturo.cascade._correctness import (
+    DETERMINISTIC,
+    DETERMINISTIC_TECHNIQUES,
+    UNCERTAIN,
+    UNCERTAIN_TECHNIQUES,
+    annotate,
+    node_correctness,
+    node_techniques,
+    recognition_summary,
+    technique_class,
+    uncertain_warning,
+)
 
 __all__ = [
     # Types
@@ -103,4 +115,15 @@ __all__ = [
     # Providers
     "_fetch_ai_elements",
     "_fetch_cdp_elements",
+    # Correctness / fusion tagging (M1 Unified Auto Element Tree)
+    "DETERMINISTIC",
+    "DETERMINISTIC_TECHNIQUES",
+    "UNCERTAIN",
+    "UNCERTAIN_TECHNIQUES",
+    "annotate",
+    "node_correctness",
+    "node_techniques",
+    "recognition_summary",
+    "technique_class",
+    "uncertain_warning",
 ]
