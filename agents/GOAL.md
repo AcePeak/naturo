@@ -62,38 +62,41 @@ the fused tree; `docs/SOFTWARE_ADAPTATION.md` published from real runs (non-repr
 `blocked: needs env`). Open follow-ups (own issues, not M2 blockers): IA2/Firefox wiring, Excel-fixture nag
 dismissal (COM verified +8 via direct command; automated fixture reads +0 on un-activated Office), MSAA additive.
 
-## 🎯 CURRENT MILESTONE — **M3: AI-agent fit hardening (pillar B — co-equal, so far untouched)**
-Make naturo the RPA tool an AI agent plugs into cleanest. **Done when ALL of these are observably true:**
-1. **MCP exposes the moat** — naturo's MCP server exposes the core recognition + action capabilities, **including
-   the M1/M2 unified `see --cascade` tree**, as clean MCP tools (clear name + description + typed params). Observable:
-   a CI test enumerates the MCP tools and asserts each has a description + input schema, and the unified-tree
-   capability is reachable via MCP.
-2. **Self-correcting error contract on MCP** — every MCP tool error returns the full contract (**code + category +
-   recovery-hint**) so an agent can self-correct (extend the #884/#1180 envelope work to the MCP surface).
-   Observable: a CI test drives MCP error paths and asserts each returns a **registered** code + category + hint,
-   never a bare string.
-3. **"3-line" integration** — `docs/AGENT_INTEGRATION.md` shows wiring naturo's MCP into an agent in ~3 lines
-   (e.g. `claude mcp add naturo -- python -m naturo mcp`, or an mcp-config snippet) + a runnable example, and the
-   command it documents actually works.
-4. **Agent-in-the-loop acceptance (desktop)** — a **real Claude-Code agent with naturo's MCP configured** (using
-   the existing login auth; **no separate API key** — the Anthropic API is reachable via the 127.0.0.1:7890 proxy)
-   completes an end-to-end desktop task **through naturo MCP tools** (e.g. launch Notepad → find the edit area via
-   the unified tree → type text → read it back), verified by the independent QA sub-agent's transcript showing the
-   agent actually used naturo MCP tools and succeeded, with **zero orphaned processes**.
-5. **CI-runnable test** for the MCP schemas + error contracts exits 0, Linux-collectable (this layer needs no
-   LLM/desktop — it is deterministic pytest).
+## ✅ M3 DONE (2026-07-01) — AI-agent fit hardening
+Merged (PR #1218 `a550c6d`, CI green). MCP exposes the unified `see --cascade` tree; self-correcting error contract
+across MCP (42 paths, 0 violations); `docs/AGENT_INTEGRATION.md` 3-line integration; a real Claude agent completed
+an end-to-end desktop task through naturo MCP (type→read-back character-exact), QA-verified, zero orphans. Bonus:
+an enterprise correctness bug fixed — stale comtypes gen-cache silently killed the whole UIA write layer → now
+self-heals + WARNs (#1219/#1220, `7d5925c`).
+
+## 🎯 CURRENT MILESTONE — **M4: Reliability & soak (the commercial-grade 100%-correctness floor)**
+Capability is strong; now make it **trustworthy** — enterprises need 100%, and a capable-but-flaky tool loses.
+**Done when ALL of these are observably true:**
+1. **No silent failures (guarded)** — extend the #885/#1180 work: a CI source/behavior guard **fails** if any CLI
+   or MCP path can return `success:true` on a failed operation; the known silent-failure classes are closed.
+   Observable: `pytest` for the silent-failure guard exits 0 AND the guard catches a planted violation (positive control).
+2. **Crash-recovery generalized** — after a backend/DLL/COM failure the **next** call self-heals (re-inits) rather
+   than staying broken (generalize the comtypes self-heal #1220 to the recognition/input layers). Observable: a test
+   forces a backend failure, then asserts the next call succeeds + logs a WARNING.
+3. **Zero process leaks (enforced)** — the #1202 guaranteed-teardown fixtures cover **every** launching test; a
+   before/after process-snapshot harness asserts **zero** orphaned test-launched processes after the full
+   desktop+browser suite (PID-scoped, dialogs dismissed, cmd/terminals never touched). Observable: the snapshot
+   harness reports 0 orphans.
+4. **Soak stable** — a bounded soak (**≥100 consecutive** recognition+action cycles on **≥2 real apps**) completes
+   with zero crashes, zero degradation, zero leaks. Observable: a soak harness runs the cycles and reports 0
+   failures/0 leaks (desktop QA).
+5. **CI-runnable** reliability tests (silent-failure guard, crash-recovery, teardown-snapshot) exit 0, Linux-collectable.
 6. **Merged to `develop`, CI green.**
 
-(M3 is large — decompose one-slice-per-round: expose unified tree via MCP → MCP error-contract sweep + test →
-integration doc + working `claude mcp add` → the agent-in-the-loop desktop acceptance. Each round runs the full
-implement→independent-verify loop. The agent-in-the-loop uses Claude Code as the agent; the CI layer is pure pytest.)
+(M4 is large — decompose one-slice-per-round: silent-failure guard+sweep → crash-recovery generalization → the
+teardown-snapshot harness across all launching tests → the soak harness + real-app soak run. Each round runs the
+full implement→independent-verify loop; the CI layer is deterministic pytest, the soak/crash-recovery layer is desktop QA.)
 
 ## 🔜 MILESTONE QUEUE (advance in order; re-derive from the scoreboard as rivals move)
 - **M1** — Unified Auto Element Tree foundation. ✅ DONE 2026-07-01 (PR #1214).
 - **M2** — Broaden framework coverage + publish the software-adaptation-degree table. ✅ DONE 2026-07-01 (#1215/#1216/#1217).
-- **M3** — AI-agent fit hardening: MCP tool schemas + self-correcting error contracts + "3-line" integration
-  examples + agent-in-the-loop acceptance. ← **current** (see above).
-- **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks.
+- **M3** — AI-agent fit hardening: MCP + self-correcting error contracts + integration + agent-in-the-loop. ✅ DONE 2026-07-01 (#1218).
+- **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks. ← **current** (see above).
 Each milestone's done-criteria must be **transcript-verifiable** (a command's output / a passing test / a QA verdict).
 
 ## ⚔️ COMPETITIVE TARGETS (prove "#1", in this order)
