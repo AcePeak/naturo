@@ -82,7 +82,17 @@ switch ($Role) {
 # doskey and does not exist in a scheduled-task PowerShell, so route through the local Clash-style
 # proxy directly if one is listening. Auto-detected, so this stays portable on machines without it. ---
 $ProxyPort = 7890
-if (Get-NetTCPConnection -LocalPort $ProxyPort -State Listen -ErrorAction SilentlyContinue) {
+# Detect the proxy with a bounded TcpClient connect, NOT Get-NetTCPConnection: that cmdlet is a CIM/WMI call
+# which, in a degraded headless session, HANGS forever (same class as the #1204 `cmd /c ver` hang) — it wedged
+# every QA cycle right here for ~24h. A direct socket connect with a hard timeout can't hang the cycle.
+$ProxyUp = $false
+try {
+  $tcp = New-Object System.Net.Sockets.TcpClient
+  $iar = $tcp.BeginConnect('127.0.0.1', $ProxyPort, $null, $null)
+  if ($iar.AsyncWaitHandle.WaitOne(1500)) { $tcp.EndConnect($iar); $ProxyUp = $tcp.Connected }
+  $tcp.Close()
+} catch { $ProxyUp = $false }
+if ($ProxyUp) {
   $env:HTTP_PROXY  = "http://127.0.0.1:$ProxyPort"
   $env:HTTPS_PROXY = "http://127.0.0.1:$ProxyPort"
   $env:ALL_PROXY   = "socks5://127.0.0.1:$ProxyPort"

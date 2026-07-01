@@ -101,9 +101,12 @@ git checkout -b fix/issue-N-short-desc origin/develop
 ```
 1. **Write a failing test first** (`tests/`). Mark `@pytest.mark.desktop` if it touches real UI/DLL.
    **Test hygiene — close what you open:** a test that launches an app/browser MUST use a guaranteed-teardown
-   fixture (`yield` + `finally` that quits/kills the **tracked PID**, runs even on failure) so it leaves **zero**
-   orphaned processes — never raw-launch without teardown, and never blanket-kill by name (kills the human's real
-   windows). Leaking instances pollute the desktop and corrupt later window-count/`list apps`/`find` tests. (#1202)
+   fixture (`yield` + `finally`, runs even on failure) that **hard-terminates the tracked PID** (`taskkill /PID
+   <pid> /T /F` or `psutil` kill) — a hard kill leaves **zero** orphans AND avoids the **"Save/Don't Save/Cancel"
+   dialog** that a graceful close of an edited window pops (the #1 residue cause: the window stays open on that
+   dialog). Never raw-launch without teardown; never blanket-kill by name and **never kill cmd/terminal/console**
+   (PID-scoped only — killing the wrong window breaks the host). Leaks pollute the desktop and corrupt later
+   window-count/`list apps`/`find` tests. (#1202)
 2. Implement the **minimal** fix. Read files before changing them.
 3. **Quality gate — ALL must pass** (run from the worktree root so local code wins):
    ```bash

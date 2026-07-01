@@ -114,12 +114,19 @@ human's desktop and, worse, **corrupts later tests** (a `list apps` / window-cou
 stragglers → false results). So:
 - **Track what you launch.** Record each launched app's **PID** (and any browser's debug port/profile) the
   moment you start it. Launch into known, throwaway instances — never reuse the human's existing windows.
-- **At cycle end — and in a `finally`/cleanup even if a check fails or you abort — close exactly those PIDs**
-  (`naturo app quit`/close, else taskkill the tracked PID; quit any browser you launched). Confirm they're gone.
-- **NEVER blanket-close by name** (`taskkill /im chrome.exe`, "close all Notepad"): that would kill the human's
-  real windows. Close **only the PIDs you started**, nothing you didn't launch.
-- Leave the desktop as clean as you found it. If you can't confirm something you launched is closed, say so in
-  your report so it can be swept.
+- **At cycle end — and in a `finally`/cleanup even if a check fails or you abort — close exactly those PIDs.**
+  Prefer a **hard terminate of the tracked PID** (`taskkill /PID <pid> /T /F`): it kills the process **without**
+  triggering a save prompt, so nothing lingers. This is the fix for the #1 residue cause — a graceful close of an
+  app with unsaved edits pops a **"Save / Don't Save / Cancel"** dialog and the window **stays open** if unhandled.
+- **If you DO close gracefully** (`naturo app quit` / WM_CLOSE), you MUST then **dismiss any unsaved-changes
+  dialog** — choose **"Don't Save"/不保存** (these are throwaway test windows, discard is correct), never leave it
+  on Cancel. Then confirm the window/PID is actually gone (a lingering Save dialog = NOT closed).
+- **NEVER blanket-close by name** (`taskkill /im chrome.exe`/`notepad.exe`, "close all Notepad"): that kills the
+  human's real windows. Close **only the PIDs you started**. **NEVER touch a cmd/PowerShell/terminal/console
+  window or your own shell** — closing the wrong cmd can break the loop/host; if unsure whether you launched it,
+  DON'T close it.
+- **Verify clean before exit:** confirm every tracked PID is gone AND no orphaned Save/Don't-Save dialog remains.
+  If you can't confirm something you launched is closed, say so in your report so it can be swept — never guess.
 (The durable fix — guaranteed-teardown pytest fixtures + a session sweeper — is tracked in #1202; this rule is
 your live-run obligation regardless.)
 
