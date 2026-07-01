@@ -56,7 +56,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from naturo.backends.base import get_backend
-from naturo.cascade import _flatten, run_cascade
+from naturo.cascade import _flatten, recognition_summary, run_cascade
+from naturo.cascade._correctness import DETERMINISTIC, technique_class
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,10 @@ class CoverageResult:
     extra_sources: dict = field(default_factory=dict)
     sample_extra_names: List[str] = field(default_factory=list)
     notes: str = ""
+    # M2: fusion tags from the M1 recognition_summary (deterministic-first
+    # techniques + a deterministic/uncertain node breakdown).
+    techniques: List[str] = field(default_factory=list)
+    correctness_counts: dict = field(default_factory=dict)
 
     @property
     def delta(self) -> int:
@@ -109,6 +114,9 @@ class CoverageResult:
             "extra_sources": dict(self.extra_sources),
             "sample_extra_names": list(self.sample_extra_names),
             "notes": self.notes,
+            "techniques": list(self.techniques),
+            "correctness_counts": dict(self.correctness_counts),
+            "degree": adaptation_degree(self),
         }
 
 
@@ -127,6 +135,51 @@ def _provider_counts(stats) -> dict:
         if provider.status == "ok" and provider.elements > 0:
             counts[provider.name] = counts.get(provider.name, 0) + provider.elements
     return counts
+
+
+def _degree_fields_from_summary(summary: dict) -> tuple[List[str], dict]:
+    """Derive (techniques, correctness_counts) from an M1 recognition_summary.
+
+    ``techniques`` is deterministic-first (the contract in
+    docs/RECOGNITION_TREE.md); ``correctness_counts`` splits the recognized
+    nodes into ``deterministic`` vs ``uncertain``.
+    """
+    by_technique = summary.get("by_technique", {}) or {}
+    total = summary.get("total_nodes", 0) or 0
+    uncertain = summary.get("uncertain_nodes", 0) or 0
+    techniques = sorted(
+        by_technique.keys(),
+        key=lambda t: (technique_class(t) != DETERMINISTIC, t),
+    )
+    counts = {"deterministic": total - uncertain, "uncertain": uncertain}
+    return techniques, counts
+
+
+def adaptation_degree(result: "CoverageResult") -> str:
+    """Classify a measured result into an honest adaptation-degree class.
+
+    See docs/design/software-adaptation-degree.md §2. This is a coarse class,
+    never a false-precision score:
+
+    * ``full``           -- a deterministic non-UIA framework (cdp/jab/com/ia2/
+      msaa) adds net elements (``delta > 0``). The moat case.
+    * ``uncertain-only`` -- the only non-UIA contribution is image/OCR/AI.
+    * ``uia-only``       -- only UIA adds value (a UIA-only rival would tie).
+
+    ``blocked: needs env`` is decided at collection time (a framework that
+    cannot be exercised on the host), not here.
+    """
+    techniques = result.techniques or []
+    deterministic_non_uia = [
+        t for t in techniques
+        if technique_class(t) == DETERMINISTIC and t != "uia"
+    ]
+    uncertain = [t for t in techniques if technique_class(t) != DETERMINISTIC]
+    if deterministic_non_uia and result.delta > 0:
+        return "full"
+    if uncertain and not deterministic_non_uia and result.delta > 0:
+        return "uncertain-only"
+    return "uia-only"
 
 
 def measure_window(
@@ -192,6 +245,15 @@ def measure_window(
             if len(sample_extra_names) >= 8:
                 break
 
+    # M2: fusion tags (techniques + deterministic/uncertain split) from the
+    # same fused tree, via the M1 recognition_summary.
+    techniques: List[str] = []
+    correctness_counts: dict = {}
+    if full.tree is not None:
+        techniques, correctness_counts = _degree_fields_from_summary(
+            recognition_summary(full.tree)
+        )
+
     return CoverageResult(
         app=app,
         framework=framework,
@@ -200,6 +262,8 @@ def measure_window(
         extra_sources=extra_sources,
         sample_extra_names=sample_extra_names,
         notes=notes,
+        techniques=techniques,
+        correctness_counts=correctness_counts,
     )
 
 

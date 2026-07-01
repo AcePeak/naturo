@@ -23,13 +23,13 @@ from naturo.backends.base import ElementInfo
 
 #: Techniques whose hits are structured and reproducible (guaranteed).
 DETERMINISTIC_TECHNIQUES = ("uia", "msaa", "ia2", "jab", "cdp", "com")
-#: Techniques whose hits are estimated (image match / AI vision).
-UNCERTAIN_TECHNIQUES = ("image", "vision", "ai")
+#: Techniques whose hits are estimated (image match / local OCR / AI vision).
+UNCERTAIN_TECHNIQUES = ("image", "ocr", "vision", "ai")
 
 #: Canonical ordering: deterministic first (cascade order), then uncertain.
 _TECHNIQUE_ORDER = [
     "uia", "msaa", "ia2", "jab", "cdp", "com",  # deterministic
-    "image", "vision", "ai",                    # uncertain
+    "image", "ocr", "vision", "ai",             # uncertain
 ]
 
 DETERMINISTIC = "deterministic"
