@@ -51,27 +51,40 @@ GitHub output; never push to `main`.
 
 ---
 
-## 🎯 CURRENT MILESTONE — **M1: Unified Auto Element Tree (foundation, correctness-tagged)**
-The single most moat-advancing thing to build first. **Done when ALL of these are observably true:**
-1. **Design spec** committed: `docs/RECOGNITION_TREE.md` defines the unified node schema — `techniques[]`,
-   `confidence`, and `correctness` class (`deterministic` vs `uncertain`).
-2. **Command**: a `naturo` command emits **one fused tree** per app/window in `--json` where every node carries
-   `techniques[]` + `correctness`; deterministic sources are preferred; the CLI prints a clear **warning** when a
-   node's only source is image/AI.
-3. **Test**: `pytest tests/test_unified_tree.py` exits 0 and is collectable on Linux CI (no Windows-only imports at
-   module top) — proving the fusion, the tagging, and the AI-warning.
-4. **Independent QA passed** on **≥2 real apps of different frameworks** (e.g. a UIA app + a Java or Electron app):
-   the tree fuses + tags correctly, deterministic preferred, AI-only nodes warned — with **zero orphaned processes**
-   after teardown.
-5. **Merged to `develop`, CI green.**
+## ✅ M1 DONE (2026-07-01) — Unified Auto Element Tree foundation
+Merged to `develop` (PR #1214, commit `c4cb55e`, CI green). `naturo see --cascade --json` emits one fused,
+correctness-tagged tree; `docs/RECOGNITION_TREE.md` + `tests/test_unified_tree.py` (17/17) landed; QA-verified on
+UIA + Electron/CDP with zero orphaned processes. The moat foundation exists.
 
-(M1 is large — decompose it into one-slice-per-round: design spec → tree fusion for 2 frameworks → correctness/
-warning tagging → the test → real-app QA. Each round still runs the full implement→independent-verify loop.)
+## 🎯 CURRENT MILESTONE — **M2: Broaden framework coverage + publish the Software-Adaptation table**
+**First, cleanly re-read the existing #931 benchmark harness (authoritative source) — do NOT build on unverified
+reads.** If M2 opens design questions (table schema, how coverage-degree is scored), write a short ADR first.
+**Done when ALL of these are observably true:**
+1. **Coverage broadened** — the fused `naturo see --cascade --json` tree correctly fuses + tags **≥2 additional
+   frameworks beyond M1's UIA+CDP**, chosen from what's **reproducible on THIS machine** (e.g. Java/JAB via an owned
+   Swing fixture, MSAA, image/OCR fallback). Observable: on a Java app the tree shows JAB-tagged nodes; where
+   accessibility returns nothing, an image/OCR node appears tagged `uncertain` with the CLI warning.
+2. **Software-adaptation table published** — `docs/SOFTWARE_ADAPTATION.md`, **generated from REAL runs on this
+   machine**, one row per tested software: the techniques that recognized it + an adaptation degree (full-tree /
+   partial / vision-only / none). Apps/frameworks NOT reproducible here (e.g. SAP GUI) are listed
+   **`blocked: needs env`** and **NOT counted as covered** — no faked coverage.
+3. **Harness-driven, not hand-authored** — the table numbers come from the (cleanly-read) #931 benchmark harness or
+   a documented extension of it; re-running it reproduces the table.
+4. **Test** — `pytest tests/test_adaptation_table.py` (or an extended `test_unified_tree.py`) exits 0, Linux-
+   collectable, pinning the multi-framework fusion + the table-generation logic.
+5. **Independent QA passed** on **≥2 of the newly-covered frameworks' real apps** — tree fuses + tags correctly,
+   deterministic preferred, AI/image-only warned, **zero orphaned processes** (PID-scoped teardown, no
+   Save/Don't-Save dialog left open).
+6. **Merged to `develop`, CI green.**
+
+(M2 is large — decompose one-slice-per-round: clean-read #931 → (ADR if needed) → add framework #1 to the tree →
+framework #2 → adaptation-table generator + doc → the test → real-app QA. Each round runs the full
+implement→independent-verify loop.)
 
 ## 🔜 MILESTONE QUEUE (advance in order; re-derive from the scoreboard as rivals move)
-- **M1** — Unified Auto Element Tree foundation (current).
-- **M2** — Broaden framework coverage in the tree (SAP, Qt, terminal, image/OCR fallback) + a public **software-
-  adaptation-degree table** built from real apps tested on this machine (reproducible-only).
+- **M1** — Unified Auto Element Tree foundation. ✅ DONE 2026-07-01 (PR #1214).
+- **M2** — Broaden framework coverage in the tree + publish the public **software-adaptation-degree table**
+  (reproducible-only; non-reproducible frameworks marked `blocked: needs env`). ← **current** (see above).
 - **M3** — AI-agent fit hardening: MCP tool schemas + self-correcting error contracts + "3-line" integration
   examples that run green, proven by agent-in-the-loop acceptance.
 - **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks.
