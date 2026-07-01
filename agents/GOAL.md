@@ -1,87 +1,92 @@
-# GOAL — naturo's north-star and current sub-goal (the loop orients to THIS)
+# GOAL — naturo's north-star + how a `/goal` session drives toward it
 
-This is the single orienting target for the whole loop (Dev / QA / Orch). Every cycle reads this file FIRST
-and asks: *"What is the single most goal-advancing action I can take right now?"* — not just "what's the next
-issue by priority." The Orchestrator maintains this file (Step 3 / Step 3.7) and advances the sub-goal.
-
-This is **goal mode**, not cadence mode: the timer is only a heartbeat. What drives a cycle is distance-to-goal.
+This file is the single orienting blueprint. A `/goal` session opened in this repo reads THIS file first and
+asks each turn: *"What is the single most goal-advancing action right now?"* — then does it, verifies it
+independently, and repeats until the current milestone's done-criteria are observably met.
 
 ---
 
 ## ⭐ NORTH-STAR (permanent — never "done")
-**Become the #1 Windows RPA open-source engine on GitHub.**
-The loop never converges on this; it continuously closes the gap. Sub-goals (releases) converge and auto-advance.
+**Become the #1 open-source Windows RPA engine on GitHub, built for AI agents.**
+Won when an AI-agent builder doing Windows automation reaches for naturo FIRST — because it (a) recognizes what
+nothing else can and (b) plugs into agents cleaner than anything else. Never converges; milestones do.
 
-### Strategy / moat (how we win, not by racing UIA stars)
-**Recognition supremacy:** commercial-RPA-grade multi-framework recognition — UIA + MSAA/IA2 + Java Access
-Bridge + Electron/CDP + SAP GUI + AI-vision — where every OSS rival (UFO² / Windows-MCP / Terminator) is
-UIA/accessibility-tree only. Backed by reliability (no silent failures) + honest docs + distribution.
+### Two co-equal pillars (both drive the work)
+- **A · RPA capability moat** — correctness-first, full-stack, self-healing recognition (see moat below).
+- **B · AI-agent fit** — best-in-class MCP server, LLM-friendly tool schemas, self-correcting error contracts
+  (code + category + recovery-hint), deterministic structured outputs, "3 lines to give your agent Windows control".
 
-### Scoreboard (measure the gap every week — Orch Step 3.5)
-- **Stars vs rivals** (Terminator nearest peer) — tracked in `docs/COMPETITIVE.md`.
-- **Recognition coverage matrix** — frameworks naturo handles that UIA-only rivals can't (the headline proof).
-- **Reliability** — silent-failure count trending to zero; ship-gate bugs closed.
-A week with no movement on the scoreboard is a failure of the north-star, even if cycles were "busy."
-
----
-
-## 🎯 CURRENT SUB-GOAL: ship v0.3.2 — complete, not a half-product
-**Done-criteria (ALL must hold; this is the convergence test):**
-1. **Recognition moat hardened beyond UIA for the v0.3.2 set:** Electron/CDP (#933 ✅) + Java Access Bridge
-   (#932/**#1096 ✅ — fix landed 06-29 via PR #1174 `45768c1`, then QA-VERIFIED+CLOSED 06-29 01:20Z: live JAB attach
-   on a real OpenJDK-21 Swing desktop, UIA 6 → cascade 46, delta=+40, `extra_sources={'jab':40}`, with a
-   discriminating negative control [pre-fix DLL → delta 0, fix DLL → delta 40 proves it's the fix, not env]**) both
-   prove real-app recognition via a passing test; `docs/RECOGNITION.md` matrix published (#982 ✅). **Criterion #1 is
-   now FULLY MET** — the recognition moat is code-complete AND live-QA-verified for v0.3.2.
-2. **find engine** (#809): `--selector` (✅) + `--image` (✅) + `--ocr` (#1060 — **PR #1170 OPEN & FULL-MATRIX GREEN
-   06-28; Dev correctly held auto-merge OFF (new public CLI/API surface: `--ocr` flag, `OCR_NOT_AVAILABLE`/`OCR_FAILED`
-   error codes, `naturo.ocr_match` module, `naturo[ocr]` extra) → awaiting Ace public-API sign-off + merge, then QA
-   verify**) all shipped & QA-verified.
-3. **Migration validation** (#766 fixtures + #763 rpa-client equivalence) green.
-4. **All ship-gate bugs QA-verified+closed**, develop CI green, no half-finished feature.
-5. **Release sign-off (#914) is HUMAN-ONLY** → queue it in needs:ace; do NOT block the loop on it.
-
-**When done-criteria 1–4 hold:** put "v0.3.2 ready to cut (#914)" at the TOP of NEEDS-ACE.md, then
-**auto-advance**: pull the next milestone (v0.3.3) as the current sub-goal and keep driving — do NOT idle
-waiting for Ace's release click. The loop never stalls on a human-only gate; it advances the next sub-goal's
-work while the gate waits.
-
-### Known blockers on the current sub-goal (surface, don't silently skip)
-- ~~**#1096 JAB attach fails** — local build blocked by no MSVC/cmake (#1097)~~ — **NATIVE-BUILD BLOCK CLEARED 06-28**:
-  Ace provisioned the C++ toolchain on NATUROBOT (MSVC 14.44 + CMake + Ninja, smoke build produced `naturo_core.dll`);
-  #1097 closed; build recipe on #1097; pointer + root-cause on #1096. **#1096 is now Dev-actionable** (fix the async
-  JVM handshake in `jab_ensure_init`, build+verify locally) — no human gate remains; this is now Dev execution work.
-- **#1060 --ocr** — engine resolved (RapidOCR `naturo[ocr]`, #1077 closed). **PR #1170 OPEN & FULL-MATRIX GREEN
-  (06-28); auto-merge OFF by Dev's design** — it adds new public CLI/API surface (`--ocr` flag, `OCR_NOT_AVAILABLE`/
-  `OCR_FAILED`, `naturo.ocr_match`, `naturo[ocr]` extra), a **human-only public-API sign-off** (same class as #1136/#1105).
-  **→ NOW A HUMAN GATE on done-criterion #2**: Ace signs off the surface + merges #1170 (the loop will not, Rule guardrail),
-  then QA verifies end-to-end with `naturo[ocr]` installed. Tracked via #1060's `needs:ace` label.
-- ~~**#1096 JAB attach fix** — criterion-#1's last unlanded recognition item~~ — **RESOLVED 06-29: fix LANDED via PR #1174
-  (`45768c1`).** The prior cycle's [Orc] nudge ("PROVE the block, don't assert it") worked exactly as intended: Dev built the
-  native core locally (MSVC 14.44 + CMake, surmounting the vcvars block the two prior cycles deferred on), **reproduced the bug
-  first** with the pre-fix DLL, then **live-verified on a provisioned desktop** (OpenJDK 21 + Access Bridge: UIA 6 → cascade 46,
-  **delta=40, extra_sources={'jab':40}**) with an independent fresh-context adversarial verifier PASS (incl. bounded-cost perf:
-  call1 5.05s one-time handshake, call2/3 0.156s — no per-query hang). Root cause was a one-shot `Windows_run` that never completed
-  the async AT↔JVM handshake; the fix is a bounded pump-and-retry that never caches a failed handshake. `docs/RECOGNITION.md` `+40`
-  row republished, `test_recognition_doc_982.py` re-pinned (never-lie both directions). **QA VERIFIED+CLOSED #1096 06-29 01:20Z**
-  (live JAB attach on a real OpenJDK-21 Swing desktop + discriminating negative control: pre-fix DLL → delta 0, fix DLL → delta 40,
-  proving the attach is the fix's effect not env; QA deployed the canonical CI-built DLL, not the worktree's stale untracked binary)
-  → **criterion #1 is now FULLY MET** (code-complete AND live-verified). The "attended/live-verify-deferred-with-caveat" escalation
-  the prior cycle pre-registered is **no longer needed** — Dev proved it live, QA confirmed it live.
-- **#1168** — Dev/QA crons are **session-only**; loop freezes with no Orch session alive (scheduler durability, needs:ace).
-  Human-gated, but about *future* durability, not a done-criteria-1–4 blocker. With #1096 landed, the critical-path human gates on
-  done-criteria 1–4 are now the **two PR-ready public-API sign-offs on criterion #2 — #1060/PR#1170 (`--ocr`) + #1169/PR#1171
-  (`find --selector` default `uia`→`auto`)** — plus release sign-off #914 (criterion #5, expected). Criterion #1 is **fully met**
-  (#1096 QA-verified+closed 01:20Z — no further action).
-These are the highest-leverage items for Ace — keep them at the top of the needs:ace digest with a clear ask.
+### The MOAT (the #1 thing to build): correctness-first **Unified Auto Element Tree**
+Commercial RPA's first law is **correctness — enterprises need 100%**. So:
+- **One app in → one fused element tree out, automatically.** Nodes fuse UIA / MSAA/IA2 / Java(JAB) / Electron·
+  Chromium(CDP) / SAP / image / AI-vision. The user does **not** pick a technique by default; they may filter.
+- Each node is tagged with **which techniques recognized it**, a **confidence**, and a **correctness class**:
+  `deterministic` (UIA/MSAA/JAB/CDP/COM — guaranteed) vs `uncertain` (image/AI — **the CLI must WARN**). Same
+  element seen by several techniques → mark all, **prefer the deterministic one** for actions/reads.
+- **Self-heal (bounded, deterministic):** when a selector breaks, re-anchor to the SAME correct element via
+  multi-attribute anchors — never introduce uncertainty to "heal".
+- **Extensible adapter architecture:** recognition can be augmented by pluggable per-app/version adapters.
 
 ---
 
-## 🔜 SUB-GOAL QUEUE (auto-advance order)
-1. **v0.3.2** (current) — recognition moat + find engine + migration validation.
-2. **v0.3.3** — SAP GUI recognition (#934, needs SAP env) + remaining recognition hardening.
-3. **v0.3.4** — reliability/contract backlog (envelope/exit-code/MCP consistency).
-4. Then re-derive the next gap-closing milestone from the scoreboard vs rivals.
+## 🔁 HOW A `/goal` SESSION WORKS (the process — follow this every round)
+1. **Pick** the single highest-leverage slice toward the current milestone (hardest-first; whichever pillar/
+   done-criterion is furthest behind). If it opens a NEW architecture area (the unified tree, adapter API, a new
+   framework), first write a short **design spec / ADR** so slices compose coherently — otherwise skip straight to build.
+2. **Implement** it (TDD: failing test first; ruff + mypy + pytest gates; minimal, tight diff; English only).
+3. **Verify independently — spawn a FRESH-CONTEXT sub-agent** (via the Agent tool) that did NOT write the code and
+   does not trust the claim: it reproduces the original problem, runs the change on the **real desktop**, tries to
+   break it (non-default paths, error paths, cross-command parity), and for **agent-fit** work does an **agent-in-
+   the-loop acceptance** (a real agent completes a task via naturo's MCP). FAIL → fix and re-verify (≤2 in-round
+   attempts) → else revert. **Never open a PR on a failed verification.**
+4. **Land** it: open a PR to `develop` (never `main`), let CI (Linux/macOS cross-platform) gate the merge.
+5. **Re-eval**: update the scoreboard + this file; if the milestone's done-criteria are all observably met, advance
+   to the next milestone. Append a plain-language round report to `naturo-progress.md` (capability delivered +
+   distance to milestone + next).
 
-When the current sub-goal's done-criteria 1–4 hold, the Orchestrator updates "CURRENT SUB-GOAL" to the next
-queue entry (rewrite its done-criteria from that milestone's open issues) and logs the advance in STATE.md.
+**Non-negotiable principles:** correctness first (deterministic > AI; warn on AI/image); **test hygiene** — any
+test/QA that launches an app/browser must hard-kill its **tracked PID** on teardown (no "Save/Don't-Save/Cancel"
+dialog left open), PID-scoped only, **never** touch cmd/terminals or windows it didn't launch; English on all
+GitHub output; never push to `main`.
+
+---
+
+## 🎯 CURRENT MILESTONE — **M1: Unified Auto Element Tree (foundation, correctness-tagged)**
+The single most moat-advancing thing to build first. **Done when ALL of these are observably true:**
+1. **Design spec** committed: `docs/RECOGNITION_TREE.md` defines the unified node schema — `techniques[]`,
+   `confidence`, and `correctness` class (`deterministic` vs `uncertain`).
+2. **Command**: a `naturo` command emits **one fused tree** per app/window in `--json` where every node carries
+   `techniques[]` + `correctness`; deterministic sources are preferred; the CLI prints a clear **warning** when a
+   node's only source is image/AI.
+3. **Test**: `pytest tests/test_unified_tree.py` exits 0 and is collectable on Linux CI (no Windows-only imports at
+   module top) — proving the fusion, the tagging, and the AI-warning.
+4. **Independent QA passed** on **≥2 real apps of different frameworks** (e.g. a UIA app + a Java or Electron app):
+   the tree fuses + tags correctly, deterministic preferred, AI-only nodes warned — with **zero orphaned processes**
+   after teardown.
+5. **Merged to `develop`, CI green.**
+
+(M1 is large — decompose it into one-slice-per-round: design spec → tree fusion for 2 frameworks → correctness/
+warning tagging → the test → real-app QA. Each round still runs the full implement→independent-verify loop.)
+
+## 🔜 MILESTONE QUEUE (advance in order; re-derive from the scoreboard as rivals move)
+- **M1** — Unified Auto Element Tree foundation (current).
+- **M2** — Broaden framework coverage in the tree (SAP, Qt, terminal, image/OCR fallback) + a public **software-
+  adaptation-degree table** built from real apps tested on this machine (reproducible-only).
+- **M3** — AI-agent fit hardening: MCP tool schemas + self-correcting error contracts + "3-line" integration
+  examples that run green, proven by agent-in-the-loop acceptance.
+- **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks.
+Each milestone's done-criteria must be **transcript-verifiable** (a command's output / a passing test / a QA verdict).
+
+## ⚔️ COMPETITIVE TARGETS (prove "#1", in this order)
+1. **vs OSS** (UFO² / Windows-MCP / Terminator / pywinauto / PyAutoGUI): a public, reproducible **coverage matrix**
+   — same apps, naturo recognizes frameworks they return nothing on (them 0, us pass).
+2. **vs commercial** (UiPath / Automation Anywhere / Power Automate Desktop): match recognition breadth + self-heal
+   on common cases — open-source, AI-native, free.
+3. **vs pure-vision AI** (Claude computer-use / Operator): on a benchmark task set, higher success + lower
+   latency/cost via accessibility+CDP vs pixels.
+Ship a **public, runnable benchmark suite** that anyone can use to verify these claims.
+
+---
+
+*This is a living target — re-evolved periodically by Ace. Distribution/adoption/community work is a later phase;
+this phase is engineering (capability / reliability / agent-integration).*
