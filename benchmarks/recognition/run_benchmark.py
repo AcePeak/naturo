@@ -35,6 +35,7 @@ from benchmarks.recognition.harness import (
     ChromiumFixtureApp,
     CoverageResult,
     ElectronFixtureApp,
+    ExcelComFixtureApp,
     JavaSwingFixtureApp,
     measure_running_app,
 )
@@ -105,7 +106,18 @@ def collect_results() -> tuple[List[CoverageResult], List[str]]:
             "JAVA_HOME) and enable Java Access Bridge (`jabswitch -enable`)."
         )
 
-    # 4. Optional real desktop apps (included only when actually open).
+    # 4. Owned Excel workbook (the literal spreadsheet / COM case).
+    excel = ExcelComFixtureApp()
+    if excel.available:
+        with excel:
+            results.append(excel.measure())
+    else:
+        gaps.append(
+            "Excel COM fixture skipped: Microsoft Excel or pywin32 not "
+            "available on this machine."
+        )
+
+    # 5. Optional real desktop apps (included only when actually open).
     for spec in OPTIONAL_APPS:
         result = measure_running_app(
             app=spec["app"],
