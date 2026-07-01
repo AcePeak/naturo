@@ -191,6 +191,7 @@ def measure_window(
     window_title: Optional[str] = None,
     depth: int = 15,
     notes: str = "",
+    run_ocr: bool = False,
 ) -> CoverageResult:
     """Measure UIA-only vs full-cascade recognition on one open window.
 
@@ -226,7 +227,7 @@ def measure_window(
     )
     full = run_cascade(
         backend, hwnd=hwnd, pid=pid, window_title=window_title,
-        depth=depth, backend_name="auto",
+        depth=depth, backend_name="auto", run_ocr=run_ocr,
     )
 
     full_counts = _provider_counts(full.stats)
@@ -930,6 +931,124 @@ class JavaSwingFixtureApp:
             self._process = None
 
     def __enter__(self) -> "JavaSwingFixtureApp":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.stop()
+
+
+class ExcelComFixtureApp:
+    """Launch and control an owned Excel workbook for COM-provider measurement.
+
+    Excel collapses its cell grid into a single opaque UIA node; only the COM
+    provider (binding the running Excel instance, cells projected via
+    ``PointsToScreenPixels``) recovers the cells. This fixture writes a small
+    known workbook, opens it in Excel, and measures the uia-only vs full-cascade
+    delta — the literal spreadsheet case.
+    """
+
+    #: Excel window titles look like ``<file> - Excel``.
+    WINDOW_TITLE_SUBSTRING = " - Excel"
+    _STEM = "naturo_adaptation_cells"
+    _CELLS = "Product,Qty\nWidget,42\nGadget,7\nSprocket,13\n"
+
+    def __init__(self, *, excel_path: Optional[str] = None) -> None:
+        import os
+
+        self.excel_path = excel_path or os.path.join(
+            os.environ.get("ProgramFiles", r"C:\Program Files"),
+            "Microsoft Office", "root", "Office16", "EXCEL.EXE",
+        )
+        self._process: Optional[subprocess.Popen] = None
+        self._win_pid: Optional[int] = None
+        self._workdir: Optional[str] = None
+
+    @property
+    def available(self) -> bool:
+        import importlib.util
+
+        return (
+            Path(self.excel_path).is_file()
+            and importlib.util.find_spec("win32com") is not None
+        )
+
+    def start(self, ready_timeout: float = 45.0) -> None:
+        import os
+        import tempfile
+
+        if not self.available:
+            raise RuntimeError(
+                f"Excel COM fixture unavailable: excel={self.excel_path!r}; "
+                "Excel + pywin32 required."
+            )
+        self._workdir = tempfile.mkdtemp(prefix="naturo_excel_fix_")
+        csv_path = os.path.join(self._workdir, f"{self._STEM}.csv")
+        with open(csv_path, "w", encoding="utf-8") as fh:
+            fh.write(self._CELLS)
+        logger.info("Launching Excel COM fixture: %s", csv_path)
+        self._process = subprocess.Popen([self.excel_path, csv_path])
+
+        deadline = time.monotonic() + ready_timeout
+        while time.monotonic() < deadline:
+            window = self.find_window()
+            if window is not None:
+                self._win_pid = window.pid  # the process actually hosting the grid
+                time.sleep(2.5)  # settle render + Excel COM/ROT registration
+                return
+            time.sleep(0.5)
+        self.stop()
+        raise RuntimeError(
+            f"Excel window did not appear within {ready_timeout:.0f}s."
+        )
+
+    def find_window(self):
+        backend = get_backend()
+        for window in backend.list_windows():
+            title = window.title or ""
+            if self.WINDOW_TITLE_SUBSTRING in title and self._STEM in title.lower():
+                return window
+        return None
+
+    def measure(self, depth: int = 15) -> CoverageResult:
+        window = self.find_window()
+        if window is None:
+            raise RuntimeError("Could not locate the Excel fixture window.")
+        return measure_window(
+            app="Owned Excel workbook (real Excel via COM)",
+            framework="Excel COM",
+            hwnd=window.hwnd,
+            pid=window.pid,
+            depth=depth,
+            notes=(
+                "A real Excel window: the cell grid is one opaque UIA node; only "
+                "the COM provider (running-instance binding, cells projected via "
+                "PointsToScreenPixels) recovers the cells."
+            ),
+        )
+
+    def stop(self) -> None:
+        # Kill Excel PID-scoped (the window's host process), then the launcher;
+        # terminate — never a UI close — so no Save/Don't-Save dialog is raised.
+        for pid in (self._win_pid, self._process.pid if self._process else None):
+            if pid is None:
+                continue
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    capture_output=True,
+                )
+            except OSError:
+                pass
+        self._process = None
+        self._win_pid = None
+        if self._workdir is not None:
+            import shutil
+
+            shutil.rmtree(self._workdir, ignore_errors=True)
+            self._workdir = None
+
+    def __enter__(self) -> "ExcelComFixtureApp":
         self.start()
         return self
 

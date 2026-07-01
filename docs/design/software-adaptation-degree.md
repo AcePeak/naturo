@@ -68,11 +68,20 @@ correctness_counts: dict = {}        # {"deterministic": N, "uncertain": M}
 
 Recorded from live probes; re-derive per host. Only ✓ rows count toward coverage.
 
+> **Update (2026-07-01, after provisioning):** several rows below were an initial
+> snapshot and are now superseded — `jab` is **reproducible** (the source handshake
+> #1174 was already correct; only the *local dev DLL* was stale — rebuilt with the
+> VS2022 Build Tools that ARE installed; the earlier "MSVC absent / #1213" note was
+> wrong, #1213 is an unrelated issue and #1096 is the real, already-fixed handshake
+> bug); `ocr` is **reproducible** (`rapidocr_onnxruntime` installed — local, no cloud
+> key); `ia2` is a **candidate** (Firefox now installed, additive path not yet wired).
+> The authoritative current per-software matrix is `docs/SOFTWARE_ADAPTATION.md`.
+
 | framework | technique | status on this host | evidence |
 | --------- | --------- | ------------------- | -------- |
 | Win32/UWP/WPF | `uia` | ✓ reproducible | M1 QA: Notepad 46 nodes deterministic |
 | Electron/Chromium | `cdp` | ✓ reproducible | M1 QA: Chrome uia+cdp fusion |
-| Java Swing/AWT | `jab` | ✗ blocked: needs env | native `naturo_core.dll` handshake defect (#1213); MSVC absent → cannot rebuild here |
+| Java Swing/AWT | `jab` | ✗ blocked: needs env | native `naturo_core.dll` handshake defect (#1096); MSVC absent → cannot rebuild here |
 | Firefox/IA2 | `ia2` | ✗ blocked: needs env | no Firefox/Thunderbird/LibreOffice installed |
 | Office COM | `com` | ⚑ candidate (unwired) | Excel + Word installed; not yet a cascade provider |
 | Legacy MSAA | `msaa` | ⚑ candidate (suppressed) | in primary loop but first-non-empty (uia) wins; no additive path yet |
