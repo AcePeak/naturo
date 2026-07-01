@@ -35,6 +35,20 @@ class ErrorCode:
     TIMEOUT = "TIMEOUT"
     CANCELLED = "CANCELLED"
 
+    # Element-pattern interaction failures (a control did not support the
+    # requested UIA pattern) — same family as INTERACTION_FAILED. Emitted by the
+    # MCP set_element_value / toggle / select / expand_collapse tools.
+    SET_VALUE_FAILED = "SET_VALUE_FAILED"
+    TOGGLE_FAILED = "TOGGLE_FAILED"
+    SELECT_FAILED = "SELECT_FAILED"
+    EXPAND_FAILED = "EXPAND_FAILED"
+    COLLAPSE_FAILED = "COLLAPSE_FAILED"
+
+    # A process/PID lookup that matched nothing.
+    PROCESS_NOT_FOUND = "PROCESS_NOT_FOUND"
+    # A keyboard/mouse input rejected by the safe-input guard.
+    UNSAFE_INPUT_BLOCKED = "UNSAFE_INPUT_BLOCKED"
+
     # Input errors
     INVALID_INPUT = "INVALID_INPUT"
     INVALID_COORDINATES = "INVALID_COORDINATES"
@@ -127,6 +141,17 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
     # Cancellation is an operation-lifecycle outcome, like ``TIMEOUT`` (#1101).
     ErrorCode.CANCELLED: ErrorCategory.AUTOMATION,
+    # Element-pattern interaction failures — automation operation faults, like
+    # INTERACTION_FAILED (M3).
+    ErrorCode.SET_VALUE_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.TOGGLE_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.SELECT_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.EXPAND_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.COLLAPSE_FAILED: ErrorCategory.AUTOMATION,
+    # A process lookup is UI/automation target resolution, like APP_NOT_FOUND.
+    ErrorCode.PROCESS_NOT_FOUND: ErrorCategory.AUTOMATION,
+    # A guard-rejected input is a validation fault, like INVALID_INPUT.
+    ErrorCode.UNSAFE_INPUT_BLOCKED: ErrorCategory.VALIDATION,
     # Locating a tray icon / taskbar item is UI-element lookup, like
     # app/window/element-not-found (#1101).
     ErrorCode.TRAY_ICON_NOT_FOUND: ErrorCategory.AUTOMATION,

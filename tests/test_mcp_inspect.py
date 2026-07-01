@@ -220,7 +220,7 @@ class TestSeeUiTree:
         result = _call_tool(server, "see_ui_tree", {"app": "Nonexistent"})
         data = json.loads(result[0].text)
         assert data["success"] is False
-        assert data["error"]["code"] == "NO_WINDOW"
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
 
     def test_app_with_hwnd_bypasses_multi_window(self, server, mock_backend):
         """When both app and hwnd are provided, hwnd takes priority (#737)."""
@@ -255,7 +255,7 @@ class TestSeeUiTree:
         result = _call_tool(server, "see_ui_tree", {})
         data = json.loads(result[0].text)
         assert data["success"] is False
-        assert data["error"]["code"] == "NO_WINDOW"
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
 
     def test_nested_children_serialized(self, server, mock_backend):
         child = _make_element(id="child1", role="Text", name="Hello", children=[])

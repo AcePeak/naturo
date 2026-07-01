@@ -72,7 +72,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         elif app and not hwnd and hasattr(backend, "_resolve_hwnds"):
             hwnds = backend._resolve_hwnds(app=app)
             if not hwnds:
-                return {"success": False, "error": {"code": "NO_WINDOW", "message": f"No windows found for app '{app}'"}}
+                return {"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": f"No windows found for app '{app}'"}}
 
             from naturo.backends.base import ElementInfo as BaseElementInfo
             window_trees = []
@@ -84,7 +84,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                     window_trees.append((h, subtree))
 
             if not window_trees:
-                return {"success": False, "error": {"code": "NO_WINDOW", "message": "All windows have empty UI trees"}}
+                return {"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": "All windows have empty UI trees"}}
 
             # Single window: use its tree directly
             if len(window_trees) == 1:
@@ -111,7 +111,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 depth=depth, backend=accessibility_backend,
             )
         if tree is None:
-            return {"success": False, "error": {"code": "NO_WINDOW", "message": "No matching window found"}}
+            return {"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": "No matching window found"}}
 
         # (#682) Store element tree in the snapshot manager so eN refs can be
         # resolved by subsequent click/type_text calls in the same session.

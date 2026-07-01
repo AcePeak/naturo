@@ -1,4 +1,4 @@
-"""Tests for MCP server tool definitions and input validation.
+﻿"""Tests for MCP server tool definitions and input validation.
 
 Tests server creation, tool registration, and input validation logic
 that runs on all platforms (no Windows backend required).
@@ -35,7 +35,7 @@ def tools(server):
     return {t.name: t for t in server._tool_manager.list_tools()}
 
 
-# ── Server Creation ──────────────────────────────────────────────────────────
+# 鈹€鈹€ Server Creation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestServerCreation:
@@ -98,10 +98,10 @@ class TestServerCreation:
         assert srv.settings.port == 3100
 
 
-# ── Input Validation (pure logic, no backend needed) ─────────────────────────
+# 鈹€鈹€ Input Validation (pure logic, no backend needed) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
-# ── Tool Function Unit Tests (with mocked backend) ──────────────────────────
+# 鈹€鈹€ Tool Function Unit Tests (with mocked backend) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestToolFunctionsWithMockedBackend:
@@ -326,14 +326,14 @@ class TestToolFunctionsWithMockedBackend:
             assert data["success"] is False
 
     def test_see_ui_tree_no_window(self, mock_backend):
-        """see_ui_tree returns NO_WINDOW when no matching window."""
+        """see_ui_tree returns WINDOW_NOT_FOUND when no matching window."""
         mock_backend.get_element_tree.return_value = None
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 3})
             data = json.loads(result[0].text)
             assert data["success"] is False
-            assert data["error"]["code"] == "NO_WINDOW"
+            assert data["error"]["code"] == "WINDOW_NOT_FOUND"
 
     def test_find_element_not_found(self, mock_backend):
         """find_element returns error when element not found."""
@@ -544,7 +544,7 @@ class TestWaitTools:
             assert data["gone"] is True
 
 
-# ── CLI Integration ──────────────────────────────────────────────────────────
+# 鈹€鈹€ CLI Integration 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestMCPCli:
@@ -631,7 +631,7 @@ class TestMCPCli:
         assert result.output == "", f"Unexpected stdout output: {result.output!r}"
 
 
-# ── Response Format Consistency ──────────────────────────────────────────────
+# 鈹€鈹€ Response Format Consistency 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestResponseFormat:
@@ -692,7 +692,7 @@ class TestStdioLogging:
             root.removeHandler(stdout_handler)
 
 
-# ── Pydantic ValidationError leak (#844) ─────────────────────────────────────
+# 鈹€鈹€ Pydantic ValidationError leak (#844) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestValidationErrorSanitization:
