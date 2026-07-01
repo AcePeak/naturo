@@ -19,7 +19,7 @@ from mcp.types import ContentBlock
 from naturo.version import __version__
 from naturo.backends.base import get_backend, Backend
 from naturo.bridge import NaturoCoreError
-from naturo.errors import ErrorCode, NaturoError
+from naturo.errors import ErrorCode, NaturoError, category_for_code
 from naturo.process import launch_app as _launch_app
 
 from naturo.mcp._capture import register_capture_tools
@@ -73,6 +73,24 @@ def _core_error_envelope(exc: NaturoCoreError) -> dict[str, Any]:
     code = _CORE_ERROR_CODE_MAP.get(exc.code, _INTERNAL_ERROR_CODE)
     message = NaturoCoreError.ERROR_MESSAGES.get(exc.code, f"Unknown error ({exc.code})")
     return {"success": False, "error": {"code": code, "message": message}}
+
+
+def _finalize_error_envelope(result: Any) -> Any:
+    """Guarantee any tool error envelope carries the full self-correcting contract.
+
+    Tools may build ``{"success": False, "error": {"code", "message"}}`` inline;
+    this backfills ``category`` (derived from the registered code via
+    :func:`category_for_code`) and ensures a ``suggested_action`` key is present,
+    so every MCP error an agent sees is ``code + category + recovery-hint``
+    regardless of how the tool constructed it (M3). Non-error results and
+    non-dict errors pass through untouched.
+    """
+    if isinstance(result, dict) and result.get("success") is False:
+        err = result.get("error")
+        if isinstance(err, dict) and isinstance(err.get("code"), str):
+            err.setdefault("category", category_for_code(err["code"]))
+            err.setdefault("suggested_action", None)
+    return result
 
 
 class _SanitizingFastMCP(FastMCP):
@@ -221,37 +239,37 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         @functools.wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
-                return fn(*args, **kwargs)
+                # (M3) Finalize even success-path tool returns: a tool that builds
+                # its own error envelope inline still gets code+category+hint.
+                return _finalize_error_envelope(fn(*args, **kwargs))
             except NaturoError as e:
                 # (#885) A missing desktop session must fail *loudly* — re-raise
                 # so the MCP transport flags isError:true instead of returning a
                 # success:false dict (isError:false) an agent may overlook.
                 if e.code == ErrorCode.NO_DESKTOP_SESSION:
                     raise
-                error_info: dict = {"code": e.code, "message": str(e)}
-                if e.suggested_action:
-                    error_info["suggested_action"] = e.suggested_action
-                if e.is_recoverable:
-                    error_info["recoverable"] = True
-                return {"success": False, "error": error_info}
+                # (M3) The full self-correcting contract: code + category +
+                # message + suggested_action (recovery hint) + recoverable +
+                # context, from the single canonical NaturoError serializer.
+                return {"success": False, "error": e.to_dict()}
             except NaturoCoreError as e:
                 # (#881) Map the native bridge error to a typed code and a
                 # message free of the C++/Python class name and argument repr,
                 # rather than leaking "NaturoCoreError: <op>(<args>): ...".
                 logger.exception("Core error in tool %s", fn.__name__)
-                return _core_error_envelope(e)
+                return _finalize_error_envelope(_core_error_envelope(e))
             except Exception as e:
                 # (#844) Catch Pydantic ValidationError separately to avoid
                 # leaking internal field paths, validator names, and raw repr.
                 if _is_validation_error(e):
                     msg = _format_validation_error(e)
                     logger.warning("Validation error in tool %s: %s", fn.__name__, msg)
-                    return {"success": False, "error": {"code": ErrorCode.INVALID_INPUT, "message": msg}}
+                    return _finalize_error_envelope({"success": False, "error": {"code": ErrorCode.INVALID_INPUT, "message": msg}})
                 # (#881) Surface the message via str(e) — without the
                 # type(e).__name__ prefix that leaked exception class names
                 # (NaturoCoreError, TypeError, ValueError, …) to MCP clients.
                 logger.exception("Unhandled error in tool %s", fn.__name__)
-                return {"success": False, "error": {"code": _INTERNAL_ERROR_CODE, "message": str(e)}}
+                return _finalize_error_envelope({"success": False, "error": {"code": _INTERNAL_ERROR_CODE, "message": str(e)}})
         return wrapper
 
     def _is_validation_error(exc: Exception) -> bool:
