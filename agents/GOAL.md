@@ -56,37 +56,43 @@ Merged to `develop` (PR #1214, commit `c4cb55e`, CI green). `naturo see --cascad
 correctness-tagged tree; `docs/RECOGNITION_TREE.md` + `tests/test_unified_tree.py` (17/17) landed; QA-verified on
 UIA + Electron/CDP with zero orphaned processes. The moat foundation exists.
 
-## 🎯 CURRENT MILESTONE — **M2: Broaden framework coverage + publish the Software-Adaptation table**
-**First, cleanly re-read the existing #931 benchmark harness (authoritative source) — do NOT build on unverified
-reads.** If M2 opens design questions (table schema, how coverage-degree is scored), write a short ADR first.
-**Done when ALL of these are observably true:**
-1. **Coverage broadened** — the fused `naturo see --cascade --json` tree correctly fuses + tags **≥2 additional
-   frameworks beyond M1's UIA+CDP**, chosen from what's **reproducible on THIS machine** (e.g. Java/JAB via an owned
-   Swing fixture, MSAA, image/OCR fallback). Observable: on a Java app the tree shows JAB-tagged nodes; where
-   accessibility returns nothing, an image/OCR node appears tagged `uncertain` with the CLI warning.
-2. **Software-adaptation table published** — `docs/SOFTWARE_ADAPTATION.md`, **generated from REAL runs on this
-   machine**, one row per tested software: the techniques that recognized it + an adaptation degree (full-tree /
-   partial / vision-only / none). Apps/frameworks NOT reproducible here (e.g. SAP GUI) are listed
-   **`blocked: needs env`** and **NOT counted as covered** — no faked coverage.
-3. **Harness-driven, not hand-authored** — the table numbers come from the (cleanly-read) #931 benchmark harness or
-   a documented extension of it; re-running it reproduces the table.
-4. **Test** — `pytest tests/test_adaptation_table.py` (or an extended `test_unified_tree.py`) exits 0, Linux-
-   collectable, pinning the multi-framework fusion + the table-generation logic.
-5. **Independent QA passed** on **≥2 of the newly-covered frameworks' real apps** — tree fuses + tags correctly,
-   deterministic preferred, AI/image-only warned, **zero orphaned processes** (PID-scoped teardown, no
-   Save/Don't-Save dialog left open).
+## ✅ M2 DONE (2026-07-01) — Broadened coverage + Software-Adaptation table
+Merged (PRs #1215 `6024f2d` + #1216 `f93266c` + #1217, CI green). Added COM/Excel + local OCR + JAB/Java Swing to
+the fused tree; `docs/SOFTWARE_ADAPTATION.md` published from real runs (non-reproducible frameworks marked
+`blocked: needs env`). Open follow-ups (own issues, not M2 blockers): IA2/Firefox wiring, Excel-fixture nag
+dismissal (COM verified +8 via direct command; automated fixture reads +0 on un-activated Office), MSAA additive.
+
+## 🎯 CURRENT MILESTONE — **M3: AI-agent fit hardening (pillar B — co-equal, so far untouched)**
+Make naturo the RPA tool an AI agent plugs into cleanest. **Done when ALL of these are observably true:**
+1. **MCP exposes the moat** — naturo's MCP server exposes the core recognition + action capabilities, **including
+   the M1/M2 unified `see --cascade` tree**, as clean MCP tools (clear name + description + typed params). Observable:
+   a CI test enumerates the MCP tools and asserts each has a description + input schema, and the unified-tree
+   capability is reachable via MCP.
+2. **Self-correcting error contract on MCP** — every MCP tool error returns the full contract (**code + category +
+   recovery-hint**) so an agent can self-correct (extend the #884/#1180 envelope work to the MCP surface).
+   Observable: a CI test drives MCP error paths and asserts each returns a **registered** code + category + hint,
+   never a bare string.
+3. **"3-line" integration** — `docs/AGENT_INTEGRATION.md` shows wiring naturo's MCP into an agent in ~3 lines
+   (e.g. `claude mcp add naturo -- python -m naturo mcp`, or an mcp-config snippet) + a runnable example, and the
+   command it documents actually works.
+4. **Agent-in-the-loop acceptance (desktop)** — a **real Claude-Code agent with naturo's MCP configured** (using
+   the existing login auth; **no separate API key** — the Anthropic API is reachable via the 127.0.0.1:7890 proxy)
+   completes an end-to-end desktop task **through naturo MCP tools** (e.g. launch Notepad → find the edit area via
+   the unified tree → type text → read it back), verified by the independent QA sub-agent's transcript showing the
+   agent actually used naturo MCP tools and succeeded, with **zero orphaned processes**.
+5. **CI-runnable test** for the MCP schemas + error contracts exits 0, Linux-collectable (this layer needs no
+   LLM/desktop — it is deterministic pytest).
 6. **Merged to `develop`, CI green.**
 
-(M2 is large — decompose one-slice-per-round: clean-read #931 → (ADR if needed) → add framework #1 to the tree →
-framework #2 → adaptation-table generator + doc → the test → real-app QA. Each round runs the full
-implement→independent-verify loop.)
+(M3 is large — decompose one-slice-per-round: expose unified tree via MCP → MCP error-contract sweep + test →
+integration doc + working `claude mcp add` → the agent-in-the-loop desktop acceptance. Each round runs the full
+implement→independent-verify loop. The agent-in-the-loop uses Claude Code as the agent; the CI layer is pure pytest.)
 
 ## 🔜 MILESTONE QUEUE (advance in order; re-derive from the scoreboard as rivals move)
 - **M1** — Unified Auto Element Tree foundation. ✅ DONE 2026-07-01 (PR #1214).
-- **M2** — Broaden framework coverage in the tree + publish the public **software-adaptation-degree table**
-  (reproducible-only; non-reproducible frameworks marked `blocked: needs env`). ← **current** (see above).
+- **M2** — Broaden framework coverage + publish the software-adaptation-degree table. ✅ DONE 2026-07-01 (#1215/#1216/#1217).
 - **M3** — AI-agent fit hardening: MCP tool schemas + self-correcting error contracts + "3-line" integration
-  examples that run green, proven by agent-in-the-loop acceptance.
+  examples + agent-in-the-loop acceptance. ← **current** (see above).
 - **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks.
 Each milestone's done-criteria must be **transcript-verifiable** (a command's output / a passing test / a QA verdict).
 
