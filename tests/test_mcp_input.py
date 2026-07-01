@@ -36,6 +36,10 @@ def _call_tool(server, tool_name: str, arguments: dict):
 @pytest.fixture
 def mock_backend():
     backend = MagicMock()
+    # Default: no focused ValuePattern control, so type_text falls back to
+    # keystroke injection (the path most tests assert). The IME-immune
+    # ValuePattern path (#1219) is covered explicitly in TestTypeText.
+    backend.set_focused_element_value.return_value = False
     return backend
 
 
@@ -155,6 +159,37 @@ class TestTypeText:
         assert data["success"] is True
         call_kwargs = mock_backend.type_text.call_args[1]
         assert call_kwargs["input_mode"] == "hardware"
+
+    def test_type_text_prefers_value_pattern_when_available(self, server, mock_backend):
+        """#1219: focused control with a writable ValuePattern → IME-immune
+        direct write, no keystroke injection."""
+        mock_backend.set_focused_element_value.return_value = True
+        result = _call_tool(server, "type_text", {"text": "naturo"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["method"] == "value_pattern"
+        mock_backend.set_focused_element_value.assert_called_once_with("naturo", append=True)
+        mock_backend.type_text.assert_not_called()
+
+    def test_type_text_falls_back_to_keystroke_without_value_pattern(self, server, mock_backend):
+        """No focused ValuePattern control (default) → keystroke injection."""
+        result = _call_tool(server, "type_text", {"text": "naturo"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["method"] == "keystroke"
+        mock_backend.set_focused_element_value.assert_called_once()
+        mock_backend.type_text.assert_called_once()
+
+    def test_type_text_hardware_mode_skips_value_pattern(self, server, mock_backend):
+        """Explicit 'hardware' scan-code mode is keystroke-only — ValuePattern
+        is not attempted."""
+        mock_backend.set_focused_element_value.return_value = True
+        result = _call_tool(server, "type_text", {"text": "hw", "input_mode": "hardware"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["method"] == "keystroke"
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.type_text.assert_called_once()
 
 
 # ── Press Key ─────────────────────────────────────────────────────────

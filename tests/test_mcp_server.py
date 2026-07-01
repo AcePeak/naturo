@@ -112,6 +112,10 @@ class TestToolFunctionsWithMockedBackend:
         """Create a comprehensive mock backend."""
         backend = MagicMock()
         # Setup return values for common methods
+        # No focused ValuePattern control by default → type_text uses keystroke
+        # injection (the asserted path); the IME-immune ValuePattern path (#1219)
+        # is covered in tests/test_mcp_input.py.
+        backend.set_focused_element_value.return_value = False
         backend.list_windows.return_value = []
         backend.list_apps.return_value = []
         backend.clipboard_get.return_value = "test"
