@@ -95,6 +95,17 @@ A real Claude-Code agent runs exactly this sequence through the MCP tools with n
 naturo-specific code — see `tests/` for the contract the tools honor
 (`test_mcp_error_contract.py`, `test_mcp_inspect.py`).
 
+### Reliable text entry under IMEs
+
+`type_text` writes to the focused control through its UIA **ValuePattern** when
+one is available — text lands exactly, bypassing the keyboard and any active
+input method (e.g. a CJK Pinyin IME that would otherwise mangle injected
+keystrokes). The result reports `"method": "value_pattern"` or `"keystroke"`.
+Controls without a writable ValuePattern fall back to keystroke injection, which
+is best-effort under an active IME; pass `input_mode: "hardware"` to force
+scan-code keystrokes. For a guaranteed exact set on a known field, use
+`set_element_value` (also ValuePattern-based).
+
 ## Tool surface (summary)
 
 `capture_screen` · `capture_window` · `list_windows` · `list_apps` · `launch_app`
