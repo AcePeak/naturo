@@ -430,6 +430,51 @@ def run_cascade(
                     name="jab", elapsed_ms=elapsed, status="no_elements",
                 ))
 
+    # Provider 2c: COM/Excel (spreadsheet cells UIA collapses into one node).
+    # Excel exposes its grid only via COM, so ``see --cascade`` on an Excel
+    # window otherwise shows just the ribbon/chrome.  Bind the running Excel
+    # instance and graft its cells onto the root, mirroring the additive
+    # CDP/JAB providers above, so ``see --backend auto`` delivers spreadsheet
+    # recognition (M2).
+    already_have_com = any(
+        p.name == "com" and p.status == "ok" for p in stats.providers
+    )
+    if backend_name == "auto" and root_tree is not None and not already_have_com:
+        com_hwnd = hwnd
+        if com_hwnd is None:
+            try:
+                com_hwnd = backend._resolve_hwnd(
+                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                )
+            except Exception as exc:
+                logger.debug(
+                    "Auto cascade: HWND resolution for COM/Excel failed: %s", exc,
+                )
+                com_hwnd = None
+
+        if com_hwnd is not None and _get_cascade_pkg()._is_excel_window(com_hwnd):
+            t0 = time.monotonic()
+            com_cells: List[ElementInfo] = []
+            try:
+                com_cells = _get_cascade_pkg()._fetch_excel_cells(com_hwnd)
+            except Exception as exc:
+                logger.debug("Auto cascade: COM/Excel probe failed: %s", exc)
+            elapsed = (time.monotonic() - t0) * 1000
+
+            if com_cells:
+                for cell in com_cells:
+                    tagged_cell = _tag_source(cell, "com")
+                    root_tree.children.append(tagged_cell)
+                    merged_elements.append(tagged_cell)
+                stats.providers.append(ProviderStat(
+                    name="com", elements=len(com_cells),
+                    elapsed_ms=elapsed, status="ok",
+                ))
+            else:
+                stats.providers.append(ProviderStat(
+                    name="com", elapsed_ms=elapsed, status="no_elements",
+                ))
+
     # ── Shallow tree detection (issue #275) ────────────────────────────────
     # When the UIA tree is too shallow (few elements, mostly invalid bounds),
     # automatically enable AI vision fallback even without --fill-gaps.
