@@ -82,7 +82,11 @@ def _cell_to_element(win, cell) -> Optional[ElementInfo]:
     top = int(win.PointsToScreenPixelsY(cell.Top))
     right = int(win.PointsToScreenPixelsX(cell.Left + cell.Width))
     bottom = int(win.PointsToScreenPixelsY(cell.Top + cell.Height))
-    addr = cell.Address(False, False)  # e.g. "B3"
+    # Under late-bound COM dispatch (GetActiveObject, no makepy/EnsureDispatch)
+    # ``Address`` resolves as a PROPERTY returning the absolute "$A$1" string —
+    # calling it with args raises ``'str' object is not callable``.  Read it as
+    # a property and normalize to the plain "A1" label.
+    addr = str(cell.Address).replace("$", "")  # e.g. "B3"
     return ElementInfo(
         id=f"com_{addr}",
         role="DataItem",

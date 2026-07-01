@@ -24,8 +24,12 @@ class _FakeCell:
         self.Height = height
         self._addr = addr
 
-    def Address(self, absolute_col, absolute_row):
-        return self._addr
+    @property
+    def Address(self):
+        # Model late-bound COM dispatch: Address is a PROPERTY returning the
+        # absolute "$A$1" string, NOT a callable method. (The real provider bug
+        # was calling cell.Address(False, False) on this property.)
+        return f"${self._addr[0]}${self._addr[1:]}"
 
 
 class _Count:
