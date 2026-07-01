@@ -35,9 +35,10 @@ we cannot justify. The degree is one of four honest classes:
 
 | degree            | meaning                                                                 |
 | ----------------- | ----------------------------------------------------------------------- |
-| `full`            | cascade recovers substantially more than UIA-only (`delta > 0`) via a **deterministic** non-UIA framework (cdp/jab/com/ia2/msaa). The moat case. |
-| `uia-only`        | only UIA fires; no non-UIA framework adds elements. naturo works but so would a UIA-only rival. |
-| `uncertain-only`  | the only non-UIA contribution is image/OCR/AI (uncertain). Recognized, but **warned** — bounds estimated. |
+| `full-tree`            | cascade recovers substantially more than UIA-only (`delta > 0`) via a **deterministic** non-UIA framework (cdp/jab/com/ia2/msaa). The moat case. |
+| `partial`         | only UIA fires; no non-UIA framework adds elements — UIA typically sees just the accessible subset, and a UIA-only rival would tie. |
+| `none`            | nothing recognized; the cascade returns an empty tree for the window. |
+| `vision-only`  | the only non-UIA contribution is image/OCR/AI (uncertain). Recognized, but **warned** — bounds estimated. |
 | `blocked: needs env` | the framework naturo *would* use is not exercisable on this host (missing app, missing engine, or a known defect). **Not counted** as coverage. |
 
 `delta`, counts and the fired frameworks are always shown as the underlying
