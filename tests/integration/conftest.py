@@ -233,12 +233,45 @@ def _app_window_pids(title_substrings, proc_name_substr) -> "set[int]":
     """Set of PIDs owning a visible top-level window matching by title
     (case-insensitive substring) or owning-process image name.
 
-    Enumerating windows works when ``tasklist`` is broken. Returning a SET (not
-    the first match) lets a fixture **baseline-diff** its own launch, so it can
-    never select — or kill — a window the user already had open (the old
-    first-match finder killed a pre-existing user Notepad).
+    The PIDs are sourced from ``WindowsBackend.list_windows()`` so a UWP app
+    hosted by ``ApplicationFrameHost.exe`` (e.g. Calculator) is resolved to its
+    real child process — the SAME PID the soak test then passes to
+    ``get_element_tree(pid=...)`` / matches in ``list_windows()``. Sourcing the
+    fixture's PID from the host frame instead (raw ``EnumWindows`` reports the
+    ``ApplicationFrameHost`` PID) yielded a PID the backend had no window under,
+    so every Calculator soak cycle failed ``WindowNotFoundError`` (#1231).
+
+    Returning a SET (not the first match) lets a fixture **baseline-diff** its
+    own launch, so it can never select — or kill — a window the user already had
+    open (the old first-match finder killed a pre-existing user Notepad). Falls
+    back to a pure-``EnumWindows`` scan if the backend cannot be built.
     """
+
+    title_substrings = tuple(s.lower() for s in title_substrings)
+
+    def _matches(title: str, process_name: str) -> bool:
+        t = (title or "").strip().lower()
+        if t and any(s in t for s in title_substrings):
+            return True
+        base = os.path.basename(process_name or "").lower()
+        return bool(proc_name_substr) and proc_name_substr in base
+
     pids: "set[int]" = set()
+    try:
+        from naturo.backends.windows import WindowsBackend
+
+        for w in WindowsBackend().list_windows():
+            if not getattr(w, "is_visible", False):
+                continue
+            if _matches(getattr(w, "title", "") or "",
+                        getattr(w, "process_name", "") or ""):
+                pid = getattr(w, "pid", None)
+                if pid:
+                    pids.add(pid)
+        return pids
+    except Exception:
+        pids = set()  # fall through to the raw ctypes scan
+
     try:
         import ctypes
         from ctypes import wintypes
@@ -258,6 +291,7 @@ def _app_window_pids(title_substrings, proc_name_substr) -> "set[int]":
             window_pid = wintypes.DWORD()
             user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
             matched = bool(title) and any(s in title.lower() for s in title_substrings)
+            proc_name = ""
             if not matched and proc_name_substr and window_pid.value:
                 h_proc = kernel32.OpenProcess(
                     PROCESS_QUERY_LIMITED_INFORMATION, False, window_pid.value,
@@ -266,8 +300,8 @@ def _app_window_pids(title_substrings, proc_name_substr) -> "set[int]":
                     try:
                         name_buf = ctypes.create_unicode_buffer(260)
                         if psapi.GetProcessImageFileNameW(h_proc, name_buf, 260):
-                            import os
-                            if proc_name_substr in os.path.basename(name_buf.value).lower():
+                            proc_name = name_buf.value
+                            if proc_name_substr in os.path.basename(proc_name).lower():
                                 matched = True
                     finally:
                         kernel32.CloseHandle(h_proc)
