@@ -966,27 +966,44 @@ def _find_with_selector(
 
     backend = _common._get_backend(json_output)
 
-    try:
-        tree = backend.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-            depth=depth, backend=method,
-        )
-    except _common.WindowNotFoundError as exc:
-        _emit_error("WINDOW_NOT_FOUND", str(exc))
-    except Exception as exc:
-        _emit_error("TREE_ERROR", f"Failed to get UI tree for selector resolution: {exc}")
-
-    if tree is None:
-        _emit_error(
-            "WINDOW_NOT_FOUND",
-            "No window found for selector resolution. Check that the target "
-            "application is running and visible.",
+    # An emitted wildcard-host selector (app://*/Window[@name="…"]/…) with no
+    # explicit window target resolves across all top-level windows so the
+    # selector see/find emit round-trips straight back into find --selector
+    # (#1190) — the same behavior the click family uses, kept in lock-step via
+    # the shared _common helper, which returns None for every other selector
+    # shape so the normal single-window path (below) is unchanged.
+    forest = None
+    if (ast.app == "*" and app is None and window_title is None
+            and hwnd is None and pid is None):
+        from naturo.cli.interaction._common import _resolve_wildcard_host_forest
+        forest = _resolve_wildcard_host_forest(
+            backend, ast, depth=depth, method=method,
         )
 
-    # Reuse the click family's ElementInfo→dict conversion so both commands feed
-    # the resolver an identically-shaped tree (no semantic drift).
-    from naturo.cli.interaction._common import _elementinfo_to_dict
-    tree_dict = [_elementinfo_to_dict(tree)]
+    if forest is not None:
+        tree_dict = forest
+    else:
+        try:
+            tree = backend.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=depth, backend=method,
+            )
+        except _common.WindowNotFoundError as exc:
+            _emit_error("WINDOW_NOT_FOUND", str(exc))
+        except Exception as exc:
+            _emit_error("TREE_ERROR", f"Failed to get UI tree for selector resolution: {exc}")
+
+        if tree is None:
+            _emit_error(
+                "WINDOW_NOT_FOUND",
+                "No window found for selector resolution. Check that the target "
+                "application is running and visible.",
+            )
+
+        # Reuse the click family's ElementInfo→dict conversion so both commands
+        # feed the resolver an identically-shaped tree (no semantic drift).
+        from naturo.cli.interaction._common import _elementinfo_to_dict
+        tree_dict = [_elementinfo_to_dict(tree)]
 
     resolver = SelectorResolver()
     if find_all:
