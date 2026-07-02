@@ -487,7 +487,8 @@ class TestAppLifecycleE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
             assert len(notepad_wins) >= 1, "Notepad not found in window list after launch"
@@ -526,7 +527,8 @@ class TestAppLifecycleE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
             notepad = notepad_wins[0] if notepad_wins else None

@@ -800,7 +800,8 @@ class TestE2EWorkflows:
             if "notepad" in w.process_name.lower()
         }
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             # (#472) Poll for the window to appear instead of a fixed sleep.
             # On busy CI runners, 1.5s is sometimes not enough.  Also handle

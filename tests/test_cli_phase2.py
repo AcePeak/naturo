@@ -538,7 +538,8 @@ class TestNotepadAutomation:
         import subprocess
         import time
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             # Find Notepad window (UWP/WinUI3 Notepad on Win11 may be
             # hosted by ApplicationFrameHost.exe, so check title too #534)
