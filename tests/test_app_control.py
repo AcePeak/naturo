@@ -505,14 +505,8 @@ class TestAppLifecycleE2EWindows:
             assert len(still_open) == 0, "Notepad window still in list after close"
 
         finally:
-            # UWP Notepad: launcher PID differs from app PID, taskkill by name
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True, timeout=5,
-                )
-            except Exception:
-                pass
+            # PID-scoped teardown via tracked_launch reaps the UWP window-owner
+            # without killing pre-existing Notepad windows the user opened (M4-3).
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
@@ -547,13 +541,7 @@ class TestAppLifecycleE2EWindows:
             assert target is not None
 
         finally:
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True, timeout=5,
-                )
-            except Exception:
-                pass
+            # PID-scoped teardown via tracked_launch — no image-name kill (M4-3).
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
