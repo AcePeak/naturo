@@ -128,11 +128,14 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "hello world"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        mock_backend.type_text.assert_called_once_with(
-            text="hello world", wpm=120, input_mode="normal",
-        )
+        # Normal mode with no writable ValuePattern → atomic clipboard paste.
+        assert data["method"] == "clipboard_paste"
+        mock_backend.clipboard_set.assert_any_call("hello world")
 
     def test_type_text_custom_wpm(self, server, mock_backend):
+        # wpm only applies to the keystroke fallback; force it by making paste
+        # unavailable, then confirm wpm reaches the backend.
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         result = _call_tool(server, "type_text", {"text": "fast", "wpm": 300})
         data = json.loads(result[0].text)
         assert data["success"] is True
@@ -150,8 +153,7 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "日本語テスト 🎉"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        call_kwargs = mock_backend.type_text.call_args[1]
-        assert call_kwargs["text"] == "日本語テスト 🎉"
+        mock_backend.clipboard_set.assert_any_call("日本語テスト 🎉")
 
     def test_type_text_hardware_mode(self, server, mock_backend):
         result = _call_tool(server, "type_text", {"text": "hw", "input_mode": "hardware"})
@@ -171,13 +173,25 @@ class TestTypeText:
         mock_backend.set_focused_element_value.assert_called_once_with("naturo", append=True)
         mock_backend.type_text.assert_not_called()
 
-    def test_type_text_falls_back_to_keystroke_without_value_pattern(self, server, mock_backend):
-        """No focused ValuePattern control (default) → keystroke injection."""
+    def test_type_text_falls_back_to_clipboard_paste_without_value_pattern(self, server, mock_backend):
+        """No writable ValuePattern (default) → clipboard paste: atomic and
+        IME-immune. A fast per-key SendInput drops chars on heavy controls like
+        Win11 Notepad ("hello from naturo" -> "hello      turo")."""
+        result = _call_tool(server, "type_text", {"text": "naturo"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["method"] == "clipboard_paste"
+        mock_backend.set_focused_element_value.assert_called_once()
+        # paste path used → no per-key keystroke injection
+        mock_backend.type_text.assert_not_called()
+
+    def test_type_text_falls_back_to_keystroke_when_paste_unavailable(self, server, mock_backend):
+        """Neither ValuePattern nor clipboard paste can apply → keystroke."""
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         result = _call_tool(server, "type_text", {"text": "naturo"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert data["method"] == "keystroke"
-        mock_backend.set_focused_element_value.assert_called_once()
         mock_backend.type_text.assert_called_once()
 
     def test_type_text_hardware_mode_skips_value_pattern(self, server, mock_backend):

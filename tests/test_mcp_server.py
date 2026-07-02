@@ -212,13 +212,17 @@ class TestToolFunctionsWithMockedBackend:
             mock_backend.click.assert_called_once()
 
     def test_type_text_valid(self, mock_backend):
-        """type_text with valid wpm."""
+        """type_text passes wpm to the keystroke fallback (profile='human' so
+        wpm is actually honored). Force that path by making paste unavailable."""
+        mock_backend.set_focused_element_value.return_value = False
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "type_text", {"text": "hello", "wpm": 60})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.type_text.assert_called_once_with(text="hello", wpm=60, input_mode="normal")
+            mock_backend.type_text.assert_called_once_with(
+                text="hello", wpm=60, input_mode="normal", profile="human")
 
     def test_type_text_invalid_wpm(self, mock_backend):
         """type_text with wpm=0 returns validation error."""

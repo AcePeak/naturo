@@ -10,6 +10,38 @@ logger = logging.getLogger(__name__)
 _EN_REF_RE = re.compile(r"e\d+")
 
 
+def _paste_text(backend, text: str) -> bool:
+    """Insert ``text`` via clipboard paste — atomic, fast, and IME-immune.
+
+    A fast per-character SendInput drops characters on heavy controls (Win11
+    Notepad's RichEdit under the modern TSF input host): "hello from naturo"
+    lands as "hello      turo". Pasting inserts the whole string in one shot,
+    so there is no per-key race and no IME composition to corrupt it. The
+    caller's clipboard is saved and restored so it is not clobbered.
+
+    Returns True if the paste was delivered (clipboard set + Ctrl+V sent).
+    """
+    import time
+    try:
+        saved = backend.clipboard_get()
+    except Exception:
+        saved = None
+    delivered = False
+    try:
+        backend.clipboard_set(text)
+        backend.hotkey("ctrl", "v")
+        time.sleep(0.06)  # let the target consume the clipboard before restoring it
+        delivered = True
+    except Exception:
+        delivered = False
+    if saved is not None:
+        try:
+            backend.clipboard_set(saved)
+        except Exception:
+            pass
+    return delivered
+
+
 def register_input_tools(server, _get_backend, _safe_tool):
     """Register input action MCP tools."""
 
@@ -111,12 +143,26 @@ def register_input_tools(server, _get_backend, _safe_tool):
         # set its value directly through UIA — bypassing the keyboard and the
         # IME. Fall back to keystrokes when there is no such control, or when
         # the caller explicitly asked for keystroke-level "hardware" scan codes.
-        used_value_pattern = False
+        # Reliability ladder (each rung is exact; fall to the next only if it can't apply):
+        #   1. writable ValuePattern → set the value directly (instant, IME-immune);
+        #   2. clipboard paste → insert atomically (fast, IME-immune, no per-key race) —
+        #      this is what heavy controls like Win11 Notepad need, where fast keystroke
+        #      SendInput drops chars ("hello from naturo" -> "hello      turo");
+        #   3. keystroke at the requested wpm — now with profile="human" so wpm is
+        #      actually honored (the old call left profile="linear", so wpm was ignored
+        #      and it typed at 5 ms/char, which is the drop cause).
+        method = "keystroke"
+        used = False
         if input_mode == "normal":
-            used_value_pattern = bool(backend.set_focused_element_value(text, append=True))
-        if not used_value_pattern:
-            backend.type_text(text=text, wpm=wpm, input_mode=input_mode)
-        return {"success": True, "method": "value_pattern" if used_value_pattern else "keystroke"}
+            used = bool(backend.set_focused_element_value(text, append=True))
+            if used:
+                method = "value_pattern"
+        if not used and input_mode == "normal" and _paste_text(backend, text):
+            used = True
+            method = "clipboard_paste"
+        if not used:
+            backend.type_text(text=text, wpm=wpm, input_mode=input_mode, profile="human")
+        return {"success": True, "method": method}
 
     @server.tool()
     @_safe_tool
