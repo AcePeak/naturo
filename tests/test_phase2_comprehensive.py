@@ -834,18 +834,10 @@ class TestE2EWorkflows:
             proc.terminate()
             proc.wait(timeout=5)
 
-            # (#523) UWP Notepad: proc.terminate() only kills the launcher;
-            # the actual window is hosted by ApplicationFrameHost.exe which
-            # persists.  Use taskkill to ensure all Notepad processes are
-            # terminated, matching the approach in conftest.py fixtures.
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True,
-                    timeout=5,
-                )
-            except Exception:
-                pass
+            # (#523, M4-3) UWP Notepad's window-owner PID differs from the
+            # launcher; tracked_launch's proc.terminate() above reaps it
+            # PID-scoped, so no image-name taskkill (which would kill a user's
+            # unrelated Notepad) is needed.
 
             # Poll until our specific window disappears
             deadline = time.monotonic() + 10.0
