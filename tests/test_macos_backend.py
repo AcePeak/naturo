@@ -744,7 +744,9 @@ class TestOpenURI:
             backend.open_uri("https://example.com")
             args = mock_run.call_args[0][0]
             assert "open" in args
-            assert "https://example.com" in args
+            # Exact-match membership (args is the argv list), not a URL substring
+            # check — avoids a py/incomplete-url-substring-sanitization false positive.
+            assert any(a == "https://example.com" for a in args)
 
     @patch("shutil.which", return_value="/usr/local/bin/peekaboo")
     def test_open_empty(self, mock_which):
