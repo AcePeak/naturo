@@ -166,7 +166,8 @@ Search for UI elements matching a query.
 | `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
 | `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
 | `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@app/name`) |
-| `--screenshot` | path | Match against this existing screenshot instead of capturing live (for `--ai` and `--image`). With `--image` the screenshot is the haystack, coordinates are screenshot-relative, and window-targeting flags are rejected |
+| `--ocr` | boolean | Find on-screen text by OCR (for Canvas/game/custom-drawn controls UIA can't see). The positional `QUERY` is the text to locate; returns bounding boxes. Requires `pip install naturo[ocr]` |
+| `--screenshot` | path | Match against this existing screenshot instead of capturing live (for `--ai`, `--image`, and `--ocr`). With `--image`/`--ocr` the screenshot is the haystack, coordinates are screenshot-relative, and window-targeting flags are rejected |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
@@ -194,6 +195,8 @@ naturo find --image btn.png --screenshot saved.png  # match offline against a sa
 naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
 naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
 naturo find --selector @chrome/login-button --all  # every match of a saved selector
+naturo find --ocr "Start" --app game.exe          # OCR on-screen text in a window
+naturo find --ocr "Score" --screenshot shot.png --all  # every OCR match in an image
 ```
 
 Found matches get `eN` refs in the snapshot (like a normal `find`), so you can
@@ -207,6 +210,18 @@ regression fixtures — and the coordinates are then relative to the screenshot
 are rejected. With `--selector` the element is resolved the
 same way `click`/`type` resolve it (URI / XML / `//` shorthand / `@named`, with
 flexible app-name matching), so a path that clicks will also `find`.
+
+With `--ocr` the positional `QUERY` is the text to locate: naturo runs OCR over
+the target window/screen (or a `--screenshot`) via the optional RapidOCR engine
+and returns the bounding box of every region whose recognised text contains the
+query (case-insensitive), highest-confidence first — reaching Canvas / game /
+custom-drawn text the accessibility tree cannot see. Coordinates follow the same
+rules as `--image` (`screen` for a live capture, `screenshot` for `--screenshot`),
+and the JSON envelope adds `text`, `center_x`, `center_y`, and the recognition
+`score`. The engine ships in the optional extra: `pip install naturo[ocr]`
+(offline, bundled ONNX models — no network or system Tesseract). When it is
+absent the command returns a recoverable `OCR_NOT_AVAILABLE` error with the
+install hint.
 
 ## `naturo get`
 

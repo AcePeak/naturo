@@ -69,6 +69,9 @@ class ErrorCode:
     SELECTOR_REF_ERROR = "SELECTOR_REF_ERROR"
     INVALID_SELECTOR = "INVALID_SELECTOR"
     TREE_ERROR = "TREE_ERROR"
+    # OCR text-finding errors (naturo find --ocr, #1060)
+    OCR_NOT_AVAILABLE = "OCR_NOT_AVAILABLE"
+    OCR_FAILED = "OCR_FAILED"
 
     # Dialog errors
     DIALOG_NOT_FOUND = "DIALOG_NOT_FOUND"
@@ -183,6 +186,11 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.SELECTOR_REF_ERROR: ErrorCategory.SESSION,
     ErrorCode.INVALID_SELECTOR: ErrorCategory.VALIDATION,
     ErrorCode.TREE_ERROR: ErrorCategory.AUTOMATION,
+    # OCR text-finding (#1060): a missing optional OCR engine is a configuration
+    # gap (like MISSING_DEPENDENCY); an engine fault at run time is an automation
+    # operation failure (alongside CAPTURE_FAILED).
+    ErrorCode.OCR_NOT_AVAILABLE: ErrorCategory.CONFIGURATION,
+    ErrorCode.OCR_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.DIALOG_NOT_FOUND: ErrorCategory.AUTOMATION,
     ErrorCode.DEPENDENCY_MISSING: ErrorCategory.CONFIGURATION,
     ErrorCode.NO_DESKTOP_SESSION: ErrorCategory.ENVIRONMENT,
