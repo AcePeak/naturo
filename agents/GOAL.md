@@ -69,34 +69,53 @@ an end-to-end desktop task through naturo MCP (type→read-back character-exact)
 an enterprise correctness bug fixed — stale comtypes gen-cache silently killed the whole UIA write layer → now
 self-heals + WARNs (#1219/#1220, `7d5925c`).
 
-## 🎯 CURRENT MILESTONE — **M4: Reliability & soak (the commercial-grade 100%-correctness floor)**
-Capability is strong; now make it **trustworthy** — enterprises need 100%, and a capable-but-flaky tool loses.
-**Done when ALL of these are observably true:**
-1. **No silent failures (guarded)** — extend the #885/#1180 work: a CI source/behavior guard **fails** if any CLI
-   or MCP path can return `success:true` on a failed operation; the known silent-failure classes are closed.
-   Observable: `pytest` for the silent-failure guard exits 0 AND the guard catches a planted violation (positive control).
-2. **Crash-recovery generalized** — after a backend/DLL/COM failure the **next** call self-heals (re-inits) rather
-   than staying broken (generalize the comtypes self-heal #1220 to the recognition/input layers). Observable: a test
-   forces a backend failure, then asserts the next call succeeds + logs a WARNING.
-3. **Zero process leaks (enforced)** — the #1202 guaranteed-teardown fixtures cover **every** launching test; a
-   before/after process-snapshot harness asserts **zero** orphaned test-launched processes after the full
-   desktop+browser suite (PID-scoped, dialogs dismissed, cmd/terminals never touched). Observable: the snapshot
-   harness reports 0 orphans.
-4. **Soak stable** — a bounded soak (**≥100 consecutive** recognition+action cycles on **≥2 real apps**) completes
-   with zero crashes, zero degradation, zero leaks. Observable: a soak harness runs the cycles and reports 0
-   failures/0 leaks (desktop QA).
-5. **CI-runnable** reliability tests (silent-failure guard, crash-recovery, teardown-snapshot) exit 0, Linux-collectable.
-6. **Merged to `develop`, CI green.**
+## ✅ M4 DONE (2026-07-01) — Reliability & soak
+Merged (#1221–#1231, CI green). Silent-failure guard (42 error paths, 0 violations + positive control);
+crash-recovery self-heal after COM failure; zero-process-leak teardown snapshot enforced (real-machine == baseline,
+incl. the #1230 fix so a fixture only kills windows IT launched, never a pre-existing one); ≥100-cycle soak on
+≥2 real apps PASS (0 failures / 0 leaks / no degradation). The M1→M4 engineering phase is complete.
 
-(M4 is large — decompose one-slice-per-round: silent-failure guard+sweep → crash-recovery generalization → the
-teardown-snapshot harness across all launching tests → the soak harness + real-app soak run. Each round runs the
-full implement→independent-verify loop; the CI layer is deterministic pytest, the soak/crash-recovery layer is desktop QA.)
+---
+
+# 🚀 PHASE 2 — DISTRIBUTION (flipped 2026-07-02, at the M1–M4 maturity gate)
+The engineering phase built the capability + reliability. The north-star is unchanged, but the highest-leverage
+work is now **PROOF · VISIBILITY · ADOPTION**, not more engineering. The task universe now includes: competitive
+benchmarks, README/docs that sell, agent-framework integrations, PyPI, community. **Re-eval is now OUTWARD-first**
+— rival moves, stars/adoption, open community issues — not just our own backlog.
+**Stronger human-gate in this phase:** published competitive **claims**, README positioning, PyPI releases, and
+community-PR handling are **Ace-facing** — open them with **auto-merge OFF** and surface to Ace; never self-publish
+a public "we beat X" claim. (Engineering-quality PRs still auto-merge on green as before.)
+
+## 🎯 CURRENT MILESTONE — **D1: Prove #1 (public, reproducible competitive coverage matrix vs OSS)**
+Convert the built moat into verifiable superiority. **Done when ALL of these are observably true:**
+1. **Runnable benchmark** — `benchmarks/competitive/` has a harness anyone can run comparing naturo vs the
+   **reproducibly-installable** OSS rivals (pip-installable pywinauto + PyAutoGUI at minimum; add any of
+   UFO²/Windows-MCP/Terminator that install cleanly here, others documented `blocked: needs env`) on the **same**
+   real apps across frameworks (UIA / Java / Electron / COM …).
+2. **Coverage matrix published** — `docs/COMPETITIVE.md` (matrix section) shows, **from real benchmark runs**, the
+   per-framework result: naturo recognizes frameworks the rivals return nothing on (them 0 / naturo pass). Numbers
+   are reproducible from the harness; non-reproducible rivals marked `blocked: needs env`.
+3. **Honest, not cherry-picked** — rivals run with a fair/best config; any naturo gaps are shown too.
+4. **Test/CI** — the harness smoke-runs + is Linux-collectable; a test pins the matrix-generation logic (`pytest`
+   exits 0).
+5. **Public claim gated** — the "naturo beats X" framing in README/public docs is opened with **auto-merge OFF**
+   for Ace sign-off (the harness + `docs/COMPETITIVE.md` data can auto-merge; the README positioning awaits Ace).
+6. **Merged to `develop`, CI green** (harness + matrix data).
+
+(D1 decomposes one-slice-per-round: install + smoke a reproducible rival → the shared-app harness → run naturo vs
+rivals + generate the matrix → the matrix test → the (Ace-gated) README positioning. Each round runs the full
+produce→independent-verify loop; independent QA re-runs the harness to confirm the numbers aren't hand-authored.)
 
 ## 🔜 MILESTONE QUEUE (advance in order; re-derive from the scoreboard as rivals move)
 - **M1** — Unified Auto Element Tree foundation. ✅ DONE 2026-07-01 (PR #1214).
 - **M2** — Broaden framework coverage + publish the software-adaptation-degree table. ✅ DONE 2026-07-01 (#1215/#1216/#1217).
 - **M3** — AI-agent fit hardening: MCP + self-correcting error contracts + integration + agent-in-the-loop. ✅ DONE 2026-07-01 (#1218).
-- **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks. ← **current** (see above).
+- **M4** — Reliability/soak: no silent failures, crash-recovery, zero process leaks. ✅ DONE 2026-07-01 (#1221–#1231).
+- **— PHASE 2 (DISTRIBUTION) —**
+- **D1** — Prove #1: public reproducible competitive coverage matrix vs OSS rivals. ← **current** (see above).
+- **D2** — Make the moat visible: README headline (matrix above the fold) + docs that sell (Ace-gated positioning).
+- **D3** — Agent-framework integrations + copy-paste examples that run green (MCP done; add adapters/examples).
+- **D4** — Distribution: PyPI package current + install-works + a community issue/PR handling cadence.
 Each milestone's done-criteria must be **transcript-verifiable** (a command's output / a passing test / a QA verdict).
 
 ## ⚔️ COMPETITIVE TARGETS (prove "#1", in this order)
@@ -110,5 +129,5 @@ Ship a **public, runnable benchmark suite** that anyone can use to verify these 
 
 ---
 
-*This is a living target — re-evolved periodically by Ace. Distribution/adoption/community work is a later phase;
-this phase is engineering (capability / reliability / agent-integration).*
+*This is a living target — re-evolved periodically by Ace. The engineering phase (M1–M4) is complete; we are now
+in **Phase 2 (Distribution)** — proof, visibility, adoption — with public claims/README/PyPI Ace-gated.*
