@@ -35,16 +35,57 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
             name: Application name or executable path.
 
         Returns:
-            Dict with success flag, pid, and process info.
+            Dict with success, pid, and the **window(s) that actually appeared**
+            so the caller can ``focus_window``/``window_close`` exactly what it
+            launched — and tear it down afterwards. ``hwnd`` is the primary new
+            window (first one). Note: some apps (e.g. Win11 Notepad) restore
+            their previous session on start, so ``windows`` may list several
+            pre-existing documents that reappeared, not just a fresh one.
         """
+        import time
+
+        def _win_map() -> dict:
+            try:
+                out = {}
+                for w in backend.list_windows():
+                    h = getattr(w, "handle", None) or getattr(w, "hwnd", None)
+                    out[h] = getattr(w, "title", "") or ""
+                return out
+            except Exception:
+                return {}
+
+        backend = _get_backend()
+        before = set(_win_map())
         info = launch_app_fn(name=name)
+
+        # The process layer returns a transient launcher PID for UWP apps and
+        # hard-codes window_count=0, so the caller could not find (and later
+        # close) what it opened — a root cause of window pile-up. Resolve the
+        # real window(s) by diffing the window list, polling briefly.
+        # launch_app_fn already waited for the process, so the window usually
+        # exists on the first check (break immediately); the short cap only
+        # covers a slow-drawing window without adding latency to the fast path.
+        new_windows: list[dict] = []
+        deadline = time.monotonic() + 1.5
+        while time.monotonic() < deadline:
+            new_windows = [
+                {"hwnd": h, "title": t}
+                for h, t in _win_map().items()
+                if h is not None and h not in before
+            ]
+            if new_windows:
+                break
+            time.sleep(0.15)
+
         return {
             "success": True,
             "pid": info.pid,
             "name": info.name,
             "path": info.path,
             "is_running": info.is_running,
-            "window_count": info.window_count,
+            "window_count": len(new_windows),
+            "windows": new_windows,
+            "hwnd": new_windows[0]["hwnd"] if new_windows else None,
         }
 
     @server.tool()
