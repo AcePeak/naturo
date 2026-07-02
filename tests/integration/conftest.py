@@ -259,15 +259,19 @@ def notepad_app(has_desktop) -> Generator[int, None, None]:
 
     yield actual_pid
 
-    # Teardown: kill Notepad (by image name for UWP, fallback to proc handle)
-    try:
-        subprocess.run(
-            ["taskkill", "/F", "/IM", "Notepad.exe"],
-            capture_output=True,
-            timeout=5,
-        )
-    except Exception:
-        pass
+    # Teardown: PID-scoped kill of the tracked window owner + launcher (M4-3).
+    # Never kill by image name — that would also take out pre-existing Notepad
+    # windows the user opened. ``/T`` reaps child processes; ``/F`` force-closes
+    # so a "Save changes?" dialog cannot strand the process.
+    for pid in {actual_pid, proc.pid}:
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception:
+            pass
     try:
         proc.terminate()
     except Exception:
@@ -297,15 +301,17 @@ def calculator_app(has_desktop) -> Generator[int, None, None]:
 
     yield actual_pid
 
-    # Teardown: kill Calculator
-    try:
-        subprocess.run(
-            ["taskkill", "/F", "/IM", "CalculatorApp.exe"],
-            capture_output=True,
-            timeout=5,
-        )
-    except Exception:
-        pass
+    # Teardown: PID-scoped kill of the tracked app + launcher (M4-3) — never by
+    # image name, which would kill a Calculator the user already had open.
+    for pid in {actual_pid, proc.pid}:
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception:
+            pass
     try:
         proc.terminate()
     except Exception:

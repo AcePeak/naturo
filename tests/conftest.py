@@ -197,6 +197,38 @@ def _forbid_unsafe_live_input():
             strategy_cls.type_text = original  # type: ignore[method-assign]
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _assert_no_orphaned_processes():
+    """Fail the session if the desktop/browser suite leaks a test-launched app (M4-3).
+
+    A before/after process snapshot of watched GUI apps (notepad, calculator,
+    chrome, msedge, excel, …) asserts **zero orphaned** PIDs remain after the
+    whole suite — every launching test must guarantee PID-scoped teardown. Shells,
+    terminals and the test runner are **never** watched, so the harness cannot
+    touch (or even flag) a ``cmd``/terminal.
+
+    Opt-in: only active when ``NATURO_ASSERT_NO_ORPHANS=1`` (the desktop-QA lane),
+    so it is inert on Linux CI and on a developer's live desktop by default.
+    """
+    import os
+
+    if os.environ.get("NATURO_ASSERT_NO_ORPHANS") != "1":
+        yield
+        return
+
+    from tests._process_snapshot import find_orphans, snapshot, tasklist_lister
+
+    before = snapshot(tasklist_lister)
+    yield
+    after = snapshot(tasklist_lister)
+    orphans = find_orphans(before, after)
+    assert not orphans, (
+        f"Orphaned test-launched processes leaked (M4-3): {orphans}. "
+        "Every launching test must guarantee PID-scoped teardown "
+        "(kill by PID, dismiss Save/Don't-Save dialogs)."
+    )
+
+
 def cli_stdout(result):
     """Extract stdout-only text from a Click CliRunner result.
 
