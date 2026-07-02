@@ -541,13 +541,7 @@ class TestAppLifecycleE2EWindows:
             assert target is not None
 
         finally:
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True, timeout=5,
-                )
-            except Exception:
-                pass
+            # PID-scoped teardown via tracked_launch — no image-name kill (M4-3).
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
