@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "naturo",
   "display_name": "Naturo Desktop Automation",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Windows desktop automation engine — see, click, type, and automate any app through UIA, MSAA, IA2, Java Access Bridge, Electron/CDP, and AI vision.",
   "long_description": "Naturo exposes Windows desktop automation as MCP tools so AI agents can inspect the accessibility tree, capture screenshots, click, type, manage windows and apps, and drive dialogs. This bundle launches the installed `naturo` CLI via `naturo mcp start`; run `pip install naturo` first.",
   "author": {
