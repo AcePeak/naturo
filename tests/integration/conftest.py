@@ -259,59 +259,105 @@ def notepad_app(has_desktop) -> Generator[int, None, None]:
 
     yield actual_pid
 
-    # Teardown: PID-scoped kill of the tracked window owner + launcher (M4-3).
-    # Never kill by image name — that would also take out pre-existing Notepad
-    # windows the user opened. ``/T`` reaps child processes; ``/F`` force-closes
-    # so a "Save changes?" dialog cannot strand the process.
+    # Teardown: PID-scoped kill of the tracked window owner + launcher (M4-3),
+    # robust to a broken ``taskkill`` CLI (Win32 TerminateProcess). Never by image
+    # name — pre-existing Notepad windows the user opened stay untouched. Force
+    # kill so a "Save changes?" dialog cannot strand the process.
+    from tests._launch import kill_pid
     for pid in {actual_pid, proc.pid}:
-        try:
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                capture_output=True,
-                timeout=5,
-            )
-        except Exception:
-            pass
+        kill_pid(pid)
     try:
         proc.terminate()
     except Exception:
         pass
 
 
+def _find_calculator_window_pid() -> Optional[int]:
+    """PID of the process owning a visible Calculator window (mirrors the Notepad
+    finder, #534). ``calc.exe`` is a launcher stub that exits immediately and the
+    UWP ``CalculatorApp.exe`` hosts the window via a broker; the ``tasklist``
+    IMAGENAME filter is also broken on some hosts — so enumerate windows and match
+    the Calculator title/owner instead.
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        found_pid = ctypes.c_ulong(0)
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def enum_callback(hwnd, lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(hwnd, buf, 256)
+            title = buf.value.strip()
+            # English "Calculator" or Chinese "计算器"
+            if title and ("calculator" in title.lower() or "计算器" in title):
+                window_pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+                h_proc = kernel32.OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION, False, window_pid.value,
+                )
+                if h_proc:
+                    try:
+                        name_buf = ctypes.create_unicode_buffer(260)
+                        if psapi.GetProcessImageFileNameW(h_proc, name_buf, 260):
+                            import os
+                            if "calculator" in os.path.basename(name_buf.value).lower():
+                                found_pid.value = window_pid.value
+                                return False
+                    finally:
+                        kernel32.CloseHandle(h_proc)
+                if not found_pid.value:  # Calculator-titled visible window is enough
+                    found_pid.value = window_pid.value
+                    return False
+            return True
+
+        user32.EnumWindows(enum_callback, 0)
+        return found_pid.value or None
+    except Exception:
+        return None
+
+
 @pytest.fixture(scope="module")
 def calculator_app(has_desktop) -> Generator[int, None, None]:
-    """Launch Calculator and yield its PID. Clean up on teardown.
+    """Launch Calculator and yield the PID owning its window. Clean up on teardown.
 
-    Windows Calculator is a UWP/WinUI3 app — tests modern UI framework detection.
-    Note: UWP apps launch via a broker, so the PID from Popen may differ
-    from the actual Calculator process.
+    Windows Calculator is a UWP/WinUI3 app launched via a broker: ``calc.exe``
+    exits immediately and ``CalculatorApp.exe`` hosts the window.  Resolve the
+    window owner via ``EnumWindows`` (robust to the launcher stub exiting and to a
+    broken ``tasklist`` IMAGENAME filter), polling because UWP launch is slow.
     """
-    proc = _launch_app("calc.exe", wait_seconds=3.0)
-    if proc is None:
-        pytest.skip("Could not launch Calculator")
+    proc = subprocess.Popen(
+        "calc.exe", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
 
-    # UWP apps: the actual process is CalculatorApp.exe, not calc.exe
-    time.sleep(1)
-    actual_pid = _find_process_by_name("CalculatorApp.exe")
+    actual_pid = None
+    deadline = time.monotonic() + 15.0
+    while actual_pid is None and time.monotonic() < deadline:
+        actual_pid = _find_calculator_window_pid()
+        if actual_pid is None:
+            time.sleep(1.0)
     if actual_pid is None:
-        # Fallback: try the broker PID
-        actual_pid = _find_process_by_name("Calculator.exe")
-    if actual_pid is None:
-        actual_pid = proc.pid
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        pytest.skip("Could not launch Calculator (no window resolved)")
 
     yield actual_pid
 
-    # Teardown: PID-scoped kill of the tracked app + launcher (M4-3) — never by
-    # image name, which would kill a Calculator the user already had open.
+    # Teardown: PID-scoped kill of the resolved window owner + launcher (M4-3),
+    # robust to a broken ``taskkill`` CLI (Win32 TerminateProcess). Never by image
+    # name — a Calculator the user already had open stays untouched.
+    from tests._launch import kill_pid
     for pid in {actual_pid, proc.pid}:
-        try:
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                capture_output=True,
-                timeout=5,
-            )
-        except Exception:
-            pass
+        kill_pid(pid)
     try:
         proc.terminate()
     except Exception:

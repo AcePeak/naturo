@@ -50,15 +50,41 @@ def _tasklist_app_pids(image_names: Iterable[str]) -> "set[int]":
     return pids
 
 
+def kill_pid(pid: int) -> bool:
+    """Force-terminate *pid*, robust to a broken/blocked ``taskkill`` CLI.
+
+    Some hosts return "ERROR: Critical error" from ``taskkill`` — so a teardown
+    that shells out to it silently leaks. This prefers Win32 ``TerminateProcess``
+    (works regardless of the CLI) and *also* runs ``taskkill /F /T /PID`` to reap
+    the child tree (e.g. a UWP broker's children). Returns True if
+    ``TerminateProcess`` reported success.
+    """
+    killed = False
+    try:
+        import ctypes
+
+        PROCESS_TERMINATE = 0x0001
+        handle = ctypes.windll.kernel32.OpenProcess(PROCESS_TERMINATE, False, int(pid))
+        if handle:
+            try:
+                killed = bool(ctypes.windll.kernel32.TerminateProcess(handle, 1))
+            finally:
+                ctypes.windll.kernel32.CloseHandle(handle)
+    except Exception:
+        pass
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(pid)],
+            capture_output=True, timeout=5,
+        )
+    except Exception:
+        pass
+    return killed
+
+
 def _pid_scoped_kill(pids: Iterable[int]) -> None:
     for pid in pids:
-        try:
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                capture_output=True, timeout=5,
-            )
-        except Exception:
-            pass
+        kill_pid(pid)
 
 
 class TrackedProc:
