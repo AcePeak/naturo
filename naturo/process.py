@@ -464,11 +464,15 @@ def launch_app(
     real_path = path or ""
     if _resolve_real_pid is not None:
         try:
-            proc.wait(timeout=5)
+            proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
             pass
-        # Poll for the real process — give UWP apps time to start
-        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 3.0)
+        # Poll for the real process — break as soon as it appears. The give-up
+        # window is short (1.2s, not 3s) because a UWP process name that will
+        # never match find_process() otherwise wastes the full window on every
+        # launch — the single biggest MCP-latency source; callers that need the
+        # real window resolve it from list_windows anyway.
+        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 1.2)
         while time.monotonic() < poll_deadline:
             found = find_process(name=_resolve_real_pid)
             if not found and _resolve_real_alias and _resolve_real_alias != _resolve_real_pid:
@@ -478,7 +482,7 @@ def launch_app(
                 real_name = found.name
                 real_path = found.path or ""
                 break
-            time.sleep(0.3)
+            time.sleep(0.1)
 
     info = ProcessInfo(
         pid=real_pid,
