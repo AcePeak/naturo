@@ -104,19 +104,26 @@ def register_input_tools(server, _get_backend, _safe_tool):
         wpm: int = 120,
         input_mode: str = "normal",
         method: str = "auto",
+        hwnd: Optional[int] = None,
+        window_title: Optional[str] = None,
     ) -> dict:
-        """Type text using keyboard input.
+        """Type text into a target window (or the focused window).
 
-        Types the given text character by character, simulating human typing.
+        Pass ``hwnd`` (from ``launch_app``/``list_windows``) or ``window_title``
+        to type into a specific window: naturo focuses it first so the text
+        lands there deterministically — no separate ``focus_window`` call and no
+        focus race. Omit both to type into whatever is currently focused.
 
         Args:
             text: Text to type.
-            wpm: Words per minute (typing speed).
-            input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes, bypasses anti-cheat).
+            wpm: Words per minute (applies to the keystroke fallback only).
+            input_mode: "normal" (default) or "hardware" (Phys32 scan codes, bypasses anti-cheat).
             method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision".
+            hwnd: Target window handle to focus + type into.
+            window_title: Target window title (partial match) to focus + type into.
 
         Returns:
-            Dict with success flag.
+            Dict with success flag and the delivery ``method``.
         """
         if wpm < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"wpm must be >= 1, got {wpm}"}}
@@ -137,6 +144,16 @@ def register_input_tools(server, _get_backend, _safe_tool):
                 },
             }
         backend = _get_backend()
+        # Optional target: focus the requested window first, in-process and
+        # immediately before typing, so the text lands there deterministically —
+        # this is one atomic focus+type with no cross-call round-trip for the
+        # foreground to drift, the failure mode that made a separate
+        # focus_window + type_text land input in the wrong window.
+        if hwnd is not None or window_title is not None:
+            try:
+                backend.focus_window(hwnd=hwnd, title=window_title)
+            except Exception:
+                pass  # best-effort; fall through to whatever is focused
         # (#1219) Prefer IME-immune entry: keystroke injection (SendInput) is
         # intercepted by CJK/TSF IMEs and can corrupt text ("naturo" ->
         # "nature"). When the focused control exposes a writable ValuePattern,
