@@ -43,7 +43,8 @@ def core():
 
 def _launch_notepad():
     """Launch notepad and return the process."""
-    return subprocess.Popen(["notepad.exe"])
+    from tests._launch import NOTEPAD_IMAGES, tracked_launch
+    return tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
 
 
 def _is_notepad_window(w) -> bool:

@@ -213,7 +213,8 @@ class TestSelectorE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["calc.exe"])
+        from tests._launch import CALCULATOR_IMAGES, tracked_launch
+        proc = tracked_launch(["calc.exe"], CALCULATOR_IMAGES)
         try:
             time.sleep(2.0)
 
@@ -244,7 +245,8 @@ class TestSelectorE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             time.sleep(1.5)
 
