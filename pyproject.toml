@@ -94,6 +94,15 @@ naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib", "selectors_builtin/*.json"]
 testpaths = ["tests"]
 pythonpath = ["."]
 timeout = 120
+# Safety default: never run the real-desktop tests unless explicitly opted in.
+# The ``ui``/``integration``/``desktop`` suites drive real SendInput / native
+# UIA against whatever window has focus — an ad-hoc or looped ``pytest <file>``
+# would type into the user's active terminal (M4 criterion 3: "cmd/terminals
+# never touched"). CI already passes this exact ``-m`` filter; making it the
+# default aligns local runs with CI so injecting tests only run under an explicit
+# ``-m ui`` (or ``-m "ui or integration or desktop"``) opt-in, ideally scoped to
+# a throwaway window.
+addopts = "-m 'not ui and not integration and not desktop'"
 markers = [
     "ui: marks tests that need a desktop session (deselect with '-m \"not ui\"')",
     "windows: Windows-only test",
