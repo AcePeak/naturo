@@ -229,47 +229,125 @@ def _find_notepad_window_pid() -> Optional[int]:
         return None
 
 
-@pytest.fixture(scope="module")
-def notepad_app(has_desktop) -> Generator[int, None, None]:
-    """Launch Notepad and yield its PID. Clean up on teardown.
+def _app_window_pids(title_substrings, proc_name_substr) -> "set[int]":
+    """Set of PIDs owning a visible top-level window matching by title
+    (case-insensitive substring) or owning-process image name.
 
-    Notepad is a classic Win32 application — the baseline test target.
-    On Windows 11, the UWP/WinUI3 version uses a launcher PID that differs
-    from the window-owning process.  We resolve the actual PID by finding
-    the visible Notepad window (#534).
+    Enumerating windows works when ``tasklist`` is broken. Returning a SET (not
+    the first match) lets a fixture **baseline-diff** its own launch, so it can
+    never select — or kill — a window the user already had open (the old
+    first-match finder killed a pre-existing user Notepad).
     """
-    proc = _launch_app("notepad.exe", wait_seconds=3.0)
-    if proc is None:
-        pytest.skip("Could not launch Notepad")
+    pids: "set[int]" = set()
+    try:
+        import ctypes
+        from ctypes import wintypes
 
-    # (#534, #697, #729) Find the PID that owns the visible Notepad window.
-    # This handles UWP Notepad where the launcher PID differs from
-    # the actual window-owning process.
-    # Poll instead of fixed sleep — UWP Notepad on Win11 can take 5-10s.
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def enum_callback(hwnd, lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(hwnd, buf, 256)
+            title = buf.value.strip()
+            window_pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+            matched = bool(title) and any(s in title.lower() for s in title_substrings)
+            if not matched and proc_name_substr and window_pid.value:
+                h_proc = kernel32.OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION, False, window_pid.value,
+                )
+                if h_proc:
+                    try:
+                        name_buf = ctypes.create_unicode_buffer(260)
+                        if psapi.GetProcessImageFileNameW(h_proc, name_buf, 260):
+                            import os
+                            if proc_name_substr in os.path.basename(name_buf.value).lower():
+                                matched = True
+                    finally:
+                        kernel32.CloseHandle(h_proc)
+            if matched and window_pid.value:
+                pids.add(window_pid.value)
+            return True
+
+        user32.EnumWindows(enum_callback, 0)
+    except Exception:
+        pass
+    return pids
+
+
+def _notepad_window_pids() -> "set[int]":
+    return _app_window_pids(("notepad", "记事本"), "notepad")
+
+
+def _calculator_window_pids() -> "set[int]":
+    return _app_window_pids(("calculator", "计算器"), "calculator")
+
+
+def _launch_and_resolve(cmd, window_pids_fn, app_label):
+    """Launch *cmd* and resolve the PID of a window that appeared AFTER launch.
+
+    Returns ``(proc, actual_pid, before)`` where ``actual_pid`` is guaranteed not
+    to be a pre-existing window (baseline-diff), so a fixture can never touch a
+    window the user already had open. Skips loudly if no new window appears.
+    """
+    before = window_pids_fn()
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     actual_pid = None
     deadline = time.monotonic() + 15.0
     while actual_pid is None and time.monotonic() < deadline:
-        actual_pid = _find_notepad_window_pid()
-        if actual_pid is None:
+        new = window_pids_fn() - before
+        if new:
+            actual_pid = sorted(new)[0]
+        else:
             time.sleep(1.0)
-    if actual_pid is None:
-        actual_pid = _find_process_by_name("Notepad.exe")
-    if actual_pid is None:
+    # Classic app whose launcher owns the window — only if that PID is genuinely new.
+    if actual_pid is None and proc.poll() is None and proc.pid not in before:
         actual_pid = proc.pid
+    if actual_pid is None:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        pytest.skip(f"Could not launch {app_label} (no new window appeared)")
+    return proc, actual_pid, before
 
-    yield actual_pid
 
-    # Teardown: PID-scoped kill of the tracked window owner + launcher (M4-3),
-    # robust to a broken ``taskkill`` CLI (Win32 TerminateProcess). Never by image
-    # name — pre-existing Notepad windows the user opened stay untouched. Force
-    # kill so a "Save changes?" dialog cannot strand the process.
+def _teardown_launched(proc, actual_pid, before) -> None:
+    """PID-scoped teardown of only what the fixture launched — the resolved
+    window-owner + launcher, each guarded to never be a pre-existing PID. Robust
+    to a broken ``taskkill`` (Win32 TerminateProcess); force-kill so a Save dialog
+    cannot strand the process.
+    """
     from tests._launch import kill_pid
+
     for pid in {actual_pid, proc.pid}:
-        kill_pid(pid)
+        if pid not in before:  # never kill a pre-existing window/process
+            kill_pid(pid)
     try:
         proc.terminate()
     except Exception:
         pass
+
+
+@pytest.fixture(scope="module")
+def notepad_app(has_desktop) -> Generator[int, None, None]:
+    """Launch Notepad and yield the PID of the window IT launched.
+
+    Resolved by baseline-diff, so a Notepad the user already had open is never
+    selected or killed. Handles UWP Notepad where the window owner differs from
+    the launcher (#534).
+    """
+    proc, actual_pid, before = _launch_and_resolve(
+        "notepad.exe", _notepad_window_pids, "Notepad",
+    )
+    yield actual_pid
+    _teardown_launched(proc, actual_pid, before)
 
 
 def _find_calculator_window_pid() -> Optional[int]:
@@ -326,42 +404,17 @@ def _find_calculator_window_pid() -> Optional[int]:
 
 @pytest.fixture(scope="module")
 def calculator_app(has_desktop) -> Generator[int, None, None]:
-    """Launch Calculator and yield the PID owning its window. Clean up on teardown.
+    """Launch Calculator and yield the PID of the window IT launched.
 
-    Windows Calculator is a UWP/WinUI3 app launched via a broker: ``calc.exe``
-    exits immediately and ``CalculatorApp.exe`` hosts the window.  Resolve the
-    window owner via ``EnumWindows`` (robust to the launcher stub exiting and to a
-    broken ``tasklist`` IMAGENAME filter), polling because UWP launch is slow.
+    ``calc.exe`` is a launcher stub that exits immediately; ``CalculatorApp.exe``
+    hosts the UWP window, resolved via ``EnumWindows`` and baseline-diff so a
+    Calculator the user already had open is never selected or killed.
     """
-    proc = subprocess.Popen(
-        "calc.exe", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    proc, actual_pid, before = _launch_and_resolve(
+        "calc.exe", _calculator_window_pids, "Calculator",
     )
-
-    actual_pid = None
-    deadline = time.monotonic() + 15.0
-    while actual_pid is None and time.monotonic() < deadline:
-        actual_pid = _find_calculator_window_pid()
-        if actual_pid is None:
-            time.sleep(1.0)
-    if actual_pid is None:
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        pytest.skip("Could not launch Calculator (no window resolved)")
-
     yield actual_pid
-
-    # Teardown: PID-scoped kill of the resolved window owner + launcher (M4-3),
-    # robust to a broken ``taskkill`` CLI (Win32 TerminateProcess). Never by image
-    # name — a Calculator the user already had open stays untouched.
-    from tests._launch import kill_pid
-    for pid in {actual_pid, proc.pid}:
-        kill_pid(pid)
-    try:
-        proc.terminate()
-    except Exception:
-        pass
+    _teardown_launched(proc, actual_pid, before)
 
 
 @pytest.fixture(scope="module")
