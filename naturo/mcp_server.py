@@ -75,21 +75,49 @@ def _core_error_envelope(exc: NaturoCoreError) -> dict[str, Any]:
     return {"success": False, "error": {"code": code, "message": message}}
 
 
+# A default recovery hint per error code, so every error an agent sees carries a
+# concrete "what to do next" even when the raise site did not supply one. A raise
+# site that sets its own suggested_action always wins.
+_DEFAULT_SUGGESTED_ACTION = {
+    ErrorCode.ELEMENT_NOT_FOUND: "Call see_ui_tree (cascade=true) to list the window's current elements, then retry with an exact Role:Name selector or a fresh element id.",
+    ErrorCode.SELECTOR_NOT_FOUND: "Call see_ui_tree to inspect the window, then use a selector that matches an element that is actually present.",
+    ErrorCode.WINDOW_NOT_FOUND: "Call list_windows to see open windows and pass the exact hwnd, or launch the app first with launch_app.",
+    ErrorCode.APP_NOT_FOUND: "Check the app name/path; use list_apps for running apps or launch_app to start it.",
+    ErrorCode.PROCESS_NOT_FOUND: "Call list_apps to see running processes, or start the app with launch_app first.",
+    ErrorCode.MENU_NOT_FOUND: "Call menu_inspect to list the app's menus, then use an exact menu path.",
+    ErrorCode.SNAPSHOT_NOT_FOUND: "Call create_snapshot (or see_ui_tree) first, then use the returned snapshot id.",
+    ErrorCode.STALE_SNAPSHOT_CACHE: "Call see_ui_tree/create_snapshot to capture a fresh snapshot, then retry with the new element ids.",
+    ErrorCode.DIALOG_NOT_FOUND: "Call dialog_detect to confirm a dialog is present before acting on it.",
+    ErrorCode.SET_VALUE_FAILED: "The control has no writable ValuePattern. Use type_text (it falls back to paste/keystroke) with the window's hwnd, or click the field first.",
+    ErrorCode.TOGGLE_FAILED: "The element does not support TogglePattern; confirm it is a checkbox/toggle via see_ui_tree, or click it instead.",
+    ErrorCode.SELECT_FAILED: "The element does not support SelectionItemPattern; confirm it is a selectable item via see_ui_tree, or click it instead.",
+    ErrorCode.EXPAND_FAILED: "The element does not support ExpandCollapsePattern; confirm it is expandable via see_ui_tree, or click it instead.",
+    ErrorCode.COLLAPSE_FAILED: "The element does not support ExpandCollapsePattern; confirm it is collapsible via see_ui_tree, or click it instead.",
+    ErrorCode.TIMEOUT: "Increase the timeout, or verify the expected window/element actually appears (list_windows / see_ui_tree).",
+    ErrorCode.INVALID_COORDINATES: "Use coordinates within a monitor's bounds (list_monitors), or target an element id instead of raw x/y.",
+    ErrorCode.TASKBAR_ITEM_NOT_FOUND: "Call taskbar_list to see current taskbar items, then use an exact label.",
+    ErrorCode.TRAY_ICON_NOT_FOUND: "Call tray_list to see current tray icons, then use an exact label.",
+    ErrorCode.CAPTURE_FAILED: "Verify the target window is visible and not minimized (list_windows), then retry.",
+    ErrorCode.SCREENSHOT_FAILED: "Verify the target window is visible and not minimized (list_windows), then retry.",
+}
+
+
 def _finalize_error_envelope(result: Any) -> Any:
     """Guarantee any tool error envelope carries the full self-correcting contract.
 
     Tools may build ``{"success": False, "error": {"code", "message"}}`` inline;
-    this backfills ``category`` (derived from the registered code via
-    :func:`category_for_code`) and ensures a ``suggested_action`` key is present,
-    so every MCP error an agent sees is ``code + category + recovery-hint``
-    regardless of how the tool constructed it (M3). Non-error results and
-    non-dict errors pass through untouched.
+    this backfills ``category`` (from the registered code) and a
+    ``suggested_action`` recovery hint (from ``_DEFAULT_SUGGESTED_ACTION`` when
+    the raise site left it empty), so every MCP error an agent sees is
+    ``code + category + recovery-hint`` regardless of how the tool built it (M3).
+    Non-error results and non-dict errors pass through untouched.
     """
     if isinstance(result, dict) and result.get("success") is False:
         err = result.get("error")
         if isinstance(err, dict) and isinstance(err.get("code"), str):
             err.setdefault("category", category_for_code(err["code"]))
-            err.setdefault("suggested_action", None)
+            if err.get("suggested_action") is None:
+                err["suggested_action"] = _DEFAULT_SUGGESTED_ACTION.get(err["code"])
     return result
 
 

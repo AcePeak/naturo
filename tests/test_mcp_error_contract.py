@@ -149,3 +149,27 @@ def test_raised_naturo_error_yields_full_dict_contract(server, backend):
     assert err["recoverable"] is True
     assert "context" in err
     _assert_full_contract(err)
+
+
+def test_default_recovery_hint_backfilled_for_inline_error():
+    """An inline error envelope (code+message only, no raise-site hint) still
+    gets a concrete recovery hint from the default map — every error an agent
+    sees is code + category + suggested_action."""
+    from naturo.mcp_server import _finalize_error_envelope
+
+    r = _finalize_error_envelope(
+        {"success": False, "error": {"code": ErrorCode.ELEMENT_NOT_FOUND, "message": "x"}}
+    )
+    assert r["error"]["suggested_action"]  # backfilled, not null
+    assert r["error"]["category"] == "automation"
+
+
+def test_raise_site_recovery_hint_not_overwritten():
+    """A suggested_action supplied by the raise site always wins over the default."""
+    from naturo.mcp_server import _finalize_error_envelope
+
+    r = _finalize_error_envelope(
+        {"success": False, "error": {"code": ErrorCode.ELEMENT_NOT_FOUND,
+                                     "message": "x", "suggested_action": "CUSTOM"}}
+    )
+    assert r["error"]["suggested_action"] == "CUSTOM"
