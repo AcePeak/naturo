@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-02
+
+### Highlights
+- **Unified Auto Element Tree (M1)** — `naturo see --cascade --json` now emits ONE fused element tree per app/window combining UIA + MSAA + Java (JAB) + Electron/Chromium (CDP) + COM + image/OCR + AI-vision. Every node is tagged with which techniques recognized it, a confidence, and a **correctness class** (`deterministic` for UIA/MSAA/JAB/CDP/COM vs `uncertain` for image/AI — the latter warned on the CLI). Operations auto-pick the most reliable technique per element; the user never has to choose a backend.
+- **Multi-framework recognition breadth (M2)** — added **COM/Excel** (deterministic cells), **local OCR** (uncertain, warned), and **Java Access Bridge / Swing** (deterministic controls) to the fused tree; a public `docs/SOFTWARE_ADAPTATION.md` records per-software adaptation degree from real runs (non-reproducible frameworks marked `blocked: needs env`).
+- **AI-agent-native, MCP-first (M3)** — naturo's MCP server exposes recognition + action (including the unified tree) as clean tools with a **self-correcting error contract** (code + category + recovery-hint on every error path). `docs/AGENT_INTEGRATION.md` shows 3-line integration (`claude mcp add naturo -- python -m naturo mcp`); a real AI agent completes end-to-end desktop tasks through naturo MCP.
+- **Reliability & soak (M4)** — a no-silent-failure source guard, crash-recovery self-heal (a backend/COM failure re-inits on the next call), an enforced zero-process-leak teardown, and a **≥100-cycle real-app soak** that passes with zero failures / zero leaks / no degradation.
+
 ### Added
 - **Worktree-integrity import guard (opt-in)** — when `NATURO_EXPECTED_ROOT` is set, importing `naturo` (or running `python -m naturo`) fails loudly with a `WORKTREE_MISMATCH` error if the resolved package is not under that root. This catches a stale editable install (egg-link/`.pth`) silently shadowing the checkout under test with a sibling worktree's code, which would otherwise let runtime verification validate the wrong source and emit confident false verdicts. The guard is a no-op for ordinary installs (the variable is unset), so it only affects the multi-worktree agent harness that sets it. The fix for the install itself is environment-only and tracked separately ([#969](https://github.com/AcePeak/naturo/issues/969)); this is the code-only loud-failure companion ([#971](https://github.com/AcePeak/naturo/issues/971))
 
