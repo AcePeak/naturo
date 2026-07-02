@@ -109,7 +109,7 @@ class TestSetValue:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["action"] == "set_value"
         assert data["value"] == "test"
         assert data["pattern"] == "ValuePattern"
@@ -286,7 +286,7 @@ class TestSetToggle:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["action"] == "toggle"
         assert data["new_state"] == "Off"
         assert data["pattern"] == "TogglePattern"
@@ -368,7 +368,7 @@ class TestSetSelect:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["action"] == "select"
         assert data["pattern"] == "SelectionItemPattern"
 
@@ -450,7 +450,7 @@ class TestSetExpandCollapse:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["action"] == "expand"
         assert data["pattern"] == "ExpandCollapsePattern"
 
