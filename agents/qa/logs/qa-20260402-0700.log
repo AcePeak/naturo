@@ -1,0 +1,55 @@
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   6cc6ae9..896ba10  develop    -> origin/develop
+error: you need to resolve your current index first
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+error: Pulling is not possible because you have unmerged files.
+hint: Fix them up in the work tree, and then use 'git add/rm <file>'
+hint: as appropriate to mark resolution and make a commit.
+fatal: Exiting because of an unresolved conflict.
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+The stash entry is kept in case you need it again.
+[2026/04/02 ÖÜËÄ  7:00:05.44] Starting QA-Mariana round 
+All three background Notepad cleanup tasks now confirmed complete. QA Round 90 is fully finished â€” no apps left running, report pushed to develop.

@@ -1,0 +1,33 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   3a90cfe..dd7798a  main       -> origin/main
+Updating 3a90cfe..dd7798a
+Fast-forward
+ .github/workflows/build.yml        | 18 ++++----
+ agents/dev/status.md               | 34 +++++++--------
+ naturo/cli/interaction.py          | 44 ++++----------------
+ naturo/routing.py                  | 82 +++++++++++++++++++++++++++++++++---
+ tests/test_e2e_notepad.py          |  9 ++--
+ tests/test_phase2_comprehensive.py | 29 ++++++++++---
+ tests/test_routing.py              | 64 +++++++++++++++++++++++++++-
+ tests/test_verify.py               | 85 ++++++++++++++++++++++++++++++++++++--
+ 8 files changed, 280 insertions(+), 85 deletions(-)
+[2026/03/27 ÖÜÎå 23:00:04.48] Starting QA-Mariana round 
+## Round 43 Complete
+
+**Summary:**
+
+| Phase | Result |
+|-------|--------|
+| Phase 0 CI | 105 passed, 1 failed (test_window_lifecycle â†’ #446) |
+| Phase 1 Verify | 0/3 verified (all PRs unmerged) |
+| Phase 2 E2E | Calculator PASS (7Ã—8=56, 1+2=3), JSON valid |
+| Phase 3 Exploratory | Error paths good, exit codes correct, special chars PASS |
+| Phase 4 Evaluator | naturo 13x slower than pywinauto (#448), window targeting non-deterministic (#449) |
+| Phase 5 Regression | 3/7 pass, 2 fail, 2 blocked |
+| Phase 6 Test Cases | TC-0008 created (multi-window targeting) |
+| Phase 7 Issues | #446 (flaky CI test), #448 (performance), #449 (window targeting) |
+| Phase 8 Status | Updated |
+
+**New issues filed:** #446, #448, #449
+**Critical blocker:** #425 (type silent failure on Chinese IME) â€” still unfixed after 5 rounds.

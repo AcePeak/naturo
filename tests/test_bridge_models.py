@@ -1,7 +1,7 @@
 """Tests for naturo.bridge._models — WindowInfo, ElementInfo, and parsing helpers."""
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -11,6 +11,7 @@ from naturo.bridge._models import (
     _decode_native,
     _parse_element,
     _safe_json_loads,
+    _system_ansi_encoding,
     populate_hierarchy,
 )
 
@@ -50,6 +51,72 @@ class TestDecodeNative:
 
     def test_ascii_bytes(self):
         assert _decode_native(b"Notepad") == "Notepad"
+
+    def test_ansi_fallback_ignores_utf8_mode_locale_on_windows(self):
+        """#1150: the ANSI fallback must use the OS codepage (GetACP), not
+        ``locale.getpreferredencoding``.
+
+        Under Python UTF-8 mode (``PYTHONUTF8=1`` / ``-X utf8``)
+        ``locale.getpreferredencoding`` returns ``"utf-8"`` regardless of the
+        OS ANSI codepage, so the old fallback re-decoded GBK title bytes as
+        UTF-8 and corrupted every non-ASCII character to U+FFFD.  The decoded
+        title must instead match the true Win32 wide-API value.
+        """
+        title = "无标题 - Notepad"
+        raw = b'[{"hwnd": 1, "title": "' + title.encode("gbk") + b'"}]'
+        fake_windll = MagicMock()
+        fake_windll.kernel32.GetACP.return_value = 936
+        with patch("naturo.bridge._models.sys.platform", "win32"), patch(
+            "naturo.bridge._models.ctypes.windll", fake_windll, create=True
+        ), patch("locale.getpreferredencoding", return_value="utf-8"):
+            result = _decode_native(raw)
+        assert title in result
+        assert "�" not in result
+
+
+# ---------------------------------------------------------------------------
+# _system_ansi_encoding
+# ---------------------------------------------------------------------------
+
+class TestSystemAnsiEncoding:
+    """Tests for _system_ansi_encoding OS-codepage resolution (#1150)."""
+
+    def test_windows_prefers_getacp_over_locale(self):
+        """On Windows the OS ANSI codepage comes from GetACP, never locale.
+
+        This is the crux of #1150: ``locale.getpreferredencoding`` reports
+        ``"utf-8"`` under Python UTF-8 mode even on a CP936 desktop, so it
+        cannot be trusted to detect the codepage of the native DLL's bytes.
+        """
+        fake_windll = MagicMock()
+        fake_windll.kernel32.GetACP.return_value = 936
+        with patch("naturo.bridge._models.sys.platform", "win32"), patch(
+            "naturo.bridge._models.ctypes.windll", fake_windll, create=True
+        ), patch("locale.getpreferredencoding", return_value="utf-8"):
+            assert _system_ansi_encoding() == "cp936"
+
+    def test_windows_falls_back_to_locale_when_getacp_unavailable(self):
+        """If GetACP cannot be called, fall back to the locale encoding."""
+        fake_windll = MagicMock()
+        fake_windll.kernel32.GetACP.side_effect = OSError("boom")
+        with patch("naturo.bridge._models.sys.platform", "win32"), patch(
+            "naturo.bridge._models.ctypes.windll", fake_windll, create=True
+        ), patch("locale.getpreferredencoding", return_value="gbk"):
+            assert _system_ansi_encoding() == "gbk"
+
+    def test_non_windows_uses_locale(self):
+        """Off Windows there is no ANSI codepage; use the locale encoding."""
+        with patch("naturo.bridge._models.sys.platform", "linux"), patch(
+            "locale.getpreferredencoding", return_value="utf-8"
+        ):
+            assert _system_ansi_encoding() == "utf-8"
+
+    def test_defaults_to_cp936_when_no_encoding_resolved(self):
+        """When neither GetACP nor locale yields an encoding, default to cp936."""
+        with patch("naturo.bridge._models.sys.platform", "linux"), patch(
+            "locale.getpreferredencoding", return_value=""
+        ):
+            assert _system_ansi_encoding() == "cp936"
 
 
 # ---------------------------------------------------------------------------

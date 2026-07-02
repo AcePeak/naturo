@@ -5,7 +5,6 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-import click
 import pytest
 
 from naturo.cli.interaction._common import (
@@ -265,7 +264,11 @@ class TestResolveAppId:
         entry = MagicMock(handle=999, pid=111)
         fake_map = MagicMock()
         fake_map.resolve.return_value = entry
-        with patch("naturo.app_ids.get_app_id_map", return_value=fake_map):
+        # The handle (999) is a fixture value, not a real window, so the #788
+        # stale-HWND guard must be mocked alive; otherwise IsWindow(999) returns
+        # 0 on Windows and _resolve_app_id raises APP_ID_STALE (see #944).
+        with patch("naturo.app_ids.get_app_id_map", return_value=fake_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True):
             result = _resolve_app_id("a1", "notepad", None, None, False)
         assert result == (None, 999, 111)
 
@@ -416,10 +419,13 @@ class TestGetBackend:
 
     @patch("naturo.cli.interaction._common._check_desktop_session",
            side_effect=Exception("no desktop"))
-    def test_no_desktop_text_raises_usage_error(self, _mock):
+    def test_no_desktop_text_exits_1(self, _mock):
+        # A missing desktop is a runtime failure: exit 1, never Click's exit-2
+        # UsageError / 'Usage:' banner (#866).
         from naturo.cli.interaction._common import _get_backend
-        with pytest.raises(click.UsageError, match="no desktop"):
+        with pytest.raises(SystemExit) as exc_info:
             _get_backend(json_output=False)
+        assert exc_info.value.code == 1
 
 
 # ── _validate_method ────────────────────────────

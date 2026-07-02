@@ -11,43 +11,99 @@
 - [TC-0002](regression/click-exit-code.yaml) — P1: click/press returns exit code 2 on success (#426) — **retired** (5 passes, #426 closed)
 - [TC-0003](regression/chinese-app-name-matching.yaml) — P1: --app with Chinese titles inconsistent across commands — **active**
 
+- [TC-0038](regression/uwp-notepad-enumeration.yaml) — P0: UWP Notepad intermittently invisible to list apps after launch — **active**
+- [TC-0040](regression/capture-unicode-path-dll.yaml) — P1: naturo_core.dll capture_screen fails with Unicode file path — **active**
+- [TC-0041](regression/json-mode-exit-code-zero-on-failure.yaml) — P1: JSON mode (-j) returns exit code 0 on failure, breaking scripts — **retired** (34 passes, #781 closed)
+- [TC-0042](regression/type-escape-newline-dropped.yaml) — P1: type -E silently drops newline chars during keystroke simulation — **active**
+- [TC-0043](regression/calculator-uwp-invisible.yaml) — P0: app launch calculator reports success but Calculator invisible to list/see (#785) — **active**
+- [TC-0045](regression/type-stale-pid-silent-failure.yaml) — P0: type --app routes to stale PID after app restart, silently drops keystrokes — **active**
+- [TC-0046](regression/see-error-exit-code-zero.yaml) — P1: see --app returns exit 0 on error in non-JSON mode — **active**
+
 ## E2E Tests
 - [TC-0004](e2e/calculator-basic-flow.yaml) — P1: Calculator see→click→verify flow — **active**
 - [TC-0010](e2e/mcp-agent-workflow.yaml) — P1: MCP server E2E: initialize→tools/list→type_text→verify — **active**
 - [TC-0014](e2e/scripted-notepad-workflow.yaml) — P1: Scripted workflow: launch→JSON parse→click→type→verify→close — **active**
 
-- [TC-0007](regression/click-on-short-text.yaml) — P1: click --on fails for short English text ('C', 'CE', 'MC') (#442) — **active**
+- [TC-0007](regression/click-on-short-text.yaml) — P1: click --on fails for short English text ('C', 'CE', 'MC') (#442) — **retired** (5 passes, #442 closed)
 
 - [TC-0009](regression/uia-detection-after-hybrid.yaml) — P1: UIA detection missing after hybrid tree merge (#455) — **retired** (5 passes, #455 closed)
-- [TC-0012](regression/pid-targeting-ignored.yaml) — P0: --pid flag ignored, always returns foreground window — **active**
+- [TC-0012](regression/pid-targeting-ignored.yaml) — P0: --pid flag ignored, always returns foreground window — **retired** (5 passes, #471 closed)
 - [TC-0013](regression/type-app-not-found-silent-failure.yaml) — P1: type --app exits 0 on "App not found", types to wrong window (#474) — **retired** (5 passes, #474 closed)
 
 ## Exploratory Tests
-- [TC-0005](exploratory/capture-popup-menu.yaml) — P1: capture --app returns tiny image when popup menu is open — **blocked**
+- [TC-0005](exploratory/capture-popup-menu.yaml) — P1: capture --app returns tiny image when popup menu is open — **active**
 - [TC-0006](exploratory/press-after-menu-focus.yaml) — P1: press fails silently after menu open/close cycle — **blocked**
 - [TC-0008](exploratory/multi-window-targeting.yaml) — P1: --app targets different windows for type vs capture — **active**
 - [TC-0011](exploratory/app-filter-cross-process.yaml) — P2: --app matches wrong process when app name in other window title — **active**
 
 - [TC-0015](regression/app-quit-silent-failure.yaml) — P1: app quit reports success but fails to close windows with unsaved changes — **active**
 - [TC-0016](regression/uwp-app-name-matching.yaml) — P1: --app flag fails to match UWP apps by common name (#469) — **retired** (5 passes, #469 closed)
-- [TC-0034](regression/capture-chinese-filepath.yaml) — P1: naturo capture fails with Chinese/Unicode file paths — **active**
+- [TC-0034](regression/capture-chinese-filepath.yaml) — P1: naturo capture fails with Chinese/Unicode file paths — **retired** (6 passes, #693 closed)
 - [TC-0017](regression/click-en-ref-not-found.yaml) — P0: click eN ref always fails with 'Element ref not found' even after see — **retired** (5 passes, #502 closed)
 - [TC-0018](exploratory/get-value-unreadable.yaml) — P1: get command returns 'no readable pattern' for Calculator display element — **active**
 - [TC-0019](exploratory/explorer-matches-program-manager.yaml) — P1: --app explorer matches Program Manager instead of File Explorer — **retired** (5 passes, #524 closed)
 - [TC-0020](regression/click-nonexistent-app-silent-success.yaml) — P0: click --app nonexistent exits 0 and claims success (silent failure) — **retired** (5 passes, #533 closed)
 - [TC-0021](regression/type-escape-sequences-literal.yaml) — P1: naturo type treats \t and \n as literal text, not escape sequences — **retired** (5 passes, #563 closed)
-- [TC-0030](regression/type-backslash-escape-missing.yaml) — P1: naturo type has no \\\\ escape for literal backslash, breaks Windows paths — **active**
+- [TC-0030](regression/type-backslash-escape-missing.yaml) — P1: naturo type has no \\\\ escape for literal backslash, breaks Windows paths — **retired** (6 passes, #619 closed)
 - [TC-0022](exploratory/capture-missing-pid-flag.yaml) — P2: capture command missing --pid flag (API inconsistency) — **retired** (5 passes, #556 closed)
-- [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **active**
+- [TC-0023](exploratory/mcp-launch-missing-pid.yaml) — P2: MCP launch_app returns success but omits PID in response — **retired** (6 passes, #575 closed)
 
 ## Real-World Verification (from Ace's v0.3.1 testing — 2026-03-29)
 - [TC-0024](exploratory/click-background-window.yaml) — P0: click --app hits wrong window when target is behind others (#608) — **active**
-- [TC-0025](exploratory/dpi-coordinate-verification.yaml) — P0: Element coordinates wrong on 4K + 150% DPI (#613) — **active**
+- [TC-0025](exploratory/dpi-coordinate-verification.yaml) — P0: Element coordinates wrong on 4K + 150% DPI (#613) — **retired** (5 passes, #613 closed)
 - [TC-0026](exploratory/ai-vision-fill-gaps.yaml) — P0: AI Vision fill-gaps returns 0 elements, JSON parsing fails (#611) — **active**
 - [TC-0027](exploratory/ai-vision-coverage-false-100.yaml) — P0: AI Vision skipped because coverage falsely reports 100% (#609) — **active**
-- [TC-0028](exploratory/uwp-multi-tab-quit.yaml) — P1: app quit fails to close UWP Notepad with multiple tabs (#586) — **active**
+- [TC-0028](exploratory/uwp-multi-tab-quit.yaml) — P1: app quit fails to close UWP Notepad with multiple tabs (#586) — **retired** (5 passes, #586 closed)
 - [TC-0029](exploratory/hybrid-mode-enrichment.yaml) — P1: Hybrid mode should discover more elements than UIA-only — **active**
 - [TC-0031](exploratory/notepad-menu-click-targeting.yaml) — P1: click eN on Notepad UWP menu item does not open menu — **active**
 - [TC-0032](exploratory/app-title-matching-multiwindow.yaml) — P1: --app cannot match by window title for multi-window processes — **active**
 - [TC-0033](exploratory/mcp-click-element-id-fails.yaml) — P1: MCP click by element_id fails, see_ui_tree refs not usable in click tool — **active**
 - [TC-0035](exploratory/press-standalone-modifier.yaml) — P2: naturo press fails for standalone modifier keys (alt, ctrl, shift) — **active**
+- [TC-0036](regression/quit-chinese-app-name.yaml) — P1: app quit with Chinese app name targets wrong PID and fails — **retired** (5 passes, #743 closed)
+- [TC-0039](exploratory/app-id-filter-see.yaml) — P1: --app aN (app ID) fails for see/click but --app-id aN works — **retired** (5 passes, #752 closed)
+- [TC-0042](exploratory/json-stderr-duplicate-error.yaml) — P2: JSON mode (-j) emits duplicate error to stderr, breaks 2>&1 pipe — **active**
+- [TC-0044](exploratory/click-coords-out-of-bounds.yaml) — P2: click --coords accepts out-of-bounds coordinates without warning — **active**
+- [TC-0047](exploratory/press-app-focus-mismatch.yaml) — P1: press --app hotkey sends to wrong process when target is not focused (#807) — **active**
+- [TC-0048](regression/mcp-stdout-debug-output.yaml) — P1: MCP server emits debug text to stdout, breaking JSON-RPC stdio protocol — **retired** (5 passes, #810 closed)
+- [TC-0049](exploratory/browser-json-error-format.yaml) — P1: Browser commands ignore -j flag, output plain text errors instead of JSON — **active**
+- [TC-0050](regression/type-default-multiline-dropped.yaml) — P1: Default type mode drops literal newlines from multi-line text — **active**
+- [TC-0051](exploratory/mcp-pydantic-error-leak.yaml) — P2: MCP tool call with wrong param leaks Pydantic internals in error — **active**
+- [TC-0052](exploratory/get-id-flag-rejected.yaml) — P2: Only `click` accepts `--id eN`; 8 other element-targeting commands reject it (#864) — **active**
+- [TC-0053](exploratory/see-json-envelope-inconsistency.yaml) — P2: `see -j` returns bare tree on success but envelope on error (#865) — **active**
+- [TC-0054](exploratory/input-cmd-exit-code-on-no-desktop.yaml) — P2: input commands exit 2 + 'Usage:' on runtime errors instead of exit 1 (#866) — **active**
+- [TC-0055](exploratory/hidden-snapshot-typo-leak.yaml) — P2: Hidden `snapshot` command leaks into Click's 'Did you mean' suggestions (#867) — **active**
+- [TC-0056](regression/mcp-capture-screen-silent-black.yaml) — P0: MCP `capture_screen` returns all-black PNG with success:true when desktop not bindable (#868) — **active**
+- [TC-0057](exploratory/deps-prompt-leaks-into-json.yaml) — P2: Optional-dep install prompt leaks into -j JSON output (#869) — **active**
+- [TC-0058](exploratory/window-targeting-flag-matrix.yaml) — P2: Window-targeting flag matrix (--app/--window/--hwnd/--pid) inconsistent across subcommands (#871) — **active**
+- [TC-0059](exploratory/click-usage-bypasses-json-envelope.yaml) — P2: Click UsageError (unknown option/invalid type) bypasses -j JSON envelope (#872) — **active**
+- [TC-0060](exploratory/mcp-serverinfo-version-mismatch.yaml) — P2: MCP serverInfo.version reports MCP SDK version instead of naturo version (#873) — **active**
+- [TC-0061](exploratory/eager-option-bypasses-json-envelope.yaml) — P2: `-j --version` / `-j --help` / `-j <unknown-cmd>` bypass JSON envelope (#874) — **active**
+- [TC-0062](exploratory/dialog-taskbar-tray-silent-success.yaml) — P1: dialog detect / taskbar list / tray list -j silently return success:true [] in NO_DESKTOP_SESSION (#875) — **active**
+- [TC-0063](exploratory/selector-record-list-envelope.yaml) — P2: selector/record/visual list -j omit top-level 'success' field (#876) — **active**
+- [TC-0064](exploratory/get-set-unknown-error-code.yaml) — P2: get/set -j error envelope uses UNKNOWN_ERROR code and omits suggested_action (#877) — **active**
+- [TC-0065](exploratory/app-windows-missing-desktop-guard.yaml) — P1: app windows -j silently returns real windows in NO_DESKTOP_SESSION while every other read command refuses (#878) — **active**
+- [TC-0066](exploratory/browser-launch-status-envelope.yaml) — P2: browser launch -j returns {status: ok} envelope instead of standard {success: true} (#879) — **active**
+- [TC-0067](exploratory/typo-suggester-ignores-subgroups.yaml) — P2: CLI typo suggester ignores subgroup commands; first-time `launch`/`open`/`screenshot` hit dead end (#880) — **active**
+- [TC-0068](exploratory/mcp-error-code-naturocore-leak.yaml) — P1: MCP tools surface `INTERNAL_ERROR` + `NaturoCoreError` C++ exception names instead of typed codes (#881) — **active**
+- [TC-0069](exploratory/mcp-iserror-flag-inconsistent.yaml) — P2: MCP `isError` flag used inconsistently — agents must check both isError and payload.success (#882) — **active**
+- [TC-0070](exploratory/mcp-list-windows-silent-success.yaml) — P1: MCP `list_windows` bypasses NO_DESKTOP_SESSION guard, returns real windows + isError:false (MCP analogue of #878) (#883) — **active**
+- [TC-0071](exploratory/envelope-shape-drift.yaml) — P2: JSON error envelope shape drifts across CLI commands — `app *` returns 6 fields, see/capture/list/type/press/click/find return 3, get/set return 2 (#884) — **active**
+- [TC-0072](exploratory/keyboard-shortcut-always-null.yaml) — P1: `see` snapshot `keyboardShortcut` always null for UIA-backed elements (87,196 elements across 2,835 snapshots, 0 populated) (#886) — **active**
+- [TC-0073](exploratory/record-error-as-string.yaml) — P2: `record show/delete/export/play -j` return error as plain string instead of structured object (shape D of #884) — **active**
+- [TC-0074](exploratory/clipboard-set-missing-file-stdin.yaml) — P2: `naturo clipboard set` lacks `--file`/stdin asymmetric with `naturo type --file`, blocks >32KB & multi-line ergonomics — **active**
+- [TC-0075](exploratory/readme-marketing-claims-accuracy.yaml) — P1: README ✅ "Post-Action Verify" and ✅ "AI Agent Ready: JSON output" claims contradicted by silent-failure cluster (#868/#875/#878/#883) and -j envelope cluster (#864–#884) — **active**
+- [TC-0076](exploratory/typo-suggester-nonsense-match.yaml) — P2: 'Did you mean' suggester returns semantically wrong matches for short queries — `naturo ai → wait`, `naturo tap → app` (#889) — **active**
+- [TC-0077](regression/mcp-list-snapshots-broken.yaml) — P1: MCP `list_snapshots` fails 100% — wrapper passes `limit=` kwarg that `SnapshotManager.list_snapshots()` doesn't accept (#890) — **active**
+- [TC-0078](exploratory/mcp-unknown-arg-silent-drop.yaml) — P2: MCP tools silently drop unknown args — typos fall back to defaults (#891) — **active**
+- [TC-0079](regression/wait-gone-silent-success.yaml) — P1: `naturo wait --gone` bypasses NO_DESKTOP_SESSION, returns success:true exit 0 with wait_time:0; --timeout ignored (#893) — **active**
+- [TC-0080](exploratory/json-ensure-ascii-escapes-chinese.yaml) — P2: JSON output uses `ensure_ascii=True`; Chinese/emoji round-tripped through `-j` is escaped as `\uXXXX`, mangling readability for CJK users (#894) — **active**
+- [TC-0081](exploratory/wait-success-envelope-drift.yaml) — P2: `naturo wait` success envelope drifts across sub-modes — duration emits `{success, mode, wait_time}`, predicate modes (`--gone`/`--window`/`--element`) emit `{success, found, wait_time, warnings}` with no `mode` discriminator (#895) — **active**
+- [TC-0082](exploratory/see-schema-missing-accessibility-props.yaml) — P2: `see` snapshot schema omits IsKeyboardFocusable / HasKeyboardFocus / HelpText / IsEnabled / IsOffscreen / LocalizedControlType — zero usages in `naturo/` or `core/`; `find` has no `--focusable`/`--enabled`/`--visible` filters; `press/type --on` is click-to-focus only (#896) — **active**
+- [TC-0083](exploratory/missing-arg-exit-code-drift.yaml) — P2: missing-required-arg path returns exit 1 for `type/press/find/wait/get/set/app launch` but Click's own missing-flag-value / unknown-command paths return exit 2; Scripter switch on `$?` misclassifies usage errors as transient operation failures (#897) — **active**
+- [TC-0084](exploratory/short-help-flag-not-accepted.yaml) — P2: `-h` not accepted as `--help` alias — every command/subcommand emits `Error: No such option: -h` exit 2 instead of help text; missing Click `context_settings={'help_option_names': ['-h', '--help']}` on root group (#899) — **active**
+- [TC-0085](exploratory/mcp-window-target-param-drift.yaml) — P2: MCP window-targeting param name drifts across surfaces — `focus_window`/`window_*`/`wait_for_window` use `title`, `see_ui_tree`/`capture_window`/`wait_for_element`/`wait_until_gone`/`create_snapshot` use `window_title`, `menu_inspect` has neither (only `app`), CLI uses `--window`; #891 turns the wrong-name case into silent fallback to "foreground" (#900) — **active**
+- [TC-0086](exploratory/mcp-app-inspect-bogus-pid-silent.yaml) — P1: MCP `app_inspect({pid: <any int>})` returns success:true with empty exe/app + fabricated win32+vision fallback for non-existent PIDs (1, -1, 0, 999999, MAX_INT); CLI surface properly returns PROCESS_NOT_FOUND (#901) — **active**
+- [TC-0087](regression/selector-chinese-name-roundtrip.yaml) — P2: Selector save/load/show/delete round-trip with Chinese app+name — file storage and in-memory lookup must survive non-ASCII (regression-prevention, no source bug) — **active**
+- [TC-0089](exploratory/keyboard-navigation-key-matrix.yaml) — P2: `press` must accept the full keyboard-navigation key matrix (Tab/Shift+Tab/Apps/F6/F10/arrows) a screen-reader user depends on; broadens TC-0035 — **blocked** (needs desktop session; guard masks key parsing per #866/#863)
+- [TC-0088](regression/no-desktop-guard-positive-lock.yaml) — P1: NO_DESKTOP_SESSION guard positive-lock — see/capture/list windows/list apps/list screens/app list/menu-inspect/find + `see --pid <leaked>` MUST all keep refusing (exit 1) so #885's centralized middleware can't silently drop the guard from a currently-correct command (regression-prevention, counterpart to TC-0065/#878) — **active**
+- [TC-0090](exploratory/rpa-workflow-exit-code-consistency.yaml) — P1: Enterprise RPA 10-step batch — same NO_DESKTOP_SESSION root cause must not yield 3 different exit codes (0/1/2) nor 3 mid-flow `success:true` steps on fabricated data (#878/#875/#893/#866); locks end-to-end cross-surface consistency for #885 — **active** (fail on cf1cfb7)

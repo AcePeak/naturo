@@ -1,0 +1,35 @@
+id: TC-0073
+title: "record show/delete/export/play -j return error as plain STRING instead of structured object (shape D of #884)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 884
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R134: FAIL — four record subcommands all return {success:false, error:'string message'} instead of {success:false, error:{code,message,...}}. .error.code is undefined for scripts. Filed as comment on #884 (shape D extension)."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "A nonexistent recording_id (e.g. bogus_id_999) is used to trigger the error path"
+
+steps:
+  - description: "record show -j error must use structured object"
+    command: "naturo record show bogus_id_999 -j"
+    expect: '.error is an object with at minimum a "code" field (e.g. RECORDING_NOT_FOUND). Currently: error is a plain string "Recording not found: bogus_id_999"'
+  - description: "record delete -j error must use structured object"
+    command: "naturo record delete bogus_id_999 -j"
+    expect: 'Same structured object envelope. Currently: same string-shape bug'
+  - description: "record export -j error must use structured object"
+    command: "naturo record export bogus_id_999 -j"
+    expect: 'Same structured object envelope. Currently: same string-shape bug'
+  - description: "record play -j error must use structured object"
+    command: "naturo record play bogus_id_999 -j"
+    expect: 'Same structured object envelope. Currently: same string-shape bug'
+  - description: "Parseability discriminator — .error.code must exist"
+    command: "naturo record show bogus_id_999 -j | python -c \"import json,sys; d=json.load(sys.stdin); print(type(d['error']).__name__)\""
+    expect: 'Output is "dict". Currently: "str" (FAIL)'
+
+pass_criteria: "All four record commands return the canonical {success:false, error:{code,message,suggested_action,...}} envelope; .error is always an object, never a string."
+fail_action: "Update #884 (shape D). Route record_cmd error paths through naturo/cli/error_helpers.py json_error()."

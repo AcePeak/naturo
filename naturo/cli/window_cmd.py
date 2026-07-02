@@ -5,7 +5,7 @@ Each command targets a window via ``--app``, ``--title``, or ``--hwnd``.
 """
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import sys
 from typing import Optional
 
@@ -14,7 +14,7 @@ import click
 from naturo.backends.base import get_backend as _get_backend_impl
 from naturo.cli.error_helpers import json_error
 from naturo.cli.fuzzy_group import FuzzyGroup
-from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
+from naturo.cli.options import app_id_option, maybe_promote_app_to_app_id, resolve_app_id_to_hwnd
 
 
 def _safe_echo(text: str, **kwargs) -> None:
@@ -74,7 +74,7 @@ def _emit_deprecation(json_output: bool) -> None:
 
 
 @click.group(cls=FuzzyGroup, hidden=True)
-def window():
+def window() -> None:
     """Manage windows (deprecated — use 'naturo app' instead)."""
     pass
 
@@ -87,13 +87,15 @@ def window():
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def focus(ctx, name, app, title, hwnd, app_id, json_output):
+def focus(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Focus a window (bring to foreground)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     # Support positional NAME for backward compat: naturo window focus "Notepad"
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -114,12 +116,12 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output):
         backend = _get_backend()
         backend.focus_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "focus"}))
+            click.echo(json_dumps({"success": True, "action": "focus"}))
         else:
             _safe_echo(f"Focused window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -140,12 +142,14 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def close(ctx, name, app, title, hwnd, force, app_id, json_output):
+def close(ctx, name, app, title, hwnd, force, app_id, json_output) -> None:
     """Close a window (graceful or forced)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     # (#584) Resolve --app-id to hwnd
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
@@ -168,12 +172,12 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output):
         kwargs["force"] = force
         backend.close_window(**kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "close", "force": force}))
+            click.echo(json_dumps({"success": True, "action": "close", "force": force}))
         else:
             _safe_echo(f"Closed window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -193,12 +197,14 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def minimize(ctx, name, app, title, hwnd, app_id, json_output):
+def minimize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Minimize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -218,12 +224,12 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output):
         backend = _get_backend()
         backend.minimize_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "minimize"}))
+            click.echo(json_dumps({"success": True, "action": "minimize"}))
         else:
             _safe_echo(f"Minimized window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -243,12 +249,14 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def maximize(ctx, name, app, title, hwnd, app_id, json_output):
+def maximize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Maximize a window."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -268,12 +276,12 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output):
         backend = _get_backend()
         backend.maximize_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "maximize"}))
+            click.echo(json_dumps({"success": True, "action": "maximize"}))
         else:
             _safe_echo(f"Maximized window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -293,12 +301,14 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output):
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def restore(ctx, name, app, title, hwnd, app_id, json_output):
+def restore(ctx, name, app, title, hwnd, app_id, json_output) -> None:
     """Restore a minimized or maximized window to normal state."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
     if name and not app:
         app = name
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -318,12 +328,12 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output):
         backend = _get_backend()
         backend.restore_window(**_resolve_target(app, title, hwnd))
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "restore"}))
+            click.echo(json_dumps({"success": True, "action": "restore"}))
         else:
             _safe_echo(f"Restored window: {app or title or hwnd}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -344,10 +354,12 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output):
 @click.option("--y", type=int, default=None, help="Target Y position")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
+def window_move(ctx, app, title, hwnd, app_id, x, y, json_output) -> None:
     """Move a window to a position (keeps current size)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -376,12 +388,12 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
         kwargs = _resolve_target(app, title, hwnd)
         backend.move_window(x=x, y=y, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "move", "x": x, "y": y}))
+            click.echo(json_dumps({"success": True, "action": "move", "x": x, "y": y}))
         else:
             _safe_echo(f"Moved window to ({x}, {y})")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -402,10 +414,12 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output):
 @click.option("--height", type=int, default=None, help="New height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
+def resize(ctx, app, title, hwnd, app_id, width, height, json_output) -> None:
     """Resize a window (keeps current position)."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -443,12 +457,12 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
         kwargs = _resolve_target(app, title, hwnd)
         backend.resize_window(width=width, height=height, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "resize", "width": width, "height": height}))
+            click.echo(json_dumps({"success": True, "action": "resize", "width": width, "height": height}))
         else:
             _safe_echo(f"Resized window to {width}x{height}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -471,10 +485,12 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output):
 @click.option("--height", type=int, default=None, help="Height in pixels")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
+def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output) -> None:
     """Set window position and size at once."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
+    # (#776) Promote --app aN to --app-id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
     hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
     if app_id and hwnd is None:
         sys.exit(1)
@@ -521,12 +537,12 @@ def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
         kwargs = _resolve_target(app, title, hwnd)
         backend.set_bounds(x=x, y=y, width=width, height=height, **kwargs)
         if json_output:
-            click.echo(json.dumps({"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}))
+            click.echo(json_dumps({"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}))
         else:
             _safe_echo(f"Set bounds: ({x}, {y}) {width}x{height}")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -544,7 +560,7 @@ def set_bounds(ctx, app, title, hwnd, app_id, x, y, width, height, json_output):
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def window_list(ctx, app, pid, json_output):
+def window_list(ctx, app, pid, json_output) -> None:
     """List open windows."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
     _emit_deprecation(json_output)
@@ -562,7 +578,7 @@ def window_list(ctx, app, pid, json_output):
             windows = [w for w in windows if w.pid == pid]
 
         if json_output:
-            click.echo(json.dumps({
+            click.echo(json_dumps({
                 "success": True,
                 "windows": [
                     {
@@ -588,7 +604,7 @@ def window_list(ctx, app, pid, json_output):
                 click.echo(f"\n{len(windows)} windows")
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response()))
+            click.echo(json_dumps(exc.to_json_response()))
         else:
             _safe_echo(f"Error: {exc.message}", err=True)
         sys.exit(1)

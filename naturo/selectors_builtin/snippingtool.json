@@ -1,0 +1,22 @@
+{
+  "new-button": {
+    "selector": "app://snippingtool.exe/Window[@name=\"Snipping Tool\"]/Button[@automationid=\"NewSnipButton\"]",
+    "description": "New snip capture button"
+  },
+  "mode-selector": {
+    "selector": "app://snippingtool.exe/Window[@name=\"Snipping Tool\"]/ComboBox[@automationid=\"SnipModeComboBox\"]",
+    "description": "Snip mode selector (Rectangle, Window, Full screen, Free-form)"
+  },
+  "delay-selector": {
+    "selector": "app://snippingtool.exe/Window[@name=\"Snipping Tool\"]/ComboBox[@automationid=\"DelayComboBox\"]",
+    "description": "Delay timer selector"
+  },
+  "screenshot-area": {
+    "selector": "app://snippingtool.exe/Window[@name=\"Snipping Tool\"]/Pane[@name=\"*screenshot*\"]",
+    "description": "Screenshot preview area"
+  },
+  "save-button": {
+    "selector": "app://snippingtool.exe/Window[@name=\"Snipping Tool\"]/Button[@name=\"Save*\"]",
+    "description": "Save snip button"
+  }
+}

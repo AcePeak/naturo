@@ -1,7 +1,7 @@
 """CLI diff command — compare UI element trees."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 
 from naturo.cli.error_helpers import json_error as _json_error_str
 from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
@@ -37,6 +37,10 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
       naturo diff --app-id a1 --interval 2
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
 
     # Resolve --app-id to hwnd (#595)
     resolved_hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
@@ -127,7 +131,7 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
 
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             click.echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -150,7 +154,7 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
 def _output_diff(result, json_output: bool) -> None:
     """Format and output a TreeDiff result."""
     if json_output:
-        click.echo(json.dumps({
+        click.echo(json_dumps({
             "success": True,
             "diff": result.to_dict(),
         }, indent=2))

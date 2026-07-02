@@ -1,0 +1,35 @@
+id: TC-0047
+title: "press --app hotkey sends to wrong process when target is not focused"
+status: active
+category: exploratory
+priority: P1
+source_issue: 807
+created: 2026-04-02
+last_run: 2026-04-04
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-04 R104: Not directly tested. Carried forward. #807 open."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is running but NOT in the foreground (another window is focused)"
+
+steps:
+  - description: "Launch Notepad and type some text"
+    command: "naturo app launch notepad && sleep 2 && naturo click e3 --app notepad && naturo type 'test' --app notepad"
+    expect: "Notepad launched, text area clicked, 'test' typed"
+  - description: "Click on another window to remove focus from Notepad"
+    command: "naturo click --coords 500 400"
+    expect: "Focus moves away from Notepad"
+  - description: "Send Alt+F hotkey to Notepad via --app flag"
+    command: "naturo press 'alt+f' --app notepad 2>&1"
+    expect: "Hotkey should be sent to Notepad. File menu should open."
+  - description: "Capture Notepad screenshot to verify"
+    command: "naturo capture --app notepad -o /tmp/tc-0047.png"
+    expect: "Screenshot shows File menu opened in Notepad"
+  - description: "Cleanup"
+    command: "naturo app quit notepad"
+    expect: "Notepad closed"
+
+pass_criteria: "File menu opens in Notepad when press --app sends Alt+F, even when Notepad is not focused"
+fail_action: "File GitHub issue: press --app does not focus target window before sending keystroke"

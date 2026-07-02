@@ -1,4 +1,4 @@
-"""Tests for MCP server tool definitions and input validation.
+﻿"""Tests for MCP server tool definitions and input validation.
 
 Tests server creation, tool registration, and input validation logic
 that runs on all platforms (no Windows backend required).
@@ -35,7 +35,7 @@ def tools(server):
     return {t.name: t for t in server._tool_manager.list_tools()}
 
 
-# ── Server Creation ──────────────────────────────────────────────────────────
+# 鈹€鈹€ Server Creation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestServerCreation:
@@ -43,6 +43,22 @@ class TestServerCreation:
 
     def test_server_name(self, server):
         assert server.name == "naturo"
+
+    def test_server_version_is_naturo_version(self, server):
+        """#873: serverInfo.version must be naturo's version, not the mcp SDK's.
+
+        FastMCP does not forward a ``version=`` argument to its low-level
+        ``Server``; left unset, the initialize handshake reports the installed
+        ``mcp`` package version (e.g. ``1.26.0``) instead of naturo's own
+        version, breaking client-side capability detection.  The reported
+        ``server_version`` is exactly what populates ``serverInfo.version`` in
+        the initialize response.
+        """
+        from naturo import __version__
+
+        init_options = server._mcp_server.create_initialization_options()
+        assert init_options.server_version == __version__
+        assert init_options.server_name == "naturo"
 
     def test_server_has_tools(self, tools):
         assert len(tools) >= 20
@@ -82,10 +98,10 @@ class TestServerCreation:
         assert srv.settings.port == 3100
 
 
-# ── Input Validation (pure logic, no backend needed) ─────────────────────────
+# 鈹€鈹€ Input Validation (pure logic, no backend needed) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
-# ── Tool Function Unit Tests (with mocked backend) ──────────────────────────
+# 鈹€鈹€ Tool Function Unit Tests (with mocked backend) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestToolFunctionsWithMockedBackend:
@@ -96,6 +112,10 @@ class TestToolFunctionsWithMockedBackend:
         """Create a comprehensive mock backend."""
         backend = MagicMock()
         # Setup return values for common methods
+        # No focused ValuePattern control by default → type_text uses keystroke
+        # injection (the asserted path); the IME-immune ValuePattern path (#1219)
+        # is covered in tests/test_mcp_input.py.
+        backend.set_focused_element_value.return_value = False
         backend.list_windows.return_value = []
         backend.list_apps.return_value = []
         backend.clipboard_get.return_value = "test"
@@ -310,14 +330,14 @@ class TestToolFunctionsWithMockedBackend:
             assert data["success"] is False
 
     def test_see_ui_tree_no_window(self, mock_backend):
-        """see_ui_tree returns NO_WINDOW when no matching window."""
+        """see_ui_tree returns WINDOW_NOT_FOUND when no matching window."""
         mock_backend.get_element_tree.return_value = None
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 3})
             data = json.loads(result[0].text)
             assert data["success"] is False
-            assert data["error"]["code"] == "NO_WINDOW"
+            assert data["error"]["code"] == "WINDOW_NOT_FOUND"
 
     def test_find_element_not_found(self, mock_backend):
         """find_element returns error when element not found."""
@@ -528,7 +548,7 @@ class TestWaitTools:
             assert data["gone"] is True
 
 
-# ── CLI Integration ──────────────────────────────────────────────────────────
+# 鈹€鈹€ CLI Integration 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestMCPCli:
@@ -592,8 +612,30 @@ class TestMCPCli:
             result = runner.invoke(main, ["mcp", "install"])
         assert "Installing MCP dependencies" in result.output
 
+    def test_mcp_start_stdio_suppresses_logging(self, runner):
+        """#810: stdio transport must suppress all logging to avoid corrupting JSON-RPC."""
+        import logging
 
-# ── Response Format Consistency ──────────────────────────────────────────────
+        with patch("naturo.mcp_server.run_server") as mock_run:
+            from naturo.cli import main
+            result = runner.invoke(main, ["mcp", "start", "--transport", "stdio"])
+
+        mock_run.assert_called_once_with(transport="stdio", host="localhost", port=3100)
+        # Root logger should have been configured to suppress output
+        root = logging.getLogger()
+        assert root.level >= logging.CRITICAL
+        assert any(isinstance(h, logging.NullHandler) for h in root.handlers)
+
+    def test_mcp_start_stdio_no_stdout_pollution(self, runner):
+        """#810: MCP start with stdio must produce no text output on stdout."""
+        with patch("naturo.mcp_server.run_server"):
+            from naturo.cli import main
+            result = runner.invoke(main, ["mcp", "start", "--transport", "stdio"])
+
+        assert result.output == "", f"Unexpected stdout output: {result.output!r}"
+
+
+# 鈹€鈹€ Response Format Consistency 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
 class TestResponseFormat:
@@ -632,3 +674,98 @@ class TestResponseFormat:
                 assert "error" in data, f"{tool_name}({args}) missing error object"
                 assert "code" in data["error"], f"{tool_name}({args}) missing error.code"
                 assert "message" in data["error"], f"{tool_name}({args}) missing error.message"
+
+
+class TestStdioLogging:
+    """#810: MCP stdio transport must not emit debug text to stdout."""
+
+    def test_suppress_stdout_logging(self):
+        """_suppress_stdout_logging redirects stdout handlers to stderr."""
+        import logging
+        import sys
+
+        from naturo.mcp_server import _suppress_stdout_logging
+
+        root = logging.getLogger()
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        root.addHandler(stdout_handler)
+        try:
+            _suppress_stdout_logging()
+            assert stdout_handler.stream is sys.stderr
+        finally:
+            root.removeHandler(stdout_handler)
+
+
+# 鈹€鈹€ Pydantic ValidationError leak (#844) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+
+
+class TestValidationErrorSanitization:
+    """#844: MCP tool validation errors must not leak Pydantic internals."""
+
+    def _call_tool(self, srv, name, args):
+        import asyncio
+
+        async def _run():
+            return await srv.call_tool(name, args)
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_run())
+        finally:
+            loop.close()
+
+    def test_validation_error_returns_invalid_input(self):
+        """Pydantic-style ValidationError returns INVALID_INPUT, not INTERNAL_ERROR."""
+        # The _is_validation_error check uses type(exc).__name__ == "ValidationError"
+        # so we must name our class accordingly.
+        class ValidationError(Exception):
+            def errors(self):
+                return [
+                    {"loc": ("body", "x"), "msg": "value is not a valid integer", "type": "type_error.integer"},
+                    {"loc": ("body", "y"), "msg": "field required", "type": "value_error.missing"},
+                ]
+
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = ValidationError("2 validation errors")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+            assert "body" in data["error"]["message"]
+            assert "x" in data["error"]["message"]
+            # Must NOT contain internal type info
+            assert "type_error.integer" not in data["error"]["message"]
+            assert "value_error.missing" not in data["error"]["message"]
+
+    def test_validation_error_fallback_on_broken_errors_method(self):
+        """If .errors() itself fails, still returns INVALID_INPUT safely."""
+        class ValidationError(Exception):
+            def errors(self):
+                raise RuntimeError("errors() broke")
+
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = ValidationError("bad")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INVALID_INPUT"
+            assert "invalid input" in data["error"]["message"].lower() or "validation" in data["error"]["message"].lower()
+
+    def test_regular_exception_still_returns_internal_error(self):
+        """Non-validation exceptions still return INTERNAL_ERROR."""
+        mock_backend = MagicMock()
+        mock_backend.capture_screen.side_effect = RuntimeError("disk full")
+
+        with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
+            srv = create_server()
+            result = self._call_tool(srv, "capture_screen", {})
+            data = json.loads(result[0].text)
+            assert data["success"] is False
+            assert data["error"]["code"] == "INTERNAL_ERROR"
+            assert "disk full" in data["error"]["message"]

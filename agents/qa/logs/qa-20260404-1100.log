@@ -1,0 +1,271 @@
+Saved working directory and index state WIP on develop: 2308b68 qa: round 102 report [skip ci]
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   31119dc..5495dfe  develop    -> origin/develop
+Your branch is behind 'origin/develop' by 61 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating 2308b68..5495dfe
+Fast-forward
+ .work/reviews/2026-04-03-1400-daily-review.md      | 113 ++++
+ agents/STATE.md                                    |  31 +-
+ agents/github-queue/pending-issues.md              | 100 ++--
+ agents/github-queue/pr-requests.md                 | 660 ++++++++++++++++++++-
+ agents/github-queue/session-log.md                 |  32 +-
+ agents/qa/.last-ci-sha                             |   2 +-
+ agents/qa/status.md                                |  20 +-
+ agents/qa/testcases/e2e/calculator-basic-flow.yaml |   4 +-
+ agents/qa/testcases/e2e/mcp-agent-workflow.yaml    |   4 +-
+ .../testcases/e2e/scripted-notepad-workflow.yaml   |   4 +-
+ .../exploratory/ai-vision-coverage-false-100.yaml  |   4 +-
+ .../testcases/exploratory/ai-vision-fill-gaps.yaml |   4 +-
+ .../exploratory/app-filter-cross-process.yaml      |   4 +-
+ .../app-title-matching-multiwindow.yaml            |   4 +-
+ .../exploratory/click-background-window.yaml       |   4 +-
+ .../exploratory/click-coords-out-of-bounds.yaml    |   4 +-
+ .../exploratory/get-value-unreadable.yaml          |   4 +-
+ .../exploratory/hybrid-mode-enrichment.yaml        |   4 +-
+ .../exploratory/json-stderr-duplicate-error.yaml   |   4 +-
+ .../exploratory/mcp-click-element-id-fails.yaml    |   4 +-
+ .../exploratory/multi-window-targeting.yaml        |   4 +-
+ .../exploratory/notepad-menu-click-targeting.yaml  |   4 +-
+ .../exploratory/press-app-focus-mismatch.yaml      |   4 +-
+ .../exploratory/press-standalone-modifier.yaml     |   6 +-
+ .../regression/app-quit-silent-failure.yaml        |   4 +-
+ .../regression/calculator-uwp-invisible.yaml       |   8 +-
+ .../regression/capture-unicode-path-dll.yaml       |   8 +-
+ .../regression/chinese-app-name-matching.yaml      |   6 +-
+ .../json-mode-exit-code-zero-on-failure.yaml       |   6 +-
+ .../regression/mcp-stdout-debug-output.yaml        |   4 +-
+ .../regression/see-error-exit-code-zero.yaml       |   6 +-
+ .../regression/type-escape-newline-dropped.yaml    |   4 +-
+ .../regression/type-stale-pid-silent-failure.yaml  |   4 +-
+ .../regression/uwp-notepad-enumeration.yaml        |   6 +-
+ naturo/browser/_page.py                            | 174 ++++++
+ naturo/cli/__init__.py                             |   2 +
+ naturo/cli/browser_cmd.py                          | 136 +++++
+ naturo/cli/interaction/_common.py                  |   5 +-
+ naturo/cli/recording_cmd.py                        | 455 ++++++++++++++
+ tests/qa-reports/QA-Mariana-20260403-0023.md       |  59 ++
+ tests/test_browser_wait.py                         | 160 +++++
+ tests/test_recording_cli.py                        | 326 ++++++++++
+ 42 files changed, 2237 insertions(+), 164 deletions(-)
+ create mode 100644 .work/reviews/2026-04-03-1400-daily-review.md
+ create mode 100644 naturo/cli/recording_cmd.py
+ create mode 100644 tests/qa-reports/QA-Mariana-20260403-0023.md
+ create mode 100644 tests/test_browser_wait.py
+ create mode 100644 tests/test_recording_cli.py
+Auto-merging agents/qa/testcases/e2e/calculator-basic-flow.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/e2e/calculator-basic-flow.yaml
+Auto-merging agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+Auto-merging agents/qa/testcases/exploratory/ai-vision-coverage-false-100.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/ai-vision-coverage-false-100.yaml
+Auto-merging agents/qa/testcases/exploratory/ai-vision-fill-gaps.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/ai-vision-fill-gaps.yaml
+Auto-merging agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+Auto-merging agents/qa/testcases/exploratory/app-title-matching-multiwindow.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/app-title-matching-multiwindow.yaml
+Auto-merging agents/qa/testcases/exploratory/click-background-window.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/click-background-window.yaml
+Auto-merging agents/qa/testcases/exploratory/click-coords-out-of-bounds.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/click-coords-out-of-bounds.yaml
+Auto-merging agents/qa/testcases/exploratory/get-value-unreadable.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/get-value-unreadable.yaml
+Auto-merging agents/qa/testcases/exploratory/hybrid-mode-enrichment.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/hybrid-mode-enrichment.yaml
+Auto-merging agents/qa/testcases/exploratory/json-stderr-duplicate-error.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/json-stderr-duplicate-error.yaml
+Auto-merging agents/qa/testcases/exploratory/mcp-click-element-id-fails.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/mcp-click-element-id-fails.yaml
+Auto-merging agents/qa/testcases/exploratory/multi-window-targeting.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/multi-window-targeting.yaml
+Auto-merging agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml
+Auto-merging agents/qa/testcases/exploratory/press-app-focus-mismatch.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/press-app-focus-mismatch.yaml
+Auto-merging agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+Auto-merging agents/qa/testcases/regression/app-quit-silent-failure.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/app-quit-silent-failure.yaml
+Auto-merging agents/qa/testcases/regression/calculator-uwp-invisible.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/calculator-uwp-invisible.yaml
+Auto-merging agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+Auto-merging agents/qa/testcases/regression/chinese-app-name-matching.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/chinese-app-name-matching.yaml
+Auto-merging agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+Auto-merging agents/qa/testcases/regression/mcp-stdout-debug-output.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/mcp-stdout-debug-output.yaml
+Auto-merging agents/qa/testcases/regression/see-error-exit-code-zero.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/see-error-exit-code-zero.yaml
+Auto-merging agents/qa/testcases/regression/type-escape-newline-dropped.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/type-escape-newline-dropped.yaml
+Auto-merging agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml
+Auto-merging agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+CONFLICT (content): Merge conflict in agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   agents/qa/logs/qa-20260401-2100.log
+	modified:   agents/qa/testcases/exploratory/dpi-coordinate-verification.yaml
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   agents/qa/testcases/e2e/calculator-basic-flow.yaml
+	both modified:   agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+	both modified:   agents/qa/testcases/exploratory/ai-vision-coverage-false-100.yaml
+	both modified:   agents/qa/testcases/exploratory/ai-vision-fill-gaps.yaml
+	both modified:   agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+	both modified:   agents/qa/testcases/exploratory/app-title-matching-multiwindow.yaml
+	both modified:   agents/qa/testcases/exploratory/click-background-window.yaml
+	both modified:   agents/qa/testcases/exploratory/click-coords-out-of-bounds.yaml
+	both modified:   agents/qa/testcases/exploratory/get-value-unreadable.yaml
+	both modified:   agents/qa/testcases/exploratory/hybrid-mode-enrichment.yaml
+	both modified:   agents/qa/testcases/exploratory/json-stderr-duplicate-error.yaml
+	both modified:   agents/qa/testcases/exploratory/mcp-click-element-id-fails.yaml
+	both modified:   agents/qa/testcases/exploratory/multi-window-targeting.yaml
+	both modified:   agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml
+	both modified:   agents/qa/testcases/exploratory/press-app-focus-mismatch.yaml
+	both modified:   agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+	both modified:   agents/qa/testcases/regression/app-quit-silent-failure.yaml
+	both modified:   agents/qa/testcases/regression/calculator-uwp-invisible.yaml
+	both modified:   agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+	both modified:   agents/qa/testcases/regression/chinese-app-name-matching.yaml
+	both modified:   agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+	both modified:   agents/qa/testcases/regression/mcp-stdout-debug-output.yaml
+	both modified:   agents/qa/testcases/regression/see-error-exit-code-zero.yaml
+	both modified:   agents/qa/testcases/regression/type-escape-newline-dropped.yaml
+	both modified:   agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml
+	both modified:   agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260327-1755.log
+	agents/qa/logs/qa-20260327-1803.log
+	agents/qa/logs/qa-20260327-1900.log
+	agents/qa/logs/qa-20260327-2000.log
+	agents/qa/logs/qa-20260327-2100.log
+	agents/qa/logs/qa-20260327-2200.log
+	agents/qa/logs/qa-20260327-2300.log
+	agents/qa/logs/qa-20260328-0000.log
+	agents/qa/logs/qa-20260328-0100.log
+	agents/qa/logs/qa-20260328-0200.log
+	agents/qa/logs/qa-20260328-0300.log
+	agents/qa/logs/qa-20260328-0400.log
+	agents/qa/logs/qa-20260328-0500.log
+	agents/qa/logs/qa-20260328-0600.log
+	agents/qa/logs/qa-20260328-0700.log
+	agents/qa/logs/qa-20260328-1400.log
+	agents/qa/logs/qa-20260328-1800.log
+	agents/qa/logs/qa-20260328-1900.log
+	agents/qa/logs/qa-20260328-2000.log
+	agents/qa/logs/qa-20260329-0200.log
+	agents/qa/logs/qa-20260329-0300.log
+	agents/qa/logs/qa-20260329-0400.log
+	agents/qa/logs/qa-20260329-0500.log
+	agents/qa/logs/qa-20260329-0600.log
+	agents/qa/logs/qa-20260329-0700.log
+	agents/qa/logs/qa-20260329-0800.log
+	agents/qa/logs/qa-20260329-0900.log
+	agents/qa/logs/qa-20260329-1700.log
+	agents/qa/logs/qa-20260329-1800.log
+	agents/qa/logs/qa-20260331-1200.log
+	agents/qa/logs/qa-20260331-1700.log
+	agents/qa/logs/qa-20260331-1800.log
+	agents/qa/logs/qa-20260331-1900.log
+	agents/qa/logs/qa-20260331-2000.log
+	agents/qa/logs/qa-20260331-2100.log
+	agents/qa/logs/qa-20260331-2300.log
+	agents/qa/logs/qa-20260401-0000.log
+	agents/qa/logs/qa-20260401-0100.log
+	agents/qa/logs/qa-20260401-0200.log
+	agents/qa/logs/qa-20260401-0300.log
+	agents/qa/logs/qa-20260401-0400.log
+	agents/qa/logs/qa-20260401-0600.log
+	agents/qa/logs/qa-20260401-0700.log
+	agents/qa/logs/qa-20260401-0800.log
+	agents/qa/logs/qa-20260401-1735.log
+	agents/qa/logs/qa-20260401-1900.log
+	agents/qa/logs/qa-20260401-2000.log
+	agents/qa/logs/qa-20260401-2200.log
+	agents/qa/logs/qa-20260401-2300.log
+	agents/qa/logs/qa-20260402-0000.log
+	agents/qa/logs/qa-20260402-0100.log
+	agents/qa/logs/qa-20260402-0200.log
+	agents/qa/logs/qa-20260402-0300.log
+	agents/qa/logs/qa-20260402-0400.log
+	agents/qa/logs/qa-20260402-0500.log
+	agents/qa/logs/qa-20260402-0600.log
+	agents/qa/logs/qa-20260402-0700.log
+	agents/qa/logs/qa-20260402-0800.log
+	agents/qa/logs/qa-20260402-0900.log
+	agents/qa/logs/qa-20260402-1000.log
+	agents/qa/logs/qa-20260402-1100.log
+	agents/qa/logs/qa-20260402-1200.log
+	agents/qa/logs/qa-20260402-1300.log
+	agents/qa/logs/qa-20260402-1400.log
+	agents/qa/logs/qa-20260402-1500.log
+	agents/qa/logs/qa-20260402-1600.log
+	agents/qa/logs/qa-20260402-1700.log
+	agents/qa/logs/qa-20260402-1800.log
+	agents/qa/logs/qa-20260402-1900.log
+	agents/qa/logs/qa-20260402-2000.log
+	agents/qa/logs/qa-20260402-2100.log
+	agents/qa/logs/qa-20260402-2200.log
+	agents/qa/logs/qa-20260402-2300.log
+	agents/qa/logs/qa-20260403-0000.log
+	agents/qa/logs/qa-20260404-1100.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+The stash entry is kept in case you need it again.
+[2026/04/04 ÷‹¡˘ 11:00:11.71] Starting QA-Mariana round 

@@ -72,8 +72,21 @@ class TestJABBackend:
     @patch("naturo.backends.windows.WindowsBackend._ensure_core")
     @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)
     @patch("naturo.bridge.enumerate_child_windows", return_value=None)
-    def test_auto_fallback_includes_jab(self, mock_enum, mock_resolve, mock_core_fn):
-        """auto mode tries UIA → IA2 → JAB → MSAA."""
+    @patch("naturo.bridge.enumerate_hybrid_tree", return_value=None)
+    def test_auto_fallback_includes_jab(
+        self, mock_hybrid, mock_enum, mock_resolve, mock_core_fn
+    ):
+        """auto mode tries UIA → IA2 → JAB → MSAA.
+
+        ``enumerate_hybrid_tree`` is mocked to ``None`` so the auto path
+        deterministically reaches the IA2→JAB→MSAA fallback regardless of the
+        host desktop. The ``auto`` path runs a Win32+UIA hybrid enumeration on a
+        shallow UIA tree *before* that fallback; on an interactive desktop with
+        windows open ``enumerate_hybrid_tree(hwnd=0)`` returns real top-level
+        windows, the tree is no longer empty, and the JAB fallback is skipped —
+        so without this mock the test is green on headless CI but red on a real
+        desktop (#1069), a false-confidence gate on the JAB cascade (#932).
+        """
         from naturo.backends.windows import WindowsBackend
         from naturo.bridge import ElementInfo
 

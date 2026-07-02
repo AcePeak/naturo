@@ -1,0 +1,32 @@
+id: TC-0065
+title: "app windows -j silently returns real windows in NO_DESKTOP_SESSION while every other read command refuses"
+status: active
+category: exploratory
+priority: P1
+source_issue: 878
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: "R151 (Skeptical Evaluator persona): FAIL — re-confirmed on HEAD ec07c24. `naturo app windows -j` → success:true exit 0, leaks the QA terminal's own window (WindowsTerminal 'claude' pid 73740) while same-session `naturo list windows -j` refuses (exit 1). Confirmed via MCP too: `list_apps` tool returns success:true with the same real apps. Bug unchanged. R150 (Scripter/Automator persona): FAIL — re-confirmed on HEAD c15be18. Both -j AND non-json modes bypass the guard: `naturo app windows` (no -j) → exit 0 and dumps real windows (WindowsTerminal, Chrome w/ Chinese title). `naturo app list -j` in the SAME group correctly refuses (exit 1) — intra-`app`-group inconsistency. Leaked PID 73740 → `see --pid 73740 -j` exit 1 NO_DESKTOP_SESSION (enumeration-only leak). R149 (Accessibility persona): FAIL — re-confirmed on HEAD c4342ff. `naturo app windows -j` returns success:true exit 0 and even leaks the QA terminal's own window (Microsoft.WindowsTerminal). Bug unchanged. R144: FAIL on HEAD 893209e — returned 14 real windows incl. Chinese-titled apps + Chrome + Explorer with exit 0."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Session has no interactive desktop access (SSH / RDP-blocked / service session)"
+
+steps:
+  - description: "list windows refuses with NO_DESKTOP_SESSION envelope (baseline — correct behavior)"
+    command: "naturo list windows -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1'
+  - description: "list apps refuses similarly (baseline)"
+    command: "naturo list apps -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1'
+  - description: "app windows MUST refuse with the same envelope — currently bypasses guard"
+    command: "naturo app windows -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1 — NOT {"success": true, "windows": [...]}'
+  - description: "Any hwnd returned by app windows is unreachable via see"
+    command: "HWND=$(naturo app windows -j | python -c 'import json,sys; print(json.load(sys.stdin)[\"windows\"][0][\"handle\"])') && naturo see --hwnd $HWND -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} — proves the windows list was useless'
+
+pass_criteria: "app windows -j returns NO_DESKTOP_SESSION envelope (matching list windows / list apps / see / capture) with exit 1"
+fail_action: "Update or reopen #878"

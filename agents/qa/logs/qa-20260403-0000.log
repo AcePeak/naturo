@@ -1,0 +1,178 @@
+warning: in the working copy of 'agents/qa/testcases/regression/mcp-stdout-debug-output.yaml', LF will be replaced by CRLF the next time Git touches it
+Saved working directory and index state WIP on develop: a1ebe62 chore: Dev-Sirius session log 2026-04-02
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Your branch is behind 'origin/develop' by 3 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating a1ebe62..2308b68
+Fast-forward
+ agents/github-queue/pr-requests.md                 |  8 ++
+ agents/github-queue/session-log.md                 | 46 +++++-------
+ agents/qa/.last-ci-sha                             |  2 +-
+ agents/qa/status.md                                | 27 +++----
+ agents/qa/testcases/CATALOG.md                     |  2 +-
+ .../exploratory/dpi-coordinate-verification.yaml   |  2 +-
+ tests/qa-reports/QA-Mariana-20260402-2342.md       | 86 ++++++++++++++++++++++
+ 7 files changed, 128 insertions(+), 45 deletions(-)
+ create mode 100644 tests/qa-reports/QA-Mariana-20260402-2342.md
+Auto-merging agents/qa/testcases/exploratory/dpi-coordinate-verification.yaml
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/logs/qa-20260401-2100.log
+	modified:   agents/qa/testcases/e2e/calculator-basic-flow.yaml
+	modified:   agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+	modified:   agents/qa/testcases/exploratory/ai-vision-coverage-false-100.yaml
+	modified:   agents/qa/testcases/exploratory/ai-vision-fill-gaps.yaml
+	modified:   agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+	modified:   agents/qa/testcases/exploratory/app-title-matching-multiwindow.yaml
+	modified:   agents/qa/testcases/exploratory/click-background-window.yaml
+	modified:   agents/qa/testcases/exploratory/click-coords-out-of-bounds.yaml
+	modified:   agents/qa/testcases/exploratory/dpi-coordinate-verification.yaml
+	modified:   agents/qa/testcases/exploratory/get-value-unreadable.yaml
+	modified:   agents/qa/testcases/exploratory/hybrid-mode-enrichment.yaml
+	modified:   agents/qa/testcases/exploratory/json-stderr-duplicate-error.yaml
+	modified:   agents/qa/testcases/exploratory/mcp-click-element-id-fails.yaml
+	modified:   agents/qa/testcases/exploratory/multi-window-targeting.yaml
+	modified:   agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml
+	modified:   agents/qa/testcases/exploratory/press-app-focus-mismatch.yaml
+	modified:   agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+	modified:   agents/qa/testcases/regression/app-quit-silent-failure.yaml
+	modified:   agents/qa/testcases/regression/calculator-uwp-invisible.yaml
+	modified:   agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+	modified:   agents/qa/testcases/regression/chinese-app-name-matching.yaml
+	modified:   agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+	modified:   agents/qa/testcases/regression/mcp-stdout-debug-output.yaml
+	modified:   agents/qa/testcases/regression/see-error-exit-code-zero.yaml
+	modified:   agents/qa/testcases/regression/type-escape-newline-dropped.yaml
+	modified:   agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml
+	modified:   agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260327-1755.log
+	agents/qa/logs/qa-20260327-1803.log
+	agents/qa/logs/qa-20260327-1900.log
+	agents/qa/logs/qa-20260327-2000.log
+	agents/qa/logs/qa-20260327-2100.log
+	agents/qa/logs/qa-20260327-2200.log
+	agents/qa/logs/qa-20260327-2300.log
+	agents/qa/logs/qa-20260328-0000.log
+	agents/qa/logs/qa-20260328-0100.log
+	agents/qa/logs/qa-20260328-0200.log
+	agents/qa/logs/qa-20260328-0300.log
+	agents/qa/logs/qa-20260328-0400.log
+	agents/qa/logs/qa-20260328-0500.log
+	agents/qa/logs/qa-20260328-0600.log
+	agents/qa/logs/qa-20260328-0700.log
+	agents/qa/logs/qa-20260328-1400.log
+	agents/qa/logs/qa-20260328-1800.log
+	agents/qa/logs/qa-20260328-1900.log
+	agents/qa/logs/qa-20260328-2000.log
+	agents/qa/logs/qa-20260329-0200.log
+	agents/qa/logs/qa-20260329-0300.log
+	agents/qa/logs/qa-20260329-0400.log
+	agents/qa/logs/qa-20260329-0500.log
+	agents/qa/logs/qa-20260329-0600.log
+	agents/qa/logs/qa-20260329-0700.log
+	agents/qa/logs/qa-20260329-0800.log
+	agents/qa/logs/qa-20260329-0900.log
+	agents/qa/logs/qa-20260329-1700.log
+	agents/qa/logs/qa-20260329-1800.log
+	agents/qa/logs/qa-20260331-1200.log
+	agents/qa/logs/qa-20260331-1700.log
+	agents/qa/logs/qa-20260331-1800.log
+	agents/qa/logs/qa-20260331-1900.log
+	agents/qa/logs/qa-20260331-2000.log
+	agents/qa/logs/qa-20260331-2100.log
+	agents/qa/logs/qa-20260331-2300.log
+	agents/qa/logs/qa-20260401-0000.log
+	agents/qa/logs/qa-20260401-0100.log
+	agents/qa/logs/qa-20260401-0200.log
+	agents/qa/logs/qa-20260401-0300.log
+	agents/qa/logs/qa-20260401-0400.log
+	agents/qa/logs/qa-20260401-0600.log
+	agents/qa/logs/qa-20260401-0700.log
+	agents/qa/logs/qa-20260401-0800.log
+	agents/qa/logs/qa-20260401-1735.log
+	agents/qa/logs/qa-20260401-1900.log
+	agents/qa/logs/qa-20260401-2000.log
+	agents/qa/logs/qa-20260401-2200.log
+	agents/qa/logs/qa-20260401-2300.log
+	agents/qa/logs/qa-20260402-0000.log
+	agents/qa/logs/qa-20260402-0100.log
+	agents/qa/logs/qa-20260402-0200.log
+	agents/qa/logs/qa-20260402-0300.log
+	agents/qa/logs/qa-20260402-0400.log
+	agents/qa/logs/qa-20260402-0500.log
+	agents/qa/logs/qa-20260402-0600.log
+	agents/qa/logs/qa-20260402-0700.log
+	agents/qa/logs/qa-20260402-0800.log
+	agents/qa/logs/qa-20260402-0900.log
+	agents/qa/logs/qa-20260402-1000.log
+	agents/qa/logs/qa-20260402-1100.log
+	agents/qa/logs/qa-20260402-1200.log
+	agents/qa/logs/qa-20260402-1300.log
+	agents/qa/logs/qa-20260402-1400.log
+	agents/qa/logs/qa-20260402-1500.log
+	agents/qa/logs/qa-20260402-1600.log
+	agents/qa/logs/qa-20260402-1700.log
+	agents/qa/logs/qa-20260402-1800.log
+	agents/qa/logs/qa-20260402-1900.log
+	agents/qa/logs/qa-20260402-2000.log
+	agents/qa/logs/qa-20260402-2100.log
+	agents/qa/logs/qa-20260402-2200.log
+	agents/qa/logs/qa-20260402-2300.log
+	agents/qa/logs/qa-20260403-0000.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (3d079ea16e9c97b30f7708c6f50c88d6c3435dd4)
+[2026/04/03 ÷‹ŒÂ  0:00:17.13] Starting QA-Mariana round 

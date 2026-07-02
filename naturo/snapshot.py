@@ -58,6 +58,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from naturo.config import ENV_SESSION, ENV_SNAPSHOT_TTL
 from naturo.models.snapshot import (
     Snapshot,
     SnapshotInfo,
@@ -80,10 +81,10 @@ DEFAULT_STORAGE_ROOT: Path = Path.home() / ".naturo" / "snapshots"
 DEFAULT_SESSION: str = "default"
 
 #: Environment variable used to set the active session for snapshot isolation.
-SESSION_ENV_VAR: str = "NATURO_SESSION"
+SESSION_ENV_VAR: str = ENV_SESSION
 
 #: Environment variable for overriding snapshot TTL (seconds).
-TTL_ENV_VAR: str = "NATURO_SNAPSHOT_TTL"
+TTL_ENV_VAR: str = ENV_SNAPSHOT_TTL
 
 
 def get_active_session() -> str:
@@ -405,7 +406,8 @@ class SnapshotManager:
 
         try:
             snapshot = self.get_snapshot(recent_id)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load snapshot %s for ref resolution: %s", recent_id, exc)
             return None
 
         # (#237) ui_map may be keyed by ref ("e1") or by backend id,
@@ -483,7 +485,8 @@ class SnapshotManager:
 
         try:
             snapshot = self.get_snapshot(recent_id)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load snapshot %s for ref element resolution: %s", recent_id, exc)
             return None
 
         # (#237) ui_map may be keyed by ref or by backend id.
@@ -626,8 +629,30 @@ class SnapshotManager:
         logger.debug("Most recent valid snapshot: %s", best)
         return best
 
-    def list_snapshots(self) -> List[SnapshotInfo]:
-        """Return summary information for all stored snapshots, newest first."""
+    def list_snapshots(self, limit: Optional[int] = None) -> List[SnapshotInfo]:
+        """Return summary information for stored snapshots, newest first.
+
+        Parameters
+        ----------
+        limit:
+            Maximum number of snapshots to return. When ``None`` (the default)
+            every snapshot is returned. When set, only the newest ``limit``
+            snapshots are returned.
+
+        Returns
+        -------
+        List[SnapshotInfo]
+            Snapshot summaries sorted newest-first, sliced to ``limit`` when
+            provided.
+
+        Raises
+        ------
+        ValueError
+            If ``limit`` is provided and is less than 1.
+        """
+        if limit is not None and limit < 1:
+            raise ValueError(f"limit must be >= 1, got {limit}")
+
         infos: List[SnapshotInfo] = []
 
         with self._lock:
@@ -674,6 +699,8 @@ class SnapshotManager:
                 )
 
         infos.sort(key=lambda s: s.created_at, reverse=True)
+        if limit is not None:
+            return infos[:limit]
         return infos
 
     def clean_snapshot(self, snapshot_id: str) -> None:
@@ -761,8 +788,8 @@ class SnapshotManager:
             try:
                 data = json.loads(json_path.read_text(encoding="utf-8"))
                 return Snapshot.from_dict(data)
-            except (OSError, json.JSONDecodeError, KeyError):
-                pass
+            except (OSError, json.JSONDecodeError, KeyError) as exc:
+                logger.debug("Failed to load snapshot %s, creating new skeleton: %s", snapshot_id, exc)
         return Snapshot(snapshot_id=snapshot_id)
 
     @staticmethod
@@ -796,6 +823,6 @@ class SnapshotManager:
             if f.is_file():
                 try:
                     total += f.stat().st_size
-                except OSError:
-                    pass
+                except OSError as exc:
+                    logger.debug("Failed to stat %s: %s", f, exc)
         return total

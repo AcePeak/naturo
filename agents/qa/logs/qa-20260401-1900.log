@@ -1,0 +1,113 @@
+Saved working directory and index state WIP on develop: 2434ab1 fix: run-qa.bat targets develop branch with stash to prevent conflicts
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   57addd2..c241158  develop    -> origin/develop
+Your branch is behind 'origin/develop' by 6 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating 2434ab1..c241158
+Fast-forward
+ agents/github-queue/pending-issues.md              |  63 +++++
+ agents/github-queue/pr-requests.md                 |  34 +++
+ agents/github-queue/session-log.md                 |  21 ++
+ agents/orchestrator/dev-prompt.md                  | 254 ++++++++-------------
+ agents/orchestrator/review-prompt.md               |  51 +++++
+ agents/qa/.last-ci-sha                             |   2 +-
+ agents/qa/status.md                                |  26 +--
+ agents/qa/testcases/CATALOG.md                     |   3 +-
+ agents/qa/testcases/e2e/calculator-basic-flow.yaml |   4 +-
+ agents/qa/testcases/e2e/mcp-agent-workflow.yaml    |   4 +-
+ .../testcases/e2e/scripted-notepad-workflow.yaml   |   4 +-
+ .../exploratory/app-filter-cross-process.yaml      |   4 +-
+ .../app-title-matching-multiwindow.yaml            |   4 +-
+ .../exploratory/click-background-window.yaml       |   4 +-
+ .../exploratory/get-value-unreadable.yaml          |   4 +-
+ .../exploratory/mcp-click-element-id-fails.yaml    |   4 +-
+ .../exploratory/mcp-launch-missing-pid.yaml        |   4 +-
+ .../exploratory/multi-window-targeting.yaml        |   4 +-
+ .../exploratory/notepad-menu-click-targeting.yaml  |   4 +-
+ .../exploratory/press-standalone-modifier.yaml     |   4 +-
+ .../testcases/exploratory/uwp-multi-tab-quit.yaml  |   6 +-
+ .../regression/capture-unicode-path-dll.yaml       |  25 ++
+ tests/qa-reports/QA-Mariana-20260401-1816.md       |  67 ++++++
+ 23 files changed, 399 insertions(+), 201 deletions(-)
+ create mode 100644 agents/github-queue/pending-issues.md
+ create mode 100644 agents/github-queue/pr-requests.md
+ create mode 100644 agents/github-queue/session-log.md
+ create mode 100644 agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+ create mode 100644 tests/qa-reports/QA-Mariana-20260401-1816.md
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/testcases/exploratory/app-id-filter-see.yaml
+	modified:   agents/qa/testcases/regression/app-quit-silent-failure.yaml
+	modified:   agents/qa/testcases/regression/capture-chinese-filepath.yaml
+	modified:   agents/qa/testcases/regression/chinese-app-name-matching.yaml
+	modified:   agents/qa/testcases/regression/quit-chinese-app-name.yaml
+	modified:   agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (ed631b37c153e69ed6548fd22d48db7e7222843c)
+[2026/04/01 ÖÜÈý 19:00:05.69] Starting QA-Mariana round 
+## QA Round 79 Complete
+
+**Summary:**
+- **CI**: 14 passed, 1 known failure (#777), 18 skipped, 4 xfail/xpass
+- **E2E**: Notepad + Calculator both pass with screenshot verification
+- **Regression**: 14/15 passed, 1 new failure (TC-0041)
+- **Chinese User Simulation**: All Chinese scenarios pass (type, see, capture, quit with Chinese names/paths)
+- **Retired**: TC-0034 (capture Chinese filepath â€” 6 passes, #693 closed)
+- **New issue**: [#781](https://github.com/AcePeak/naturo/issues/781) â€” JSON mode (`-j`) returns exit code 0 on failure, breaking script error detection
+- **New test case**: TC-0041 for the JSON exit code bug
+- **Report pushed** to `develop` at commit 153fc14

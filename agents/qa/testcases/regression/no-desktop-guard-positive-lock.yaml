@@ -1,0 +1,80 @@
+id: TC-0088
+title: "NO_DESKTOP_SESSION guard positive-lock — commands that correctly refuse must keep refusing after #885 middleware refactor"
+status: active
+category: regression
+priority: P1
+source_issue: 885
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: pass
+consecutive_passes: 6
+notes: >
+  R153 (Enterprise RPA Dev persona) reconfirm on HEAD cf1cfb7 (source unchanged since
+  17aefe6 — only QA/Orc report commits added; verified via git diff naturo/core/tests).
+  All 8 refusing commands (see/capture/list windows/list apps/list screens/app list/
+  menu-inspect/find) still exit 1 with NO_DESKTOP_SESSION. Leaked-PID step: PID=73740 from
+  buggy `app windows -j` → `naturo see --pid 73740 -j` → exit 1 NO_DESKTOP_SESSION.
+  Positive-lock holds. consecutive_passes 5->6. NOT retired (#885 still open).
+  R152 (First-time User persona) reconfirm on HEAD e8cea28 (source unchanged since R150/R151 —
+  only QA/Orc report commits added). All 8 refusing commands (see/capture/list windows/list apps/
+  list screens/app list/menu-inspect/find) still exit 1 with code NO_DESKTOP_SESSION. Leaked-PID
+  step re-run: PID=73740 from buggy `app windows -j` → `naturo see --pid 73740 -j` → exit 1
+  NO_DESKTOP_SESSION. Positive-lock holds. consecutive_passes 4->5. NOTE: #885 still OPEN, so
+  not retired despite reaching 5 passes (retirement requires source_issue closed).
+  R151 (Skeptical Evaluator persona) reconfirm on HEAD ec07c24 (source unchanged since R150):
+  all 8 refusing commands (see/capture/list windows/list apps/list screens/app list/
+  menu-inspect/find) still exit 1 with NO_DESKTOP_SESSION. Leaked-PID step re-run: PID=73740
+  from buggy `app windows -j` → `naturo see --pid 73740 -j` → exit 1 NO_DESKTOP_SESSION.
+  Positive-lock holds. consecutive_passes 3->4.
+  R150 (Scripter/Automator persona) reconfirm on HEAD c15be18 (source unchanged): all 8
+  refusing commands still exit 1 with code NO_DESKTOP_SESSION (see/capture/list windows/list
+  apps/list screens/app list/menu-inspect/find button). Leaked-PID step verified: PID=73740
+  from the buggy `app windows -j`, `naturo see --pid 73740 -j` → exit 1 NO_DESKTOP_SESSION —
+  enumeration-only leak confirmed. Positive-lock holds. consecutive_passes 2->3.
+  R149 (Accessibility User persona) reconfirm on HEAD c4342ff (source identical to e346036,
+  +1 doc-only commit): see/capture/list windows all refuse with exit 1; the buggy bypass
+  cases (TC-0065 #878, TC-0062 #875, TC-0079 #893) still return success:true exit 0.
+  Positive-lock guard holds. consecutive_passes 1->2.
+  R148 (Power User persona): created as the positive counterpart to the silent-failure
+  bug-repro cases (TC-0065 #878, dialog/taskbar/tray #875, TC-0079 #893). Those assert
+  buggy BYPASS commands. This case locks in the commands that ALREADY refuse correctly,
+  so the planned centralized guard middleware in #885 cannot silently DROP the guard from
+  a currently-correct command while fixing the bypassing ones. All steps PASS on HEAD
+  e346036 (exit 1, success:false, code NO_DESKTOP_SESSION). Verified single-session
+  alongside the still-failing bypass cases.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Session has no interactive desktop access (SSH / RDP-blocked / service session)"
+
+steps:
+  - description: "see refuses with NO_DESKTOP_SESSION"
+    command: "naturo see --app notepad -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1'
+  - description: "capture refuses"
+    command: "naturo capture -o /tmp/tc0088.png"
+    expect: 'Error: No interactive desktop ... with exit 1'
+  - description: "list windows refuses"
+    command: "naturo list windows -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "list apps refuses"
+    command: "naturo list apps -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "list screens refuses"
+    command: "naturo list screens -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "app list refuses"
+    command: "naturo app list -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "menu-inspect refuses"
+    command: "naturo menu-inspect -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "find refuses"
+    command: "naturo find button -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1'
+  - description: "interaction on a PID leaked by the (buggy) app windows enumeration still refuses — guard applies at the interaction layer"
+    command: "PID=$(naturo app windows -j | python -c 'import json,sys; print(json.load(sys.stdin)[\"windows\"][0][\"pid\"])'); naturo see --pid $PID -j"
+    expect: 'success:false, code NO_DESKTOP_SESSION, exit 1 — proves #878 is an enumeration-only leak, not full functionality'
+
+pass_criteria: "ALL listed commands return NO_DESKTOP_SESSION (exit 1, success:false). Any command that starts returning success:true here after a refactor is a guard regression."
+fail_action: "File a P0 guard-regression issue and link to #885 — a previously-correct command lost its NO_DESKTOP_SESSION guard."

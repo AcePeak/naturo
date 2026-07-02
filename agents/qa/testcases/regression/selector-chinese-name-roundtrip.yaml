@@ -1,0 +1,54 @@
+id: TC-0087
+title: "Selector save/load/show/delete round-trip with Chinese app+name — file storage and in-memory lookup must survive non-ASCII"
+status: active
+category: regression
+priority: P2
+source_issue: null
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: pass
+consecutive_passes: 1
+notes: |
+  R147 (Chinese User persona): PASS — on HEAD e2afdcb in NO_DESKTOP_SESSION session.
+  Full round-trip with Chinese app/selector name works at file/storage layer despite #894 JSON-mode ASCII escaping:
+    1. save:  naturo -j selector save "记事本" "保存按钮" 'app://notepad.exe/Button[@name="Save"]'
+              → {"success": true, "app": "记事本", ..., "path": ".../selectors/记事本.json"} EXIT=0
+              → File on disk: ~/.naturo/selectors/记事本.json (literal Chinese filename, 114 bytes)
+    2. load:  naturo -j selector load "记事本" "保存按钮"
+              → {"success": true, "app": "记事本", "name": "保存按钮", "selector": "app://notepad.exe/Button[@name=\"Save\"]", ...} EXIT=0
+    3. show:  naturo -j selector show "记事本"
+              → {"user": {"保存按钮": {"selector": "...", "description": ""}}, "builtin": {}} EXIT=0
+    4. list:  naturo selector list (non-JSON)
+              → prints literal "记事本 (1 selectors)" + "@记事本/保存按钮" (proves storage is UTF-8 intact; only the -j wire format escapes)
+    5. delete:  naturo -j selector delete "记事本" "保存按钮"
+              → {"success": true, "deleted": "@记事本/保存按钮"} EXIT=0
+              → After delete + last-selector cleanup: ~/.naturo/selectors/ is empty (no orphan 记事本.json)
+  Purpose: protect Chinese-name end-to-end correctness if anyone refactors selector_cmd.py path-handling or in-memory dict keys. The ASCII-escape behavior is tracked separately in #894 (this test does not block on that).
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Filesystem at ~/.naturo/selectors/ writable; no pre-existing selectors for app '记事本'"
+  - "Locale supports UTF-8 file names (modern Windows 10+)"
+
+steps:
+  - description: "Save a selector with Chinese app + Chinese selector name"
+    command: "naturo -j selector save '记事本' '保存按钮' 'app://notepad.exe/Button[@name=\"Save\"]'"
+    expect: '{"success": true, ...}, path ends with \\selectors\\记事本.json (UTF-8 filename)'
+  - description: "File created with literal Chinese filename"
+    command: "ls ~/.naturo/selectors/ | grep -- '记事本.json' | wc -l"
+    expect: "1"
+  - description: "Load by Chinese app/name retrieves the exact selector string"
+    command: "naturo -j selector load '记事本' '保存按钮'"
+    expect: '"success": true AND .selector field equals stored selector'
+  - description: "List in non-JSON mode prints literal Chinese (storage round-trip)"
+    command: "naturo selector list 2>&1 | grep -c '@记事本/保存按钮'"
+    expect: "1"
+  - description: "Delete by Chinese app/name succeeds"
+    command: "naturo -j selector delete '记事本' '保存按钮'"
+    expect: '"success": true AND "deleted" field contains the @app/name path'
+  - description: "After delete of last selector, file is cleaned up (no orphan)"
+    command: "ls ~/.naturo/selectors/ | grep -c '记事本.json'"
+    expect: "0"
+
+pass_criteria: "All five round-trip steps succeed; file storage uses literal UTF-8 Chinese filename; in-memory lookup matches Chinese keys exactly; orphan file cleanup happens after last selector deleted."
+fail_action: "File regression bug: selector storage broke for Chinese names (tag #894 if it is JSON-only; otherwise P1 storage regression)"

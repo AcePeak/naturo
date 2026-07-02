@@ -124,22 +124,34 @@ def test_tag_uia_source_recursive():
     assert child.name == "[uia] Cell A1"
 
 
-# ── enumerate_hybrid_tree (mocked, platform-independent) ──────────────────
+# ── enumerate_hybrid_tree (platform-forced, host-independent) ─────────────
 
 
-def test_hybrid_tree_returns_none_on_linux():
-    """On non-Windows, enumerate_hybrid_tree should return None."""
+def test_hybrid_tree_returns_none_on_non_windows():
+    """On non-Windows platforms, enumerate_hybrid_tree returns None.
+
+    ``platform.system()`` is forced to a non-Windows value so the non-Windows
+    contract is asserted deterministically regardless of the host OS. Without
+    this pin the test reddens on a real Windows desktop, where the function
+    performs live HWND enumeration and returns a tree (#1133).
+    """
     from naturo.bridge import enumerate_hybrid_tree
-    # We're running on Linux in CI, so this should return None
-    result = enumerate_hybrid_tree(hwnd=12345, depth=3, core=None)
+    with patch("naturo.bridge._tree.platform.system", return_value="Linux"):
+        result = enumerate_hybrid_tree(hwnd=12345, depth=3, core=None)
     assert result is None
 
 
-def test_hybrid_tree_returns_none_without_core():
-    """Without a NaturoCore instance, hybrid degrades to pure Win32."""
+def test_hybrid_tree_returns_none_on_non_windows_without_core():
+    """Without a NaturoCore instance, the non-Windows path still returns None.
+
+    ``platform.system()`` is forced to a non-Windows value so the assertion
+    holds on any host; on Windows the function enumerates the real HWND tree
+    even with ``core=None`` (pure Win32), so the platform must be pinned (#1133).
+    """
     from naturo.bridge import enumerate_hybrid_tree
-    result = enumerate_hybrid_tree(hwnd=0, depth=3, core=None)
-    assert result is None  # Linux: returns None
+    with patch("naturo.bridge._tree.platform.system", return_value="Linux"):
+        result = enumerate_hybrid_tree(hwnd=0, depth=3, core=None)
+    assert result is None
 
 
 @pytest.mark.skipif(

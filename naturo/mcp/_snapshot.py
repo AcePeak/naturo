@@ -44,6 +44,23 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
         backend = _get_backend()
         manager = get_snapshot_manager()
 
+        # (#956) Resolve window_title to a concrete hwnd ONCE, before any
+        # snapshot is created, then feed the same hwnd to BOTH the screenshot
+        # capture and the element-tree build so they can never describe two
+        # different windows.  The Windows backend's capture_window does not
+        # implement title matching (a missing hwnd means the foreground
+        # window), whereas get_element_tree does — so passing the raw title to
+        # each independently let a matched, non-foreground title pair a
+        # foreground screenshot with the named window's tree and still report
+        # success:true (a silent data-integrity failure), and let an unmatched
+        # title leave an orphan foreground screenshot before get_element_tree
+        # raised WINDOW_NOT_FOUND.  Resolving up front mirrors the #954/#955
+        # capture_window fix and the CLI contract: an unmatched title now fails
+        # loudly (WINDOW_NOT_FOUND) before any snapshot is stored.
+        hwnd: Optional[int] = None
+        if window_title and hasattr(backend, "_resolve_hwnd"):
+            hwnd = backend._resolve_hwnd(window_title=window_title)
+
         # Create snapshot and capture
         snapshot_id = manager.create_snapshot()
 
@@ -52,7 +69,10 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             temp_path = f.name
         try:
-            backend.capture_window(window_title=window_title, output_path=temp_path)
+            if hwnd is not None:
+                backend.capture_window(hwnd=hwnd, output_path=temp_path)
+            else:
+                backend.capture_window(window_title=window_title, output_path=temp_path)
             manager.store_screenshot(snapshot_id, temp_path, metadata={
                 "window_title": window_title or "foreground",
             })
@@ -60,8 +80,12 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
-        # Capture UI tree and store as flat element map
-        tree = backend.get_element_tree(window_title=window_title, depth=depth)
+        # Capture UI tree and store as flat element map.  Reuse the same hwnd so
+        # the tree describes the exact window the screenshot was taken of (#956).
+        if hwnd is not None:
+            tree = backend.get_element_tree(hwnd=hwnd, depth=depth)
+        else:
+            tree = backend.get_element_tree(window_title=window_title, depth=depth)
         if tree:
             from naturo.models.snapshot import UIElement
 
@@ -69,6 +93,7 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
 
             def _collect_elements(el, parent_id=None):
                 child_ids = [c.id for c in (el.children or [])]
+                props = getattr(el, "properties", {}) or {}
                 ui_map[el.id] = UIElement(
                     id=el.id,
                     element_id=el.id,
@@ -78,6 +103,10 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
                     frame=(el.x, el.y, el.width, el.height),
                     parent_id=parent_id,
                     children=child_ids,
+                    # (#886) Carry the UIA keyboard shortcut into the MCP uiMap
+                    # too — without this the MCP snapshot path drops the field
+                    # the CLI path now populates.
+                    keyboard_shortcut=props.get("keyboard_shortcut"),
                 )
                 for c in (el.children or []):
                     _collect_elements(c, parent_id=el.id)
@@ -166,13 +195,15 @@ def register_snapshot_tools(server, _get_backend, _safe_tool):
 
         return {
             "success": True,
+            "session": manager.session,
             "snapshots": [
                 {
-                    "snapshot_id": s.snapshot_id,
-                    "created_at": s.created_at,
-                    "window_title": s.window_title,
+                    "id": s.id,
+                    "created_at": s.created_at.isoformat(),
+                    "last_accessed_at": s.last_accessed_at.isoformat(),
+                    "size_bytes": s.size_in_bytes,
+                    "screenshot_count": s.screenshot_count,
                     "application_name": s.application_name,
-                    "is_valid": s.is_valid,
                 }
                 for s in snapshots
             ],

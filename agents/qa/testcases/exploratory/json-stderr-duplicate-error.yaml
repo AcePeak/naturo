@@ -1,0 +1,32 @@
+id: TC-0042
+title: "JSON mode (-j) emits duplicate human-readable error to stderr alongside JSON on stdout"
+status: active
+category: exploratory
+priority: P2
+source_issue: null
+created: 2026-04-01
+last_run: 2026-05-28
+last_result: pass
+consecutive_passes: 5
+notes: "R133: PASS — naturo see -j writes valid JSON to stdout, stderr 0B, exit=1. naturo list apps -j same pattern. 5 consecutive passes but source_issue is null (never had a tracked bug), so retirement rule doesn't apply yet — keep active as JSON-envelope guard."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Target app is NOT running"
+
+steps:
+  - description: "Run command with -j on non-existent app, separate stdout/stderr"
+    command: "naturo click --app fakefake --on 'button' -j > /tmp/tc-0042-stdout.txt 2> /tmp/tc-0042-stderr.txt; echo EXIT=$?"
+    expect: "Exit code 1. stdout has valid JSON with success:false. stderr has human-readable error."
+  - description: "Verify stdout JSON is valid"
+    command: "python -m json.tool /tmp/tc-0042-stdout.txt > /dev/null && echo 'JSON valid' || echo 'JSON INVALID'"
+    expect: "JSON valid"
+  - description: "Verify stderr contains duplicate error"
+    command: "cat /tmp/tc-0042-stderr.txt"
+    expect: "Human-readable error message (redundant with JSON error)"
+  - description: "Verify combined pipe (2>&1) breaks JSON parsing"
+    command: "naturo click --app fakefake --on 'button' -j 2>&1 | python -m json.tool > /dev/null 2>&1; echo EXIT=$?"
+    expect: "EXIT=1 (JSON parse failure because stderr mixes with stdout)"
+
+pass_criteria: "JSON output on stdout is valid. Stderr duplication is documented/expected behavior for now."
+fail_action: "If JSON on stdout becomes invalid, file P1 bug. The stderr duplication is a P2 UX issue."

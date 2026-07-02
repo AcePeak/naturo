@@ -1,0 +1,44 @@
+id: TC-0054
+title: "Input commands (type/press/click) exit 2 with 'Usage:' banner on runtime errors instead of exit 1"
+status: active
+category: exploratory
+priority: P2
+source_issue: 866
+created: 2026-05-27
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R147: FAIL — re-confirmed on HEAD e2afdcb. `naturo type 'hello'` → EXIT=2 + Usage banner; `naturo press F1` → EXIT=2 + Usage banner; `naturo see` → EXIT=1 clean. Drift unchanged.
+  R136: FAIL — type=2, press=2, click=2 (non-j), see=1, type -j=1. R136 extended matrix: highlight/move/drag/scroll also exit 2 with Click 'Usage:' banner (bare) but 1 with envelope (-j). Same `_get_backend` code path in naturo/cli/interaction/_common.py affects 7 commands, not just the 3 in #866 title. #866 unchanged on HEAD 70e6591.
+  R138: FAIL — re-confirmed on HEAD `ceecfd5`. `naturo type 'x'` exit 2 with Click "Usage:" banner; `naturo type 'x' -j` exit 1 with clean NO_DESKTOP envelope. Same for press/click. Bug class is still 100% reproducible.
+  R139: FAIL — re-confirmed on HEAD `16adca7`. Verified via PowerShell `$LASTEXITCODE` (bash `$?` is unreliable with piping). `naturo type 'x'` → EXIT=2 + "Usage:" banner; `naturo see` → EXIT=1 clean. Discovered during: Chinese User simulation while probing if Chinese app args (`type --app 记事本 "你好世界"`) hit the same code path — they do, same exit=2 + Usage banner. Bug surface unchanged on `_common.py`.
+  R142: FAIL — re-confirmed on HEAD `ca7a9bc`. `naturo type 'x'` exit 2, `type 'x' -j` exit 1, `press 'a'` exit 2, `see` exit 1. Drift unchanged. Adjacent finding: missing-required-arg path *also* drifts (type/press/find/wait/get/set/app launch all exit 1 with INVALID_INPUT instead of exit 2 for usage errors) — that's a separate Scripter-relevant axis not covered by #866; will file as its own issue.
+  R144: FAIL — re-confirmed on HEAD `893209e`. `naturo type 'x'` → exit 2 + "Usage:" banner + "Try '... --help' for help."; same for press/click/drag/scroll/highlight. `-j` envelope still exit 1 clean. Discovered during First-time User simulation — a user who just installed naturo and tries `naturo type "hello"` is told to consult --help despite the actual error being environmental (NO_DESKTOP_SESSION). High UX confusion cost. Drift unchanged on `naturo/cli/interaction/_common.py`.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Run in any session where naturo cannot bind to an interactive desktop (or temporarily induce a backend failure)"
+
+steps:
+  - description: "Probe input command exit code without -j (should be 1, not 2)"
+    command: "naturo type 'x' > /dev/null 2>&1 ; echo $?"
+    expect: "Exit code 1 (runtime error). Exit code 2 = FAIL (Click UsageError)"
+  - description: "Probe press exit code without -j"
+    command: "naturo press 'a' > /dev/null 2>&1 ; echo $?"
+    expect: "Exit code 1. Exit code 2 = FAIL"
+  - description: "Probe click exit code without -j"
+    command: "naturo click e1 > /dev/null 2>&1 ; echo $?"
+    expect: "Exit code 1. Exit code 2 = FAIL"
+  - description: "Confirm read-only commands behave correctly"
+    command: "naturo see > /dev/null 2>&1 ; echo $?"
+    expect: "Exit code 1 (baseline — should already be correct)"
+  - description: "Confirm -j flag returns correct exit code on input commands"
+    command: "naturo type 'x' -j > /dev/null 2>&1 ; echo $?"
+    expect: "Exit code 1 (already correct via sys.exit(1) branch)"
+  - description: "Check stderr does NOT contain 'Usage:' banner"
+    command: "naturo type 'x' 2>&1 | grep -c '^Usage:'"
+    expect: "0 (no Usage banner — that prefix is reserved for actual argument errors)"
+
+pass_criteria: "All input commands return exit 1 (not 2) on runtime errors AND no 'Usage:' banner is emitted for non-argument failures"
+fail_action: "Update or reopen #866"

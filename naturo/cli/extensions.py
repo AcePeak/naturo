@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 import click
+from naturo.cli._jsonio import json_dumps
 from naturo.cli.fuzzy_group import FuzzyGroup
 
 
@@ -11,7 +12,7 @@ from naturo.cli.fuzzy_group import FuzzyGroup
 
 
 @click.group(hidden=True, cls=FuzzyGroup)
-def excel():
+def excel() -> None:
     """Excel COM automation (Windows-specific).
 
     Automate Excel workbooks via COM interface — read/write cells, run macros,
@@ -27,7 +28,7 @@ def excel():
 @click.option("--visible", is_flag=True, help="Show Excel window")
 @click.option("--read-only", is_flag=True, help="Open in read-only mode")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def excel_open_cmd(path, visible, read_only, json_output):
+def excel_open_cmd(path, visible, read_only, json_output) -> None:
     """Open an Excel workbook and show its info.
 
     PATH is the workbook file (.xlsx, .xls, .xlsm).
@@ -39,7 +40,6 @@ def excel_open_cmd(path, visible, read_only, json_output):
 
       naturo excel open "C:\\Data\\sales.xlsx" --visible --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     try:
@@ -50,7 +50,7 @@ def excel_open_cmd(path, visible, read_only, json_output):
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         click.echo(f"Opened: {result['path']}")
         click.echo(f"Sheets ({result['sheet_count']}): {', '.join(result['sheets'])}")
@@ -62,7 +62,7 @@ def excel_open_cmd(path, visible, read_only, json_output):
 @click.argument("cell")
 @click.option("--sheet", help="Sheet name (default: active sheet)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def read(path, cell, sheet, json_output):
+def read(path, cell, sheet, json_output) -> None:
     """Read a cell or range value from a workbook.
 
     PATH is the workbook file. CELL is a cell reference (A1) or range (A1:C10).
@@ -74,7 +74,6 @@ def read(path, cell, sheet, json_output):
 
       naturo excel read data.xlsx "A1:D100" --sheet "Sales" --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     try:
@@ -85,7 +84,7 @@ def read(path, cell, sheet, json_output):
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         value = result["value"]
         if isinstance(value, list):
@@ -116,7 +115,6 @@ def write(path: str, cell: str, value: str, sheet: str | None, create: bool, jso
 
       naturo excel write data.xlsx B2 42 --sheet "Numbers" --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     # Try to convert numeric values
@@ -137,7 +135,7 @@ def write(path: str, cell: str, value: str, sheet: str | None, create: bool, jso
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         click.echo(f"Wrote to {result['cell']} ({result['sheet']}): {write_value}")
 
@@ -145,7 +143,7 @@ def write(path: str, cell: str, value: str, sheet: str | None, create: bool, jso
 @excel.command("list-sheets")
 @click.argument("path", type=click.Path())
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def list_sheets(path, json_output):
+def list_sheets(path, json_output) -> None:
     """List all sheets in a workbook.
 
     \b
@@ -155,7 +153,6 @@ def list_sheets(path, json_output):
 
       naturo excel list-sheets data.xlsx --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     try:
@@ -166,7 +163,7 @@ def list_sheets(path, json_output):
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         click.echo(f"Workbook: {result['path']}")
         for i, name in enumerate(result["sheets"], 1):
@@ -179,7 +176,7 @@ def list_sheets(path, json_output):
 @click.argument("macro_name")
 @click.option("--arg", "macro_args", multiple=True, help="Macro argument (repeatable)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def run_macro(path, macro_name, macro_args, json_output):
+def run_macro(path, macro_name, macro_args, json_output) -> None:
     """Run a VBA macro in a workbook.
 
     PATH is the workbook file (.xlsm). MACRO_NAME is the macro to run.
@@ -191,7 +188,6 @@ def run_macro(path, macro_name, macro_args, json_output):
 
       naturo excel run-macro data.xlsm "UpdateData" --arg "2024" --arg "Q1" --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     try:
@@ -202,7 +198,7 @@ def run_macro(path, macro_name, macro_args, json_output):
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         click.echo(f"Macro '{result['macro']}' executed.")
         if result.get("result") is not None:
@@ -213,7 +209,7 @@ def run_macro(path, macro_name, macro_args, json_output):
 @click.argument("path", type=click.Path())
 @click.option("--sheet", help="Sheet name (default: active sheet)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def excel_info(path, sheet, json_output):
+def excel_info(path, sheet, json_output) -> None:
     """Get used range info for a worksheet.
 
     Shows the dimensions of the data area in the sheet.
@@ -225,7 +221,6 @@ def excel_info(path, sheet, json_output):
 
       naturo excel info data.xlsx --sheet "Sales" --json
     """
-    import json as json_module
     from naturo.cli.error_helpers import emit_exception_error
 
     try:
@@ -236,7 +231,7 @@ def excel_info(path, sheet, json_output):
         return
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, **result}))
+        click.echo(json_dumps({"success": True, **result}))
     else:
         click.echo(f"Sheet: {result['sheet']}")
         click.echo(f"Used range: {result['used_range']}")

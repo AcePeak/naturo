@@ -1,0 +1,30 @@
+id: TC-0041
+title: "JSON mode (-j) returns exit code 0 even when operation fails (success: false)"
+status: retired
+category: regression
+priority: P1
+source_issue: 781
+created: 2026-04-01
+last_run: 2026-05-28
+last_result: pass
+consecutive_passes: 34
+retired_round: 124
+notes: "2026-05-28 R124: PASS (34th) — see -j exit=1, capture -j exit=1. Source #781 CLOSED + consec>=5 → AUTO-RETIRE."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is NOT running"
+
+steps:
+  - description: "Run see with --app for non-running app (non-JSON)"
+    command: "naturo see --app notepad 2>&1; echo EXIT=$?"
+    expect: "Error message, EXIT=1"
+  - description: "Run see with --app for non-running app (JSON mode)"
+    command: "naturo see --app notepad -j 2>&1; echo EXIT=$?"
+    expect: "JSON with success:false, EXIT should be 1 but is currently 0"
+  - description: "Run capture with --app for non-running app (JSON mode)"
+    command: "naturo capture --app notepad -j 2>&1; echo EXIT=$?"
+    expect: "JSON with success:false, EXIT should be 1 but is currently 0"
+
+pass_criteria: "JSON mode returns non-zero exit code when success:false, matching non-JSON behavior"
+fail_action: "File P1 bug: -j flag masks error exit codes, breaking script error detection"

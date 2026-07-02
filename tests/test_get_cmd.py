@@ -10,12 +10,20 @@ Covers:
 
 import json
 import platform
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
 from naturo.cli import main
+
+# Resolve the *module* (not the Click Command object that shadows it in
+# naturo.cli's namespace).  On Python 3.9 ``mock.patch()`` uses the old
+# ``_importer`` which walks ``getattr`` and finds the Command; on 3.11+
+# it uses ``pkgutil.resolve_name`` which finds the module.  Using
+# ``patch.object`` with the real module works on every Python version.
+_get_cmd_mod = sys.modules["naturo.cli.values._get"]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,14 +58,6 @@ def _make_mock_backend(result=None, not_found=False, error=None):
 
 # ── CLI Tests ────────────────────────────────────────────────────────────────
 
-def _patch_get(mock_backend):
-    """Context manager to patch both backend and platform check for get_cmd."""
-    return (
-        patch("naturo.cli.get_cmd._get_backend", return_value=mock_backend),
-        patch("naturo.cli.get_cmd.platform") if platform.system() not in ("Windows",) else None,
-    )
-
-
 def _apply_patches(mock_backend):
     """Apply both backend and platform patches for get_cmd tests.
 
@@ -68,9 +68,9 @@ def _apply_patches(mock_backend):
 
     @contextlib.contextmanager
     def _ctx():
-        with patch("naturo.cli.get_cmd._get_backend", return_value=mock_backend):
+        with patch.object(_get_cmd_mod, "_get_backend", return_value=mock_backend):
             if platform.system() not in ("Windows",):
-                with patch("naturo.cli.get_cmd.platform") as mock_plat:
+                with patch.object(_get_cmd_mod, "platform") as mock_plat:
                     mock_plat.system.return_value = "Windows"
                     yield
             else:

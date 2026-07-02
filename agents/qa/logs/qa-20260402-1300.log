@@ -1,0 +1,183 @@
+Saved working directory and index state WIP on develop: c0d327f qa: round 94 report [skip ci]
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   c0d327f..b032097  develop    -> origin/develop
+Your branch is behind 'origin/develop' by 11 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating c0d327f..b032097
+Fast-forward
+ agents/github-queue/pending-issues.md |  84 +++---
+ agents/github-queue/pr-requests.md    |  24 ++
+ agents/github-queue/session-log.md    |  21 +-
+ core/src/input.cpp                    |  36 ++-
+ docs/MCP_SERVER.md                    | 297 ++++++++++++++++++++
+ examples/README.md                    |  77 ++++-
+ examples/agent_demo.py                | 158 +++++++++++
+ examples/form_filler.py               |  67 +++++
+ examples/notepad_hello.py             |  65 +++++
+ examples/ui_inspector.py              |  96 +++++++
+ examples/window_capture.py            |  77 +++++
+ naturo/browser/_network.py            | 263 +++++++++++++++++
+ naturo/browser/_page.py               |  17 +-
+ naturo/browser/_stealth.py            | 150 ++++++++++
+ naturo/cli/app_cmd.py                 | 179 ++++++++++++
+ naturo/cli/browser_cmd.py             | 151 ++++++++++
+ naturo/process.py                     |  42 ++-
+ tests/test_app_cmd.py                 | 174 ++++++++++++
+ tests/test_browser_element.py         | 414 +++++++++++++++++++++++++++
+ tests/test_browser_network.py         | 231 +++++++++++++++
+ tests/test_browser_page.py            | 511 ++++++++++++++++++++++++++++++++++
+ tests/test_browser_stealth.py         | 198 +++++++++++++
+ tests/test_process.py                 | 113 ++++++++
+ 23 files changed, 3380 insertions(+), 65 deletions(-)
+ create mode 100644 docs/MCP_SERVER.md
+ create mode 100644 examples/agent_demo.py
+ create mode 100644 examples/form_filler.py
+ create mode 100644 examples/notepad_hello.py
+ create mode 100644 examples/ui_inspector.py
+ create mode 100644 examples/window_capture.py
+ create mode 100644 naturo/browser/_network.py
+ create mode 100644 naturo/browser/_stealth.py
+ create mode 100644 tests/test_browser_element.py
+ create mode 100644 tests/test_browser_network.py
+ create mode 100644 tests/test_browser_page.py
+ create mode 100644 tests/test_browser_stealth.py
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/logs/qa-20260401-2100.log
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260327-1755.log
+	agents/qa/logs/qa-20260327-1803.log
+	agents/qa/logs/qa-20260327-1900.log
+	agents/qa/logs/qa-20260327-2000.log
+	agents/qa/logs/qa-20260327-2100.log
+	agents/qa/logs/qa-20260327-2200.log
+	agents/qa/logs/qa-20260327-2300.log
+	agents/qa/logs/qa-20260328-0000.log
+	agents/qa/logs/qa-20260328-0100.log
+	agents/qa/logs/qa-20260328-0200.log
+	agents/qa/logs/qa-20260328-0300.log
+	agents/qa/logs/qa-20260328-0400.log
+	agents/qa/logs/qa-20260328-0500.log
+	agents/qa/logs/qa-20260328-0600.log
+	agents/qa/logs/qa-20260328-0700.log
+	agents/qa/logs/qa-20260328-1400.log
+	agents/qa/logs/qa-20260328-1800.log
+	agents/qa/logs/qa-20260328-1900.log
+	agents/qa/logs/qa-20260328-2000.log
+	agents/qa/logs/qa-20260329-0200.log
+	agents/qa/logs/qa-20260329-0300.log
+	agents/qa/logs/qa-20260329-0400.log
+	agents/qa/logs/qa-20260329-0500.log
+	agents/qa/logs/qa-20260329-0600.log
+	agents/qa/logs/qa-20260329-0700.log
+	agents/qa/logs/qa-20260329-0800.log
+	agents/qa/logs/qa-20260329-0900.log
+	agents/qa/logs/qa-20260329-1700.log
+	agents/qa/logs/qa-20260329-1800.log
+	agents/qa/logs/qa-20260331-1200.log
+	agents/qa/logs/qa-20260331-1700.log
+	agents/qa/logs/qa-20260331-1800.log
+	agents/qa/logs/qa-20260331-1900.log
+	agents/qa/logs/qa-20260331-2000.log
+	agents/qa/logs/qa-20260331-2100.log
+	agents/qa/logs/qa-20260331-2300.log
+	agents/qa/logs/qa-20260401-0000.log
+	agents/qa/logs/qa-20260401-0100.log
+	agents/qa/logs/qa-20260401-0200.log
+	agents/qa/logs/qa-20260401-0300.log
+	agents/qa/logs/qa-20260401-0400.log
+	agents/qa/logs/qa-20260401-0600.log
+	agents/qa/logs/qa-20260401-0700.log
+	agents/qa/logs/qa-20260401-0800.log
+	agents/qa/logs/qa-20260401-1735.log
+	agents/qa/logs/qa-20260401-1900.log
+	agents/qa/logs/qa-20260401-2000.log
+	agents/qa/logs/qa-20260401-2200.log
+	agents/qa/logs/qa-20260401-2300.log
+	agents/qa/logs/qa-20260402-0000.log
+	agents/qa/logs/qa-20260402-0100.log
+	agents/qa/logs/qa-20260402-0200.log
+	agents/qa/logs/qa-20260402-0300.log
+	agents/qa/logs/qa-20260402-0400.log
+	agents/qa/logs/qa-20260402-0500.log
+	agents/qa/logs/qa-20260402-0600.log
+	agents/qa/logs/qa-20260402-0700.log
+	agents/qa/logs/qa-20260402-0800.log
+	agents/qa/logs/qa-20260402-0900.log
+	agents/qa/logs/qa-20260402-1000.log
+	agents/qa/logs/qa-20260402-1100.log
+	agents/qa/logs/qa-20260402-1200.log
+	agents/qa/logs/qa-20260402-1300.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (bcdabc88acec08098a52adf90437cde997fc75c5)
+[2026/04/02 ÖÜËÄ 13:00:05.08] Starting QA-Mariana round 
+All pushed. Here's the complete **Round 95 Final Summary**:
+
+### Test Results (26 cases + CI)
+
+| Category | Pass | Fail | Skip |
+|---|---|---|---|
+| CI Desktop | 1 | 1 (#785) | 8 |
+| CI E2E | 9 | 0 | 4 (xfail/xpass) |
+| Regression | 5 | 3 | 0 |
+| E2E | 2 | 1 | 0 |
+| Exploratory | 8 | 3 | 4 |
+
+### Key Findings
+- **TC-0045, TC-0046 newly passing** â€” stale PID routing and non-JSON exit codes are fixed
+- **TC-0031 passes with `--app-id`** â€” menu click works when properly targeted; previous failures were caused by `--app notepad` matching Chrome (#789), not a menu click bug
+- **New issue #807** â€” `press --app` sends hotkeys to wrong process when target isn't focused
+- **Persistent failures**: Calculator invisible (#785), type -E drops newlines (#784), app filter cross-process (#789), JSON stderr duplicate (#783), OOB coords no warning (#787)

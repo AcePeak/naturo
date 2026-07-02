@@ -1,0 +1,103 @@
+Saved working directory and index state WIP on develop: c241158 chore: Dev-Sirius session log 2026-04-01
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   b8a516f..780642e  develop    -> origin/develop
+Your branch is behind 'origin/develop' by 7 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+error: The following untracked working tree files would be overwritten by merge:
+	agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+Please move or remove them before you merge.
+Updating c241158..780642e
+Aborting
+On branch develop
+Your branch is behind 'origin/develop' by 7 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/testcases/CATALOG.md
+	modified:   agents/qa/testcases/e2e/calculator-basic-flow.yaml
+	modified:   agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+	modified:   agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+	modified:   agents/qa/testcases/exploratory/app-id-filter-see.yaml
+	modified:   agents/qa/testcases/exploratory/get-value-unreadable.yaml
+	modified:   agents/qa/testcases/exploratory/multi-window-targeting.yaml
+	modified:   agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml
+	modified:   agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+	modified:   agents/qa/testcases/regression/app-quit-silent-failure.yaml
+	modified:   agents/qa/testcases/regression/capture-chinese-filepath.yaml
+	modified:   agents/qa/testcases/regression/capture-unicode-path-dll.yaml
+	modified:   agents/qa/testcases/regression/chinese-app-name-matching.yaml
+	modified:   agents/qa/testcases/regression/quit-chinese-app-name.yaml
+	modified:   agents/qa/testcases/regression/uwp-notepad-enumeration.yaml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/
+	agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (1fb51c929c85386239ed638d7211367b447bd73e)
+[2026/04/01 ÖÜÈý 21:00:11.70] Starting QA-Mariana round 
+## QA Round 79 Complete
+
+**Summary:**
+- **CI**: 14 passed, 1 failed (known #777 Unicode DLL), 18 skipped, 3 xfailed, 1 xpassed
+- **E2E**: Calculator (PASS), Notepad (PASS) â€” both verified with screenshots
+- **Exploratory**: All error paths, JSON, exit codes correct. #781 fix confirmed holding
+- **Persona (Accessibility User)**: Full keyboard workflow works, element roles/names screen-reader friendly
+- **Regression**: 16/16 passed, 6 skipped (infrastructure)
+- **Test case evolution**: TC-0034 retired (6 passes, #693 closed)
+- **New issues**: none
+- **Report**: pushed to develop as `0f0f3eb`
+
+**Top 3 Risks:**
+1. Unicode path in naturo_core.dll (#777) â€” CI still failing
+2. AI Vision/Hybrid mode untestable â€” 6 tests always skipped
+3. v0.3.2 scope tripled to 31 issues â€” browser features need QA plan

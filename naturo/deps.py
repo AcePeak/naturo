@@ -64,6 +64,7 @@ def ensure_package(
     feature: str = "",
     install_extra: str | None = None,
     auto_install: bool | None = None,
+    json_output: bool = False,
 ) -> None:
     """Ensure an optional package is importable, offering to install if missing.
 
@@ -78,6 +79,14 @@ def ensure_package(
         auto_install: Override interactive prompt.  ``True`` → install without
             asking; ``False`` → never prompt, just error; ``None`` (default) →
             prompt if TTY, error otherwise.
+        json_output: When ``True``, the caller has requested machine-readable
+            output, so this function must never prompt and never write prose to
+            stdout (#869).  The interactive prompt is suppressed (treated as a
+            decline) and any install progress is silenced, leaving the caller's
+            structured envelope as the sole content on stdout.  This is gated on
+            the explicit flag rather than ``_is_interactive`` because on Windows
+            ``sys.stdin.isatty()`` returns ``True`` even for a DEVNULL-redirected
+            child, so a TTY check alone cannot protect non-interactive agents.
 
     Raises:
         NaturoError: If the package is not installed and cannot be installed
@@ -101,7 +110,10 @@ def ensure_package(
     # Determine whether to prompt
     should_install = auto_install
     if should_install is None:
-        if _is_interactive():
+        if json_output:
+            # JSON mode: never prompt — emit only the structured error envelope.
+            should_install = False
+        elif _is_interactive():
             try:
                 answer = input(
                     f"\n  {feature_label} requires '{package}'.\n"
@@ -128,7 +140,8 @@ def ensure_package(
     logger.info("Installing %s: %s", package, " ".join(cmd))
 
     try:
-        print(f"\n  Installing {package}...", end=" ", flush=True)
+        if not json_output:
+            print(f"\n  Installing {package}...", end=" ", flush=True)
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -136,7 +149,8 @@ def ensure_package(
             timeout=120,
         )
         if result.returncode != 0:
-            print("failed ❌")
+            if not json_output:
+                print("failed ❌")
             logger.error("pip install failed: %s", result.stderr[:500])
             raise NaturoError(
                 message=f"Failed to install '{package}': {result.stderr[:200]}",
@@ -144,9 +158,11 @@ def ensure_package(
                 category="setup",
                 suggested_action=f"Try manually: {hint}",
             )
-        print("done ✅")
+        if not json_output:
+            print("done ✅")
     except subprocess.TimeoutExpired:
-        print("timed out ❌")
+        if not json_output:
+            print("timed out ❌")
         raise NaturoError(
             message=f"Installation of '{package}' timed out after 120s",
             code="INSTALL_TIMEOUT",
@@ -192,11 +208,14 @@ def requires_package(
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            # Forward the command's JSON flag (if it has one) so the dependency
+            # check honours machine-readable output and never prompts (#869).
             ensure_package(
                 package,
                 import_name=import_name,
                 feature=feature,
                 install_extra=install_extra,
+                json_output=bool(kwargs.get("json_output", False)),
             )
             return func(*args, **kwargs)
 

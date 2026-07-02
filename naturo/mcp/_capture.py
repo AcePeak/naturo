@@ -5,6 +5,8 @@ import base64
 import os
 from typing import Optional
 
+from naturo.mcp._resolve import require_hwnd
+
 
 def register_capture_tools(server, _get_backend, _safe_tool):
     """Register capture-related MCP tools."""
@@ -57,7 +59,20 @@ def register_capture_tools(server, _get_backend, _safe_tool):
             Dict with path, width, height, format, scale_factor, dpi.
         """
         backend = _get_backend()
-        result = backend.capture_window(window_title=window_title, output_path=output_path)
+        # (#954/#957) Resolve window_title to a concrete hwnd via the shared
+        # MCP helper, so an unmatched title raises WindowNotFoundError (surfaced
+        # as success:false / WINDOW_NOT_FOUND) instead of silently capturing the
+        # foreground window and reporting success:true.  The Windows backend's
+        # capture_window does not implement title matching (a missing hwnd means
+        # the foreground window), so resolution must happen here — mirroring
+        # naturo/cli/core/_capture.py — to keep the CLI and MCP contracts aligned.
+        # Backends whose capture_window does its own title matching (e.g. macOS,
+        # which has no _resolve_hwnd) keep receiving the raw window_title.
+        if window_title and hasattr(backend, "_resolve_hwnd"):
+            hwnd = require_hwnd(backend, window_title=window_title)
+            result = backend.capture_window(hwnd=hwnd, output_path=output_path)
+        else:
+            result = backend.capture_window(window_title=window_title, output_path=output_path)
         response = {
             "success": True,
             "path": result.path,

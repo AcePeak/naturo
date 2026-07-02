@@ -1,0 +1,29 @@
+# Cost Guardrails for Scheduled Agents
+# =====================================
+# Prevents runaway costs from automated agent sessions.
+# Orc-Mycelium checks these limits before dispatching each agent run.
+
+# Global emergency switch — set to true to stop ALL scheduled agent runs.
+pause_all: false
+
+# Per-agent limits
+agents:
+  Dev-Sirius:
+    # Maximum scheduled runs per calendar day (UTC).
+    daily_run_limit: 20
+    # Auto-pause after N consecutive failed sessions (non-zero exit).
+    consecutive_failure_pause: 3
+    # Warn (log + Orc-Mycelium comment) when daily runs reach this %.
+    notification_threshold_pct: 80
+
+  QA-Mariana:
+    daily_run_limit: 20
+    consecutive_failure_pause: 3
+    notification_threshold_pct: 80
+
+# Notes:
+# - "failed session" = agent process exited non-zero or produced no commits/output.
+# - Auto-paused agents require manual un-pause by Ace (set consecutive_failure_pause
+#   to 0 or reset the failure counter in STATE.md).
+# - Daily counters reset at 00:00 UTC.
+# - Orc-Mycelium reads this file before every dispatch. Changes take effect immediately.

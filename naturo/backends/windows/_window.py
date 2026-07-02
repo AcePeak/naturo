@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+from dataclasses import replace
 from typing import Optional
 
 from naturo.backends.base import WindowInfo as BaseWindowInfo
@@ -18,8 +20,28 @@ class WindowMixin:
     def list_windows(self) -> list[BaseWindowInfo]:
         """List all visible top-level windows.
 
+        UWP/packaged apps hosted by ``ApplicationFrameHost.exe`` are resolved
+        to their real child process, so the reported ``pid``/``process_name``
+        identify the owning app rather than the host. This matches what
+        ``list_apps`` reports for the same window handle (#958, mirroring the
+        ``list_apps`` resolution added in #267/#276).
+
         Returns:
             List of WindowInfo dataclass instances.
+        """
+        return [self._resolve_uwp_window(w) for w in self._list_windows_unresolved()]
+
+    def _list_windows_unresolved(self) -> list[BaseWindowInfo]:
+        """Enumerate top-level windows straight from the core bridge.
+
+        UWP windows still carry the ``ApplicationFrameHost.exe`` host PID and
+        executable here — no resolution is applied. ``list_apps`` consumes this
+        raw view because it performs its own UWP child resolution and naming,
+        keyed off the host basename (see ``AppMixin.list_apps``); resolving here
+        would hide the host marker it depends on.
+
+        Returns:
+            List of WindowInfo dataclass instances as reported by the bridge.
         """
         core = self._ensure_core()
         bridge_windows = core.list_windows()
@@ -38,6 +60,29 @@ class WindowMixin:
             )
             for w in bridge_windows
         ]
+
+    def _resolve_uwp_window(self, window: BaseWindowInfo) -> BaseWindowInfo:
+        """Resolve a UWP host window to the real owning app process (#958).
+
+        ``ApplicationFrameHost.exe`` hosts UWP apps as child windows, so the
+        bridge reports the host's PID/executable for the top-level window. When
+        ``window`` belongs to the host, substitute the real child PID and
+        executable (resolved via ``_resolve_uwp_child_pid``). Non-UWP windows,
+        and host windows whose child cannot be resolved, are returned unchanged.
+
+        Args:
+            window: A window enumerated by ``_list_windows_unresolved``.
+
+        Returns:
+            The window with the real PID/process_name when it is a resolvable
+            UWP host window; otherwise the original window unchanged.
+        """
+        if os.path.basename(window.process_name).lower() != self._UWP_HOST_PROCESS:
+            return window
+        real_pid, real_exe = self._resolve_uwp_child_pid(window.handle)
+        if not real_pid or not real_exe:
+            return window
+        return replace(window, pid=real_pid, process_name=real_exe)
 
     def _ensure_win32(self) -> None:
         """Verify we are running on Windows; raise NotImplementedError otherwise.

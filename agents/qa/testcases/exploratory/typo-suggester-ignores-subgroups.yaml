@@ -1,0 +1,36 @@
+id: TC-0067
+title: "CLI typo suggester ignores subgroup commands (#880)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 880
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R147: FAIL — re-confirmed on HEAD e2afdcb. `naturo lauch` (probable typo for `app launch`) → "Error: No such command 'lauch'." with NO 'Did you mean' suggestion. Bug unchanged.
+  R144: FAIL — re-confirmed on HEAD 893209e. `naturo launch` / `naturo openn` still emit 'No such command' with no 'Did you mean' suggestion. Bug unchanged.
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "`naturo launch` should suggest `app launch`"
+    command: "naturo launch notepad 2>&1 | grep -c 'Did you mean'"
+    expect: "1 once fixed; currently 0 (FAIL)"
+  - description: "`naturo open` should suggest `app launch`"
+    command: "naturo open notepad 2>&1 | grep -c 'Did you mean'"
+    expect: "1 once fixed; currently 0 (FAIL)"
+  - description: "`naturo run` should suggest `app launch`"
+    command: "naturo run notepad 2>&1 | grep -c 'Did you mean'"
+    expect: "1 once fixed; currently 0 (FAIL)"
+  - description: "`naturo start` should suggest `app launch`"
+    command: "naturo start notepad 2>&1 | grep -c 'Did you mean'"
+    expect: "1 once fixed; currently 0 (FAIL)"
+  - description: "`naturo screenshot` should suggest `capture`, NOT hidden `snapshot`"
+    command: "naturo screenshot 2>&1 | grep -c \"Did you mean 'capture'\""
+    expect: "1 once fixed; currently 0 (suggests 'snapshot' instead — see #867)"
+
+pass_criteria: "First-time user typing an intuitive verb that maps to a subgroup gets either (a) a 'Did you mean' suggestion pointing at the real subcommand, or (b) the command works directly via a top-level alias. Hidden commands must never be suggested."
+fail_action: "Update or reopen #880. Consider also adding flat aliases (launch/open/screenshot) at top level for AI-agent ergonomics."

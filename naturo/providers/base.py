@@ -369,7 +369,8 @@ def _auto_detect_provider(**kwargs: Any) -> VisionProvider:
             provider = cls(**kwargs)
             if provider.is_available:
                 return provider
-        except Exception:
+        except Exception as exc:
+            logger.debug("Provider %s init failed: %s", pname, exc)
             continue
 
     raise AIProviderUnavailableError(

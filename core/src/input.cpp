@@ -274,10 +274,22 @@ extern "C" NATURO_API int naturo_key_type(const char* text, int delay_ms) {
 
     int result = 0;
     for (int i = 0; i < wlen - 1; ++i) {  // -1 to skip null terminator
-        INPUT seq[2] = {
-            make_unicode_input((WORD)wtext[i], 0),
-            make_unicode_input((WORD)wtext[i], KEYEVENTF_KEYUP),
-        };
+        wchar_t ch = wtext[i];
+        INPUT seq[2];
+
+        // Control characters must be sent as virtual-key events because
+        // KEYEVENTF_UNICODE silently drops them (#784).
+        WORD vk = 0;
+        if (ch == L'\n' || ch == L'\r') vk = VK_RETURN;
+        else if (ch == L'\t')           vk = VK_TAB;
+
+        if (vk != 0) {
+            seq[0] = make_vk_input(vk, 0);
+            seq[1] = make_vk_input(vk, KEYEVENTF_KEYUP);
+        } else {
+            seq[0] = make_unicode_input((WORD)ch, 0);
+            seq[1] = make_unicode_input((WORD)ch, KEYEVENTF_KEYUP);
+        }
         if (send_inputs(seq, 2) != 0) { result = -2; break; }
         if (delay_ms > 0) Sleep((DWORD)delay_ms);
     }
@@ -497,6 +509,22 @@ extern "C" NATURO_API int naturo_phys_key_type(const char* text, int delay_ms) {
     int result = 0;
     for (int i = 0; i < wlen - 1; ++i) {
         wchar_t ch = wtext[i];
+
+        // Control characters must be sent as virtual-key scan codes
+        // because KEYEVENTF_UNICODE silently drops them (#784).
+        WORD ctrl_vk = 0;
+        if (ch == L'\n' || ch == L'\r') ctrl_vk = VK_RETURN;
+        else if (ch == L'\t')           ctrl_vk = VK_TAB;
+        if (ctrl_vk != 0) {
+            WORD sc = vk_to_scancode(ctrl_vk);
+            INPUT seq[2] = {
+                make_scancode_input(sc != 0 ? sc : (WORD)MapVirtualKeyW(ctrl_vk, MAPVK_VK_TO_VSC)),
+                make_scancode_input(sc != 0 ? sc : (WORD)MapVirtualKeyW(ctrl_vk, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP),
+            };
+            if (send_inputs(seq, 2) != 0) { result = -2; break; }
+            if (delay_ms > 0) Sleep((DWORD)delay_ms);
+            continue;
+        }
 
         // Use VkKeyScanW to find VK + shift state for this character
         SHORT vk_result = VkKeyScanW(ch);

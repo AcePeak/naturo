@@ -317,6 +317,22 @@ class Backend(ABC):
         """
         return False
 
+    def set_focused_element_value(self, text: str, append: bool = True) -> bool:
+        """IME-immune text entry via the focused element's UIA ValuePattern.
+
+        Returns True if the text was set directly through accessibility
+        (bypassing keystroke injection and any active IME), False if
+        unavailable — in which case the caller should fall back to
+        :meth:`type_text`. The default returns False; Windows overrides it
+        to make ``type`` reliable on CJK/IME hosts (#1219).
+
+        Args:
+            text: Text to insert.
+            append: Append to the element's current value (keystroke-like) when
+                True, else replace the whole value.
+        """
+        return False
+
     @abstractmethod
     def type_text(self, text: str, delay_ms: int = 5, profile: str = "human",
                   wpm: int = 120, input_mode: str = "normal") -> None:
@@ -337,11 +353,16 @@ class Backend(ABC):
 
     @abstractmethod
     def drag(self, from_x: int, from_y: int, to_x: int, to_y: int,
-             duration_ms: int = 500, steps: int = 10) -> None:
+             duration_ms: int = 500, steps: int = 10,
+             trajectory: str = "linear", jitter: float = 0.0,
+             overshoot: float = 0.0, release_delay_ms: int = 0) -> None:
         ...
 
     @abstractmethod
-    def move_mouse(self, x: int, y: int) -> None:
+    def move_mouse(self, x: int, y: int, *,
+                   trajectory: str = "instant",
+                   duration_ms: int = 500, steps: int | None = None,
+                   jitter: float = 0.0, overshoot: float = 0.0) -> None:
         ...
 
     # === Clipboard ===

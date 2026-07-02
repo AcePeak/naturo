@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import platform
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -16,7 +15,7 @@ import pytest
 # we monkeypatch the constructors to auto-skip on CI Windows.
 
 _ON_CI = os.environ.get("CI") == "true"
-_IS_WINDOWS = platform.system() == "Windows"
+_IS_WINDOWS = os.name == "nt"
 _CI_WINDOWS = _ON_CI and _IS_WINDOWS
 
 if _CI_WINDOWS:
@@ -73,7 +72,7 @@ def _has_desktop_session() -> bool:
 
     Always returns False on non-Windows platforms.
     """
-    if platform.system() != "Windows":
+    if os.name != "nt":
         return False
     try:
         import ctypes
@@ -149,6 +148,87 @@ def _skip_desktop_tests(request: pytest.FixtureRequest):
             pytest.skip("No interactive desktop session available")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _forbid_unsafe_live_input():
+    """Structural backstop: no test may live-type shell metacharacters (#976).
+
+    R-SEC-012: an unattended QA cycle once typed ``$(rm -rf /)`` into a live
+    window through a global-``SendInput`` focus race.  The lesson is that a
+    safety test must never be able to perform the unsafe act it guards against —
+    the injection-safety property must be asserted in-process, never by putting
+    shell metacharacters on a real keyboard.
+
+    This session-wide tripwire patches the real keystroke-delivery boundary (the
+    ``SendInput`` and Phys32 input strategies) so that any attempt — by any test,
+    intentional or accidental — to type a string containing shell-command
+    content raises loudly *before* a single keystroke is emitted.  Benign text
+    still reaches the original implementation, so legitimate desktop ``type``
+    tests are unaffected.  Detection is ungated (it does not depend on the opt-in
+    ``NATURO_SAFE_INPUT`` runtime guard) so the backstop holds in every run.
+    """
+    from naturo.backends.windows import _strategies
+    from naturo.safety import contains_dangerous_input
+
+    originals: dict[type, object] = {}
+
+    def _make_guarded(original):
+        def guarded(self, text, delay_ms=5):
+            reason = contains_dangerous_input(text)
+            if reason is not None:
+                raise AssertionError(
+                    "R-SEC-012 tripwire: refusing to live-type shell-unsafe "
+                    f"content ({reason}) via {type(self).__name__}.type_text. "
+                    "Injection-safety must be asserted in-process (see "
+                    "tests/test_input_injection_safety_976.py), never through "
+                    f"real keystrokes. Payload repr: {text!r}"
+                )
+            return original(self, text, delay_ms)
+
+        return guarded
+
+    for strategy_cls in (_strategies.SendInputStrategy, _strategies.Phys32Strategy):
+        originals[strategy_cls] = strategy_cls.type_text
+        strategy_cls.type_text = _make_guarded(strategy_cls.type_text)  # type: ignore[method-assign]
+
+    try:
+        yield
+    finally:
+        for strategy_cls, original in originals.items():
+            strategy_cls.type_text = original  # type: ignore[method-assign]
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _assert_no_orphaned_processes():
+    """Fail the session if the desktop/browser suite leaks a test-launched app (M4-3).
+
+    A before/after process snapshot of watched GUI apps (notepad, calculator,
+    chrome, msedge, excel, …) asserts **zero orphaned** PIDs remain after the
+    whole suite — every launching test must guarantee PID-scoped teardown. Shells,
+    terminals and the test runner are **never** watched, so the harness cannot
+    touch (or even flag) a ``cmd``/terminal.
+
+    Opt-in: only active when ``NATURO_ASSERT_NO_ORPHANS=1`` (the desktop-QA lane),
+    so it is inert on Linux CI and on a developer's live desktop by default.
+    """
+    import os
+
+    if os.environ.get("NATURO_ASSERT_NO_ORPHANS") != "1":
+        yield
+        return
+
+    from tests._process_snapshot import find_orphans, snapshot, tasklist_lister
+
+    before = snapshot(tasklist_lister)
+    yield
+    after = snapshot(tasklist_lister)
+    orphans = find_orphans(before, after)
+    assert not orphans, (
+        f"Orphaned test-launched processes leaked (M4-3): {orphans}. "
+        "Every launching test must guarantee PID-scoped teardown "
+        "(kill by PID, dismiss Save/Don't-Save dialogs)."
+    )
+
+
 def cli_stdout(result):
     """Extract stdout-only text from a Click CliRunner result.
 
@@ -161,10 +241,10 @@ def cli_stdout(result):
 
 @pytest.fixture
 def is_windows():
-    return platform.system() == "Windows"
+    return os.name == "nt"
 
 
 @pytest.fixture
 def skip_if_not_windows():
-    if platform.system() != "Windows":
+    if os.name != "nt":
         pytest.skip("Windows-only test")

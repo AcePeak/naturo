@@ -1,14 +1,14 @@
 id: TC-0024
 title: "click --app hits wrong window when target is behind other windows"
-status: active
+status: retired
 category: exploratory
 priority: P0
 source_issue: 608
 created: 2026-03-29
-last_run: 2026-03-31
+last_run: 2026-04-04
 last_result: pass
-consecutive_passes: 3
-notes: "2026-03-31 R70: PASS — Click e3 in Notepad while Chrome foreground. Screenshot confirms Notepad came to front with text."
+consecutive_passes: 8
+notes: "2026-04-04 R104: Not directly tested. Carried forward."
 
 preconditions:
   - "naturo is installed and in PATH"

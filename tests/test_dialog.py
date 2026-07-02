@@ -5,6 +5,7 @@ Phase 4.5.1 + 4.5.2: Dialog Detection & Interaction.
 Tests the dialog classification engine, CLI commands, and backend integration.
 Backend calls are mocked since dialog detection requires a Windows desktop session.
 """
+from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock, patch, PropertyMock

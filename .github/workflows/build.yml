@@ -5,13 +5,62 @@ on:
     branches: ["*"]
     tags: ["v*"]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  author-check:
+    name: Commit Author Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit authors
+        shell: bash
+        run: |
+          # Allowlist of known commit authors (agents + maintainers + bots)
+          ALLOWED_AUTHORS=(
+            "Dev-Sirius"
+            "QA-Mariana"
+            "Orc-Mycelium"
+            "AcePeak"
+            "dependabot[bot]"
+            "github-actions[bot]"
+          )
+
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          echo "Checking commits ${BASE}..${HEAD}"
+          UNKNOWN=()
+
+          while IFS= read -r author; do
+            FOUND=false
+            for allowed in "${ALLOWED_AUTHORS[@]}"; do
+              if [[ "$author" == "$allowed" ]]; then
+                FOUND=true
+                break
+              fi
+            done
+            if [[ "$FOUND" == false ]]; then
+              UNKNOWN+=("$author")
+            fi
+          done < <(git log --format='%an' "${BASE}..${HEAD}" | sort -u)
+
+          if [[ ${#UNKNOWN[@]} -gt 0 ]]; then
+            echo "::warning::Unknown commit author(s) detected: ${UNKNOWN[*]}"
+            echo "Allowed authors: ${ALLOWED_AUTHORS[*]}"
+            echo "If this is a new contributor, this is expected."
+          else
+            echo "All commit authors are in the allowlist."
+          fi
+
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
@@ -22,6 +71,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install linting tools
         run: pip install ruff mypy
@@ -276,21 +326,27 @@ jobs:
           if-no-files-found: warn
 
   lint-and-test-python:
-    name: Python Tests (Ubuntu)
+    name: Python Tests (Ubuntu, ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    # Python 3.9 has pre-existing Click/mock compat issues — informational only
+    continue-on-error: ${{ matrix.python-version == '3.9' }}
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install package
         run: pip install -e ".[dev]"
 
       - name: Run tests (skip Windows/desktop tests)
-        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing
+        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing --cov-fail-under=65
 
       - name: Upload coverage to Codecov
         if: always()
@@ -303,21 +359,26 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-python-macos:
-    name: Python Tests (macOS)
+    name: Python Tests (macOS, ${{ matrix.python-version }})
     runs-on: macos-latest
+    continue-on-error: ${{ matrix.python-version == '3.9' }}
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install package
         run: pip install -e ".[dev]"
 
       - name: Run tests (skip Windows/desktop tests)
-        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing
+        run: pytest -v -m "not ui and not integration and not desktop and not windows" --cov=naturo --cov-report=xml --cov-report=term-missing --cov-fail-under=65
 
       - name: Upload coverage to Codecov
         if: always()
@@ -415,6 +476,10 @@ jobs:
           CI_COMMIT_MSG: ${{ github.event.head_commit.message }}
           CI_NOTE: ${{ steps.status.outputs.note }}
         run: |
+          if [[ -z "$FEISHU_WEBHOOK_URL" ]]; then
+            echo "::warning::FEISHU_WEBHOOK_URL not set (fork/dependabot PR); skipping notification"
+            exit 0
+          fi
           SHORT_COMMIT="${CI_COMMIT:0:7}"
           RUN_URL="https://github.com/${CI_REPO}/actions/runs/${CI_RUN_ID}"
           # Use first line of commit message only
@@ -457,6 +522,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Download DLL
         uses: actions/download-artifact@v8

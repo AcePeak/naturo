@@ -369,7 +369,9 @@ def highlight_elements_uia(
         try:
             snaps = mgr.list_snapshots()
             if snaps:
-                snap = mgr.get_snapshot(snaps[-1].id)
+                # list_snapshots() is newest-first, so index 0 is the most
+                # recent snapshot (the one a preceding ``see`` just stored).
+                snap = mgr.get_snapshot(snaps[0].id)
         except Exception as exc:
             logger.debug("Snapshot retrieval for highlight failed: %s", exc)
 
@@ -406,7 +408,8 @@ def highlight_elements_uia(
     try:
         snaps = mgr.list_snapshots()
         if snaps:
-            latest = snaps[-1]
+            # list_snapshots() is newest-first; index 0 is the latest snapshot.
+            latest = snaps[0]
             snap = mgr.get_snapshot(latest.id)
             if snap.ui_map:
                 _found_snapshot = True

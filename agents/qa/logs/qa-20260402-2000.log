@@ -1,0 +1,132 @@
+No local changes to save
+fatal: unable to access 'https://github.com/AcePeak/naturo.git/': Recv failure: Connection was aborted
+Your branch is up to date with 'origin/develop'.
+Already on 'develop'
+fatal: unable to access 'https://github.com/AcePeak/naturo.git/': Recv failure: Connection was aborted
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/logs/qa-20260401-2100.log
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260327-1755.log
+	agents/qa/logs/qa-20260327-1803.log
+	agents/qa/logs/qa-20260327-1900.log
+	agents/qa/logs/qa-20260327-2000.log
+	agents/qa/logs/qa-20260327-2100.log
+	agents/qa/logs/qa-20260327-2200.log
+	agents/qa/logs/qa-20260327-2300.log
+	agents/qa/logs/qa-20260328-0000.log
+	agents/qa/logs/qa-20260328-0100.log
+	agents/qa/logs/qa-20260328-0200.log
+	agents/qa/logs/qa-20260328-0300.log
+	agents/qa/logs/qa-20260328-0400.log
+	agents/qa/logs/qa-20260328-0500.log
+	agents/qa/logs/qa-20260328-0600.log
+	agents/qa/logs/qa-20260328-0700.log
+	agents/qa/logs/qa-20260328-1400.log
+	agents/qa/logs/qa-20260328-1800.log
+	agents/qa/logs/qa-20260328-1900.log
+	agents/qa/logs/qa-20260328-2000.log
+	agents/qa/logs/qa-20260329-0200.log
+	agents/qa/logs/qa-20260329-0300.log
+	agents/qa/logs/qa-20260329-0400.log
+	agents/qa/logs/qa-20260329-0500.log
+	agents/qa/logs/qa-20260329-0600.log
+	agents/qa/logs/qa-20260329-0700.log
+	agents/qa/logs/qa-20260329-0800.log
+	agents/qa/logs/qa-20260329-0900.log
+	agents/qa/logs/qa-20260329-1700.log
+	agents/qa/logs/qa-20260329-1800.log
+	agents/qa/logs/qa-20260331-1200.log
+	agents/qa/logs/qa-20260331-1700.log
+	agents/qa/logs/qa-20260331-1800.log
+	agents/qa/logs/qa-20260331-1900.log
+	agents/qa/logs/qa-20260331-2000.log
+	agents/qa/logs/qa-20260331-2100.log
+	agents/qa/logs/qa-20260331-2300.log
+	agents/qa/logs/qa-20260401-0000.log
+	agents/qa/logs/qa-20260401-0100.log
+	agents/qa/logs/qa-20260401-0200.log
+	agents/qa/logs/qa-20260401-0300.log
+	agents/qa/logs/qa-20260401-0400.log
+	agents/qa/logs/qa-20260401-0600.log
+	agents/qa/logs/qa-20260401-0700.log
+	agents/qa/logs/qa-20260401-0800.log
+	agents/qa/logs/qa-20260401-1735.log
+	agents/qa/logs/qa-20260401-1900.log
+	agents/qa/logs/qa-20260401-2000.log
+	agents/qa/logs/qa-20260401-2200.log
+	agents/qa/logs/qa-20260401-2300.log
+	agents/qa/logs/qa-20260402-0000.log
+	agents/qa/logs/qa-20260402-0100.log
+	agents/qa/logs/qa-20260402-0200.log
+	agents/qa/logs/qa-20260402-0300.log
+	agents/qa/logs/qa-20260402-0400.log
+	agents/qa/logs/qa-20260402-0500.log
+	agents/qa/logs/qa-20260402-0600.log
+	agents/qa/logs/qa-20260402-0700.log
+	agents/qa/logs/qa-20260402-0800.log
+	agents/qa/logs/qa-20260402-0900.log
+	agents/qa/logs/qa-20260402-1000.log
+	agents/qa/logs/qa-20260402-1100.log
+	agents/qa/logs/qa-20260402-1200.log
+	agents/qa/logs/qa-20260402-1300.log
+	agents/qa/logs/qa-20260402-1400.log
+	agents/qa/logs/qa-20260402-1500.log
+	agents/qa/logs/qa-20260402-1600.log
+	agents/qa/logs/qa-20260402-1700.log
+	agents/qa/logs/qa-20260402-1800.log
+	agents/qa/logs/qa-20260402-1900.log
+	agents/qa/logs/qa-20260402-2000.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (e78feaa34ab9621595081f6fddd2c99bfc651f42)
+[2026/04/02 ÷‹Àƒ 20:00:01.98] Starting QA-Mariana round 
+API Error: Unable to connect to API (ECONNRESET)

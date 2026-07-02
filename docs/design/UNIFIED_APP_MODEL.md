@@ -11,7 +11,7 @@ A single entry point that **auto-detects** the application framework and **route
 ### Core Principle
 
 ```
-naturo click --app "飞书" --name "Send"
+naturo click --app "飞书 (Feishu)" --name "Send"
 ```
 
 The user says *what* to click. Naturo figures out *how*.
@@ -21,14 +21,14 @@ The user says *what* to click. Naturo figures out *how*.
 ### 1. App Inspect
 
 ```bash
-naturo app inspect "飞书"
+naturo app inspect "飞书 (Feishu)"
 ```
 
 Probes the target application and reports available interaction methods:
 
 ```json
 {
-  "app": "飞书",
+  "app": "飞书 (Feishu)",
   "pid": 12840,
   "exe": "C:\\Users\\ace\\AppData\\Local\\Feishu\\Feishu.exe",
   "framework": {
@@ -101,7 +101,7 @@ Methods ranked by reliability and capability:
 When multiple methods are available, naturo picks the highest-priority one. Users can override:
 
 ```bash
-naturo click --app "飞书" --name "Send" --method uia   # Force UIA
+naturo click --app "飞书 (Feishu)" --name "Send" --method uia   # Force UIA
 ```
 
 ### 4. Auto-Routing
@@ -144,8 +144,8 @@ These are power-user tools. The default path is always through the unified model
 ### 6. Inspect Flags
 
 ```bash
-naturo app inspect "飞书"              # Full probe
-naturo app inspect "飞书" --quick      # Skip slow checks (IA2, JAB)
+naturo app inspect "飞书 (Feishu)"              # Full probe
+naturo app inspect "飞书 (Feishu)" --quick      # Skip slow checks (IA2, JAB)
 naturo app inspect --pid 12840         # By PID
 naturo app inspect --all               # All visible windows
 ```

@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_id, coords,
            smooth, delay, app, pid, window_title, hwnd, selector, method, app_id, see_after, settle,
-           json_output):
+           json_output) -> None:
     """Scroll in a direction.
 
     DIRECTION can be: up, down, left, right (default: down)
@@ -91,50 +91,18 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         target_label = f"({x}, {y})"
     elif on_text or element_id:
         target_id = on_text or element_id
-        import re as _re
-        if _re.fullmatch(r"e\d+", target_id):
-            # Resolve eN ref from most recent `see` snapshot
-            from naturo.snapshot import get_snapshot_manager
-            mgr = get_snapshot_manager()
-            resolved = mgr.resolve_ref(target_id, app_name=app)
-            if resolved:
-                x, y = resolved[0], resolved[1]
-                target_label = target_id
-            else:
-                _common._json_err(
-                    f"Element ref '{target_id}' not found. Run 'naturo see' first to "
-                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
-                    json_output,
-                    code="REF_NOT_FOUND",
-                )
-                return
-        else:
-            # Text-based element lookup — find element center via backend
-            try:
-                elem = backend.find_element(target_id)
-                if elem:
-                    x = elem.x + elem.width // 2
-                    y = elem.y + elem.height // 2
-                    target_label = target_id
-                else:
-                    _common._json_err(
-                        f"Element '{target_id}' not found.",
-                        json_output,
-                        code="ELEMENT_NOT_FOUND",
-                    )
-                    return
-            except Exception as exc:
-                _common._json_err(
-                    f"Failed to find element '{target_id}': {exc}",
-                    json_output,
-                    code="ELEMENT_NOT_FOUND",
-                )
-                return
+        resolved = _common._resolve_text_or_ref_target(
+            target_id, backend, app, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
+        target_label = target_id
 
     try:
         backend.scroll(direction=direction, amount=amount, x=x, y=y, smooth=smooth)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action
@@ -174,6 +142,15 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         'XML format: <selector app="notepad.exe"><node role="Button" name="Save"/></selector>.'
     ),
 )
+@click.option(
+    "--from-element",
+    default=None,
+    help=(
+        "Find source element by name in the UI tree. "
+        "Matches by element name/text (e.g. slider handle label). "
+        "Simpler alternative to --from-selector for common cases."
+    ),
+)
 @click.option("--to", "to_text", help="Destination element text")
 @click.option("--to-coords", nargs=2, type=int, metavar="X Y", help="Destination X Y coordinates")
 @click.option(
@@ -185,14 +162,33 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
         'XML format: <selector app="notepad.exe"><node role="ListItem" name="Folder"/></selector>.'
     ),
 )
+@click.option(
+    "--to-element",
+    default=None,
+    help=(
+        "Find destination element by name in the UI tree. "
+        "Matches by element name/text. "
+        "Simpler alternative to --to-selector for common cases."
+    ),
+)
 @click.option("--duration", type=float, default=0.5, help="Drag duration (seconds)", show_default=True)
 @click.option("--steps", type=int, default=10, help="Interpolation steps", show_default=True)
 @click.option("--modifiers", multiple=True, help="Modifier keys to hold (ctrl, shift, alt)")
 @click.option(
+    "--trajectory",
+    type=click.Choice(["linear", "bezier", "instant"]),
+    default="linear",
+    help="Motion mode: linear (default), bezier (human-like), instant (teleport)",
+)
+@click.option("--jitter", type=float, default=0.0, help="Random perpendicular offset per step (pixels)")
+@click.option("--overshoot", type=float, default=0.0, help="Pixels to overshoot past target then correct back")
+@click.option("--release-delay", type=float, default=0.0, help="Pause before releasing button (seconds)")
+@click.option(
     "--profile",
     type=click.Choice(["linear", "ease-in-out"]),
     default="linear",
-    help="Motion profile",
+    hidden=True,
+    help="Deprecated: use --trajectory instead",
 )
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -202,9 +198,11 @@ def scroll(direction_arg, direction_option, amount, on_text, ref_alias, element_
 @_common._method_option
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
-         duration, steps, modifiers, profile, app, pid, window_title, hwnd, method,
-         app_id, json_output):
+def drag(from_text, from_coords, from_selector, from_element,
+         to_text, to_coords, to_selector, to_element,
+         duration, steps, modifiers, trajectory, jitter, overshoot, release_delay,
+         profile, app, pid, window_title, hwnd, method,
+         app_id, json_output) -> None:
     """Drag from one element/position to another.
 
     \b
@@ -212,6 +210,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
       naturo drag --from e5 --to e12
       naturo drag --from-coords 100 100 --to-coords 500 300
       naturo drag --from e5 --to-coords 500 300
+      naturo drag --from-element "Slider" --to-coords 500 300
       naturo drag --from-selector 'app://*/ListItem[@name="File1"]' --to-selector 'app://*/TreeItem[@name="Folder"]'
     """
     # (#593) Resolve --app-id to app/hwnd/pid before any other logic
@@ -230,7 +229,7 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
     from_label = None
     to_label = None
 
-    # Resolve source: --from-selector > --from-coords > --from (eN ref)
+    # Resolve source: --from-selector > --from-element > --from-coords > --from (eN ref)
     if from_selector:
         resolved = _common._resolve_selector_target(
             from_selector, backend, app, window_title, hwnd, pid, json_output,
@@ -239,6 +238,21 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
         fx, fy = resolved
         from_label = from_selector
+    elif from_element:
+        resolved = _common._find_element_by_text_fallback(
+            backend, from_element, app=app, hwnd=hwnd,
+            window_title=window_title, pid=pid,
+        )
+        if resolved is None:
+            _common._json_err(
+                f"Source element '{from_element}' not found in UI tree. "
+                f"Run 'naturo see' to inspect available elements.",
+                json_output,
+                code="ELEMENT_NOT_FOUND",
+            )
+            return
+        fx, fy = resolved
+        from_label = from_element
     elif from_coords:
         fx, fy = from_coords
     elif from_text and _re.fullmatch(r"e\d+", from_text):
@@ -252,19 +266,20 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
                 f"Source element ref '{from_text}' not found or has zero-size bounds. "
                 f"Run 'naturo see' first to capture a fresh snapshot.",
                 json_output,
-                code="REF_NOT_FOUND",
+                code="STALE_SNAPSHOT_CACHE",
+                context={"ref": from_text},
             )
             return
     else:
         _common._json_err(
-            "Specify source: --from-selector, --from-coords X Y, or --from eN "
-            "(element ref from 'naturo see')",
+            "Specify source: --from-element, --from-selector, --from-coords X Y, "
+            "or --from eN (element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
         return
 
-    # Resolve destination: --to-selector > --to-coords > --to (eN ref)
+    # Resolve destination: --to-selector > --to-element > --to-coords > --to (eN ref)
     if to_selector:
         resolved = _common._resolve_selector_target(
             to_selector, backend, app, window_title, hwnd, pid, json_output,
@@ -273,6 +288,21 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
             return
         tx, ty = resolved
         to_label = to_selector
+    elif to_element:
+        resolved = _common._find_element_by_text_fallback(
+            backend, to_element, app=app, hwnd=hwnd,
+            window_title=window_title, pid=pid,
+        )
+        if resolved is None:
+            _common._json_err(
+                f"Destination element '{to_element}' not found in UI tree. "
+                f"Run 'naturo see' to inspect available elements.",
+                json_output,
+                code="ELEMENT_NOT_FOUND",
+            )
+            return
+        tx, ty = resolved
+        to_label = to_element
     elif to_coords:
         tx, ty = to_coords
     elif to_text and _re.fullmatch(r"e\d+", to_text):
@@ -286,13 +316,14 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
                 f"Destination element ref '{to_text}' not found or has zero-size bounds. "
                 f"Run 'naturo see' first to capture a fresh snapshot.",
                 json_output,
-                code="REF_NOT_FOUND",
+                code="STALE_SNAPSHOT_CACHE",
+                context={"ref": to_text},
             )
             return
     else:
         _common._json_err(
-            "Specify destination: --to-selector, --to-coords X Y, or --to eN "
-            "(element ref from 'naturo see')",
+            "Specify destination: --to-element, --to-selector, --to-coords X Y, "
+            "or --to eN (element ref from 'naturo see')",
             json_output,
             code="INVALID_INPUT",
         )
@@ -309,9 +340,12 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 
     try:
         backend.drag(from_x=fx, from_y=fy, to_x=tx, to_y=ty,
-                     duration_ms=duration_ms, steps=steps)
+                     duration_ms=duration_ms, steps=steps,
+                     trajectory=trajectory, jitter=jitter,
+                     overshoot=overshoot,
+                     release_delay_ms=int(release_delay * 1000))
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action
@@ -340,7 +374,16 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @click.option("--to", "to_text", help="Target element text")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="Target X Y coordinates")
 @click.option("--id", "element_id", help="Target element automation ID")
-@click.option("--duration", type=float, default=0.0, help="Move duration (seconds)", hidden=True)
+@click.option(
+    "--trajectory",
+    type=click.Choice(["instant", "linear", "bezier"]),
+    default="instant",
+    help="Motion mode: instant (default, teleport), linear, bezier (human-like)",
+)
+@click.option("--duration", type=float, default=0.5, help="Movement duration in seconds (non-instant modes)")
+@click.option("--steps", type=int, default=None, help="Number of intermediate points (auto if omitted)")
+@click.option("--jitter", type=float, default=0.0, help="Random perpendicular offset per step (pixels)")
+@click.option("--overshoot", type=float, default=0.0, help="Pixels to overshoot past target then correct back")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
@@ -350,13 +393,16 @@ def drag(from_text, from_coords, from_selector, to_text, to_coords, to_selector,
 @_common._method_option
 @_common._app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
-         selector, method, app_id, json_output):
+def move(to_text, coords, element_id, trajectory, duration, steps, jitter, overshoot,
+         app, pid, window_title, hwnd, selector, method, app_id, json_output) -> None:
     """Move the mouse cursor to a target element or coordinates.
 
     \b
     Examples:
       naturo move --coords 500 300
+      naturo move --to "Save"
+      naturo move --to e42
+      naturo move --id "button_ok"
       naturo move --selector 'app://*/Button[@name="Save"]'
     """
     # (#593) Resolve --app-id to app/hwnd/pid before any other logic
@@ -366,7 +412,7 @@ def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
 
     backend = _common._get_backend(json_output)
 
-    # Resolve target: --selector > --coords
+    # Resolve target: --selector > --coords > --to/--id (text or eN ref)
     x, y = None, None
 
     if selector:
@@ -378,17 +424,36 @@ def move(to_text, coords, element_id, duration, app, pid, window_title, hwnd,
         x, y = resolved
     elif coords:
         x, y = coords
+    elif to_text or element_id:
+        target_id = to_text or element_id
+        resolved = _common._resolve_text_or_ref_target(
+            target_id, backend, app, json_output,
+        )
+        if resolved is None:
+            return
+        x, y = resolved
     else:
-        _common._json_err("Specify --selector, --coords X Y, or --to", json_output, code="INVALID_INPUT")
+        _common._json_err(
+            "Specify --selector, --coords X Y, --to TEXT, or --id",
+            json_output,
+            code="INVALID_INPUT",
+        )
         return
 
     try:
-        backend.move_mouse(x, y)
+        backend.move_mouse(
+            x, y,
+            trajectory=trajectory,
+            duration_ms=int(duration * 1000),
+            steps=steps,
+            jitter=jitter,
+            overshoot=overshoot,
+        )
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # Record the action
-    _common._record_action("move", {"x": x, "y": y})
+    _common._record_action("move", {"x": x, "y": y, "trajectory": trajectory})
 
-    _common._json_ok({"action": "moved", "x": x, "y": y}, json_output)
+    _common._json_ok({"action": "moved", "x": x, "y": y, "trajectory": trajectory}, json_output)

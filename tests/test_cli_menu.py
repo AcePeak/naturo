@@ -125,11 +125,19 @@ class TestNoMenuItems:
 class TestAppFilter:
 
     def test_app_passed_to_backend(self, runner, mock_backend):
+        # (#871) --app is resolved to a concrete handle via the shared
+        # _resolve_hwnd resolver, then that handle is inspected.  This keeps
+        # window targeting consistent with see/click/highlight and avoids the
+        # old conflation of passing the app name as a window title.
+        mock_backend._resolve_hwnd.return_value = 12345
         with _patch_platform(), _patch_backend(mock_backend), \
              patch("naturo.process.find_process", return_value={"name": "notepad"}):
             result = runner.invoke(menu_inspect, ["--app", "notepad"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.get_menu_items.assert_called_once_with(window_title="notepad", hwnd=None)
+        mock_backend._resolve_hwnd.assert_called_once_with(
+            app="notepad", window_title=None, hwnd=None, pid=None,
+        )
+        mock_backend.get_menu_items.assert_called_once_with(hwnd=12345)
 
 
 # ── Platform check ───────────────────────────────────────────────────

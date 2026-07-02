@@ -1,0 +1,25 @@
+id: TC-0072
+title: "naturo see snapshot keyboardShortcut field always null for UIA-backed elements"
+status: active
+category: exploratory
+priority: P1
+source_issue: 886
+created: 2026-05-28
+last_run: 2026-05-28
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "At least one historical snapshot exists in ~/.naturo/snapshots/ OR a live desktop session is available"
+
+steps:
+  - description: "Aggregate across all historical snapshots — count populated vs null keyboardShortcut"
+    command: "python -c \"import json,glob; n=p=0; [(n:=n+1 if v.get('keyboardShortcut') is None else (p:=p+1)) for path in glob.glob(r'C:\\Users\\Naturobot\\.naturo\\snapshots\\**\\snapshot.json', recursive=True) for v in (json.load(open(path,encoding='utf-8')).get('uiMap') or {}).values()]; print(f'null={n}, populated={p}')\""
+    expect: "populated > 0 (at minimum, Menu/Button elements with UIA AcceleratorKey or AccessKey should be populated). FAIL if populated == 0."
+
+  - description: "Live: capture Notepad via UIA, check File MenuItem has Alt+F"
+    command: "naturo see --app notepad -j > /tmp/tc-0072.json && python -c \"import json; d=json.load(open('/tmp/tc-0072.json')); items=[e for e in d.get('elements',[]) if 'File' in str(e.get('title',''))]; print([(e.get('role'),e.get('title'),e.get('keyboardShortcut')) for e in items])\""
+    expect: "At least one element with title containing 'File' has keyboardShortcut == 'Alt+F' (or similar). FAIL if all are null."
+
+pass_criteria: "Either step 1 or step 2 shows at least one populated keyboardShortcut on a UIA-backed element with a known accelerator."
+fail_action: "Update #886 with current null/populated counts and any new evidence."

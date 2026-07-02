@@ -199,7 +199,7 @@ class TestInputMixinUsesStrategy:
     def test_type_text_normal_delegates_to_sendinput(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -216,7 +216,7 @@ class TestInputMixinUsesStrategy:
     def test_type_text_hardware_delegates_to_phys32(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -233,7 +233,7 @@ class TestInputMixinUsesStrategy:
     def test_press_key_delegates_through_strategy(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -250,7 +250,7 @@ class TestInputMixinUsesStrategy:
     def test_hotkey_delegates_through_strategy(self):
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -268,7 +268,7 @@ class TestInputMixinUsesStrategy:
         """Human typing profile converts WPM to ms-per-char before delegating."""
         core = _make_core()
         with patch(
-            "naturo.backends.windows._input.get_input_strategy"
+            "naturo.backends.windows._input._keyboard.get_input_strategy"
         ) as mock_factory:
             mock_strategy = MagicMock()
             mock_factory.return_value = mock_strategy
@@ -281,6 +281,97 @@ class TestInputMixinUsesStrategy:
             mixin.type_text("abc", profile="human", wpm=60)
 
             mock_strategy.type_text.assert_called_once_with("abc", 200)
+
+
+# ── Newline handling (#840) ──────────────────────────────────────────────────
+
+
+class TestTypeTextNewlines:
+    """#840: type_text splits on newlines and presses Enter between segments."""
+
+    @staticmethod
+    def _make_mixin(mock_strategy):
+        """Create an InputMixin wired to a mock strategy."""
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _ctx():
+            core = _make_core()
+            with patch(
+                "naturo.backends.windows._input._keyboard.get_input_strategy",
+                return_value=mock_strategy,
+            ):
+                from naturo.backends.windows._input import InputMixin
+                mixin = InputMixin.__new__(InputMixin)
+                mixin._ensure_core = MagicMock(return_value=core)
+                yield mixin
+        return _ctx()
+
+    def test_no_newlines_single_call(self):
+        """Text without newlines is typed in a single call."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("hello world")
+        mock_strategy.type_text.assert_called_once_with("hello world", 5)
+        mock_strategy.press_key.assert_not_called()
+
+    def test_lf_newline_splits_and_presses_enter(self):
+        """Unix \\n is split into two type_text calls with Enter between."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("line1\nline2")
+        assert mock_strategy.type_text.call_count == 2
+        mock_strategy.type_text.assert_any_call("line1", 5)
+        mock_strategy.type_text.assert_any_call("line2", 5)
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_crlf_newline(self):
+        """Windows \\r\\n is treated as a single newline."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("a\r\nb")
+        assert mock_strategy.type_text.call_count == 2
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_cr_newline(self):
+        """Old Mac \\r is treated as a newline."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("a\rb")
+        assert mock_strategy.type_text.call_count == 2
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_multiple_newlines(self):
+        """Multiple newlines produce multiple Enter presses."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("a\nb\nc")
+        assert mock_strategy.type_text.call_count == 3
+        assert mock_strategy.press_key.call_count == 2
+
+    def test_trailing_newline(self):
+        """Trailing newline produces Enter after the text."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("hello\n")
+        mock_strategy.type_text.assert_called_once_with("hello", 5)
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_leading_newline(self):
+        """Leading newline produces Enter before the text."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("\nhello")
+        mock_strategy.type_text.assert_called_once_with("hello", 5)
+        mock_strategy.press_key.assert_called_once_with("enter")
+
+    def test_only_newlines(self):
+        """Text of only newlines produces Enter presses with no type_text calls."""
+        mock_strategy = MagicMock()
+        with self._make_mixin(mock_strategy) as mixin:
+            mixin.type_text("\n\n")
+        mock_strategy.type_text.assert_not_called()
+        assert mock_strategy.press_key.call_count == 2
 
 
 # ── Extensibility Tests ──────────────────────────────────────────────────────

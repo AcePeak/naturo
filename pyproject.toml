@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "naturo"
-version = "0.3.1"
+version = "0.3.2"
 description = "Windows desktop automation engine — see, click, type, automate."
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,7 +32,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "click>=8.0",
+    "click>=8.0,<9.0",
 ]
 
 [project.urls]
@@ -47,42 +47,62 @@ dev = [
     "pytest>=7.0",
     "pytest-cov",
     "pytest-timeout",
+    "pyyaml>=6.0",
     "ruff>=0.4.0",
     "mypy>=1.10",
+    # Pillow backs image capture/conversion and `find --image` template matching;
+    # the test environment needs it to exercise those paths cross-platform.
+    "Pillow>=9.0,<12.0",
+    # ``tomllib`` is stdlib only on Python 3.11+; tests read pyproject.toml on
+    # 3.9/3.10 via the ``tomli`` backport (#910).
+    "tomli>=2.0; python_version < '3.11'",
 ]
 ai = [
-    "anthropic>=0.20",
-    "openai>=1.0",
+    "anthropic>=0.20,<2.0",
+    "openai>=1.0,<3.0",
 ]
 mcp = [
-    "mcp>=1.0",
+    "mcp>=1.0,<2.0",
 ]
 cdp = [
-    "websocket-client>=1.0",
+    "websocket-client>=1.0,<2.0",
+]
+ocr = [
+    "rapidocr_onnxruntime>=1.3,<2.0",
 ]
 annotate = [
-    "Pillow>=9.0",
+    "Pillow>=9.0,<12.0",
 ]
 desktop = [
-    "pyvda>=0.4.0; sys_platform == 'win32'",
+    "pyvda>=0.4.0,<1.0; sys_platform == 'win32'",
 ]
 windows = [
-    "pywin32>=306; sys_platform == 'win32'",
-    "comtypes>=1.2.0; sys_platform == 'win32'",
+    "pywin32>=306,<400; sys_platform == 'win32'",
+    "comtypes>=1.2.0,<2.0; sys_platform == 'win32'",
 ]
 
 [project.scripts]
-naturo = "naturo.cli:main"
+naturo = "naturo.cli:run"
 
 [tool.setuptools.packages.find]
 include = ["naturo*"]
 
 [tool.setuptools.package-data]
-naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib"]
+naturo = ["bin/*.dll", "bin/*.so", "bin/*.dylib", "selectors_builtin/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 timeout = 120
+# Safety default: never run the real-desktop tests unless explicitly opted in.
+# The ``ui``/``integration``/``desktop`` suites drive real SendInput / native
+# UIA against whatever window has focus — an ad-hoc or looped ``pytest <file>``
+# would type into the user's active terminal (M4 criterion 3: "cmd/terminals
+# never touched"). CI already passes this exact ``-m`` filter; making it the
+# default aligns local runs with CI so injecting tests only run under an explicit
+# ``-m ui`` (or ``-m "ui or integration or desktop"``) opt-in, ideally scoped to
+# a throwaway window.
+addopts = "-m 'not ui and not integration and not desktop'"
 markers = [
     "ui: marks tests that need a desktop session (deselect with '-m \"not ui\"')",
     "windows: Windows-only test",
@@ -90,6 +110,7 @@ markers = [
     "linux: Linux-only test",
     "slow: takes >5s to run",
     "stress: stress/stability test (>30s)",
+    "soak: long-running soak/reliability cycles (M4-4; desktop QA only, opt-in)",
     "e2e: end-to-end workflow test",
     "acceptance: role-based acceptance test",
     "performance: performance benchmark",
@@ -132,10 +153,13 @@ no_implicit_optional = false
 module = [
     "naturo.backends.windows",
     "naturo.backends.windows.*",
+    "naturo.backends.macos",
+    "naturo.backends.macos.*",
     "naturo.backends.linux",
     "naturo.registry",
     "naturo.bridge",
     "naturo.cascade",
+    "naturo.cascade.*",
     "naturo.detect.probes",
     "naturo.detect.chain",
     "naturo.detect.models",

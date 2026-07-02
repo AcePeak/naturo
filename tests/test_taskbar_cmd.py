@@ -1,4 +1,4 @@
-"""Tests for naturo.cli.taskbar_cmd — taskbar list and click commands."""
+"""Tests for naturo.cli.system._taskbar — taskbar list and click commands."""
 
 import json
 from unittest.mock import MagicMock, patch
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.taskbar_cmd import taskbar
+from naturo.cli.system import taskbar
 
 
 @pytest.fixture

@@ -136,6 +136,7 @@ class TestCaptureWindow:
         capture_result.format = "png"
         capture_result.scale_factor = 1.0
         capture_result.dpi = 96
+        mock_backend._resolve_hwnd.return_value = 999
         mock_backend.capture_window.return_value = capture_result
 
         result = _call_tool(server, "capture_window", {"window_title": "Notepad"})
@@ -144,8 +145,48 @@ class TestCaptureWindow:
         assert data["width"] == 800
         assert data["height"] == 600
         assert "data_base64" in data
+        # window_title is resolved to an hwnd before capture (#954).
         mock_backend.capture_window.assert_called_once_with(
-            window_title="Notepad", output_path="capture.png"
+            hwnd=999, output_path="capture.png"
+        )
+
+    def test_unmatched_window_title_returns_window_not_found(self, server, mock_backend):
+        """An unmatched window_title must fail loudly, not silently capture the
+        foreground window (#954 — silent failure / CLI↔MCP contract drift)."""
+        from naturo.errors import WindowNotFoundError
+
+        mock_backend._resolve_hwnd.side_effect = WindowNotFoundError("zzz_nonexistent_qa")
+
+        result = _call_tool(server, "capture_window", {"window_title": "zzz_nonexistent_qa"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        assert "zzz_nonexistent_qa" in data["error"]["message"]
+        # The backend must never be asked to capture when resolution fails.
+        mock_backend.capture_window.assert_not_called()
+
+    def test_matched_window_title_captures_resolved_hwnd(self, server, mock_backend, tmp_path):
+        """A matched window_title must capture the resolved window by hwnd, not
+        pass the raw title (which the Windows backend ignores -> foreground)."""
+        png_file = tmp_path / "win.png"
+        png_file.write_bytes(b"\x89PNGdata")
+
+        capture_result = MagicMock()
+        capture_result.path = str(png_file)
+        capture_result.width = 800
+        capture_result.height = 600
+        capture_result.format = "png"
+        capture_result.scale_factor = 1.0
+        capture_result.dpi = 96
+        mock_backend._resolve_hwnd.return_value = 4242
+        mock_backend.capture_window.return_value = capture_result
+
+        result = _call_tool(server, "capture_window", {"window_title": "Notepad"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend._resolve_hwnd.assert_called_once_with(window_title="Notepad")
+        mock_backend.capture_window.assert_called_once_with(
+            hwnd=4242, output_path="capture.png"
         )
 
     def test_captures_foreground_window(self, server, mock_backend):

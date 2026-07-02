@@ -91,6 +91,56 @@ def server(mock_backend, snapshot_mgr):
 # ── see_ui_tree ──────────────────────────────────────────────────────
 
 
+class TestSeeUiTreeCascade:
+    """The unified see --cascade tree must be reachable via MCP (M3 criterion 1)."""
+
+    def test_cascade_returns_fused_correctness_tagged_tree(self, server):
+        from naturo.backends.base import ElementInfo
+        from naturo.cascade._types import CascadeResult, CascadeStats
+
+        root = ElementInfo(
+            id="w", role="Window", name="App", value=None,
+            x=0, y=0, width=200, height=200,
+            properties={"source": "uia"},
+            children=[
+                ElementInfo(id="b", role="Button", name="Save", value=None,
+                            x=0, y=0, width=100, height=50, children=[],
+                            properties={"source": "uia"}),
+                ElementInfo(id="c", role="Link", name="Open", value=None,
+                            x=100, y=0, width=40, height=40, children=[],
+                            properties={"source": "cdp"}),
+            ],
+        )
+        result = CascadeResult(tree=root, stats=CascadeStats(), primary_provider="uia")
+
+        with patch("naturo.cascade.run_cascade", return_value=result) as mock_cascade:
+            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123})
+
+        mock_cascade.assert_called_once()
+        data = json.loads(out[0].text)
+        assert data["success"] is True
+        tree = data["tree"]
+        # every fused node carries techniques[] + correctness + confidence
+        assert tree["techniques"] == ["uia"]
+        assert tree["correctness"] == "deterministic"
+        assert tree["confidence"] == 1.0
+        child_techs = {tuple(ch["techniques"]) for ch in tree["children"]}
+        assert ("uia",) in child_techs and ("cdp",) in child_techs
+        # deterministic preferred, no false uncertain
+        assert all(ch["correctness"] == "deterministic" for ch in tree["children"])
+        # structured recognition summary is exposed to the agent
+        assert "recognition_summary" in data
+        assert data["recognition_summary"]["by_technique"].get("cdp") == 1
+        assert data["recognition_summary"]["has_uncertain"] is False
+
+    def test_non_cascade_tree_has_no_fusion_tags(self, server, mock_backend):
+        # plain (single-backend) path stays unchanged — no techniques/correctness.
+        out = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(out[0].text)
+        assert "techniques" not in data["tree"]
+        assert "recognition_summary" not in data
+
+
 class TestSeeUiTree:
 
     def test_returns_tree_structure(self, server, mock_backend):
@@ -109,13 +159,77 @@ class TestSeeUiTree:
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
         mock_backend.get_element_tree.assert_called_once_with(
-            window_title="Notepad", depth=7, backend="uia",
+            app=None, window_title="Notepad", hwnd=None, pid=None,
+            depth=7, backend="uia",
         )
 
     def test_custom_depth_and_backend(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"depth": 3, "accessibility_backend": "msaa"})
         mock_backend.get_element_tree.assert_called_once_with(
-            window_title=None, depth=3, backend="msaa",
+            app=None, window_title=None, hwnd=None, pid=None,
+            depth=3, backend="msaa",
+        )
+
+    def test_with_hwnd(self, server, mock_backend):
+        _call_tool(server, "see_ui_tree", {"hwnd": 12345})
+        mock_backend.get_element_tree.assert_called_once_with(
+            app=None, window_title=None, hwnd=12345, pid=None,
+            depth=7, backend="uia",
+        )
+
+    def test_with_pid(self, server, mock_backend):
+        _call_tool(server, "see_ui_tree", {"pid": 9999})
+        mock_backend.get_element_tree.assert_called_once_with(
+            app=None, window_title=None, hwnd=None, pid=9999,
+            depth=7, backend="uia",
+        )
+
+    def test_app_param_triggers_multi_window_enumeration(self, server, mock_backend):
+        """When app is provided without hwnd, _resolve_hwnds is used (#737)."""
+        child = _make_element(id="btn1", role="Button", name="Click Me")
+        window_tree = _make_element(id="win1", role="Window", name="App Window", children=[child])
+        mock_backend._resolve_hwnds.return_value = [100]
+        mock_backend.get_element_tree.return_value = window_tree
+        result = _call_tool(server, "see_ui_tree", {"app": "MyApp"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend._resolve_hwnds.assert_called_once_with(app="MyApp")
+        mock_backend.get_element_tree.assert_called_once_with(
+            hwnd=100, depth=7, backend="uia",
+        )
+
+    def test_app_with_multiple_windows_merges_trees(self, server, mock_backend):
+        """Multiple windows for same app are merged under a virtual root (#737)."""
+        tree1 = _make_element(id="w1", role="Window", name="Win 1")
+        tree2 = _make_element(id="w2", role="Window", name="Win 2")
+        mock_backend._resolve_hwnds.return_value = [100, 200]
+        mock_backend.get_element_tree.side_effect = [tree1, tree2]
+        result = _call_tool(server, "see_ui_tree", {"app": "MultiWin"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        tree = data["tree"]
+        assert tree["role"] == "Application"
+        assert tree["name"] == "MultiWin"
+        assert len(tree["children"]) == 2
+        assert tree["children"][0]["role"] == "WindowGroup"
+        assert tree["children"][1]["role"] == "WindowGroup"
+
+    def test_app_no_windows_returns_error(self, server, mock_backend):
+        """No windows found for app returns NO_WINDOW error (#737)."""
+        mock_backend._resolve_hwnds.return_value = []
+        result = _call_tool(server, "see_ui_tree", {"app": "Nonexistent"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+
+    def test_app_with_hwnd_bypasses_multi_window(self, server, mock_backend):
+        """When both app and hwnd are provided, hwnd takes priority (#737)."""
+        _call_tool(server, "see_ui_tree", {"app": "MyApp", "hwnd": 12345})
+        # Should NOT call _resolve_hwnds — hwnd takes priority
+        mock_backend._resolve_hwnds.assert_not_called()
+        mock_backend.get_element_tree.assert_called_once_with(
+            app="MyApp", window_title=None, hwnd=12345, pid=None,
+            depth=7, backend="uia",
         )
 
     def test_depth_below_range_returns_error(self, server):
@@ -141,7 +255,7 @@ class TestSeeUiTree:
         result = _call_tool(server, "see_ui_tree", {})
         data = json.loads(result[0].text)
         assert data["success"] is False
-        assert data["error"]["code"] == "NO_WINDOW"
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
 
     def test_nested_children_serialized(self, server, mock_backend):
         child = _make_element(id="child1", role="Text", name="Hello", children=[])
@@ -257,14 +371,19 @@ class TestSetElementValue:
         })
         mock_backend._resolve_hwnd.assert_called_once_with(window_title="Notepad")
 
-    def test_hwnd_resolution_failure_graceful(self, server, mock_backend):
-        mock_backend._resolve_hwnd.side_effect = Exception("window gone")
+    def test_unresolvable_window_title_fails_loudly(self, server, mock_backend):
+        """(#957) An unmatched window_title must fail loudly, never silently
+        target the foreground window."""
+        from naturo.errors import WindowNotFoundError
+        mock_backend._resolve_hwnd.side_effect = WindowNotFoundError("Gone")
         result = _call_tool(server, "set_element_value", {
             "value": "test", "window_title": "Gone",
         })
         data = json.loads(result[0].text)
-        # Should still attempt set_element_value (with hwnd=0)
-        mock_backend.set_element_value.assert_called_once()
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        # The element write must NOT run against the foreground window.
+        mock_backend.set_element_value.assert_not_called()
 
     def test_ref_resolves_via_snapshot(self, server, mock_backend):
         mock_elem = MagicMock()

@@ -538,7 +538,8 @@ class TestNotepadAutomation:
         import subprocess
         import time
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             # Find Notepad window (UWP/WinUI3 Notepad on Win11 may be
             # hosted by ApplicationFrameHost.exe, so check title too #534)
@@ -550,13 +551,15 @@ class TestNotepadAutomation:
                     return True
                 return False
 
-            # (#560) Poll for Notepad window — UWP launch is slow
-            deadline = time.monotonic() + 10.0
+            # (#560, #729) Poll for Notepad window — UWP launch is slow.
+            # Do NOT filter by is_visible during polling: UWP windows may
+            # not report visibility immediately after launch (#729).
+            deadline = time.monotonic() + 20.0
             notepad = None
             while notepad is None and time.monotonic() < deadline:
                 windows = core.list_windows()
                 notepad = next(
-                    (w for w in windows if _is_notepad(w) and w.is_visible),
+                    (w for w in windows if _is_notepad(w)),
                     None
                 )
                 if notepad is None:

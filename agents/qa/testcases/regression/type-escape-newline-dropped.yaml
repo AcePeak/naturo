@@ -1,0 +1,35 @@
+id: TC-0042
+title: "naturo type -E silently drops newline characters during keystroke simulation"
+status: active
+category: regression
+priority: P1
+source_issue: 784
+created: 2026-04-02
+last_run: 2026-04-05
+last_result: fail
+consecutive_passes: 0
+notes: "2026-04-05 R115: FAIL — type -E 'Line1\\nLine2\\nLine3' produces 'Line1Line2Line3' on single line. Screenshot confirms. #840 open."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is running with empty editor"
+
+steps:
+  - description: "Launch Notepad and clear editor"
+    command: "naturo app launch notepad && sleep 2 && naturo press 'ctrl+a' --app notepad && naturo press 'delete' --app notepad"
+    expect: "Empty Notepad editor"
+  - description: "Type multiline text using -E escape flag"
+    command: "naturo type 'Line 1\\nLine 2\\nLine 3' -E --app notepad"
+    expect: "Text should appear on 3 separate lines in the editor"
+  - description: "Screenshot verify"
+    command: "naturo capture --app notepad -o /tmp/tc-0042.png"
+    expect: "Screenshot shows 3 lines: Line 1, Line 2, Line 3. Status bar shows Line 3."
+  - description: "Verify with --paste -E as comparison"
+    command: "naturo press 'ctrl+a' --app notepad && naturo press 'delete' --app notepad && naturo type 'Line A\\nLine B\\nLine C' -E --paste --app notepad"
+    expect: "--paste mode correctly produces 3 lines (workaround)"
+  - description: "Cleanup"
+    command: "naturo app quit notepad"
+    expect: "Notepad closed"
+
+pass_criteria: "naturo type -E correctly translates \\n to Enter keypresses, producing multiline text without --paste"
+fail_action: "File P1 bug: type -E interprets \\n but silently drops newline during keystroke simulation"

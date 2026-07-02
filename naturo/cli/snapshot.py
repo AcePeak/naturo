@@ -14,7 +14,8 @@ Commands
 
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
+from naturo.cli.error_helpers import emit_error
 
 import click
 
@@ -63,7 +64,7 @@ def snapshot_list(session: str | None, json_output: bool) -> None:
             }
             for s in infos
         ]
-        click.echo(json_module.dumps({
+        click.echo(json_dumps({
             "success": True,
             "session": mgr.session,
             "snapshots": data,
@@ -107,7 +108,7 @@ def snapshot_sessions(json_output: bool) -> None:
                 sessions.append({"name": entry.name, "snapshot_count": count})
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, "sessions": sessions}, indent=2))
+        click.echo(json_dumps({"success": True, "sessions": sessions}, indent=2))
     else:
         if not sessions:
             click.echo("No sessions found.")
@@ -137,19 +138,11 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
     """
     if not clean_all and days is None:
         msg = "Specify --days N or --all.  Run with --help for usage."
-        if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        emit_error("INVALID_INPUT", msg, json_output)
 
     if days is not None and days < 0:
         msg = f"--days must be >= 0, got {days}"
-        if json_output:
-            click.echo(json_module.dumps({"success": False, "error": {"code": "INVALID_INPUT", "message": msg}}))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        emit_error("INVALID_INPUT", msg, json_output)
 
     # Determine which sessions to clean
     if session == "all":
@@ -157,7 +150,7 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
         base = DEFAULT_STORAGE_ROOT
         if not base.exists():
             if json_output:
-                click.echo(json_module.dumps({"success": True, "deleted": 0}))
+                click.echo(json_dumps({"success": True, "deleted": 0}))
             else:
                 click.echo("No snapshots found.")
             return
@@ -179,7 +172,7 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
                 total += mgr.clean_older_than(days)  # type: ignore[arg-type]
 
         if json_output:
-            click.echo(json_module.dumps({"success": True, "deleted": total, "sessions": "all"}))
+            click.echo(json_dumps({"success": True, "deleted": total, "sessions": "all"}))
         else:
             click.echo(f"Deleted {total} snapshot(s) across all sessions.")
         return
@@ -203,7 +196,7 @@ def snapshot_clean(session: str | None, days: int | None, clean_all: bool, yes: 
         count = mgr.clean_older_than(days)  # type: ignore[arg-type]
 
     if json_output:
-        click.echo(json_module.dumps({"success": True, "deleted": count, "session": mgr.session}))
+        click.echo(json_dumps({"success": True, "deleted": count, "session": mgr.session}))
     else:
         click.echo(f"Deleted {count} snapshot(s) from session '{mgr.session}'.")
 

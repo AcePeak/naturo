@@ -1,0 +1,25 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   b6f097b..6a7e2d2  main       -> origin/main
+Updating b6f097b..6a7e2d2
+Fast-forward
+ agents/dev/status.md              |  33 +++----
+ naturo/cli/__init__.py            |   9 ++
+ naturo/cli/interaction.py         | 121 ++++++++++++++++++++++-
+ tests/test_click_text_fallback.py | 202 ++++++++++++++++++++++++++++++++++++++
+ tests/test_help_command.py        |  35 +++++++
+ 5 files changed, 381 insertions(+), 19 deletions(-)
+ create mode 100644 tests/test_click_text_fallback.py
+ create mode 100644 tests/test_help_command.py
+[2026/03/28 ÖÜÁù  2:00:03.78] Starting QA-Mariana round 
+## Round 46 Complete
+
+**Summary:**
+- **CI**: 109+8 passed, 2 failed (both `test_window_lifecycle` #446). `test_detect_notepad_has_uia` was flaky.
+- **Verification**: #455 and #449 blocked on unmerged PRs (#461, #462)
+- **E2E**: Notepad PASS (type, emoji, special chars, select-all, delete), Calculator PASS (9Ã—6=54, 5+3=8)
+- **Exploratory**: Error messages clear, exit codes correct, JSON valid, emoji/special chars work
+- **Enterprise RPA Sim**: 10-step workflow completed without failure. Found new bug #465 (--app cross-process title matching)
+- **Regression**: 6/8 passed, 2 failed (both blocked on unmerged PRs)
+- **New**: TC-0011 test case created, issue #465 filed
+- **Top risk**: 4 PRs (#458, #459, #461, #462) sitting unmerged â€” blocking verification of 4 bug fixes

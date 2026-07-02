@@ -1,0 +1,14 @@
+{
+  "name": "naturo-recognition-electron-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic, owned Electron app used by naturo's recognition-coverage benchmark to prove the CDP cascade recovers renderer content that UIA is structurally blind to (issue #933).",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "31.7.7"
+  }
+}

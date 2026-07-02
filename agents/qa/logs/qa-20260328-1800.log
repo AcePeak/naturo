@@ -1,0 +1,42 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   05f128e..09afbfd  main       -> origin/main
+Updating 05f128e..09afbfd
+Fast-forward
+ agents/dev/status.md              |  42 ++-
+ agents/orchestrator/dev-prompt.md |  43 ++-
+ naturo/annotate.py                | 237 +++++++++++++++-
+ naturo/app_ids.py                 | 206 ++++++++++++++
+ naturo/backends/base.py           |  69 +++++
+ naturo/backends/windows.py        | 219 +++++++++++++--
+ naturo/bridge.py                  | 555 +++++++++++++++++++++++++++++++-------
+ naturo/cli/__init__.py            |   2 +
+ naturo/cli/app_cmd.py             |  18 +-
+ naturo/cli/core.py                | 158 +++++++++--
+ naturo/cli/interaction.py         | 296 +++++++++++++++++++-
+ naturo/cli/set_cmd.py             | 433 +++++++++++++++++++++++++++++
+ naturo/mcp_server.py              | 222 +++++++++++++++
+ naturo/process.py                 |  30 +++
+ naturo/snapshot.py                |  82 +++++-
+ tests/conftest.py                 |   6 +-
+ tests/test_app_control.py         |   8 +-
+ tests/test_app_ids.py             | 214 +++++++++++++++
+ tests/test_backends.py            |  19 ++
+ tests/test_highlight.py           | 282 +++++++++++++++++++
+ tests/test_process.py             |  54 +++-
+ tests/test_selector_cli.py        | 279 +++++++++++++++++++
+ tests/test_set_cmd.py             | 550 +++++++++++++++++++++++++++++++++++++
+ tests/test_snapshot.py            | 112 ++++++++
+ tests/test_win32_hybrid.py        | 275 +++++++++++++++++++
+ 25 files changed, 4204 insertions(+), 207 deletions(-)
+ create mode 100644 naturo/app_ids.py
+ create mode 100644 naturo/cli/set_cmd.py
+ create mode 100644 tests/test_app_ids.py
+ create mode 100644 tests/test_highlight.py
+ create mode 100644 tests/test_selector_cli.py
+ create mode 100644 tests/test_set_cmd.py
+ create mode 100644 tests/test_win32_hybrid.py
+[2026/03/28 ÖÜÁù 18:00:08.15] Starting QA-Mariana round 
+
+
+Background task for TC-0015 already read and incorporated into the round results. All 8 phases are complete â€” no further action needed from this notification.

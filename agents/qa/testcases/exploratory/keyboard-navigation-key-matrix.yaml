@@ -1,0 +1,49 @@
+id: TC-0089
+title: "press accepts the full keyboard-navigation key matrix a screen-reader/keyboard-only user depends on"
+status: blocked          # depends on an interactive desktop session; NO_DESKTOP guard fires before key-spec parsing in current infra (#863)
+category: exploratory
+priority: P2
+source_issue: null       # regression-prevention; broadens TC-0035 (standalone modifiers only) for the Accessibility persona; related #896 (focus schema), #866 (exit-code framing)
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: blocked
+consecutive_passes: 0
+notes: >
+  R149 (Accessibility User persona). A keyboard-only / screen-reader user navigates Win32/UIA
+  apps entirely with keys: Tab / Shift+Tab to move focus, Apps (Menu) for context menus, F6 to
+  cycle panes, F10/Alt to reach the menu bar, arrows + Home/End/PageUp/PageDown inside controls.
+  naturo's `press` must accept ALL of these key NAMES and actually produce the keystroke.
+  TC-0035 only covers standalone alt/ctrl/shift; this case locks in the broader navigation matrix.
+  Cannot run in the current QA infra: the NO_DESKTOP_SESSION guard fires BEFORE key-spec parsing,
+  so every `naturo press <key>` (even `press tab`) exits 2 + Usage banner (#866) without ever
+  reaching the key parser — key-name acceptance is therefore unobservable here. Marked blocked
+  until a console/RDP desktop session is available. When it runs, ALSO assert the physical effect
+  via screenshot (focus actually moved / menu actually opened), never just exit code.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "An interactive desktop session is available (console or RDP) — SendInput not blocked (#863)"
+  - "An app with a menu bar, multiple panes, and focusable controls is open (e.g. Notepad or Explorer)"
+
+steps:
+  - description: "Tab moves keyboard focus forward (verify focus actually moves, not just exit 0)"
+    command: "naturo press tab --app notepad"
+    expect: "exit 0; screenshot/HasKeyboardFocus shows focus advanced to next control"
+  - description: "Shift+Tab moves focus backward"
+    command: "naturo press shift+tab --app notepad"
+    expect: "exit 0; focus moves to previous control"
+  - description: "Apps / Menu (context-menu) key — core screen-reader operation"
+    command: "naturo press apps --app notepad"
+    expect: "exit 0; context menu opens at the focused element (screenshot confirms)"
+  - description: "F6 cycles between panes"
+    command: "naturo press f6 --app explorer"
+    expect: "exit 0; focus moves to the next pane"
+  - description: "F10 / Alt activates the menu bar"
+    command: "naturo press f10 --app notepad"
+    expect: "exit 0; menu bar receives focus (File highlighted)"
+  - description: "Arrow + Home/End/PageUp navigation keys are accepted"
+    command: "naturo press down up home end pageup pagedown --app notepad"
+    expect: "exit 0; no 'unknown key' / 'invalid argument' parse error for any spec"
+
+pass_criteria: "press accepts every navigation key name (no parse error) AND each key produces its physical effect confirmed by screenshot/focus state. Any key name rejected as invalid, or accepted-but-no-effect (silent failure), is a bug."
+fail_action: "File a P1 accessibility issue: keyboard-only navigation is broken because press rejects/no-ops a core navigation key; cross-link #896 (focus introspection) and TC-0035."

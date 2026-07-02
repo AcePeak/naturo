@@ -1,7 +1,7 @@
 # Session Handoff — Orc-Mycelium
 
 > This file preserves context across sessions. Read this on every startup.
-> Last updated: 2026-03-31 (session 2) by Orc-Mycelium
+> Last updated: 2026-04-01 by Orc-Mycelium
 
 ## Who Am I
 
@@ -12,99 +12,90 @@ I am **Orc-Mycelium**, the strategic orchestrator of the naturo project. My role
 - Communicate with Ace (the project owner)
 - My git identity: `Orc-Mycelium <ace.busy@gmail.com>`
 
-## Current Product State (2026-03-31)
+## Current Product State (2026-04-01)
 
 ### Version Status
 - **v0.3.0**: Released on PyPI (2026-03-26)
-- **v0.3.1**: Ready to release pending Ace's final verification
-  - highlight DPI bug #662: **FIXED** (merged in #663 + #687)
-  - click snapshot misalignment: **FIXED** (merged in #687)
-  - AI vision JSON parsing: **IN PROGRESS** (PR #691, needs window-specific capture fix)
-- **v0.3.2**: In progress (Dev-Sirius active: #412 input strategy refactor done, test coverage push)
-- **v0.3.3**: 14% (Enterprise: Excel/SAP/MinHook/standalone exe)
-- **v0.3.4**: 28% (Launch & community)
+- **v0.3.1**: Released on PyPI (2026-03-31) — AI vision cascade, DPI fixes, input strategy refactor
+- **v0.3.2**: In progress — 20+ issues open, Dev-Sirius actively working. ~50% complete.
 
-### What Was Done This Session (2026-03-31)
+### Branch Strategy (ACTIVE since v0.3.1)
+- **`main`** = stable release = PyPI version (v0.3.1). Locked for direct push.
+- **`develop`** = daily development. All agents work here.
+- Feature branches → PR (--base develop) → develop
+- `develop` → `main` only on release (tag + PyPI publish)
+- Each agent uses its own **git worktree** to avoid conflicts
 
-#### Bugs Fixed & Merged
-1. **#662 highlight DPI positioning** (PR #663, merged) — `_draw_gdi_overlay()` with `SetThreadDpiAwarenessContext(-4)`, `flatten_element_tree()` shared with `see`, CLI pre-fetches tree
-2. **click snapshot misalignment** (PR #687, merged) — `resolve_ref()` now accepts `app_name` to prevent cross-app snapshot confusion. All interaction commands (click/type/press/scroll/drag/capture) updated
-3. **click feedback output** (PR #687, merged) — shows `Clicking e5 (Button "OK") at (120, 220)` before clicking
-4. **highlight options parity with see** (PR #687, merged) — added `--visible-only`, `--cascade`, `--fill-gaps`, `--pid`, expanded `--backend` choices
-5. **highlight defaults to all elements** (PR #687, merged) — was actionable-only, now shows all like `see`. Use `--actionable-only` to filter
-6. **review prompt timestamp** (PR #687, merged) — daily review filename now `YYYY-MM-DD-HHmm`
+### Agent Workflow
+- **Dev-Sirius**: Creates feature branch → PR → develop. Marks issues `status:done`. NEVER pushes directly to develop or main. NEVER closes issues.
+- **QA-Mariana**: Verifies `status:done` issues on desktop. If pass → adds `verified` label AND closes issue. If fail → removes `status:done`, sends back to Dev.
+- **Orc-Mycelium**: Reviews, creates issues, adjusts milestones, handles CI/infra. Can push directly to develop for operational changes.
 
-#### AI Vision (PR #691, open, needs more work)
-- `max_tokens` 512→16384 — fixes JSON truncation
-- Code fence regex — handles Windows `\r\n`, no trailing newline
-- Prompt rewrite — demands leaf elements, pixel-precise bounds, standard roles
-- `_merge_ai_into_tree()` — IoU deduplication + smallest-encloser parent grafting
-- **BLOCKING BUG FOUND**: cascade auto-capture screenshots the **foreground terminal window** instead of the target app. AI Vision analyzes terminal text instead of the actual app. Needs `capture_screen(hwnd=target)` window-specific capture.
-- 13 merge algorithm tests pass
+### v0.3.2 Scope
+Major features and improvements planned:
 
-#### Documentation
-- **SUPPORTED_APPS.md restructured** — framework-primary + QA evidence + community contributions
-- **scripts/generate_compatibility_report.py** — auto-generates validated apps table from QA test cases
-- **docs/CONTRIBUTING_APP_RESULTS.md** — community submission guide
-- **.github/ISSUE_TEMPLATE/app-test-result.yml** — structured issue form for app testing
-- **QA prompt Phase 8 updated** — runs compatibility script after each round
-- **docs/case-studies/electron-app-cascade.md** — cascade recognition case study for marketing
+| Category | Issues |
+|----------|--------|
+| **Selector system** | #104 (built-in templates for top 20 apps), #105 (save/load/list/export) |
+| **Browser automation** | #758 (Chrome profile mgmt), #759 (`naturo browser` subcommand + hover/scroll/click-offset/download), #760 (anti-detection defaults), #762 (wait mechanisms), #764 (iframe support), #765 (network interception/listening) |
+| **Input primitives** | #757 (human-like mouse motion: bezier, jitter, overshoot) |
+| **Captcha architecture** | #761 (hooks, motion primitives, cookie mgmt, third-party integration) |
+| **Validation** | #763 (client script equivalence: 5-phase validation against rpa-client-* patterns) |
+| **AI Vision** | #754 (--ai-model/--ai-provider CLI params, model registry, Google Gemini provider) |
+| **Recording/Playback** | #90 (enterprise recording engine) |
+| **Visual regression** | #91 (screenshot comparison testing) |
+| **CLI/Docs** | #719 (CLI reorg), #720 (_element.py split), #721 (examples), #722 (MCP docs), #726 (hero GIF) |
+| **Ops** | #723 (agent cost guardrails), #724 (git identity), #725 (issue triage), #727 (good first issues) |
 
-### Blocking Issues for v0.3.1 Release
-1. ~~highlight DPI bug~~ ✅ Fixed
-2. ~~click snapshot misalignment~~ ✅ Fixed
-3. AI vision window-specific capture — NOT blocking release (cascade is optional feature)
-4. Need to bump version to 0.3.1 in code, tag, publish to PyPI
+### Key Architecture Decisions (from Ace)
 
-### Release Plan
-1. ~~Fix highlight DPI bug~~ ✅
-2. Ace does final verification on 4K Windows 11 machine — highlight ✅, click ✅ (with feedback)
-3. Bump version to 0.3.1
-4. Tag + publish to PyPI
-5. After v0.3.1 release: create `develop` branch, switch all agents/CI to develop, lock main for releases only
+#### Cascade Recognition = Key Differentiator
+- UIA + CDP + AI Vision multi-source fusion — no competitor does this
+- `cascade/` is now a subpackage (7 modules, split from 1424-line monolith)
+- README has dedicated "Cascade Recognition" section
+- Proven on Feishu: 705 UIA + 133 vision = 838 total elements
 
-## TODO for Next Session
+#### AI Vision Model Strategy
+- Default should be best model (Opus 4.6), not cheapest
+- Model registry with friendly names (user picks `opus-4.6` not `claude-opus-4-6`)
+- Support Anthropic, OpenAI, Google Gemini, Ollama
+- CLI params `--ai-model` override env vars
+- Issue #754 tracks this
 
-### Immediate
-1. **Fix AI vision window capture** — cascade screenshot must capture the target app window, not foreground terminal. Check `capture_screen()` — does it support `hwnd=` param for window-specific capture? If not, add it.
-2. **AI vision DPI coordinate scaling** — AI reports in screenshot pixels (logical), UIA in physical pixels. On 150% DPI these are 1.5x apart. `_merge_ai_into_tree` needs to scale AI coords by `dpi_scale` before IoU comparison.
-3. **Merge PR #691** after fixing window capture + DPI scaling
+#### Browser Automation Strategy
+- naturo is an orchestration layer — integrate best tools, not reimplement
+- Current: CDP client (688 lines) for Electron/Chrome interaction
+- v0.3.2 scope (all tracked with issues):
+  - #758: Chrome profile management (create/list/switch/persist)
+  - #759: `naturo browser` subcommand (launch/navigate/find/click/type/wait/screenshot)
+  - #760: Anti-detection defaults (stealth ON by default, `navigator.webdriver` suppression)
+  - #762: Wait mechanisms (DOM events, network idle, element states)
+  - #757: Human-like mouse motion (bezier, 4-phase acceleration, jitter, overshoot)
+  - #761: Captcha architecture (hooks + motion primitives + cookie management)
+  - #763: Validation against 23 rpa-client-* production scripts
+- Design principle: anti-detection is default behavior, not opt-in
+- Design principle: captcha handling = naturo primitives + user hooks + third-party services
+- Browser provider pattern mirrors AI vision provider pattern
+- Future: DrissionPage adapter (optional), Playwright (optional)
 
-### Short-term
-4. **Release v0.3.1** — all blocking issues fixed
-5. **Implement main/develop branch split** — after v0.3.1 tag
-6. **v0.3.2 scope decision** — #580
+#### Platform Focus
+- **Windows-first** — all development focused here
+- Linux/macOS issues (#66, #68, #74, #75, #77, #84, #87, #88) removed from milestones
+- Labeled `help wanted` + `good first issue` for external contributors
 
-### Medium-term
-7. **Hero GIF for README** (#47) — could showcase cascade recognition
-8. **Launch announcements** (#55) — HN/Reddit/Twitter push
-9. **Naturobot Engine analysis** — browser capabilities comparison
-
-## Key Product Decisions (from Ace)
-
-### Cascade Recognition as Key Differentiator
-- UIA + CDP + AI Vision multi-source fusion is unique — no competitor does this
-- Case study documented in `docs/case-studies/electron-app-cascade.md`
-- Should be prominently featured in README, onboarding, marketing
-- Algorithm: IoU deduplication → smallest-encloser parent grafting → source tagging
-
-### Documentation Strategy (agreed this session)
-- **Framework-primary** compatibility docs (not per-app matrices)
-- **QA evidence layer** — auto-generated from test case YAML
-- **Community contributions** — fork users submit test results via structured PR/issue
-- See `docs/SUPPORTED_APPS.md` for the new structure
-
-### Architecture
-- naturo is an orchestration layer — integrates best-of-breed tools
-- Auto-detect what's available → use it → fall back gracefully
-- `--cascade` for progressive multi-source recognition
+#### Language Policy
+- All code, comments, docs, issues in English
+- Chinese app aliases in code are functional (required for Chinese Windows) — keep
+- Design docs translated to English (NPM_DISTRIBUTION.md, DESIGN-PRINCIPLES.md done)
 
 ## Agent System
 
-### Schedule
-- **Dev-Sirius**: Hourly, repository AcePeak/naturo
+### Schedule (Claude Code web UI)
+- **Dev-Sirius**: Hourly, starts with `git fetch origin develop && git checkout develop && git pull origin develop`
+- **QA-Mariana**: Hourly on self-hosted Windows runner
 - **Daily Review (Orc-Mycelium)**: Daily 09:00
-- **QA-Mariana**: GitHub Actions on self-hosted Windows runner
+
+All schedules prepend `git fetch origin develop && git checkout develop && git pull origin develop` before reading their prompt file.
 
 ### Key Files
 | Purpose | Path |
@@ -113,23 +104,56 @@ I am **Orc-Mycelium**, the strategic orchestrator of the naturo project. My role
 | Dev prompt | `agents/orchestrator/dev-prompt.md` |
 | QA prompt | `agents/orchestrator/qa-prompt.md` |
 | Review prompt | `agents/orchestrator/review-prompt.md` |
-| Case study | `docs/case-studies/electron-app-cascade.md` |
-| Compatibility docs | `docs/SUPPORTED_APPS.md` |
-| Community guide | `docs/CONTRIBUTING_APP_RESULTS.md` |
-| Compat script | `scripts/generate_compatibility_report.py` |
+| Rules (all agents) | `agents/RULES.md` |
 | Project state | `agents/STATE.md` |
 | Roadmap | `docs/ROADMAP.md` |
+| Config (centralized) | `naturo/config.py` |
+
+### CI Architecture
+- **build.yml**: Lint + MyPy, Python tests (3.9/3.12/3.13 matrix on Ubuntu/macOS), C++ DLL build + Windows tests
+- **publish.yml**: Triggered by GitHub Release → builds DLL → publishes to PyPI
+- **codeql.yml**: Security analysis on push to main/develop
+- Python 3.9 has `continue-on-error: true` (pre-existing compat issues)
+- Coverage threshold enforced at 70%
 
 ## Recurring Issues & Lessons Learned
 
-### AI Vision Window Capture (NEW — 2026-03-31)
-- **Root cause**: `capture_screen()` in cascade mode captures the foreground window (terminal), not the target app specified by `--app`
-- **Impact**: AI Vision analyzes terminal text instead of the actual app, producing useless elements
-- **Fix needed**: Pass `hwnd` of the target app to `capture_screen()` so it captures that specific window
-- **Also needed**: Scale AI Vision coordinates by DPI factor before merging with UIA tree
+### Agent Workspace Conflicts (SOLVED)
+- **Problem**: Agents shared same working directory, branch switching corrupted each other's work
+- **Fix**: Each agent uses dedicated git worktree (`../naturo-dev-sirius`, `../naturo-qa-mariana`)
+- **Rule**: RULES.md rule #4 enforces this
 
-### DPI Scaling
-- `SetThreadDpiAwarenessContext(-4)` is critical for all GDI/Win32 operations
-- UIA coordinates are in physical pixels (per-monitor DPI aware)
-- Screenshots may be in logical pixels — AI Vision coords need scaling
-- Must test at 100%, 125%, 150%, 200% DPI
+### AI Vision Coordinate Pipeline (SOLVED in v0.3.1)
+- `capture_window(hwnd)` not `capture_screen()` — targets correct app
+- No DPI scaling needed — `PrintWindow` and UIA both in physical pixels
+- Auto-detect `[x1,y1,x2,y2]` vs `[x,y,w,h]` bounds format
+- Auto-scale from API-downscaled image to actual screenshot dimensions
+- UIA tree snapshot for parent lookup — prevents AI nesting
+- Tuple `(x,y,w,h)` → JSON array conversion fallback
+
+### Issue Lifecycle (FIXED)
+- **Old bug**: `status:done` + `verified` issues stayed open because QA didn't close them
+- **Fix**: QA prompt Phase 1 now explicitly runs `gh issue close N` after verification
+- **20 issues** were manually closed to clear the backlog
+
+### Post-Release Debt Sweep
+- Review prompt has Phase 3.5: after every PyPI release, Orc runs 7-point sweep
+- Every finding becomes an issue in the next milestone — zero tolerance for tech debt carry-forward
+
+## TODO for Next Session
+
+### Immediate
+1. Check v0.3.2 progress — how many issues still open?
+2. Check CI status on develop — is it green?
+3. Review any `status:done` issues that QA hasn't verified yet
+
+### Short-term
+4. #754 — AI model registry + CLI params (design approved, needs implementation)
+5. Browser automation design — `naturo browser` subcommand architecture
+6. #104/#105 — Selector system (largest remaining feature in v0.3.2)
+
+### Medium-term
+7. #90 Recording/playback engine
+8. #91 Visual regression testing
+9. #726 Hero GIF for README
+10. v0.3.2 release when scope complete

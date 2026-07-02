@@ -1,0 +1,39 @@
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+M	agents/qa/testcases/e2e/calculator-basic-flow.yaml
+M	agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+M	agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+M	agents/qa/testcases/exploratory/click-background-window.yaml
+M	agents/qa/testcases/exploratory/get-value-unreadable.yaml
+M	agents/qa/testcases/exploratory/multi-window-targeting.yaml
+M	agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+M	agents/qa/testcases/regression/app-quit-silent-failure.yaml
+M	agents/qa/testcases/regression/capture-chinese-filepath.yaml
+M	agents/qa/testcases/regression/chinese-app-name-matching.yaml
+M	agents/qa/testcases/regression/click-on-short-text.yaml
+M	capture.png
+M	scripts/run-qa.bat
+Your branch is behind 'origin/develop' by 1 commit, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+error: Your local changes to the following files would be overwritten by merge:
+	agents/qa/testcases/e2e/calculator-basic-flow.yaml
+	agents/qa/testcases/e2e/scripted-notepad-workflow.yaml
+	agents/qa/testcases/exploratory/app-filter-cross-process.yaml
+	agents/qa/testcases/exploratory/click-background-window.yaml
+	agents/qa/testcases/exploratory/get-value-unreadable.yaml
+	agents/qa/testcases/exploratory/multi-window-targeting.yaml
+	agents/qa/testcases/exploratory/press-standalone-modifier.yaml
+	agents/qa/testcases/regression/app-quit-silent-failure.yaml
+	agents/qa/testcases/regression/capture-chinese-filepath.yaml
+	agents/qa/testcases/regression/chinese-app-name-matching.yaml
+	agents/qa/testcases/regression/click-on-short-text.yaml
+Please commit your changes or stash them before you merge.
+Updating 2f59abe..390f788
+Aborting
+[2026/04/01 ÖÜÈý  1:00:04.57] Starting QA-Mariana round 
+Background agent completed successfully â€” all 18 test case YAML files updated with R74 results. Those changes were already included in the commit that was pushed to develop.
+
+QA Round 74 is fully complete. All 8 phases executed, report committed and pushed.

@@ -1,0 +1,34 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   b0cedb8..b6f097b  main       -> origin/main
+Updating b0cedb8..b6f097b
+Fast-forward
+ .github/workflows/build.yml     | 26 +++++++++++++-------------
+ .github/workflows/publish.yml   |  6 +++---
+ agents/dev/status.md            | 37 ++++++++++++++++++-------------------
+ tests/test_type_paste_and_on.py |  6 +++---
+ 4 files changed, 37 insertions(+), 38 deletions(-)
+[2026/03/28 ÖÜÁù  1:00:03.88] Starting QA-Mariana round 
+---
+
+## QA Round 45 Complete
+
+**Persona**: AI Agent Builder | **Commit**: b6f097b
+
+### Results Summary
+| Phase | Result |
+|-------|--------|
+| CI Desktop | 103 passed, 1 failed (flaky #446), 18 skipped |
+| CI E2E | 8 passed, 1 failed (same #446) |
+| Dev Verification | #457, #442 â€” cannot verify, PRs not merged |
+| E2E Notepad | PASS (type, select-all, delete, screenshot verified) |
+| E2E Calculator | PASS (7+8=15, 7+3=10, screenshot verified) |
+| Regression | 5/7 passed, 2 failed, 2 blocked |
+| MCP Simulation | PASS (initialize, tools/list, type_text, error handling) |
+| New test cases | TC-0010 (MCP E2E workflow) |
+| New issues | None (all findings already tracked) |
+
+### Top Risks
+1. **PRs #458, #459 not merged** â€” two fixes awaiting merge
+2. **Element ID instability (#456)** â€” workaround: don't see-refresh between clicks
+3. **UIA detection chain discrepancy (#455)** â€” API vs real behavior mismatch

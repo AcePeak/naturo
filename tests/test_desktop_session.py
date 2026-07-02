@@ -159,15 +159,20 @@ class TestCoreGetBackendDesktopCheck:
     NoDesktopSessionError that click/type/press already show.
     """
 
-    def test_raises_usage_error_on_no_desktop(self):
-        """core._get_backend() should raise UsageError when no desktop session."""
-        import click
+    def test_exits_1_on_no_desktop_plain(self):
+        """core._get_backend() should exit 1 (not Click's exit-2 UsageError).
+
+        A missing interactive desktop is a runtime/environment failure, not a
+        CLI usage error, so it must exit 1 with a clean ``Error: ...`` message
+        and no ``Usage:`` banner (#866).
+        """
         from naturo.cli.core import _get_backend
 
         with patch("naturo.cli.interaction._check_desktop_session",
                    side_effect=NoDesktopSessionError()):
-            with pytest.raises(click.UsageError, match="interactive desktop"):
+            with pytest.raises(SystemExit) as exc_info:
                 _get_backend()
+        assert exc_info.value.code == 1
 
     def test_json_output_exits_on_no_desktop(self):
         """core._get_backend(json_output=True) should sys.exit with JSON error."""

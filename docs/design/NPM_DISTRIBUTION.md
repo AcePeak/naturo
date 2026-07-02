@@ -1,47 +1,47 @@
 # NPM Distribution Design — `npx naturo mcp`
 
-## 目标
+## Goal
 
-让用户通过 `npm install naturo` 或 `npx naturo` 使用 naturo，**无需安装 Python**。
+Allow users to use naturo via `npm install naturo` or `npx naturo` **without installing Python**.
 
-## 方案：Thin Wrapper + Platform Binary（推荐）
+## Approach: Thin Wrapper + Platform Binary (Recommended)
 
-### 架构
+### Architecture
 
 ```
 npm package (naturo)          ~5KB
   └── postinstall script
-        └── 检测 platform+arch
-        └── 从 GitHub Releases 下载对应二进制
+        └── Detect platform+arch
+        └── Download matching binary from GitHub Releases
               ├── naturo-win-x64.exe     (~40-60MB)
               ├── naturo-linux-x64       (~40-60MB)
               └── naturo-macos-arm64     (~40-60MB)
 ```
 
-### 用户体验
+### User Experience
 
 ```bash
-# 安装
+# Install
 npm install -g naturo
-# 或一次性使用
+# Or one-time usage
 npx naturo see
 npx naturo mcp
 ```
 
-### 先例
+### Precedents
 
-| 工具 | 方案 | 包体 |
-|------|------|------|
+| Tool | Approach | Package Size |
+|------|----------|-------------|
 | esbuild | npm thin wrapper + platform binary | ~9MB |
 | turbo | npm thin wrapper + platform binary | ~20MB |
-| playwright | npm + 按需下载浏览器 | ~2MB + browsers |
-| prisma | npm + 按需下载 engine binary | ~5MB + engine |
+| playwright | npm + on-demand browser download | ~2MB + browsers |
+| prisma | npm + on-demand engine binary download | ~5MB + engine |
 
-### 实现步骤
+### Implementation Steps
 
 #### Step 1: Standalone Binary (Nuitka)
 
-使用 Nuitka 将 Python + naturo 编译为单文件可执行：
+Use Nuitka to compile Python + naturo into a single-file executable:
 
 ```bash
 nuitka --standalone --onefile \
@@ -51,12 +51,12 @@ nuitka --standalone --onefile \
   naturo/__main__.py
 ```
 
-CI 矩阵：
+CI matrix:
 - Windows x64 (windows-latest)
-- Linux x64 (ubuntu-latest)  
+- Linux x64 (ubuntu-latest)
 - macOS arm64 (macos-latest)
 
-产物上传到 GitHub Release assets。
+Artifacts are uploaded to GitHub Release assets.
 
 #### Step 2: npm Package
 
@@ -64,7 +64,7 @@ CI 矩阵：
 packages/naturo-npm/
   ├── package.json
   ├── bin/naturo.js          # CLI entry point
-  ├── install.js             # postinstall 下载脚本
+  ├── install.js             # postinstall download script
   └── lib/
       └── platform.js        # platform detection + download logic
 ```
@@ -93,72 +93,72 @@ execFileSync(binary, process.argv.slice(2), { stdio: 'inherit' });
 
 **install.js:**
 ```javascript
-// 1. 检测 platform + arch
-// 2. 构造下载 URL: https://github.com/AcePeak/naturo/releases/download/vX.Y.Z/naturo-{platform}-{arch}{.exe}
-// 3. 下载到 bin/
-// 4. chmod +x (非 Windows)
+// 1. Detect platform + arch
+// 2. Build download URL: https://github.com/AcePeak/naturo/releases/download/vX.Y.Z/naturo-{platform}-{arch}{.exe}
+// 3. Download to bin/
+// 4. chmod +x (non-Windows)
 ```
 
-#### Step 3: MCP 场景
+#### Step 3: MCP Scenario
 
 ```bash
-# AI agent 配置
+# AI agent configuration
 npx naturo mcp --transport stdio
-# 或
+# Or
 npx naturo mcp --transport sse --port 8080
 ```
 
-零配置启动 MCP server，这是 npm 包的核心价值场景。
+Zero-config MCP server startup — this is the core value proposition of the npm package.
 
-### 备选方案（已排除）
+### Alternatives Considered (Rejected)
 
-#### ❌ 方案 B: npm 内嵌 Python Embedded
+#### ❌ Option B: Embed Python Inside npm Package
 
 ```
 node_modules/naturo/
   python-3.12-embed/   (~15-40MB)
-  naturo/              (Python 源码)
+  naturo/              (Python source)
 ```
 
-排除原因：
-- 包体大（npm install 慢）
-- Python Embedded 在 Linux/macOS 上不好用
-- 更新 Python 源码要重新发 npm 包
-- 权限和路径问题多
+Rejected because:
+- Large package size (slow npm install)
+- Python Embedded doesn't work well on Linux/macOS
+- Updating Python source requires republishing the npm package
+- Permission and path issues are common
 
-#### ❌ 方案 C: npm wrapper + 要求装 Python
+#### ❌ Option C: npm Wrapper Requiring Python
 
-排除原因：
-- 用户体验差，回到"请先装 Python"
-- Python 版本兼容问题转嫁给用户
-- 违背"零依赖"目标
+Rejected because:
+- Poor user experience ("please install Python first")
+- Python version compatibility issues pushed onto users
+- Violates the "zero dependencies" goal
 
-### 版本同步
+### Version Synchronization
 
-- npm 版本号与 PyPI 版本号保持一致
-- GitHub Release 同时包含：
-  - PyPI package (自动)
-  - npm package (手动或 CI)
-  - Platform binaries (CI 编译)
+- npm version numbers stay in sync with PyPI version numbers
+- GitHub Releases include:
+  - PyPI package (automatic)
+  - npm package (manual or CI)
+  - Platform binaries (CI-built)
 
-### 大小优化
+### Size Optimization
 
-Nuitka 默认产物可能 60-100MB，优化手段：
+Default Nuitka output can be 60-100MB. Optimization strategies:
 - `--lto=yes` (Link-Time Optimization)
-- 排除不需要的标准库模块
-- UPX 压缩（可选，但可能触发杀毒误报）
-- 目标：**<50MB per platform**
+- Exclude unnecessary standard library modules
+- UPX compression (optional, but may trigger antivirus false positives)
+- Target: **<50MB per platform**
 
-### 依赖矩阵
+### Dependency Matrix
 
-| 安装方式 | 需要 Python | 需要 Node | 需要编译器 |
-|----------|:-----------:|:---------:|:----------:|
+| Install Method | Requires Python | Requires Node | Requires Compiler |
+|----------------|:--------------:|:------------:|:-----------------:|
 | `pip install naturo` | ✅ ≥3.10 | ❌ | ❌ |
 | `npx naturo` | ❌ | ✅ ≥16 | ❌ |
-| GitHub Release 下载 | ❌ | ❌ | ❌ |
+| GitHub Release download | ❌ | ❌ | ❌ |
 
-### 时间线
+### Timeline
 
 - v0.4.0: Standalone binary (Nuitka CI) + GitHub Release
 - v0.4.0: npm package + postinstall download
-- v0.5.0: 优化包体大小，加 auto-update 机制
+- v0.5.0: Optimize package size, add auto-update mechanism

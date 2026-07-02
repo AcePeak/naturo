@@ -1,0 +1,20 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   8dcfe8a..3a90cfe  main       -> origin/main
+Updating 8dcfe8a..3a90cfe
+Fast-forward
+ agents/dev/status.md | 36 ++++++++++++++++++------------------
+ 1 file changed, 18 insertions(+), 18 deletions(-)
+[2026/03/27 ÖÜÎå 22:00:04.86] Starting QA-Mariana round 
+## Round 42 Complete
+
+**Summary:**
+- **CI**: 31 passed, 3 failed (all known issues), 20 skipped
+- **Verification**: 3 `status:done` issues (#427, #428, #409) â€” all PRs unmerged, cannot verify
+- **E2E**: Calculator PASS (7Ã—8=56, 3+5=8, 7+3=10), Notepad PARTIAL (type broken)
+- **Regression**: 1/6 passed (TC-0004), 5 failed
+- **New issue filed**: #442 â€” `click --on` fails for short English text ('C', 'CE', 'MC')
+- **New test case**: TC-0007 for #442
+- **Persona (Scripter)**: Found that `set -e` breaks, element refs are snapshot-scoped, and `click --on TEXT` is the only stable scripting pattern (but has short-text bug)
+
+**Biggest risk**: 6+ unmerged PRs â€” no fixes are landing on main. v0.3.1 release is stalled.

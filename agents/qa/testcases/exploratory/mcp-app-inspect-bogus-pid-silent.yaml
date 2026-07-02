@@ -1,0 +1,63 @@
+id: TC-0086
+title: "MCP app_inspect accepts non-existent PIDs and returns success:true with empty exe/app + fabricated win32+vision fallback (CLI properly errors PROCESS_NOT_FOUND)"
+status: active
+category: exploratory
+priority: P1
+source_issue: 901
+created: 2026-05-29
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R146 (Enterprise RPA Dev persona): MCP `app_inspect({pid: <any-int>})` returns `success:true` with empty `exe`/`app` and a fabricated `framework.detected=[{type:win32, dll_signatures:["(DLL scan unavailable)"]}]` + `interaction_methods=[{method:vision, ..., status:fallback}]` for ANY pid (verified: 1, -1, 0, 999999, 2147483647).
+
+  The CLI counterpart properly returns `PROCESS_NOT_FOUND` for the same input:
+    $ naturo app inspect --pid 999999 -j
+    {"success": false, "error": {"code": "PROCESS_NOT_FOUND", "message": "No process found with PID 999999. ...", "suggested_action": "...", "recoverable": true}}
+
+  Discovered while probing MCP tool surface as an Enterprise RPA Dev would. An agent that enumerates PIDs (e.g. to find a target) gets success:true for every PID and burns cycles trying to interact with non-existent processes. Worse: the response advertises "vision" as a valid interaction method against an empty exe — agents trust this and call `capture_screen`/`click` against the phantom.
+
+  Asymmetries within app_inspect itself:
+    - app_inspect({name: "DefinitelyNotAnApp"}) → success:false PROCESS_NOT_FOUND (correct)
+    - app_inspect({pid: <any-int>}) → success:true (wrong)
+    - app_inspect({quick: true}) → success:false INVALID_INPUT "Specify application name or pid" (quick flag ignored when standalone — separate minor bug)
+
+  This sits inside the #885 silent-failure cluster but is a process-validation gap, not a desktop-binding gap.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "MCP server can start: naturo mcp start (stdio)"
+
+steps:
+  - description: "Start MCP, send handshake + tools/list, then call app_inspect with a clearly-invalid PID"
+    command: |
+      Send: tools/call name=app_inspect arguments={"pid": 999999}
+    expect: |
+      Expected (post-fix): {"success": false, "error": {"code": "PROCESS_NOT_FOUND", ...}} matching CLI.
+      Actual (FAIL): {"success": true, "pid": 999999, "exe": "", "app": "", "framework": {"detected": [{"type":"win32", "dll_signatures": ["(DLL scan unavailable)"]}]}, "interaction_methods": [{"method":"vision","priority":6,"status":"fallback"}]}
+
+  - description: "Repeat with pid in (1, -1, 0, 2147483647) to confirm scope"
+    command: |
+      app_inspect({"pid": 1})
+      app_inspect({"pid": -1})
+      app_inspect({"pid": 0})
+      app_inspect({"pid": 2147483647})
+    expect: |
+      All four should be PROCESS_NOT_FOUND. Actual: all return success:true with empty exe/app (verified in `.work/qa-r146/transcript3.jsonl`).
+
+  - description: "Verify CLI parity to confirm the gap is MCP-only"
+    command: "naturo app inspect --pid 999999 -j"
+    expect: |
+      {"success": false, "error": {"code": "PROCESS_NOT_FOUND", ...}} — CLI errors correctly. The MCP wrapper has the regression.
+
+  - description: "Verify the success path still works"
+    command: |
+      app_inspect({"name": "WindowsTerminal"})
+    expect: |
+      success:true with real exe (e.g. "WindowsTerminal.exe"), real framework detection, real interaction_methods. (Confirmed PASS in R146 probe3.)
+
+pass_criteria: |
+  MCP app_inspect rejects non-existent PIDs with the same PROCESS_NOT_FOUND envelope as the CLI surface. The fabricated "win32 + vision fallback" shape never appears for an unverified PID.
+
+fail_action: |
+  File P1 silent-failure bug. Link to #885 cluster. Suggested fix: validate the PID via OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) before any inference; return PROCESS_NOT_FOUND on failure. Avoid speculative framework/method inference when the process can't be opened.

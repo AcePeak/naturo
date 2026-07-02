@@ -223,6 +223,8 @@ class TestInterpretEscapes:
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["hello\\tworld\\n", "-E"], catch_exceptions=False)
         assert result.exit_code == 0
+        # (#840) Newline handling lives in the backend, not the CLI layer.
+        # The CLI passes the full interpreted string (including \n) to backend.type_text.
         mock_backend.type_text.assert_called_once_with(
             "hello\tworld\n", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
         )
@@ -270,7 +272,7 @@ class TestOnElement:
              patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
             result = runner.invoke(type_cmd, ["hello", "--on", "e999", "--json"], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_on_text_finds_element(self, runner, mock_backend):
         mock_elem = MagicMock()
@@ -367,7 +369,28 @@ class TestUiaValueSet:
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route(route):
             result = runner.invoke(type_cmd, ["hello", "--json"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once()
+        mock_backend.type_text.assert_called_once_with(
+            "hello", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+
+    def test_uia_fallback_passes_newlines_to_backend(self, runner, mock_backend):
+        """UIA fallback path must pass the full text (with newlines) to
+        backend.type_text — newline splitting happens inside the backend,
+        not the CLI layer (#840)."""
+        mock_backend.set_element_value.return_value = False
+        route = {"method": "uia"}
+
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route(route):
+            result = runner.invoke(
+                type_cmd, ["line1\\nline2", "-E", "--json"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code == 0
+        # The CLI must hand the full multiline string to the backend as-is.
+        # The backend is responsible for splitting on newlines (#840).
+        mock_backend.type_text.assert_called_once_with(
+            "line1\nline2", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
 
 
 # ── --ref alias for --on ─────────────────────────────────────────────
@@ -387,3 +410,54 @@ class TestRefAlias:
             result = runner.invoke(type_cmd, ["hello", "--ref", "Input"], catch_exceptions=False)
         assert result.exit_code == 0
         mock_backend.find_element.assert_called_once_with("Input")
+
+
+# ── Newline handling (#840) ─────────────────────────────────────────
+
+
+class TestTypeWithNewlines:
+    """#840: newline handling belongs in the backend, not the CLI layer.
+
+    The CLI must pass the full text (including newlines) directly to
+    backend.type_text().  The backend is responsible for converting
+    newlines to Enter keypresses.  These tests verify the CLI passes
+    the correct string; the backend-level splitting is tested in
+    test_type_newline_840.py.
+    """
+
+    def test_cli_passes_text_without_newline_to_backend(self, runner, mock_backend):
+        """Text without newlines is passed straight to backend.type_text."""
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(type_cmd, ["hello"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.type_text.assert_called_once_with(
+            "hello", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+
+    def test_cli_passes_newline_text_to_backend(self, runner, mock_backend):
+        """CLI passes the full multiline string to backend.type_text as-is.
+
+        The backend owns the newline-splitting logic (#840); the CLI must
+        not split before calling type_text.
+        """
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                type_cmd, ["line1\\nline2", "-E"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code == 0
+        mock_backend.type_text.assert_called_once_with(
+            "line1\nline2", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )
+
+    def test_cli_passes_crlf_text_to_backend(self, runner, mock_backend):
+        """CRLF text is passed intact to backend.type_text."""
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                type_cmd, ["a\r\nb"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code == 0
+        mock_backend.type_text.assert_called_once_with(
+            "a\r\nb", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        )

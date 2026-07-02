@@ -131,6 +131,7 @@ class TestUwpClickIdentityLookup:
 
         backend = MagicMock()
         backend._is_afh_window.return_value = False  # NOT UWP
+        backend._is_winui_window.return_value = False  # NOT WinUI 3
         mock_get_backend.return_value = backend
 
         runner = CliRunner()

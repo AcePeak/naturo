@@ -18,9 +18,11 @@ from naturo.providers.base import (
     register_provider,
 )
 
+from naturo.providers.model_registry import get_default_model, resolve_model
+
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "llava"
+_DEFAULT_MODEL = get_default_model("ollama", "vision")
 _DEFAULT_BASE_URL = "http://localhost:11434"
 
 _DEFAULT_DESCRIBE_PROMPT = """\
@@ -60,7 +62,8 @@ class OllamaVisionProvider:
         model: Optional[str] = None,
         base_url: Optional[str] = None,
     ) -> None:
-        self._model = model or os.environ.get("NATURO_OLLAMA_MODEL", _DEFAULT_MODEL)
+        raw_model = model or os.environ.get("NATURO_OLLAMA_MODEL", _DEFAULT_MODEL)
+        self._model = resolve_model(raw_model, provider="ollama")
         self._base_url = (
             base_url
             or os.environ.get("OLLAMA_HOST", _DEFAULT_BASE_URL)

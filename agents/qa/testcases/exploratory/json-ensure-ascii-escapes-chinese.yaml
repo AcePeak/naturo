@@ -1,0 +1,48 @@
+id: TC-0080
+title: "JSON output uses ensure_ascii=True — Chinese/emoji round-tripped through -j is escaped as \\uXXXX (#894)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 894
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R147: FAIL — re-confirmed on HEAD e2afdcb during Chinese User persona. New repro paths exercised:
+    1. `naturo -j selector save TestApp "中文名" 'app://x/y'` → `"name": "中文名"` (selector save echoes the Chinese name escaped).
+    2. `naturo -j selector load TestApp 中文名` → `"app": "记事本"` etc. — every selector field round-trips escaped.
+    3. `naturo -j app windows` on a desktop with `计算器`/`文件资源管理器`/`要恢复页面吗？` titles → titles serialized as `\uXXXX` (confirmed against current /tmp/aw.json dump).
+    4. `naturo selector list` (non-`-j`) — prints literal Chinese (`@记事本/保存按钮`) correctly, reaffirming the drift is per-mode.
+  Bug surface unchanged across selector/list/app-windows surfaces.
+  R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j clipboard set "你好"` → success; `naturo -j clipboard get` → text field serialized as `"你好"` (literal backslash-u escape sequences) instead of literal `"你好"`. Bug unchanged. (Also restored this YAML — body was inadvertently emptied during R143's testcase folder edits.)
+  R139: FAIL — three reproductions:
+    1. `naturo clipboard set "你好世界" -j | Out-Null; naturo clipboard get -j` → `"text": "你好世界"` instead of literal `你好世界`.
+    2. `naturo type --file "C:\不存在的中文.txt" -j` → error message becomes `"File not found: C:\\不存在的中文.txt"`.
+    3. `naturo app windows -j` → Chinese window titles (`计算器`, `文件资源管理器`, `要恢复页面吗？`) serialized as `\uXXXX` runs.
+  Symmetric non-`-j` path correctly emits literal Chinese (`wait --gone 记事本` → `Element '记事本' disappeared`), so the drift is between modes for the same data.
+  Discovered during: Chinese User persona (R139, HEAD `16adca7`).
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "PowerShell session with `$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()` so the raw bytes are observable"
+
+steps:
+  - description: "Clipboard round-trip — Chinese should not be escaped in JSON bytestream"
+    command: "naturo clipboard set '你好世界' -j | Out-Null; naturo clipboard get -j"
+    expect: '"text": "你好世界" — NOT "text": "\\u4f60\\u597d\\u4e16\\u754c"'
+  - description: "Clipboard round-trip — emoji should not be surrogate-escaped"
+    command: "naturo clipboard set '🎯🚀' -j | Out-Null; naturo clipboard get -j"
+    expect: '"text": "🎯🚀" — NOT "text": "\\ud83c\\udfaf\\ud83d\\ude80"'
+  - description: "Error envelope echoing a Chinese path should preserve literal characters"
+    command: "naturo type --file 'C:\\不存在的中文.txt' -j"
+    expect: '"message": "File not found: C:\\不存在的中文.txt" — NOT escape-laden \\u4e0d\\u5b58\\u5728…'
+  - description: "Hex inspection of the bytestream — literal UTF-8 bytes, not ASCII escapes"
+    command: "naturo clipboard set '你' -j | Out-Null; naturo clipboard get -j | Format-Hex | Select-Object -First 6"
+    expect: "Bytes 0xE4 0xBD 0xA0 (UTF-8 for 你) appear; NO `5C 75 34 66 36 30` (backslash u 4 f 6 0) run"
+  - description: "Non-`-j` path baseline — literal Chinese already works without -j"
+    command: "naturo wait --gone '记事本'"
+    expect: "stdout contains literal '记事本'; this is the reference behavior the -j path should match"
+
+pass_criteria: "Every JSON output preserves literal Chinese/emoji bytes (UTF-8) in the stdout stream; no `\\uXXXX` escapes for user-supplied or echoed-back non-ASCII content"
+fail_action: "Update or reopen #894"

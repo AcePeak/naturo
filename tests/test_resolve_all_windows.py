@@ -58,8 +58,8 @@ class TestResolveAllWindows:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr(backend, "_get_console_session_id", mock_console_session)
-        monkeypatch.setattr(backend, "_get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         # --app "Lark" should return all 3 Feishu windows
         result = backend._resolve_hwnds(app="Lark")
@@ -90,8 +90,8 @@ class TestResolveAllWindows:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr(backend, "_get_console_session_id", mock_console_session)
-        monkeypatch.setattr(backend, "_get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         result = backend._resolve_hwnds(app="Feishu")
         assert result == []
@@ -138,8 +138,8 @@ class TestResolveAllWindows:
             return 1
 
         monkeypatch.setattr(backend, "list_windows", mock_list_windows)
-        monkeypatch.setattr(backend, "_get_console_session_id", mock_console_session)
-        monkeypatch.setattr(backend, "_get_process_session_id", mock_process_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", mock_console_session)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", mock_process_session)
 
         result = backend._resolve_hwnds(app="myapp")
         # Exact process name match (score 4) should come first
@@ -209,8 +209,8 @@ class TestResolveAllWindows:
 
         monkeypatch.setattr(backend, "list_windows",
                             lambda: [calculator_app, afh_calculator, notepad_window])
-        monkeypatch.setattr(backend, "_get_console_session_id", lambda: 1)
-        monkeypatch.setattr(backend, "_get_process_session_id", lambda pid: 1)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", lambda: 1)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", lambda pid: 1)
         # AFH window has a content child (CoreWindow)
         monkeypatch.setattr(WindowsBackend, "_afh_has_content_window",
                             staticmethod(lambda hwnd: hwnd == 2000))
@@ -254,8 +254,8 @@ class TestResolveAllWindows:
 
         monkeypatch.setattr(backend, "list_windows",
                             lambda: [calculator_app, stale_afh, live_afh])
-        monkeypatch.setattr(backend, "_get_console_session_id", lambda: 1)
-        monkeypatch.setattr(backend, "_get_process_session_id", lambda pid: 1)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_console_session_id", lambda: 1)
+        monkeypatch.setattr("naturo.backends.windows._element._app_discovery._get_process_session_id", lambda pid: 1)
         # Only live_afh (3000) has content child
         monkeypatch.setattr(WindowsBackend, "_afh_has_content_window",
                             staticmethod(lambda hwnd: hwnd == 3000))

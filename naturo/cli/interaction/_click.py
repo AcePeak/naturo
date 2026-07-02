@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import click
@@ -11,12 +12,99 @@ import naturo.cli.interaction._common as _common
 logger = logging.getLogger(__name__)
 
 
+def _get_screen_bound() -> int:
+    """Return the maximum coordinate value for the virtual screen.
+
+    On Windows, uses GetSystemMetrics to get the virtual screen dimensions.
+    On other platforms, falls back to a conservative generic bound (65535,
+    the maximum normalized coordinate used by SendInput).
+    """
+    import sys
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            # SM_CXVIRTUALSCREEN (78) and SM_CYVIRTUALSCREEN (79) give
+            # the full extent of the virtual screen across all monitors.
+            cx = user32.GetSystemMetrics(78)
+            cy = user32.GetSystemMetrics(79)
+            return max(cx, cy)
+        except Exception:
+            pass
+    return 65535
+
+
+def _window_root_at_point(x: int, y: int):
+    """Return the top-level window actually under screen point ``(x, y)``.
+
+    Lets the click command report which window a coordinate click really
+    landed on, so naturo never claims success when an overlapping window — or
+    a failed foreground switch — silently received the click instead (#1207).
+
+    Args:
+        x: Screen X coordinate.
+        y: Screen Y coordinate.
+
+    Returns:
+        ``(root_hwnd, title, pid)`` for the top-level window at the point, or
+        ``None`` if it cannot be determined (e.g. non-Windows or no window).
+    """
+    import sys
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        user32.WindowFromPoint.restype = wintypes.HWND
+        user32.WindowFromPoint.argtypes = [wintypes.POINT]
+        user32.GetAncestor.restype = wintypes.HWND
+        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+        hwnd = user32.WindowFromPoint(wintypes.POINT(int(x), int(y)))
+        if not hwnd:
+            return None
+        root = user32.GetAncestor(hwnd, 2) or hwnd  # GA_ROOT = 2
+        length = user32.GetWindowTextLengthW(root)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(root, buf, length + 1)
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(root, ctypes.byref(pid))
+        return int(root), buf.value, int(pid.value)
+    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
+        logger.debug("WindowFromPoint(%s, %s) failed: %s", x, y, exc)
+        return None
+
+
+def _window_pid(hwnd: int):
+    """Return the process ID owning ``hwnd``, or ``None`` if undeterminable."""
+    import sys
+    if sys.platform != "win32" or not hwnd:
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        pid = wintypes.DWORD()
+        ctypes.windll.user32.GetWindowThreadProcessId(
+            wintypes.HWND(int(hwnd)), ctypes.byref(pid)
+        )
+        return int(pid.value) or None
+    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
+        logger.debug("GetWindowThreadProcessId(%s) failed: %s", hwnd, exc)
+        return None
+
+
 @click.command("click")
 @click.argument("query", required=False)
 @click.option("--on", "on_text", help="Target element (eN ref or text label)")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
+@click.option("--image", "image_template", type=click.Path(), default=None,
+              help="Locate a template image (PNG/JPG) on the target window or "
+                   "screen and click the center of the best match "
+                   "(see 'naturo find --image').")
+@click.option("--threshold", type=float, default=0.9, show_default=True,
+              help="Minimum match score in [0.0, 1.0] for --image (higher is stricter)")
 @click.option("--double", is_flag=True, help="Double-click")
 @click.option("--right", is_flag=True, help="Right-click")
 @click.option("--app", help="Target application (name or partial match)")
@@ -44,7 +132,8 @@ logger = logging.getLogger(__name__)
 @click.option("--process-name", "app", default=None, hidden=True, help="")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
-              element_id: str | None, coords: tuple[int, int] | None, double: bool,
+              element_id: str | None, coords: tuple[int, int] | None,
+              image_template: str | None, threshold: float, double: bool,
               right: bool, app: str | None, pid: int | None,
               window_title: str | None, hwnd: int | None, wait_for: float | None,
               input_mode: str, method: str, selector: str | None, app_id: str | None,
@@ -71,6 +160,8 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
       naturo click --coords 500 300
       naturo click --coords 500 300 --right
       naturo click --id "button_ok"
+      naturo click --image submit.png
+      naturo click --image icon.png --app Notepad --threshold 0.85
       naturo click e42 --paste
       naturo click e42 --copy
     """
@@ -87,6 +178,56 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
 
     button = "right" if right else "left"
 
+    # Image-match targeting (#1059): locate a template on the window/screen and
+    # click the center of the best match. --image is its own targeting strategy,
+    # so it is mutually exclusive with the text/coords/ref/selector targets; the
+    # window-scoping flags (--app/--window/--hwnd/--pid) still apply — they choose
+    # the capture source, exactly as in `naturo find --image`. Matching is pure
+    # computation (no input injection): it resolves coordinates that then flow
+    # through the standard coordinate-click path below.
+    _image_match_info: dict[str, Any] | None = None
+    if image_template is not None:
+        from naturo.cli.core._find import _ImageMatchError, _resolve_image_matches
+        _conflict = (
+            "--coords" if coords else
+            "--id" if element_id else
+            "--selector" if selector else
+            "--on/QUERY" if (on_text or query) else
+            None
+        )
+        if _conflict is not None:
+            _common._json_err(
+                f"{_conflict} cannot be combined with --image; --image is its own "
+                "targeting strategy (it clicks the matched template's center).",
+                json_output, code="INVALID_INPUT",
+            )
+            return
+        try:
+            _matches, _ox, _oy, _thwnd, _hw, _hh = _resolve_image_matches(
+                image_template, threshold, False,
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                screenshot=None, limit=1, json_output=json_output,
+            )
+        except _ImageMatchError as exc:
+            _common._json_err(exc.message, json_output, code=exc.code)
+            return
+        if not _matches:
+            _common._json_err(
+                f"No match for template '{os.path.basename(image_template)}' "
+                f"(threshold {threshold}). Lower --threshold or verify the template "
+                "is visible on the target.",
+                json_output, code="ELEMENT_NOT_FOUND",
+            )
+            return
+        _m = _matches[0]
+        # Center the click on the match, translating haystack coordinates to
+        # screen-absolute via the captured window/monitor origin.
+        coords = (_ox + _m.x + _m.width // 2, _oy + _m.y + _m.height // 2)
+        _image_match_info = {
+            "template": os.path.basename(image_template),
+            "score": round(_m.score, 4),
+        }
+
     # Resolve target coordinates or element_id
     # Priority: --selector (semantic) > --coords > --id > --on/query (#103)
     if selector:
@@ -99,6 +240,17 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         target_id = None
     elif coords:
         x, y = coords
+        # (#787) Validate coordinates are within the virtual screen bounds.
+        # Out-of-bounds coordinates result in no-op clicks from SendInput.
+        _max_coord = _get_screen_bound()
+        if x < 0 or y < 0 or x > _max_coord or y > _max_coord:
+            _common._json_err(
+                f"Coordinates ({x}, {y}) are outside the screen bounds "
+                f"(0–{_max_coord}). Check your coordinates.",
+                json_output,
+                code="COORDS_OUT_OF_BOUNDS",
+            )
+            return
         target_id = None
     elif element_id:
         x, y = None, None
@@ -174,7 +326,8 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                     f"Element ref '{target_id}' not found. Run 'naturo see' first to "
                     f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
                     json_output,
-                    code="REF_NOT_FOUND",
+                    code="STALE_SNAPSHOT_CACHE",
+                    context={"ref": target_id},
                 )
                 return
 
@@ -221,12 +374,19 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         except Exception as exc:
             logger.debug("HWND resolution for focus failed: %s", exc)
     if _focus_hwnd:
-        # Detect UWP apps for UIA click fallback (#248)
+        # Detect UWP/WinUI apps for UIA click fallback (#248, #786)
         if hasattr(backend, "_is_afh_window"):
             try:
                 _is_uwp = backend._is_afh_window(_focus_hwnd)
             except Exception as exc:
                 logger.debug("UWP detection failed (hwnd=%s): %s", _focus_hwnd, exc)
+        # (#786) Standalone WinUI 3 apps (Win11 Notepad, Paint) also need
+        # UIA click path but are not hosted by ApplicationFrameHost.
+        if not _is_uwp and hasattr(backend, "_is_winui_window"):
+            try:
+                _is_uwp = backend._is_winui_window(_focus_hwnd)
+            except Exception as exc:
+                logger.debug("WinUI detection failed (hwnd=%s): %s", _focus_hwnd, exc)
         try:
             backend.focus_window(hwnd=_focus_hwnd)
         except Exception as exc:
@@ -278,7 +438,7 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                 # (#442) Fallback: search the app's element tree when C++
                 # exact UIA Name match fails.  Handles localized apps where
                 # UIA Name differs from visible text (e.g. Calculator "C"
-                # button has UIA Name "清除").
+                # button has UIA Name "Clear" (清除 on Chinese Windows)).
                 fallback = _common._find_element_by_text_fallback(
                     backend, target_id,
                     app=app, hwnd=hwnd, window_title=window_title,
@@ -310,7 +470,7 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                 backend.click(x=x, y=y, button=button, double=double,
                               input_mode=input_mode)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
 
     # (#168) Clipboard modifiers: --paste, --copy, --cut (post-click actions)
@@ -353,12 +513,44 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         "x": x, "y": y, "button": button, "double_click": double,
     })
 
+    # (#1207) Honesty check: confirm the click actually reached its target.
+    # For coordinate-based clicks, find the top-level window now under the
+    # point.  When a specific target window was known (--app/--hwnd/--pid or a
+    # cached snapshot) and the click landed on a *different process'* window,
+    # the target was occluded or never came to the foreground — fail loudly
+    # instead of reporting a success that did not happen.
+    _hit = None
+    if x is not None and y is not None:
+        _hit = _window_root_at_point(x, y)
+    if _hit and _focus_hwnd:
+        _target_pid = _window_pid(_focus_hwnd)
+        if _target_pid and _hit[2] and _hit[2] != _target_pid:
+            _common._json_err(
+                f"Click at ({x}, {y}) landed on window {_hit[1]!r} "
+                f"(hwnd {_hit[0]}, pid {_hit[2]}), not the target window "
+                f"(hwnd {_focus_hwnd}, pid {_target_pid}). The target is "
+                f"occluded or failed to come to the foreground; the click did "
+                f"not reach it.",
+                json_output,
+                code="CLICK_WRONG_WINDOW",
+            )
+            return
+
     action = "double-clicked" if double else "clicked"
     if _zero_bounds_element is not None:
         loc = f"{_zero_bounds_element.title or _zero_bounds_element.role} (via UIA Invoke)"
     else:
         loc = f"({x}, {y})" if coords else (target_id or "element")
     result_data: dict[str, Any] = {"action": action, "target": str(loc), "button": button}
+    # (#1207) Disclose which window actually received a coordinate click, so a
+    # caller can see when a raw --coords click hit something other than what
+    # they intended (naturo cannot know intent for bare coordinates).
+    if _hit:
+        result_data["hit_window"] = {
+            "hwnd": _hit[0], "title": _hit[1], "pid": _hit[2],
+        }
+    if _image_match_info is not None:
+        result_data["image_match"] = _image_match_info
     if _clipboard_action:
         result_data["clipboard_action"] = _clipboard_action
     # (#248) Indicate UIA click was used for UWP apps

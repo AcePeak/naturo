@@ -22,17 +22,53 @@ class ErrorCode:
     ELEMENT_NOT_FOUND = "ELEMENT_NOT_FOUND"
     MENU_NOT_FOUND = "MENU_NOT_FOUND"
     SNAPSHOT_NOT_FOUND = "SNAPSHOT_NOT_FOUND"
+    STALE_SNAPSHOT_CACHE = "STALE_SNAPSHOT_CACHE"
     FILE_NOT_FOUND = "FILE_NOT_FOUND"
+    RECORDING_NOT_FOUND = "RECORDING_NOT_FOUND"
+    SELECTOR_NOT_FOUND = "SELECTOR_NOT_FOUND"
+    BASELINE_NOT_FOUND = "BASELINE_NOT_FOUND"
 
     # Operation errors
     CAPTURE_FAILED = "CAPTURE_FAILED"
+    SCREENSHOT_FAILED = "SCREENSHOT_FAILED"
     INTERACTION_FAILED = "INTERACTION_FAILED"
     TIMEOUT = "TIMEOUT"
     CANCELLED = "CANCELLED"
 
+    # Element-pattern interaction failures (a control did not support the
+    # requested UIA pattern) — same family as INTERACTION_FAILED. Emitted by the
+    # MCP set_element_value / toggle / select / expand_collapse tools.
+    SET_VALUE_FAILED = "SET_VALUE_FAILED"
+    TOGGLE_FAILED = "TOGGLE_FAILED"
+    SELECT_FAILED = "SELECT_FAILED"
+    EXPAND_FAILED = "EXPAND_FAILED"
+    COLLAPSE_FAILED = "COLLAPSE_FAILED"
+
+    # A process/PID lookup that matched nothing.
+    PROCESS_NOT_FOUND = "PROCESS_NOT_FOUND"
+    # A keyboard/mouse input rejected by the safe-input guard.
+    UNSAFE_INPUT_BLOCKED = "UNSAFE_INPUT_BLOCKED"
+
     # Input errors
     INVALID_INPUT = "INVALID_INPUT"
     INVALID_COORDINATES = "INVALID_COORDINATES"
+
+    # Parse-time usage errors (Click) — a user typo'd a flag or a subcommand.
+    # Emitted by ``naturo.cli._emit_usage_error_json``; same validation class as
+    # INVALID_INPUT (#1162).
+    UNKNOWN_OPTION = "UNKNOWN_OPTION"
+    UNKNOWN_COMMAND = "UNKNOWN_COMMAND"
+
+    # Image-matching errors (naturo find/click --image, #1059)
+    INVALID_TEMPLATE = "INVALID_TEMPLATE"
+    INVALID_SCREENSHOT = "INVALID_SCREENSHOT"
+    MISSING_DEPENDENCY = "MISSING_DEPENDENCY"
+    PLATFORM_ERROR = "PLATFORM_ERROR"
+
+    # Selector-resolution errors (naturo find/click/type --selector, #1182/#1183)
+    SELECTOR_REF_ERROR = "SELECTOR_REF_ERROR"
+    INVALID_SELECTOR = "INVALID_SELECTOR"
+    TREE_ERROR = "TREE_ERROR"
 
     # Dialog errors
     DIALOG_NOT_FOUND = "DIALOG_NOT_FOUND"
@@ -47,6 +83,7 @@ class ErrorCode:
     # System / environment errors
     NO_DESKTOP_SESSION = "NO_DESKTOP_SESSION"
     FILE_IO_ERROR = "FILE_IO_ERROR"
+    WORKTREE_MISMATCH = "WORKTREE_MISMATCH"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 
     # AI errors
@@ -72,6 +109,106 @@ class ErrorCategory:
     SESSION = "session"
     VALIDATION = "validation"
     UNKNOWN = "unknown"
+
+
+# Canonical ``code -> category`` map. Single source of truth for the *raw-code*
+# JSON error path (:func:`naturo.cli.error_helpers.json_error`), where only an
+# error-code string is available — no :class:`NaturoError` instance to read the
+# category from. Keeping it here, beside the codes and the subclasses that define
+# them, lets every error converge on one ``category`` regardless of whether it was
+# raised as an exception or emitted by code string. Codes absent here fall back to
+# :attr:`ErrorCategory.UNKNOWN`. ``tests/test_error_envelope_884.py`` asserts this
+# map agrees with every NaturoError subclass that fixes a category.
+_ERROR_CATEGORIES: dict[str, str] = {
+    ErrorCode.PERMISSION_DENIED: ErrorCategory.PERMISSIONS,
+    ErrorCode.APP_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.WINDOW_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.ELEMENT_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.MENU_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.SNAPSHOT_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.STALE_SNAPSHOT_CACHE: ErrorCategory.SESSION,
+    # Named, naturo-managed artifacts the user saves and recalls by name — the
+    # same family as snapshots, hence ``session`` (see #1101).
+    ErrorCode.SELECTOR_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.BASELINE_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.RECORDING_NOT_FOUND: ErrorCategory.SESSION,
+    ErrorCode.FILE_NOT_FOUND: ErrorCategory.IO,
+    ErrorCode.CAPTURE_FAILED: ErrorCategory.AUTOMATION,
+    # A browser/CDP screenshot that failed to render or encode is an automation
+    # operation failure, alongside CAPTURE_FAILED (#1135).
+    ErrorCode.SCREENSHOT_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.INTERACTION_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.TIMEOUT: ErrorCategory.AUTOMATION,
+    # Cancellation is an operation-lifecycle outcome, like ``TIMEOUT`` (#1101).
+    ErrorCode.CANCELLED: ErrorCategory.AUTOMATION,
+    # Element-pattern interaction failures — automation operation faults, like
+    # INTERACTION_FAILED (M3).
+    ErrorCode.SET_VALUE_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.TOGGLE_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.SELECT_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.EXPAND_FAILED: ErrorCategory.AUTOMATION,
+    ErrorCode.COLLAPSE_FAILED: ErrorCategory.AUTOMATION,
+    # A process lookup is UI/automation target resolution, like APP_NOT_FOUND.
+    ErrorCode.PROCESS_NOT_FOUND: ErrorCategory.AUTOMATION,
+    # A guard-rejected input is a validation fault, like INVALID_INPUT.
+    ErrorCode.UNSAFE_INPUT_BLOCKED: ErrorCategory.VALIDATION,
+    # Locating a tray icon / taskbar item is UI-element lookup, like
+    # app/window/element-not-found (#1101).
+    ErrorCode.TRAY_ICON_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.TASKBAR_ITEM_NOT_FOUND: ErrorCategory.AUTOMATION,
+    # The Windows registry is a persistent key-value store — registry failures
+    # are I/O against it (#1101).
+    ErrorCode.REGISTRY_NOT_FOUND: ErrorCategory.IO,
+    ErrorCode.REGISTRY_ERROR: ErrorCategory.IO,
+    ErrorCode.REGISTRY_HAS_SUBKEYS: ErrorCategory.IO,
+    ErrorCode.INVALID_INPUT: ErrorCategory.VALIDATION,
+    ErrorCode.INVALID_COORDINATES: ErrorCategory.VALIDATION,
+    # A typo'd flag / subcommand is a user usage mistake — the same validation
+    # class as INVALID_INPUT, emitted by the same parse-time path (#1162).
+    ErrorCode.UNKNOWN_OPTION: ErrorCategory.VALIDATION,
+    ErrorCode.UNKNOWN_COMMAND: ErrorCategory.VALIDATION,
+    # Image-matching codes (#1059): a template/screenshot the user supplied that
+    # cannot be decoded is a validation fault; a missing optional matcher
+    # dependency is configuration; a GUI-less platform is environment.
+    ErrorCode.INVALID_TEMPLATE: ErrorCategory.VALIDATION,
+    ErrorCode.INVALID_SCREENSHOT: ErrorCategory.VALIDATION,
+    ErrorCode.MISSING_DEPENDENCY: ErrorCategory.CONFIGURATION,
+    ErrorCode.PLATFORM_ERROR: ErrorCategory.ENVIRONMENT,
+    # Selector-resolution codes on the find/click/type --selector moat path
+    # (#1182/#1183): a saved ``@app/name`` reference that does not resolve is a
+    # named session artifact, like SELECTOR_NOT_FOUND (session); a malformed
+    # selector string is a validation fault, like INVALID_INPUT (validation); a
+    # tree-fetch failure during resolution is an automation operation fault, like
+    # CAPTURE_FAILED (automation).
+    ErrorCode.SELECTOR_REF_ERROR: ErrorCategory.SESSION,
+    ErrorCode.INVALID_SELECTOR: ErrorCategory.VALIDATION,
+    ErrorCode.TREE_ERROR: ErrorCategory.AUTOMATION,
+    ErrorCode.DIALOG_NOT_FOUND: ErrorCategory.AUTOMATION,
+    ErrorCode.DEPENDENCY_MISSING: ErrorCategory.CONFIGURATION,
+    ErrorCode.NO_DESKTOP_SESSION: ErrorCategory.ENVIRONMENT,
+    ErrorCode.FILE_IO_ERROR: ErrorCategory.IO,
+    ErrorCode.WORKTREE_MISMATCH: ErrorCategory.ENVIRONMENT,
+    ErrorCode.UNKNOWN_ERROR: ErrorCategory.UNKNOWN,
+    ErrorCode.AI_PROVIDER_UNAVAILABLE: ErrorCategory.AI,
+    ErrorCode.AI_ANALYSIS_FAILED: ErrorCategory.AI,
+}
+
+
+def category_for_code(code: str) -> str:
+    """Return the canonical error category for a raw error code.
+
+    Used by the raw-code JSON error path (:func:`naturo.cli.error_helpers.json_error`)
+    so an error emitted by code string alone carries the same ``category`` as the
+    equivalent :class:`NaturoError` would. Unrecognised codes degrade gracefully to
+    :attr:`ErrorCategory.UNKNOWN` rather than raising.
+
+    Args:
+        code: A standardized error-code string (e.g. ``"WINDOW_NOT_FOUND"``).
+
+    Returns:
+        The matching :class:`ErrorCategory` string, or ``ErrorCategory.UNKNOWN``.
+    """
+    return _ERROR_CATEGORIES.get(code, ErrorCategory.UNKNOWN)
 
 
 class NaturoError(Exception):
@@ -213,6 +350,35 @@ class SnapshotNotFoundError(NaturoError):
         )
 
 
+class StaleSnapshotCacheError(NaturoError):
+    """Element ref could not be resolved against the snapshot cache.
+
+    Raised when a ``get``/``set`` (or any ref-targeting command) is given an
+    element ref (e.g. ``e47``) that is absent from the most recent snapshot —
+    typically because no ``naturo see`` has run yet, or the cached snapshot is
+    stale and no longer contains that ref. Carries a semantic ``code`` and a
+    ``suggested_action`` so machine consumers can dispatch on the error and
+    self-correct instead of parsing the human message (see issue #877).
+    """
+
+    def __init__(self, ref: str, **kwargs: Any) -> None:
+        kwargs.setdefault(
+            "suggested_action",
+            "Run 'naturo see' to capture a fresh element snapshot, then retry.",
+        )
+        kwargs.setdefault("is_recoverable", True)
+        super().__init__(
+            message=(
+                f"Element ref '{ref}' not found in snapshot cache. "
+                f"Run 'naturo see' first to capture elements."
+            ),
+            code=ErrorCode.STALE_SNAPSHOT_CACHE,
+            category=ErrorCategory.SESSION,
+            context={"ref": ref},
+            **kwargs,
+        )
+
+
 class TimeoutError(NaturoError):
     """Operation timed out."""
 
@@ -331,6 +497,30 @@ class FileIOError(NaturoError):
             category=ErrorCategory.IO,
             context=ctx,
             is_recoverable=True,
+            **kwargs,
+        )
+
+
+class WorktreeMismatchError(NaturoError):
+    """Imported ``naturo`` resolves outside the expected worktree root.
+
+    Raised by the opt-in import guard (#971) when a stale editable install
+    shadows the checkout under test with a sibling worktree's code, which would
+    otherwise let runtime verification silently validate the wrong source.
+    """
+
+    def __init__(self, message: str, **kwargs: Any) -> None:
+        kwargs.setdefault(
+            "suggested_action",
+            "The imported 'naturo' is not under NATURO_EXPECTED_ROOT. Re-run "
+            "'pip install -e .' from the active worktree (or fix the stale "
+            ".pth/egg-link), or unset NATURO_EXPECTED_ROOT if the guard is "
+            "misconfigured.",
+        )
+        super().__init__(
+            message=message,
+            code=ErrorCode.WORKTREE_MISMATCH,
+            category=ErrorCategory.ENVIRONMENT,
             **kwargs,
         )
 

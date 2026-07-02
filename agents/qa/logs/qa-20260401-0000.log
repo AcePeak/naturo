@@ -1,0 +1,34 @@
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   c0f3dc0..2f59abe  develop    -> origin/develop
+M	capture.png
+M	scripts/run-qa.bat
+Your branch is behind 'origin/develop' by 1 commit, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating c0f3dc0..2f59abe
+Fast-forward
+ .github/workflows/build.yml | 3 +++
+ 1 file changed, 3 insertions(+)
+[2026/04/01 ÖÜÈý  0:00:10.42] Starting QA-Mariana round 
+## QA-Mariana Round 73 Complete
+
+**CI Desktop Tests**: 12 passed, 4 failed, 21 skipped (commit 2f59abe)
+- All failures: Notepad window discovery (#729)
+
+**E2E**: Calculator PASS, Notepad PASS
+
+**Regression**: 12/14 passed, 2 known failures (#728 Chinese filepath, #704 standalone modifiers)
+
+**Simulated User**: First-time User â€” UX flow is intuitive, no new confusion points
+
+**New issues**: 0 (all bugs tracked in existing issues)
+
+**Top 3 Risks**:
+1. CI Notepad discovery broken (#729)
+2. Chinese filepath capture (#728)
+3. Standalone modifier keys (#704)
+
+Report pushed to develop as commit 390f788.

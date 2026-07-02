@@ -138,7 +138,7 @@ class TestRefClick:
              patch("naturo.snapshot.get_snapshot_manager", return_value=mock_mgr):
             result = runner.invoke(click_cmd, ["e999", "--json"], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_click_ref_zero_bounds_invokes_uia(self, runner, mock_backend):
         mock_elem = MagicMock()
@@ -287,3 +287,43 @@ class TestRefAlias:
         mock_backend.click.assert_called_once_with(
             element_id="Save", button="left", double=False, input_mode="normal", hwnd=None,
         )
+
+
+# ── Coordinate bounds validation (#787) ────────────────────────────
+
+
+class TestCoordsBoundsValidation:
+
+    def test_negative_x_rejected(self, runner, mock_backend):
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), \
+             patch("naturo.cli.interaction._click._get_screen_bound", return_value=1920):
+            result = runner.invoke(click_cmd, ["--coords", "-10", "500", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "COORDS_OUT_OF_BOUNDS"
+        mock_backend.click.assert_not_called()
+
+    def test_negative_y_rejected(self, runner, mock_backend):
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), \
+             patch("naturo.cli.interaction._click._get_screen_bound", return_value=1920):
+            result = runner.invoke(click_cmd, ["--coords", "500", "-10", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "COORDS_OUT_OF_BOUNDS"
+        mock_backend.click.assert_not_called()
+
+    def test_exceeds_max_bound_rejected(self, runner, mock_backend):
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), \
+             patch("naturo.cli.interaction._click._get_screen_bound", return_value=1920):
+            result = runner.invoke(click_cmd, ["--coords", "99999", "500", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "COORDS_OUT_OF_BOUNDS"
+        mock_backend.click.assert_not_called()
+
+    def test_valid_coords_accepted(self, runner, mock_backend):
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route(), \
+             patch("naturo.cli.interaction._click._get_screen_bound", return_value=1920):
+            result = runner.invoke(click_cmd, ["--coords", "500", "300"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.click.assert_called_once()

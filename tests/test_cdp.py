@@ -574,7 +574,9 @@ class TestChromeCLI:
             result = runner.invoke(main, ["chrome", "tabs"])
             assert result.exit_code == 0
             assert "My Page" in result.output
-            assert "https://test.com" in result.output
+            # Exact-token match, not a URL substring check — avoids a
+            # py/incomplete-url-substring-sanitization false positive.
+            assert any(tok == "https://test.com" for tok in result.output.split())
 
     def test_chrome_version_json(self):
         from click.testing import CliRunner

@@ -1,0 +1,38 @@
+id: TC-0079
+title: "naturo wait --gone <anything> bypasses NO_DESKTOP_SESSION, returns success:true exit 0 with wait_time:0 (#893)"
+status: active
+category: regression
+priority: P1
+source_issue: 893
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R151 (Skeptical Evaluator persona): FAIL — re-confirmed on HEAD ec07c24 (source unchanged). `naturo wait --gone foobar --timeout 2 -j` → {success:true, found:true, wait_time:0.016, warnings:[]} EXIT=0 in NO_DESKTOP_SESSION, while same-session `naturo see -j` refuses with exit 1. Bug unchanged; #893/#885 still open.
+  R150 (Scripter/Automator persona): FAIL — re-confirmed on HEAD c15be18 (source unchanged). Sharper repro: `naturo wait --gone explorer -j` → {success:true,found:true,wait_time:0.0} EXIT=0, while the same-session `naturo see -j` guard message explicitly names "explorer.exe running" — i.e. a verifiably FALSE negative, not merely an empty/ambiguous result. Step-4 workflow chain still propagates silent success: `wait --gone Loading --timeout 0.5 -j && echo PROCEEDING && click Save -j` prints PROCEEDING then NO_DESKTOP on the click. Commented on #893.
+  R147 (Chinese User persona): FAIL — re-confirmed on HEAD e2afdcb. `naturo wait --gone '记事本'` → stdout "Element '记事本' disappeared after 0.0s" EXIT=0; `naturo wait --gone '记事本' -j` → `{"success":true,"found":true,"wait_time":0.0,"warnings":[]}` EXIT=0 in NO_DESKTOP_SESSION. Bypasses guard with Chinese selector identical to ASCII case. #893 unchanged.
+  R144: FAIL — re-confirmed on HEAD 893209e. `naturo -j wait --gone foo --timeout 1` returns {success:true, found:true, wait_time:0.0, warnings:[]} exit 0 instantly, bypassing both NO_DESKTOP_SESSION and the --timeout. Bug unchanged.
+  R138: FAIL — `naturo wait --gone "X" --timeout 5 -j` returns `{success:true, found:true, wait_time:0.0}` exit 0 in NO_DESKTOP_SESSION; wall-clock elapsed 0.236s (CLI-startup time) confirms `--timeout` is ignored. Filed as #893; cross-listed as scope-extension on #885 epic. HEAD `ceecfd5`.
+  R139: FAIL — re-confirmed on HEAD `16adca7` (Chinese User persona). `wait --gone "Dialog:Loading" --timeout 5 -j` → success:true found:true wait_time:0.0, elapsed 0.255s, EXIT=0. Identical reproduction; --timeout still ignored. Also tested with Chinese selector `wait --gone "你好世界很长的中文文字" -j` → same shape — argument is accepted but never actually evaluated, confirming the silent-success path predates any selector resolution.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Session has no interactive desktop access (SSH / RDP-blocked / service session)"
+
+steps:
+  - description: "wait --gone with arbitrary selector should fail with NO_DESKTOP_SESSION, not silent-succeed"
+    command: "naturo wait --gone 'Dialog:Loading' --timeout 5 -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1 — NOT {"success": true, "found": true, "wait_time": 0.0}'
+  - description: "wait --gone should honor --timeout (or fail fast with NO_DESKTOP_SESSION). It must NOT return in <1s when --timeout 5 is requested AND there is no NO_DESKTOP error envelope."
+    command: "python -c \"import time, subprocess; t0=time.time(); r=subprocess.run(['naturo','wait','--gone','XXX','--timeout','5','-j'], capture_output=True); print(f'elapsed={time.time()-t0:.2f}s exit={r.returncode}')\""
+    expect: "Either elapsed >= ~5s (real poll happened) OR exit 1 with NO_DESKTOP_SESSION envelope. Elapsed <1s + exit 0 = FAIL"
+  - description: "Compare with the loud-failure peer (see) under identical NO_DESKTOP_SESSION"
+    command: "naturo see -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1 — baseline'
+  - description: "Workflow-chain repro: silent success of wait --gone should not propagate to next interactive step"
+    command: "naturo wait --gone 'Loading' --timeout 0.5 -j && echo PROCEEDING && naturo click 'Save' -j"
+    expect: "Step 1 should fail (exit 1) and chain should NOT print PROCEEDING. Current: prints PROCEEDING then NO_DESKTOP on step 2 = FAIL"
+
+pass_criteria: "wait --gone returns NO_DESKTOP_SESSION envelope with exit 1 under no-desktop, matching the see/capture baseline; OR honors --timeout with real polling. Silent success exit 0 with wait_time:0 = FAIL."
+fail_action: "Update or reopen #893 / fold into #885 epic resolution"

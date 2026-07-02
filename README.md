@@ -10,6 +10,10 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)](https://github.com/AcePeak/naturo#platform-support)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
+> **Why naturo?** It is the only open-source Windows automation engine with **commercial-RPA-grade multi-framework recognition** — UIA + MSAA/IA2 + Java Access Bridge + Electron/CDP + vision fusion. UIA-only rivals (UFO², Windows-MCP, Terminator) are blind to Electron and Java app content. See the reproducible proof: [**Recognition coverage benchmark → docs/RECOGNITION.md**](docs/RECOGNITION.md).
+
+> **New here?** Get Claude to open, type into, and save a Notepad file in under five minutes: [**5-minute quickstart → docs/QUICKSTART.md**](docs/QUICKSTART.md).
+
 ## What You Get
 
 - 🖥️ **Screen Capture** — Screenshot any window or monitor
@@ -27,7 +31,11 @@
 - 🖥️ **Multi-Monitor** — Enumerate monitors, capture specific screens, DPI-aware coordinates
 - 🗂️ **Virtual Desktops** — List, switch, create, close desktops and move windows between them
 - 🍎 **macOS Support** — Coming soon (native implementation in development)
+- 🎬 **Recording & Playback** — Record user actions, replay them, export to Python/Bash scripts
+- 🏷️ **Selector Management** — Save, share, and reuse UI element selectors across sessions
+- 🌐 **Browser Automation** — Full Chrome DevTools Protocol support: navigate, click, type, screenshot, wait, intercept network, stealth mode
 - 🔬 **Cascade Recognition** — UIA + CDP + AI Vision multi-source fusion for Electron/CEF apps where single-source fails
+- 👁️ **Visual Regression Testing** — Compare screenshots across runs, generate HTML reports, detect unintended UI changes
 - 🤖 **AI-Ready** — JSON output, agent-friendly CLI, MCP server
 
 ## Platform Support
@@ -52,7 +60,37 @@ pip install naturo
 
 Naturo includes a built-in [MCP](https://modelcontextprotocol.io/) server with 60+ tools for AI agent integration.
 
-### Claude Desktop / Claude Code
+### Quick install (one line)
+
+After `pip install naturo`, connect naturo to your agent with a single copy-paste command:
+
+**Claude Code**
+
+```bash
+claude mcp add naturo -- naturo mcp start
+```
+
+**VS Code** (GitHub Copilot / MCP)
+
+```bash
+code --add-mcp '{"name":"naturo","command":"naturo","args":["mcp","start"]}'
+```
+
+**Cursor** — add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project):
+
+```json
+{ "mcpServers": { "naturo": { "command": "naturo", "args": ["mcp", "start"] } } }
+```
+
+**Windsurf** — add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{ "mcpServers": { "naturo": { "command": "naturo", "args": ["mcp", "start"] } } }
+```
+
+> `naturo` must be on your `PATH` — it is after `pip install naturo`. Restart the client after editing a JSON config so it picks up the new server.
+
+### Claude Desktop (manual config)
 
 Add to your Claude configuration file (`claude_desktop_config.json`):
 
@@ -120,8 +158,11 @@ naturo type "Hello" --input-mode hardware
 # Press key combo
 naturo press ctrl+s
 
-# Find element
-naturo find "Edit:filename"
+# Find element — the universal locator auto-detects the strategy from the query
+naturo find "Edit:filename"                # UIA tree search (name / role:name)
+naturo find button.png                     # image template match (.png/.jpg/…)
+naturo find 'app://notepad.exe/Edit'       # resolve a selector path
+naturo find @notepad/save-btn              # resolve a saved selector (@app/name)
 
 # App management
 naturo app launch "notepad"
@@ -202,7 +243,7 @@ naturo see --app feishu --cascade --fill-gaps --stats
 #   vision   133 elements   72s   [ok]
 
 # Click an AI-discovered element by ref
-naturo click e805 --app feishu    # "视频会议" found by AI Vision
+naturo click e805 --app feishu    # "视频会议" (Video Meeting) found by AI Vision
 ```
 
 **How it works:**
@@ -285,6 +326,60 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `desktop close` | Close a virtual desktop | 0.1.0 |
 | `desktop move-window` | Move window to another desktop | 0.1.0 |
 
+### Browser Automation
+
+| Command | Description | Since |
+|---------|-------------|-------|
+| `browser navigate` | Navigate to a URL | 0.3.2 |
+| `browser find` | Find elements on the page (CSS/XPath/text) | 0.3.2 |
+| `browser click` | Click an element | 0.3.2 |
+| `browser type` | Type text into an element | 0.3.2 |
+| `browser screenshot` | Take a page screenshot | 0.3.2 |
+| `browser text` | Get element text content | 0.3.2 |
+| `browser html` | Get element HTML content | 0.3.2 |
+| `browser attr` | Get an attribute value from an element | 0.3.2 |
+| `browser eval` | Evaluate JavaScript expression | 0.3.2 |
+| `browser hover` | Hover over an element | 0.3.2 |
+| `browser scroll` | Scroll the page | 0.3.2 |
+| `browser tabs` | List open browser tabs | 0.3.2 |
+| `browser tab` | Switch to a specific tab | 0.3.2 |
+| `browser close` | Close the CDP connection | 0.3.2 |
+| `browser url` | Get the current page URL | 0.3.2 |
+| `browser title` | Get the current page title | 0.3.2 |
+| `browser requests` | List captured network requests | 0.3.2 |
+| `browser intercept` | Add a request interception rule | 0.3.2 |
+| `browser wait` | Wait for element state | 0.3.2 |
+| `browser wait-navigation` | Wait for navigation to complete | 0.3.2 |
+| `browser wait-network-idle` | Wait until network is idle | 0.3.2 |
+| `browser wait-url` | Wait until URL matches a pattern | 0.3.2 |
+| `browser wait-function` | Wait until JS expression is truthy | 0.3.2 |
+| `browser stealth` | Apply anti-detection patches | 0.3.2 |
+| `browser stealth-flags` | Print Chrome flags for anti-detection | 0.3.2 |
+| `browser launch` | Launch Chrome with remote debugging enabled | 0.3.2 |
+| `browser profiles` | List available Chrome profiles | 0.3.2 |
+| `browser select` | Select an option from a `<select>` dropdown | 0.3.2 |
+| `browser download` | Configure file downloads and wait for completion | 0.3.2 |
+| `browser frames` | List all frames (main frame and iframes) on the page | 0.3.2 |
+| `browser frame-find` | Find elements inside a specific iframe | 0.3.2 |
+| `browser frame-eval` | Evaluate JavaScript inside a specific iframe | 0.3.2 |
+| `browser stealth-check` | Verify stealth patches are working | 0.3.2 |
+| `browser captcha-detect` | Detect captchas on the page | 0.3.2 |
+| `browser captcha-solve` | Solve a captcha on the page | 0.3.2 |
+
+### Visual Regression Testing
+
+| Command | Description | Since |
+|---------|-------------|-------|
+| `visual baseline` | Save a screenshot as a visual baseline | 0.3.2 |
+| `visual compare` | Compare a screenshot against its baseline | 0.3.2 |
+| `visual diff` | Compare any two images directly | 0.3.2 |
+| `visual list` | List all saved baselines | 0.3.2 |
+| `visual delete` | Delete a saved baseline | 0.3.2 |
+| `visual report` | Run regression tests and generate HTML report | 0.3.2 |
+| `visual suite` | Run a visual regression test suite from a JSON definition | 0.3.2 |
+| `visual update` | Update an existing baseline with a new screenshot | 0.3.2 |
+| `visual update-all` | Update all baselines from a directory of screenshots | 0.3.2 |
+
 ### Tools
 
 | Command | Description | Since |
@@ -295,7 +390,24 @@ Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI Vision. Set `NATURO_AI_M
 | `mcp start` | Start MCP server | 0.1.0 |
 | `mcp install` | Install MCP server configuration | 0.3.0 |
 | `mcp tools` | List available MCP tools | 0.3.0 |
+| `record start` | Start recording user actions | 0.3.2 |
+| `record stop` | Stop recording and save | 0.3.2 |
+| `record play` | Replay a saved recording | 0.3.2 |
+| `record list` | List saved recordings | 0.3.2 |
+| `record show` | Show recording steps | 0.3.2 |
+| `record delete` | Delete a recording | 0.3.2 |
+| `record export` | Export recording to Python/Bash/JSON | 0.3.2 |
+| `selector save` | Save a UI selector with a friendly name | 0.3.2 |
+| `selector load` | Load a saved selector by name and resolve it | 0.3.2 |
+| `selector list` | List saved/built-in selectors | 0.3.2 |
+| `selector show` | Show all selectors for an app (user + built-in) | 0.3.2 |
+| `selector delete` | Delete a saved selector | 0.3.2 |
+| `selector clear` | Delete all selectors for an app | 0.3.2 |
+| `selector export` | Export selectors to JSON | 0.3.2 |
+| `selector import` | Import selectors from JSON | 0.3.2 |
+| `selector test` | Validate a selector against the parser | 0.3.2 |
 | `config` | View/set naturo configuration | 0.3.0 |
+| `doctor` | Environment self-check (session, deps, providers, DPI, version) | 0.3.4 |
 | `excel open` | Open Excel workbook (Windows only) | 0.1.1 |
 | `excel read` | Read cells from worksheet | 0.1.1 |
 | `excel write` | Write values to cells | 0.1.1 |
@@ -325,6 +437,195 @@ naturo snapshot clean --all --yes
 Snapshots expire after **10 minutes** when queried via `get_most_recent_snapshot`,
 mirroring Peekaboo's validity window.
 
+## Recording & Playback
+
+Record user actions and replay them — the fastest way to create automation scripts.
+
+```bash
+# Start recording — all subsequent naturo commands are captured
+naturo record start "Login flow"
+
+# ... perform actions ...
+naturo click 500 300
+naturo type "username"
+naturo press tab
+naturo type "password"
+naturo press enter
+
+# Stop and save
+naturo record stop
+
+# List saved recordings
+naturo record list
+# ID                        Name                           Steps  Created
+# rec_20260401_120000       Login flow                         5  2026-04-01T12:00
+
+# Replay at 2x speed
+naturo record play rec_20260401_120000 --speed 2.0
+
+# Preview without executing
+naturo record play rec_20260401_120000 --dry-run
+
+# Export to a standalone Python script
+naturo record export rec_20260401_120000 --format python -o login.py
+
+# Export to Bash
+naturo record export rec_20260401_120000 --format bash -o login.sh
+
+# Show step details
+naturo record show rec_20260401_120000
+```
+
+Recordings are stored in `~/.naturo/recordings/` as JSON files.
+Export to Python or Bash generates standalone scripts with proper timing between steps.
+
+## Selector Management
+
+Save, reuse, and share UI element selectors — no more re-discovering selectors for common apps.
+
+```bash
+# Save a selector with a friendly name
+naturo selector save notepad save-btn 'app://notepad.exe/Button[@name="Save"]'
+naturo selector save chrome address-bar '//Edit[@name="Address and search bar"]' \
+  -d "Chrome address bar"
+
+# List all saved selectors
+naturo selector list
+#   notepad (1 selectors)
+#   ──────────────────────────────────────────────────
+#     @notepad/save-btn
+#       app://notepad.exe/Button[@name="Save"]
+
+# List built-in templates (shipped with naturo)
+naturo selector list --builtin
+
+# Use a saved selector (@ prefix in click/type/find commands)
+naturo click --selector @notepad/save-btn
+
+# Test that a selector parses correctly
+naturo selector test notepad save-btn
+
+# Export for sharing with your team
+naturo selector export notepad -o notepad-selectors.json
+
+# Import selectors from a teammate
+naturo selector import team-selectors.json
+
+# Clean up
+naturo selector delete notepad save-btn
+naturo selector clear notepad  # delete all selectors for an app
+```
+
+Selectors are stored in `~/.naturo/selectors/<app>.json`.
+Built-in templates live in `naturo/selectors_builtin/` and are read-only.
+
+## Browser Automation
+
+Automate Chrome, Edge, and Chromium-based browsers via the Chrome DevTools Protocol (CDP).
+
+```bash
+# Launch Chrome with debugging enabled (using naturo)
+naturo browser launch
+# Or manually: chrome --remote-debugging-port=9222
+
+# Navigate to a page
+naturo browser navigate https://example.com
+
+# Find elements using CSS selectors, XPath, or text
+naturo browser find "#search-input"
+naturo browser find "//button[@type='submit']"
+
+# Click and type
+naturo browser click "button.submit"
+naturo browser type "#search" "hello world"
+
+# Take a screenshot
+naturo browser screenshot --path page.png
+
+# Read page content
+naturo browser text "#main-content"
+naturo browser html "#article"
+naturo browser title
+naturo browser url
+
+# Tab management
+naturo browser tabs                           # List all tabs
+naturo browser tab <tab-id>                   # Switch to a tab
+
+# Wait for conditions
+naturo browser wait "#results" --state visible
+naturo browser wait-navigation                # Wait for page load
+naturo browser wait-network-idle              # Wait for network to settle
+naturo browser wait-url "*/dashboard*"        # Wait for URL pattern
+
+# Execute JavaScript
+naturo browser eval "document.title"
+
+# Network interception
+naturo browser intercept "*.png" --action block   # Block image requests
+naturo browser requests                            # List captured requests
+
+# Anti-detection (stealth mode)
+naturo browser stealth-flags                  # Print recommended Chrome flags
+naturo browser stealth                        # Apply runtime patches
+
+# Captcha handling
+naturo browser captcha-detect                 # Detect captchas on page
+naturo browser captcha-solve                  # Attempt to solve
+
+# Chrome profiles
+naturo browser profiles                       # List available profiles
+naturo browser launch --profile "Work"        # Launch with a specific profile
+
+# Iframe support
+naturo browser frames                         # List all frames on page
+naturo browser frame-find 0 "#login-form"     # Find element inside iframe
+naturo browser frame-eval 0 "document.title"  # Run JS inside iframe
+
+# File downloads
+naturo browser download --dir ./downloads     # Set download directory
+naturo browser download --wait 30             # Wait up to 30s for download
+
+# Select dropdowns
+naturo browser select "#country" "United States"  # Select by visible text
+```
+
+All browser commands support `--port` and `--host` for connecting to remote Chrome instances.
+
+## Visual Regression Testing
+
+Compare screenshots across runs to detect unintended UI changes.
+
+```bash
+# Save a baseline screenshot
+naturo visual baseline login_screen --from screenshot.png
+
+# Compare against baseline
+naturo visual compare login_screen --current screenshot2.png
+# Reports pixel differences with configurable threshold
+
+# Compare any two images directly (without baseline)
+naturo visual diff before.png after.png
+
+# List all baselines
+naturo visual list
+
+# Generate an HTML report
+naturo visual report --name "Sprint 42" --output report.html
+
+# Update a baseline with new screenshot
+naturo visual update login_screen --from new_screenshot.png
+
+# Run a test suite from a JSON definition
+naturo visual suite test_suite.json --output report.html
+
+# Clean up
+naturo visual delete login_screen
+```
+
+Baselines are stored in `~/.naturo/visual/baselines/`.
+Reports are generated in `~/.naturo/visual/reports/`.
+
 ## Architecture
 
 ```
@@ -350,7 +651,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 | Feature | naturo | PyAutoGUI | pywinauto | AutoIt | WinAppDriver |
 |---------|--------|-----------|-----------|--------|--------------|
 | **MCP Server** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ |
-| **AI Agent Ready** | ✅ JSON output, agent CLI | ❌ | ❌ | ❌ | ❌ |
+| **AI Agent Ready** | ⚠️ JSON output, agent CLI (`-j` envelope being standardized) | ❌ | ❌ | ❌ | ❌ |
+| **Browser Automation** | ✅ CDP (Chrome/Edge) | ❌ | ❌ | ❌ | ❌ |
 | **UI Frameworks** | UIA + MSAA + IA2 + JAB + CDP + AI Vision | None (image only) | UIA, Win32 | Win32 messages | UIA only |
 | **Cascade Recognition** | ✅ Multi-source fusion with auto-dedup | ❌ | ❌ | ❌ | ❌ |
 | **Auto-Detection** | ✅ Picks best framework per app | N/A | Manual backend choice | N/A | N/A |

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: waits</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    .hidden { display: none; }
+    #loading-spinner { height: 40px; background: #fc9; }
+    #search-result { height: 40px; background: #cfe; }
+    #old-item { height: 40px; background: #ddd; }
+  </style>
+</head>
+<body>
+  <!-- Exercises: event-driven element-state waits (the migration guide's
+       "Waiting" section). The page starts in a fixed initial state and only
+       transitions when startTransitions(ms) is invoked, so the wait under test
+       genuinely has to block for the state change rather than win a race at
+       load time:
+         - #loading-spinner: visible now, display:none after the delay
+           (the Dianping "正在加载" poll loop -> wait --state hidden)
+         - #search-result: absent now, injected + visible after the delay
+           (Selenium WebDriverWait presence/visible -> wait --state visible)
+         - #old-item: in the DOM now, removed after the delay
+           (wait --state detached) -->
+  <div id="loading-spinner">loading…</div>
+  <div id="old-item">old item</div>
+
+  <script>
+    // Schedule the state transitions `delay_ms` from now. Kept off the load
+    // path on purpose: the test asserts the initial state first (so a no-op
+    // wait cannot pass), then calls this, then waits for each target state.
+    function startTransitions(delay_ms) {
+      window.setTimeout(function () {
+        document.getElementById('loading-spinner').classList.add('hidden');
+
+        var result = document.createElement('div');
+        result.id = 'search-result';
+        result.textContent = 'result ready';
+        document.body.appendChild(result);
+
+        var old = document.getElementById('old-item');
+        if (old) {
+          old.remove();
+        }
+      }, delay_ms);
+      return true;
+    }
+  </script>
+</body>
+</html>

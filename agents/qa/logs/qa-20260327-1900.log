@@ -1,0 +1,31 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[2026/03/27 ���� 19:00:03.23] Starting QA-Mariana round 
+---
+
+## QA Round 39 Complete — Summary
+
+**All 8 phases executed.**
+
+### CI Results (commit 8b1a42e)
+- Desktop: 24 passed, 1 failed, 18 skipped
+- E2E: 7 passed, 2 failed
+
+### Issues Filed This Round
+- **#427** — CI: `test_multi_window_list_all` fails (Win11 tabbed Notepad single-process)
+- **#428** — CI: `test_window_lifecycle` flaky (stale window handles)
+- **#430** — `click/type --app` fails to match Chinese window titles that `see --app` finds
+
+### Regression Tests
+- TC-0001 (type silent failure): **FAIL** — #425 still broken
+- TC-0002 (exit code 2): **FAIL** — #426 still broken
+
+### New Test Cases
+- TC-0003: Chinese app name matching consistency
+- TC-0004: Calculator E2E flow
+
+### Top 3 Risks
+1. **#425 P0** — `type` command silently fails (reports success, nothing typed)
+2. **#426 P1** — Exit code 2 on successful operations (breaks all scripting)
+3. **#430 P1** — Chinese app name matching inconsistent between `see` and `click`/`type`

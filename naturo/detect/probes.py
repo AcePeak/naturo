@@ -438,6 +438,77 @@ def _find_afh_content_children(parent_hwnd: int) -> List[int]:
         return []
 
 
+def _find_winui_content_children(parent_hwnd: int) -> List[int]:
+    """Enumerate DesktopWindowXamlSource children of any window.
+
+    Standalone WinUI 3 apps (Win11 Calculator, Paint) are NOT hosted by
+    ApplicationFrameHost — they run as their own process with a regular
+    top-level window.  When the main HWND returns an empty UIA tree, we
+    check for DesktopWindowXamlSource children which host the actual
+    XAML content (#785).
+
+    Unlike ``_find_afh_content_children``, this does NOT require the
+    parent to be an ApplicationFrameWindow.
+
+    Args:
+        parent_hwnd: Top-level window handle to inspect.
+
+    Returns:
+        List of DesktopWindowXamlSource child HWNDs.
+    """
+    if platform.system() != "Windows":
+        return []
+
+    try:
+        import ctypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        winui_children: List[int] = []
+        child = user32.FindWindowExW(parent_hwnd, None, None, None)
+        while child:
+            child_cls = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(child, child_cls, 256)
+            if child_cls.value.lower() == "desktopwindowxamlsource":
+                winui_children.append(child)
+            child = user32.FindWindowExW(parent_hwnd, child, None, None)
+
+        return winui_children
+
+    except Exception as exc:
+        logger.debug(
+            "Failed to enumerate WinUI children for HWND %s: %s",
+            parent_hwnd, exc,
+        )
+        return []
+
+
+def _comtypes_element_is_useful(element: object, uia: object) -> bool:
+    """Check whether a comtypes UIA element has actionable children.
+
+    For WinUI 3 apps the top-level window element exists but contains no
+    buttons, text fields, or other interactive controls.  We check via
+    FindAll with TreeScope_Children and a TrueCondition.
+
+    Args:
+        element: IUIAutomationElement from comtypes.
+        uia: IUIAutomation instance.
+
+    Returns:
+        True if the element has at least one child (useful for interaction).
+    """
+    try:
+        # TreeScope_Children = 2, CreateTrueCondition returns match-all
+        condition = uia.CreateTrueCondition()  # type: ignore[union-attr]
+        children = element.FindAll(2, condition)  # type: ignore[union-attr]
+        count = getattr(children, "Length", 0)
+        return count > 0
+    except Exception:
+        # If we can't enumerate children, assume it's useful
+        # (conservative — avoid false negatives)
+        return True
+
+
 def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[InteractionMethod]:
     """Probe for UI Automation availability.
 
@@ -501,6 +572,29 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                     confidence=0.95,
                 )
 
+        # (#785) Standalone WinUI 3 apps (Win11 Calculator, Paint) are
+        # NOT hosted by ApplicationFrameHost.  When the AFH child search
+        # returns empty, check for DesktopWindowXamlSource children
+        # directly — these host the actual XAML content.
+        if not child_hwnds:
+            winui_hwnds = _find_winui_content_children(target_hwnd)
+            for child_hwnd in winui_hwnds:
+                tree = core.get_element_tree(hwnd=child_hwnd, depth=1)
+                if tree is not None:
+                    logger.debug(
+                        "UIA probe succeeded via WinUI child HWND %s "
+                        "(parent %s)",
+                        child_hwnd, target_hwnd,
+                    )
+                    capabilities = ["click", "type", "find", "tree", "screenshot"]
+                    return InteractionMethod(
+                        method=InteractionMethodType.UIA,
+                        priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                        status=ProbeStatus.AVAILABLE,
+                        capabilities=capabilities,
+                        confidence=0.95,
+                    )
+
         logger.debug(
             "UIA probe via native DLL returned empty tree for PID %d (hwnd=%s)",
             pid, target_hwnd,
@@ -524,10 +618,10 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
             interface=_IUIAutomation,
         )
 
-        element = uia.ElementFromHandle(target_hwnd)
-        if element:
-            capabilities = ["click", "type", "find", "tree", "screenshot"]
+        capabilities = ["click", "type", "find", "tree", "screenshot"]
 
+        element = uia.ElementFromHandle(target_hwnd)
+        if element and _comtypes_element_is_useful(element, uia):
             return InteractionMethod(
                 method=InteractionMethodType.UIA,
                 priority=METHOD_PRIORITY[InteractionMethodType.UIA],
@@ -535,6 +629,40 @@ def probe_uia(pid: int, exe: str, hwnd: Optional[int] = None) -> Optional[Intera
                 capabilities=capabilities,
                 confidence=0.9,
             )
+
+        # (#841) Mirror Strategy 1: probe AFH and WinUI child windows.
+        # Standalone WinUI 3 apps (Calculator, Paint) have a valid top-level
+        # element but no actionable children — the real UI is inside
+        # DesktopWindowXamlSource or CoreWindow child HWNDs.
+        for child_hwnd in _find_afh_content_children(target_hwnd):
+            child_elem = uia.ElementFromHandle(child_hwnd)
+            if child_elem and _comtypes_element_is_useful(child_elem, uia):
+                logger.debug(
+                    "UIA comtypes probe succeeded via AFH child HWND %s",
+                    child_hwnd,
+                )
+                return InteractionMethod(
+                    method=InteractionMethodType.UIA,
+                    priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                    status=ProbeStatus.AVAILABLE,
+                    capabilities=capabilities,
+                    confidence=0.9,
+                )
+
+        for child_hwnd in _find_winui_content_children(target_hwnd):
+            child_elem = uia.ElementFromHandle(child_hwnd)
+            if child_elem and _comtypes_element_is_useful(child_elem, uia):
+                logger.debug(
+                    "UIA comtypes probe succeeded via WinUI child HWND %s",
+                    child_hwnd,
+                )
+                return InteractionMethod(
+                    method=InteractionMethodType.UIA,
+                    priority=METHOD_PRIORITY[InteractionMethodType.UIA],
+                    status=ProbeStatus.AVAILABLE,
+                    capabilities=capabilities,
+                    confidence=0.9,
+                )
 
     except ImportError:
         logger.debug("comtypes not available for UIA probe — install with: pip install comtypes")
@@ -820,15 +948,17 @@ def _find_window_by_process_name(pid: int, exe: str) -> Optional[int]:
             proc_name = os.path.basename(exe).lower()
         if not proc_name:
             try:
+                from naturo.process import _parse_tasklist_csv_line
+
                 result = subprocess.run(
                     ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
                     capture_output=True, text=True, encoding="utf-8",
                     errors="replace", timeout=5,
                 )
                 for line in result.stdout.strip().splitlines():
-                    parts = line.strip('"').split('","')
-                    if len(parts) >= 2:
-                        proc_name = parts[0].lower()
+                    parsed = _parse_tasklist_csv_line(line)
+                    if parsed:
+                        proc_name = parsed[0].lower()
                         break
             except Exception:
                 return None

@@ -5,10 +5,10 @@ category: e2e
 priority: P1
 source_issue: null
 created: 2026-03-28
-last_run: 2026-03-31
+last_run: 2026-04-04
 last_result: pass
-consecutive_passes: 21
-notes: "2026-03-31 R67: PASS — MCP initialize, tools/list, type_text all work. type_text typed 'MCP_E2E_TEST' into Notepad, screenshot confirmed."
+consecutive_passes: 27
+notes: "2026-04-04 R107: PASS — MCP initialize → list_windows → see_ui_tree all return valid JSON-RPC. 64 tools available. Chrome tree has 22 elements."
 
 preconditions:
   - "naturo is installed and in PATH"

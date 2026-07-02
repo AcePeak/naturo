@@ -1,0 +1,25 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   29fcc4b..1e356c2  main       -> origin/main
+Already up to date.
+[2026/04/01 ÖÜÈý  4:00:04.37] Starting QA-Mariana round 
+## QA Round 75 Complete
+
+**Summary:**
+
+| Phase | Result |
+|-------|--------|
+| **P0 CI Guardian** | 1 desktop + 2 E2E failures (existing #729) |
+| **P1 Verify Fixes** | 4 verified (#717, #713, #712, #730), 2 deferred |
+| **P2 E2E Testing** | Notepad + Calculator: all PASS |
+| **P3 Exploratory** | Boundary/error/JSON/exit codes: all PASS |
+| **P4 Power User** | --app filter precision excellent, no cross-contamination |
+| **P5 Regression** | 10/11 passed (TC-0036 fail = known #743) |
+| **P6 Evolve** | No new test cases needed |
+| **P7 Issues** | No new issues filed |
+| **P8 Status** | Report pushed to develop (aac48c7) |
+
+**Top 3 Risks:**
+1. #743 â€” `app quit` with Chinese app name targets wrong PID
+2. #729 â€” CI desktop tests fail (Notepad not found after launch)
+3. PRs #741/#742 still open â€” coverage threshold and AI vision dedup not on develop

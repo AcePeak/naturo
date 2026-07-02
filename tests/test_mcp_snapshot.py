@@ -124,6 +124,35 @@ class TestCreateSnapshot:
         assert data["element_count"] == 2  # root + child
         mock_manager.store_detection_result.assert_called_once()
 
+    def test_snapshot_carries_keyboard_shortcut_886(self, server, mock_backend, tmp_path):
+        """The MCP snapshot uiMap carries the UIA keyboard_shortcut (#886).
+
+        Mirrors the CLI snapshot path: a populated ``keyboard_shortcut`` on the
+        element tree must reach the stored ``UIElement`` so MCP agents see the
+        shortcut instead of a silent null.
+        """
+        png_file = tmp_path / "snap.png"
+        png_file.write_bytes(b"\x89PNGfake")
+
+        root = _make_element(id="e1", role="Button", name="Save")
+        root.properties = {"keyboard_shortcut": "Ctrl+S"}
+
+        mock_manager = MagicMock()
+        mock_manager.create_snapshot.return_value = "snap-886"
+        mock_snapshot = MagicMock()
+        mock_snapshot.screenshot_path = str(png_file)
+        mock_manager.get_snapshot.return_value = mock_snapshot
+        mock_backend.get_element_tree.return_value = root
+
+        mock_ui_element_cls = MagicMock()
+        with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager), \
+             patch("naturo.models.snapshot.UIElement", mock_ui_element_cls):
+            _call_tool(server, "create_snapshot", {"depth": 5})
+
+        # The UIElement built for the element must carry the shortcut.
+        kwargs = mock_ui_element_cls.call_args.kwargs
+        assert kwargs.get("keyboard_shortcut") == "Ctrl+S"
+
     def test_no_base64_when_screenshot_missing(self, server, mock_backend):
         mock_manager = MagicMock()
         mock_manager.create_snapshot.return_value = "snap-003"
@@ -148,15 +177,80 @@ class TestCreateSnapshot:
         mock_snapshot.screenshot_path = "/nonexistent/x.png"
         mock_manager.get_snapshot.return_value = mock_snapshot
 
+        mock_backend._resolve_hwnd.return_value = 1234
         mock_backend.get_element_tree.return_value = None
 
         with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
             result = _call_tool(server, "create_snapshot", {"window_title": "Notepad"})
         data = json.loads(result[0].text)
         assert data["success"] is True
+        # window_title is resolved to an hwnd before capture (#956), mirroring
+        # the #954/#955 capture_window fix.
         mock_backend.capture_window.assert_called_once()
-        call_kwargs = mock_backend.capture_window.call_args
-        assert call_kwargs[1]["window_title"] == "Notepad"
+        assert mock_backend.capture_window.call_args[1]["hwnd"] == 1234
+
+    def test_matched_window_title_uses_same_hwnd_for_screenshot_and_tree(self, server, mock_backend):
+        """The screenshot and the element tree must describe the SAME window
+        (#956 — silent data-integrity failure).  A matched, non-foreground
+        window_title must resolve to one hwnd that is passed to BOTH
+        capture_window and get_element_tree, so they cannot diverge into a
+        foreground screenshot paired with the named window's tree."""
+        mock_manager = MagicMock()
+        mock_manager.create_snapshot.return_value = "snap-006"
+
+        mock_snapshot = MagicMock()
+        mock_snapshot.screenshot_path = "/nonexistent/x.png"
+        mock_manager.get_snapshot.return_value = mock_snapshot
+
+        mock_backend._resolve_hwnd.return_value = 4242
+        mock_backend.get_element_tree.return_value = None
+
+        with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
+            result = _call_tool(server, "create_snapshot", {"window_title": "Notepad"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend._resolve_hwnd.assert_called_once_with(window_title="Notepad")
+        assert mock_backend.capture_window.call_args[1]["hwnd"] == 4242
+        assert mock_backend.get_element_tree.call_args[1]["hwnd"] == 4242
+
+    def test_unmatched_window_title_fails_loudly_and_stores_no_snapshot(self, server, mock_backend):
+        """An unmatched window_title must fail with WINDOW_NOT_FOUND BEFORE any
+        snapshot is created — no orphan snapshot with a wrong-window screenshot
+        left behind (#956)."""
+        from naturo.errors import WindowNotFoundError
+
+        mock_manager = MagicMock()
+        mock_backend._resolve_hwnd.side_effect = WindowNotFoundError("zzz_nonexistent_qa")
+
+        with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
+            result = _call_tool(server, "create_snapshot", {"window_title": "zzz_nonexistent_qa"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        assert "zzz_nonexistent_qa" in data["error"]["message"]
+        # No screenshot captured and no orphan snapshot stored when resolution fails.
+        mock_backend.capture_window.assert_not_called()
+        mock_manager.create_snapshot.assert_not_called()
+
+    def test_foreground_snapshot_does_not_resolve_hwnd(self, server, mock_backend):
+        """With no window_title the foreground window is used directly — no hwnd
+        resolution, preserving the existing foreground contract (#956)."""
+        mock_manager = MagicMock()
+        mock_manager.create_snapshot.return_value = "snap-007"
+
+        mock_snapshot = MagicMock()
+        mock_snapshot.screenshot_path = "/nonexistent/x.png"
+        mock_manager.get_snapshot.return_value = mock_snapshot
+
+        mock_backend.get_element_tree.return_value = None
+
+        with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
+            result = _call_tool(server, "create_snapshot", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend._resolve_hwnd.assert_not_called()
+        assert mock_backend.capture_window.call_args[1]["window_title"] is None
+        assert mock_backend.get_element_tree.call_args[1]["window_title"] is None
 
 
 class TestGetSnapshot:
@@ -223,23 +317,32 @@ class TestGetSnapshot:
 class TestListSnapshots:
 
     def test_returns_snapshot_list(self, server):
-        snap = MagicMock()
-        snap.snapshot_id = "snap-001"
-        snap.created_at = "2026-03-31T00:00:00"
-        snap.window_title = "Notepad"
-        snap.application_name = "notepad.exe"
-        snap.is_valid = True
+        from datetime import datetime, timezone
+
+        from naturo.models.snapshot import SnapshotInfo
+
+        snap = SnapshotInfo(
+            id="snap-001",
+            created_at=datetime(2026, 3, 31, tzinfo=timezone.utc),
+            last_accessed_at=datetime(2026, 3, 31, tzinfo=timezone.utc),
+            size_in_bytes=2048,
+            screenshot_count=1,
+            application_name="notepad.exe",
+        )
 
         mock_manager = MagicMock()
+        mock_manager.session = "default"
         mock_manager.list_snapshots.return_value = [snap]
 
         with patch("naturo.snapshot.get_snapshot_manager", return_value=mock_manager):
             result = _call_tool(server, "list_snapshots", {})
         data = json.loads(result[0].text)
         assert data["success"] is True
+        assert data["session"] == "default"
         assert len(data["snapshots"]) == 1
-        assert data["snapshots"][0]["snapshot_id"] == "snap-001"
-        assert data["snapshots"][0]["is_valid"] is True
+        assert data["snapshots"][0]["id"] == "snap-001"
+        assert data["snapshots"][0]["application_name"] == "notepad.exe"
+        assert data["snapshots"][0]["created_at"] == "2026-03-31T00:00:00+00:00"
         mock_manager.list_snapshots.assert_called_once_with(limit=10)
 
     def test_custom_limit(self, server):

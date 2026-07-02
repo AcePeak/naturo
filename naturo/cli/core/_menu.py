@@ -1,7 +1,7 @@
 """Menu-inspect command — list menu bar structure."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 
 import click
 
@@ -12,23 +12,34 @@ import naturo.cli.core._common as _common
 @click.option("--app", help="Application name")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
+@click.option("--hwnd", default=None, type=int, help="Window handle (HWND)")
+@click.option("--pid", default=None, type=int, help="Process ID")
 @click.option("--flat", is_flag=True, help="Flatten menu tree into paths")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def menu_inspect(app, app_id, flat, json_output):
-    """List the menu bar structure of the foreground application.
+def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> None:
+    """List the menu bar structure of a window.
 
     Traverses the application's MenuBar via UIAutomation and displays
-    all menu items with their keyboard shortcuts.
+    all menu items with their keyboard shortcuts.  Targets the foreground
+    window by default, or a specific window via --app/--window/--hwnd/--pid.
 
     \b
     Examples:
       naturo menu-inspect                     # Foreground app
       naturo menu-inspect --app notepad       # Specific app
+      naturo menu-inspect --window Untitled   # By window title
+      naturo menu-inspect --pid 4321          # By process ID
       naturo menu-inspect --flat              # Flat path list
       naturo menu-inspect --app notepad --json # JSON output
     """
-    # (#593) Resolve --app-id to hwnd before any other logic
-    hwnd = None
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
+    # (#593) Resolve --app-id to hwnd before any other logic.
+    # An explicit --app-id takes precedence over a raw --hwnd value.
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
         id_map = get_app_id_map()
@@ -72,7 +83,23 @@ def menu_inspect(app, app_id, flat, json_output):
             except Exception:
                 pass  # find_process failed for other reasons, fall through
 
-        items = backend.get_menu_items(window_title=app, hwnd=hwnd)
+        # Resolve the full window-targeting flag set (--app/--window/--hwnd/--pid)
+        # to a single handle via the shared resolver, then inspect that window's
+        # menu.  Resolving here (rather than passing --app through as a window
+        # title) keeps targeting consistent with see/click/highlight (#871).
+        from naturo.errors import WindowNotFoundError
+        try:
+            handle = backend._resolve_hwnd(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            )
+        except WindowNotFoundError as exc:
+            if json_output:
+                click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(exc)))
+            else:
+                click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1)
+
+        items = backend.get_menu_items(hwnd=handle)
 
         if not items:
             msg = "No menu items found."
@@ -87,9 +114,16 @@ def menu_inspect(app, app_id, flat, json_output):
                 flat_items = []
                 for item in items:
                     flat_items.extend(item.flatten())
-                click.echo(json_module.dumps({"success": True, "menu_items": flat_items}, indent=2))
+                click.echo(json_dumps(
+                    {"success": True, "menu_items": flat_items, "count": len(flat_items)},
+                    indent=2,
+                ))
             else:
-                click.echo(json_module.dumps({"success": True, "menu_items": [item.to_dict() for item in items]}, indent=2))
+                tree_items = [item.to_dict() for item in items]
+                click.echo(json_dumps(
+                    {"success": True, "menu_items": tree_items, "count": len(tree_items)},
+                    indent=2,
+                ))
         else:
             if flat:
                 for item in items:
@@ -97,7 +131,7 @@ def menu_inspect(app, app_id, flat, json_output):
                         shortcut = f"  [{entry['shortcut']}]" if entry.get("shortcut") else ""
                         click.echo(f"  {entry['path']}{shortcut}")
             else:
-                def print_menu(item, indent=0):
+                def print_menu(item, indent=0) -> None:
                     """Recursively print a menu item and its submenus with indentation."""
                     prefix = "  " * indent
                     shortcut = f" [{item.shortcut}]" if item.shortcut else ""

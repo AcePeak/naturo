@@ -1,9 +1,12 @@
 """Capture command — screenshot capture with optional element/region crop."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import click
 
 import naturo.cli.core._common as _common
+from naturo.cli._jsonio import json_dumps
 
 
 @click.command("capture")
@@ -53,6 +56,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
         naturo capture --app-id a1 --element e12        # element by app ID
         naturo capture -o output.png                    # save to output.png
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#361) Resolve --app-id to app/hwnd before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
@@ -84,6 +91,16 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
         app_label = (app or window_title or "screen").lower().replace(" ", "-")
         path = f"naturo-{app_label}-{timestamp}.{fmt}"
 
+    # (#1022) Auto-create the parent directory so a missing folder doesn't
+    # surface as a raw [Errno 2] mislabeled as a capture failure.
+    _common._ensure_output_dir(path, json_output)
+
+    # (#1114) The backend writes the *full* screenshot to the user's output
+    # path before any crop is validated.  Remember that file so a later
+    # crop-validation failure can remove it (see the SystemExit handler) —
+    # a failed capture must not leave a misleading full-screen image behind.
+    written_capture_path: str | None = None
+
     try:
         backend = _common._get_backend(json_output)
         if hwnd or app or window_title or pid:
@@ -91,7 +108,13 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             target_hwnd = hwnd
             if not target_hwnd and hasattr(backend, '_resolve_hwnd'):
                 target_hwnd = backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
-            result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
+            # (#843) When targeting an app/pid, capture the main window plus
+            # any popup/menu windows owned by the same process.  When a direct
+            # --hwnd is given, capture only that single window.
+            if target_hwnd and not hwnd and hasattr(backend, 'capture_app_windows'):
+                result = backend.capture_app_windows(main_hwnd=target_hwnd, output_path=path)
+            else:
+                result = backend.capture_window(hwnd=target_hwnd or 0, output_path=path)
         else:
             # Validate screen index against available monitors
             if screen < 0:
@@ -114,8 +137,19 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 pass  # Non-Windows: skip validation, let backend handle it
             result = backend.capture_screen(screen_index=screen, output_path=path)
 
+        # (#1114) A crop overwrites the output file only on success; record the
+        # full screenshot just written so a crop-validation failure can clean it
+        # up.  Only tracked when a crop is requested — a plain full-screen
+        # capture keeps its file.
+        if element_ref or region:
+            written_capture_path = result.path
+
         # ── Element / region crop (issue #160) ───────────────────────────────
         crop_box = None  # (left, top, right, bottom) in image coordinates
+        # The user's raw --region request (x, y, w, h), kept so an off-screen
+        # error can echo what the user typed rather than the clamped PIL box
+        # (issue #1050).  None for the --element path.
+        requested_region: tuple[int, int, int, int] | None = None
 
         # Track whether the capture is window-relative (for element crop offset)
         _is_window_capture = bool(hwnd or app or window_title or pid)
@@ -131,7 +165,8 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                     "Run 'naturo see' first to create a snapshot."
                 )
                 if json_output:
-                    click.echo(_common._json_error_str("REF_NOT_FOUND", msg))
+                    click.echo(_common._json_error_str(
+                        "STALE_SNAPSHOT_CACHE", msg, context={"ref": element_ref}))
                 else:
                     click.echo(f"Error: {msg}", err=True)
                 raise SystemExit(1)
@@ -141,10 +176,15 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 element, snap_id = el_result
                 ex, ey, ew, eh = element.frame
 
-                # Check for zero-size bounds (cannot crop)
+                # Check for zero-size bounds (cannot crop).  UIElement exposes
+                # its display name as ``title`` (``label`` as the accessibility
+                # fallback) — there is no ``name`` attribute, so reach for the
+                # real fields rather than an AttributeError that would mask this
+                # ZERO_SIZE_ELEMENT error as a generic CAPTURE_ERROR (#1114).
                 if ew <= 0 or eh <= 0:
+                    element_name = element.title or element.label
                     msg = (
-                        f"Element {element_ref} (role={element.role!r} name={element.name!r}) "
+                        f"Element {element_ref} (role={element.role!r} name={element_name!r}) "
                         f"has zero-size bounds ({ew}x{eh}) at ({ex},{ey}) and cannot be cropped. "
                         "This element may be off-screen, hidden, or in a virtualized container."
                     )
@@ -198,6 +238,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 if len(parts) != 4:
                     raise ValueError("need 4 values")
                 rx, ry, rw, rh = parts
+                requested_region = (rx, ry, rw, rh)
                 crop_box = (
                     max(0, rx - padding),
                     max(0, ry - padding),
@@ -217,6 +258,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             try:
                 from PIL import Image as _PILImage
                 img = _PILImage.open(result.path)
+                # Read the pixels now so PIL releases its handle on the capture
+                # file — otherwise the off-screen/non-positive failure branch
+                # below cannot unlink it on Windows (the file stays open). (#1114)
+                img.load()
                 # Clamp to image bounds
                 iw, ih = img.size
                 left = max(0, crop_box[0])
@@ -224,9 +269,41 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 right = min(iw, crop_box[2])
                 bottom = min(ih, crop_box[3])
                 if right <= left or bottom <= top:
-                    msg = f"Crop region ({left},{top},{right},{bottom}) has zero size."
+                    # Echo the user's *requested* region, not the clamped PIL
+                    # crop box — the clamped (left, top, right, bottom) reads
+                    # like an X,Y,W,H the user never typed (issue #1050).
+                    if requested_region is not None:
+                        rx, ry, rw, rh = requested_region
+                        if rw <= 0 or rh <= 0:
+                            msg = (
+                                f"Crop region X,Y,W,H ({rx},{ry},{rw},{rh}) has "
+                                "non-positive width/height; W and H must both be > 0."
+                            )
+                        else:
+                            msg = (
+                                f"Crop region X,Y,W,H ({rx},{ry},{rw},{rh}) is entirely "
+                                f"outside the captured image bounds ({iw}x{ih}). "
+                                "Reduce X/Y or W/H so the region overlaps the screen."
+                            )
+                        context = {
+                            "requested_region": [rx, ry, rw, rh],
+                            "image_size": [iw, ih],
+                        }
+                    else:
+                        # --element path: the resolved bounds fall outside the
+                        # captured image after the window-origin offset.
+                        msg = (
+                            f"Crop bounds fall entirely outside the captured image "
+                            f"bounds ({iw}x{ih}); the element may be off-screen."
+                        )
+                        context = {
+                            "clamped_crop_box": [left, top, right, bottom],
+                            "image_size": [iw, ih],
+                        }
                     if json_output:
-                        click.echo(_common._json_error_str("INVALID_INPUT", msg))
+                        click.echo(
+                            _common._json_error_str("INVALID_INPUT", msg, context=context)
+                        )
                     else:
                         click.echo(f"Error: {msg}", err=True)
                     raise SystemExit(1)
@@ -256,7 +333,6 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             mgr.store_screenshot(snapshot_id, result.path, metadata)
 
         if json_output:
-            import json as json_module
             out: dict = {
                 "success": True,
                 "path": result.path,
@@ -271,7 +347,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 out["crop_source"] = "element" if element_ref else "region"
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
-            click.echo(json_module.dumps(out))
+            click.echo(json_dumps(out))
         else:
             import os
             full_path = os.path.abspath(result.path)
@@ -281,6 +357,22 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             elif region:
                 crop_note = f" [cropped to {region}]"
             click.echo(f"Saved: {full_path} ({result.width}x{result.height}){crop_note}")
+    except SystemExit:
+        # (#1114) A crop was requested but its validation failed after the full
+        # screenshot was already written to the user's path.  Remove that file so
+        # the on-disk artifact matches the reported failure — a failed capture
+        # must not leave a misleading full-screen image where a crop was asked
+        # for.  Best-effort; the success path never raises SystemExit, so a
+        # successful capture always keeps its file.
+        if written_capture_path is not None:
+            try:
+                Path(written_capture_path).unlink(missing_ok=True)
+            except OSError as exc:
+                _common.logger.debug(
+                    "Best-effort cleanup of partial capture %s failed: %s",
+                    written_capture_path, exc,
+                )
+        raise
     except _common.WindowNotFoundError as e:
         if json_output:
             click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))

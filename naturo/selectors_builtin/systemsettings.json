@@ -1,0 +1,26 @@
+{
+  "search-box": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/Edit[@automationid=\"SearchTextBox\"]",
+    "description": "Settings search box"
+  },
+  "navigation-pane": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/List[@automationid=\"NavigationMenuList\"]",
+    "description": "Left navigation menu (System, Bluetooth, Network, etc.)"
+  },
+  "system-category": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/List[@automationid=\"NavigationMenuList\"]/ListItem[@name=\"System\"]",
+    "description": "System settings category"
+  },
+  "network-category": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/List[@automationid=\"NavigationMenuList\"]/ListItem[@name=\"Network*\"]",
+    "description": "Network & internet settings category"
+  },
+  "back-button": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/Button[@automationid=\"NavigationViewBackButton\"]",
+    "description": "Back navigation button"
+  },
+  "content-area": {
+    "selector": "app://systemsettings.exe/Window[@name=\"Settings\"]/Pane[@automationid=\"ContentFrame\"]",
+    "description": "Main content area for current setting page"
+  }
+}

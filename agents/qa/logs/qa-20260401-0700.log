@@ -1,0 +1,5 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[2026/04/01 ÖÜÈý  7:00:03.08] Starting QA-Mariana round 
+That background task was the TC-0036 quit test â€” I already read its output earlier (it showed "Quit è®¡ç®—å™¨" with exit 0, and the subsequent `list apps` grep returned empty, confirming Calculator was closed). The exit code 1 is from grep finding no matches, which is the expected result (Calculator successfully removed from app list). TC-0036 passed correctly. Round 76 is done.

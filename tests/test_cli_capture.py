@@ -36,6 +36,7 @@ def mock_backend():
     backend = MagicMock()
     backend.capture_screen.return_value = FakeCaptureResult()
     backend.capture_window.return_value = FakeCaptureResult()
+    backend.capture_app_windows.return_value = FakeCaptureResult()
     backend._resolve_hwnd.return_value = 12345
     backend.list_monitors.return_value = [
         MagicMock(index=0), MagicMock(index=1),
@@ -177,7 +178,8 @@ class TestWindowCapture:
             ], catch_exceptions=False)
         assert result.exit_code == 0
         mock_backend._resolve_hwnd.assert_called()
-        mock_backend.capture_window.assert_called_once()
+        # (#843) --app routes through capture_app_windows for popup compositing
+        mock_backend.capture_app_windows.assert_called_once()
 
 
 # ── Region crop ──────────────────────────────────────────────────────
@@ -217,7 +219,7 @@ class TestElementCrop:
                 "-p", "/tmp/out.png", "--element", "e999", "--json", "--no-snapshot",
             ], catch_exceptions=False)
         assert result.exit_code != 0
-        assert "REF_NOT_FOUND" in result.output
+        assert "STALE_SNAPSHOT_CACHE" in result.output
 
     def test_element_zero_size_error(self, runner, mock_backend):
         mock_elem = MagicMock()

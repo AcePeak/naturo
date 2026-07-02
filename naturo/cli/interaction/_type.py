@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import sys
 
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 @click.option("--paste", "paste_mode", is_flag=True, help="Paste via clipboard (Ctrl+V) instead of typing")
 @click.option("--file", "file_path", type=click.Path(), help="Read text from file (use with --paste)")
 @click.option("--restore/--no-restore", default=True, help="Restore clipboard after --paste", show_default=True)
-@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
+@click.option("--on", "--id", "on_element", help="Target element (eN ref or text label) — click to focus before typing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -59,7 +60,7 @@ logger = logging.getLogger(__name__)
 def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
              delete, clear, paste_mode, file_path, restore, on_element, ref_alias, app, pid,
              window_title, hwnd, input_mode, method, selector, app_id, verify, see_after,
-             settle, raw, interpret_escapes, json_output):
+             settle, raw, interpret_escapes, json_output) -> None:
     """Type text with configurable speed and profile.
 
     TEXT is the string to type. Supports human-like variable-speed typing
@@ -80,6 +81,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
       naturo type --paste --file mytext.txt
       naturo type --paste                        # paste current clipboard
       naturo type "hello" --on e42               # click e42 then type
+      naturo type "hello" --id e42               # --id is an alias for --on
       naturo type "hello" --on e42 --app feishu  # target app + element
       naturo type "hello" --selector 'app://notepad.exe/Edit[@automationid="15"]'
     """
@@ -132,6 +134,24 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         _common._json_err(f"--wpm must be >= 1, got {wpm}", json_output, code="INVALID_INPUT")
         return
 
+    # (#960) Opt-in input-content safety guard. When NATURO_SAFE_INPUT=1 is set
+    # (the unattended QA loop), refuse to inject text that looks like a shell
+    # command — a SendInput focus race could otherwise deliver a destructive
+    # fragment (e.g. "$(rm -rf /)") to a terminal. Validates the final resolved
+    # content, so it also covers --paste/--file. Normal users (env unset) are
+    # unaffected.
+    if text is not None:
+        from naturo.safety import unsafe_input_reason
+        _unsafe = unsafe_input_reason(text)
+        if _unsafe:
+            _common._json_err(
+                f"Refusing to inject unsafe content ({_unsafe}) because "
+                f"NATURO_SAFE_INPUT=1 is set. Nothing was typed.",
+                json_output,
+                code="UNSAFE_INPUT_BLOCKED",
+            )
+            return
+
     backend = _common._get_backend(json_output)
 
     # Auto-routing: detect best interaction method for target app
@@ -159,7 +179,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     import ctypes
                     import ctypes.wintypes
                     _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(
+                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
                         _target_hwnd, ctypes.byref(_focused_pid)
                     )
                     if route_info and _focused_pid.value:
@@ -223,7 +243,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     f"Element ref '{on_element}' not found. Run 'naturo see' first to "
                     f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
                     json_output,
-                    code="REF_NOT_FOUND",
+                    code="STALE_SNAPSHOT_CACHE",
+                    context={"ref": on_element},
                 )
                 return
         else:
@@ -241,7 +262,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                     )
                     return
             except Exception as exc:
-                _common._json_err(str(exc), json_output)
+                _common._json_err(str(exc), json_output, exc=exc)
                 return
         try:
             backend.click(click_x, click_y, button="left", input_mode=input_mode)
@@ -357,8 +378,8 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 backend.type_text(text, delay_ms=int(delay), profile=profile,
                                   wpm=wpm, input_mode=input_mode)
         else:
-            backend.type_text(text, delay_ms=int(delay), profile=profile, wpm=wpm,
-                              input_mode=input_mode)
+            backend.type_text(text, delay_ms=int(delay), profile=profile,
+                              wpm=wpm, input_mode=input_mode)
 
         if press_return:
             backend.press_key("enter")
@@ -369,8 +390,28 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             backend.press_key("escape")
 
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        _common._json_err(str(exc), json_output, exc=exc)
         return
+
+    # (#1111) Capture this action as a recording step so `record play`
+    # reproduces the typing — `_type.py` previously never recorded, so a
+    # `type` performed during an active recording was silently dropped even
+    # though recording.py already replays a "type" step. Mirrors the
+    # `_record_action` calls in _click.py / _mouse.py / _press.py.
+    #
+    # Pasted text (text not None) replays as typed text: the same content
+    # ends up in the target, which preserves the recording's intent. A bare
+    # clipboard paste (text is None) carries no capturable content, so it is
+    # not recorded. Follow-up navigation keys are captured as `press` steps
+    # so a login flow (type → tab → type → return) replays faithfully.
+    if text is not None:
+        _common._record_action("type", {"text": text, "wpm": wpm})
+    if press_return:
+        _common._record_action("press", {"key": "enter", "count": 1})
+    if tab_count:
+        _common._record_action("press", {"key": "tab", "count": tab_count})
+    if escape:
+        _common._record_action("press", {"key": "escape", "count": 1})
 
     action = "pasted" if paste_mode else "typed"
     display_text = text if text is not None else "(clipboard)"
@@ -474,7 +515,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             # Merge verification data into error output
             err_data = json.loads(json_error("VERIFICATION_FAILED", _verification.detail))
             err_data["data"] = result_data
-            click.echo(json.dumps(err_data))
+            click.echo(json_dumps(err_data))
             sys.exit(1)
         else:
             click.echo(f"WARNING: {_verification.detail}", err=True)

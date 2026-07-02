@@ -410,3 +410,29 @@ class TestWindowHelp:
     def test_list_help(self, runner):
         result = runner.invoke(window, ["list", "--help"])
         assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# App ID promotion (#776): --app aN must be promoted to --app-id
+# ---------------------------------------------------------------------------
+
+class TestAppIdPromotion:
+    """Verify --app aN is promoted to --app-id in window commands (#776)."""
+
+    @pytest.mark.parametrize("action", _SIMPLE_ACTIONS)
+    def test_app_a1_promoted_in_simple_actions(self, runner, mock_backend, action):
+        """--app a1 should be treated as --app-id a1, resolving via app ID map."""
+        with patch("naturo.cli.window_cmd._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.window_cmd.resolve_app_id_to_hwnd", return_value=99999) as mock_resolve:
+            result = runner.invoke(window, [action, "--app", "a1"])
+        # resolve_app_id_to_hwnd must receive app_id="a1" (promoted from --app)
+        mock_resolve.assert_called_once_with("a1", None, False)
+        assert result.exit_code == 0
+
+    def test_app_a1_promoted_in_window_move(self, runner, mock_backend):
+        """--app a1 should be promoted in window move command."""
+        with patch("naturo.cli.window_cmd._get_backend", return_value=mock_backend), \
+             patch("naturo.cli.window_cmd.resolve_app_id_to_hwnd", return_value=99999) as mock_resolve:
+            result = runner.invoke(window, ["move", "--app", "a1", "--x", "0", "--y", "0"])
+        mock_resolve.assert_called_once_with("a1", None, False)
+        assert result.exit_code == 0

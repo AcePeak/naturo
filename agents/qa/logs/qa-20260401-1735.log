@@ -1,0 +1,72 @@
+No local changes to save
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Your branch is up to date with 'origin/develop'.
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Already up to date.
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+Dropped refs/stash@{0} (04d17e2d4f6e46263def46ff236986ef1fdbe791)
+[2026/04/01 ÖÜÈý 17:35:43.93] Starting QA-Mariana round 
+## QA Round 78 Complete
+
+**Summary:**
+- **8 issues verified and closed**: #724, #729, #749, #750, #752, #754, #757, #702 (clearing the entire verification backlog)
+- **1 duplicate closed**: #776 (dup of #752)
+- **CI**: 14 passed, 1 failed (`test_capture_screen_unicode_path` â€” filed as #777)
+- **E2E**: Calculator and Notepad â€” both PASS
+- **Regression**: 19/19 PASS
+- **Exploratory**: All error paths, JSON consistency, exit codes, boundaries â€” correct
+- **AI Agent Builder simulation**: MCP server works end-to-end (64 tools, JSON-RPC protocol, structured errors)
+- **Test case evolution**: TC-0028 retired, TC-0040 created
+- **1 new issue filed**: #777 (P1 â€” capture_screen Unicode path failure in DLL)

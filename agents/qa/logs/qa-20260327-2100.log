@@ -1,0 +1,27 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   3651fe5..8dcfe8a  main       -> origin/main
+Updating 3651fe5..8dcfe8a
+Fast-forward
+ agents/dev/status.md | 30 ++++++++++++++++++------------
+ 1 file changed, 18 insertions(+), 12 deletions(-)
+[2026/03/27 ÷‹ŒÂ 21:00:04.08] Starting QA-Mariana round 
+---
+
+## QA-Mariana Round 41 Complete
+
+**Summary:**
+
+| Phase | Result |
+|-------|--------|
+| **P0 CI** | 31 passed, 3 failed (all known: #426, #427, #428) |
+| **P1 Verify** | 0/4 verified ‚Äî all PRs (#433-#436) still OPEN |
+| **P2 E2E** | Calculator PASS, Notepad FAIL (type broken) |
+| **P3 Exploratory** | JSON valid, exit codes correct for errors, `type` inconsistent (special chars work, alphanumeric fails) |
+| **P4 Accessibility** | 2 new bugs: focus after menus (#441), capture with popups (#440) |
+| **P5 Regression** | 1/4 passed (TC-0004 only) |
+| **P6 Test Cases** | +2 new (TC-0005, TC-0006), total: 6 active |
+| **P7 Issues** | Filed #440 and #441 |
+| **P8 Status** | Updated `agents/qa/status.md` |
+
+**Critical blocker:** 4 Dev PRs are stuck OPEN. No code changes have landed on main. Until these merge, v0.3.1 progress is frozen.

@@ -1,0 +1,45 @@
+id: TC-0070
+title: "MCP list_windows bypasses NO_DESKTOP_SESSION guard, returns real windows + isError:false"
+status: active
+category: exploratory
+priority: P1
+source_issue: 883
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R130: FAIL — MCP list_windows returned {success:true, windows:[12 entries with real Chrome/explorer handles]} with isError:false from a non-interactive session. CLI `naturo list windows -j` correctly refuses on the same session. MCP analogue of #878.
+  R137: FAIL — still reproduces (14 real windows leaked) on HEAD `70e6591`. Sibling read-tools that bypass NO_DESKTOP_SESSION via the same MCP wrapper class: `list_apps` (9 apps leaked), `list_monitors` (1 monitor leaked), `app_inspect` (interaction_methods leaked for any running process). Scope-expansion documented on #885.
+  R145: FAIL — confirmed on HEAD `17aefe6`. CLI `naturo list windows` and `naturo list apps` refuse with NO_DESKTOP_SESSION exit 1; MCP `list_windows`/`list_apps` return the real window handle (incl. this terminal hwnd=22808596) and app list, isError:false, no guard. Same session, same process tree.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Session has no interactive desktop access (services / SSH / RDP-blocked)"
+
+steps:
+  - description: "CLI list windows -j baseline — must refuse"
+    command: "naturo list windows -j"
+    expect: '{"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}} with exit 1'
+  - description: "MCP list_windows tool — must also refuse"
+    command: |
+      PYTHONUTF8=1 python -c "
+      import subprocess, json, time
+      p = subprocess.Popen(['naturo','mcp','start'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+      def send(r): p.stdin.write((json.dumps(r)+'\n').encode()); p.stdin.flush()
+      send({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'qa','version':'1.0'}}})
+      time.sleep(1.5); p.stdout.readline()
+      send({'jsonrpc':'2.0','method':'notifications/initialized'}); time.sleep(0.2)
+      send({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'list_windows','arguments':{}}})
+      time.sleep(1.5); print(p.stdout.readline().decode('utf-8','replace')[:600])
+      p.terminate()"
+    expect: |
+      Response payload contains {"success": false, "error": {"code": "NO_DESKTOP_SESSION", ...}}
+      AND the JSON-RPC result has "isError": true.
+      Currently returns {"success": true, "windows": [...]} with isError:false — silent failure.
+  - description: "Any returned hwnd is unreachable via subsequent calls"
+    command: "After list_windows returns a handle N, call see with hwnd=N — currently fails NO_DESKTOP_SESSION, proving the returned list is useless."
+    expect: "MCP tools/call for see_ui_tree with hwnd=N must refuse if list_windows did."
+
+pass_criteria: "MCP list_windows refuses with NO_DESKTOP_SESSION envelope AND isError:true on non-interactive sessions"
+fail_action: "Update or reopen #883"

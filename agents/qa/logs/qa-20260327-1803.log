@@ -1,0 +1,32 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[2026/03/27 ���� 18:03:34.40] Starting QA-Mariana round 
+## QA Round Complete — Summary
+
+**All 6 phases executed.**
+
+### Results
+| Phase | Status |
+|-------|--------|
+| Phase 1: Verify Dev fixes | Skipped (no status:done issues) |
+| Phase 2: E2E Notepad + Calculator | Notepad FAIL, Calculator PASS |
+| Phase 3: Exploratory testing | 2 bugs found |
+| Phase 4: Enterprise RPA Dev sim | Workflow breaks on type reliability |
+| Phase 5: File issues | #425 (P0), #426 (P1) created |
+| Phase 6: Update status | Written to agents/qa/status.md |
+
+### Issues Filed
+- **#425** — P0: `naturo type` silent failure / wrong text on Chinese IME Windows
+- **#426** — P1: `naturo click`/`press` return exit code 2 on successful operations
+
+### What Works
+- `naturo see`, `naturo capture`, `naturo list apps` — solid
+- `naturo app launch/quit` — solid
+- Hotkey shortcuts (Ctrl+A/C/N/V) — reliable
+- Calculator click flow — correct results (7+8=15 verified)
+- JSON output validity — confirmed
+
+### What's Broken
+- `naturo type` on Chinese IME Windows — wrong text, silent failures, **P0 blocker**
+- Exit code 2 on click/press success — breaks all scripting use cases

@@ -2,9 +2,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   schedule:
     - cron: "0 6 * * 1"  # Weekly Monday 06:00 UTC
 
@@ -36,3 +36,20 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+
+  # Gate job whose name matches the branch-protection required check "CodeQL".
+  # Without this, the matrix jobs report as "Analyze (python)" / "Analyze (c-cpp)"
+  # which don't satisfy the required status check.
+  codeql-gate:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    needs: [analyze]
+    if: ${{ always() }}
+    steps:
+      - name: Check analysis results
+        run: |
+          if [[ "${{ needs.analyze.result }}" != "success" ]]; then
+            echo "::error::CodeQL analysis did not succeed (${{ needs.analyze.result }})"
+            exit 1
+          fi
+          echo "✅ CodeQL analysis passed"

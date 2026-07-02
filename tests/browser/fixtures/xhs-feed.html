@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: xhs-feed</title>
+  <style>
+    #explore-feed { margin: 0; padding: 0; list-style: none; }
+    .note-item { border-bottom: 1px solid #ccc; padding: 8px; }
+    .note-title { font-weight: 600; }
+    .note-author { color: #888; }
+  </style>
+</head>
+<body>
+  <!--
+    Static feed mirroring the rpa-client-lingkehudong (Xiaohongshu / 小红书)
+    explore-page scrape (#1063 / #763): the DrissionPage *Before* code does
+
+        items = page.eles("xpath://div[contains(@class,'note-item')]")
+        for item in items:
+            title = item.ele("xpath:.//span").text
+
+    i.e. it finds every note card, then reads each card's OWN title span with a
+    relative xpath scoped to that card. Each card here carries a distinct title
+    and author so a per-card scoped read must return that card's own text — if
+    the scoping is broken and the xpath resolves against the whole document,
+    every card collapses to the first card's title, which the equivalence test
+    explicitly guards against.
+  -->
+  <h1 id="page-heading">Explore</h1>
+  <div id="explore-feed">
+    <div class="note-item" data-note-id="n0">
+      <span class="note-title">城市夜景手机摄影技巧</span>
+      <span class="note-author">@aurora</span>
+    </div>
+    <div class="note-item" data-note-id="n1">
+      <span class="note-title">十分钟快手早餐合集</span>
+      <span class="note-author">@chef-lin</span>
+    </div>
+    <div class="note-item" data-note-id="n2">
+      <span class="note-title">通勤穿搭分享</span>
+      <span class="note-author">@mina</span>
+    </div>
+    <div class="note-item" data-note-id="n3">
+      <span class="note-title">阳台多肉养护笔记</span>
+      <span class="note-author">@green-thumb</span>
+    </div>
+  </div>
+</body>
+</html>

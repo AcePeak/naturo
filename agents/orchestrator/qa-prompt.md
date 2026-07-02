@@ -42,7 +42,10 @@ When filing issues found during simulation, note: `Discovered during: <user type
    - agents/qa/SOUL.md (your full responsibilities)
 3. Determine your persona for this round (see table above).
 
-2. Check current milestone status:
+4. **Verify GitHub tools are available (CRITICAL):**
+   GitHub access is provided via MCP tools, which may take 10-30 seconds to initialize. Try listing issues — if it fails, wait 15 seconds and retry (up to 3 times). NEVER skip GitHub operations or conclude tools are unavailable without retrying.
+
+5. Check current milestone status:
    ```bash
    # Get all open issues grouped by milestone (earliest first)
    gh issue list --state open --limit 100 --json number,title,labels,milestone \
@@ -59,7 +62,18 @@ When filing issues found during simulation, note: `Discovered during: <user type
 The self-hosted GitHub Actions runner is NOT running. You are responsible for running the CI desktop test suite when needed.
 
 ### When to run
-Check if there are new commits on main since your last run:
+Set up dedicated worktree, then check if there are new commits on develop since your last run:
+```bash
+# Use dedicated worktree to avoid conflicts with other agents
+WORKTREE_DIR="../naturo-qa-mariana"
+if [ ! -d "$WORKTREE_DIR" ]; then
+  git worktree add "$WORKTREE_DIR" develop
+fi
+cd "$WORKTREE_DIR"
+git pull origin develop
+```
+
+Check if there are new commits since your last run:
 ```bash
 LAST_RUN_SHA=$(cat agents/qa/.last-ci-sha 2>/dev/null || echo "none")
 CURRENT_SHA=$(git rev-parse HEAD)
@@ -72,7 +86,7 @@ echo "Current HEAD:   $CURRENT_SHA"
 ### How to run
 ```bash
 # 1. Pull latest and reinstall
-git pull origin main
+git pull origin develop
 pip install -e ".[dev,windows]" --quiet
 
 # 2. Build C++ core if needed
@@ -107,27 +121,42 @@ python -m pytest tests/ -v -m "e2e" --timeout=60 --timeout-method=thread --tb=sh
 ### If CI was skipped
 Report in Phase 8: `CI Desktop Tests: skipped (no new commits since <short-sha>)`
 
-## Phase 1 — Verify Dev Fixes (status:done issues)
-For each `status:done` issue without `verified` label:
-1. Read the Dev's fix comment to understand the change
+## Phase 1 — Verify Dev Fixes (status:done issues) — MANDATORY FIRST
+
+**This phase is MANDATORY and MUST complete before any other testing.**
+Every `status:done` issue represents work a Dev agent completed. You must verify
+and close ALL of them before moving to Phase 2.
+
+```bash
+# List ALL issues needing verification
+gh issue list --label "status:done" --state open --json number,title --jq '.[] | "#\(.number) \(.title)"'
+```
+
+For EACH `status:done` issue (do NOT skip any):
+1. Read the Dev's fix comment and the linked PR to understand the change
 2. **Test it on this machine** — you have a real desktop. For example:
    - If the fix is about `naturo see`, run `naturo see --app notepad` and check the output
    - If the fix is about `naturo click`, launch an app, find an element, click it, then verify with a screenshot
-3. **Cross-validate with AI Vision**:
+   - If it's a refactor (no user-facing change), verify tests pass: `python -m pytest tests/ -x -q --timeout=30`
+   - If it's a CI/docs change, verify the change is present in the files
+3. **Cross-validate with AI Vision** (when applicable):
    ```bash
    naturo capture --app <app> -o /tmp/qa-verify.png
    ```
    Then read the screenshot to visually confirm the operation worked.
-4. If verified:
+4. If verified — **close the issue**:
    ```bash
    gh issue comment N --body "**[QA-Mariana]** ✅ Verified on desktop runner. Tested: <what you did>. Screenshot confirms: <what you saw>."
    gh issue edit N --add-label "verified"
+   gh issue close N --reason completed
    ```
-5. If NOT verified:
+5. If NOT verified — reject back to Dev:
    ```bash
    gh issue comment N --body "**[QA-Mariana]** ❌ Verification FAILED on desktop runner.\n\nSteps: <what you did>\nExpected: <expected>\nActual: <actual>\nScreenshot: <description of what screenshot shows>"
    gh issue edit N --remove-label "status:done"
    ```
+
+**Do NOT proceed to Phase 2 until ALL `status:done` issues are processed.**
 
 ## Phase 2 — Professional Desktop E2E Testing
 You are on a REAL Windows machine. This phase is systematic, thorough, professional QA — every round.
@@ -308,7 +337,7 @@ Then git add, commit, and push it:
 ```bash
 git add tests/qa-reports/QA-Mariana-*.md agents/qa/status.md agents/qa/testcases/
 git commit -m "qa: round <N> report [skip ci]"
-git push origin main
+git push origin develop
 ```
 
 ### 2. Local status file

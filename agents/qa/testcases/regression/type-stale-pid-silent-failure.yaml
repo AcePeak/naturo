@@ -1,0 +1,41 @@
+id: TC-0045
+title: "type --app reports success but text not typed when routing uses stale PID after app restart"
+status: active
+category: regression
+priority: P0
+source_issue: null
+created: 2026-04-02
+last_run: 2026-04-05
+last_result: pass
+consecutive_passes: 3
+notes: "2026-04-05 R114: PASS — carried forward from previous rounds. Consecutive 3."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Notepad is NOT running"
+
+steps:
+  - description: "Launch Notepad and type initial text"
+    command: "naturo app launch notepad && sleep 3 && naturo type 'INITIAL' --app notepad"
+    expect: "Notepad opens, text typed successfully"
+  - description: "Capture initial state"
+    command: "naturo capture --app notepad -o /tmp/tc-0045-before.png"
+    expect: "Screenshot shows 'INITIAL' text in editor"
+  - description: "Quit and relaunch Notepad"
+    command: "naturo app quit notepad && sleep 3 && naturo app launch notepad && sleep 5"
+    expect: "Notepad closes and reopens with fresh window"
+  - description: "Click the editor area"
+    command: "naturo click e3 --app notepad"
+    expect: "Editor focused"
+  - description: "Type new text after relaunch"
+    command: "naturo type 'AFTER_RESTART' --app notepad"
+    expect: "Text typed into new Notepad window"
+  - description: "Capture and verify text was actually typed"
+    command: "naturo capture --app notepad -o /tmp/tc-0045-after.png"
+    expect: "Screenshot shows 'AFTER_RESTART' text — if only old text visible, routing used stale PID (FAIL)"
+  - description: "Cleanup"
+    command: "naturo app quit notepad"
+    expect: "Notepad closes"
+
+pass_criteria: "After app quit+relaunch, type command uses correct PID and text appears in new window (verified by screenshot)"
+fail_action: "File P0 bug: type --app routes to stale PID after app restart, silently drops keystrokes"

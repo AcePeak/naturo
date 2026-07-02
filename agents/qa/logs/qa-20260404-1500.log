@@ -1,0 +1,57 @@
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/regression/calculator-uwp-invisible.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml: needs merge
+agents/qa/testcases/regression/see-error-exit-code-zero.yaml: needs merge
+agents/qa/testcases/regression/type-escape-newline-dropped.yaml: needs merge
+agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   6da7241..d974931  develop    -> origin/develop
+error: you need to resolve your current index first
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/regression/calculator-uwp-invisible.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml: needs merge
+agents/qa/testcases/regression/see-error-exit-code-zero.yaml: needs merge
+agents/qa/testcases/regression/type-escape-newline-dropped.yaml: needs merge
+agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+error: Pulling is not possible because you have unmerged files.
+hint: Fix them up in the work tree, and then use 'git add/rm <file>'
+hint: as appropriate to mark resolution and make a commit.
+fatal: Exiting because of an unresolved conflict.
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/regression/calculator-uwp-invisible.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/json-mode-exit-code-zero-on-failure.yaml: needs merge
+agents/qa/testcases/regression/see-error-exit-code-zero.yaml: needs merge
+agents/qa/testcases/regression/type-escape-newline-dropped.yaml: needs merge
+agents/qa/testcases/regression/type-stale-pid-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+The stash entry is kept in case you need it again.
+[2026/04/04 ���� 15:00:05.67] Starting QA-Mariana round 
+## QA Round 105 Complete
+
+**Summary:**
+
+| Phase | Result |
+|-------|--------|
+| Phase 0 — CI | 151 skipped (no desktop markers), SHA recorded |
+| Phase 1 — Verify | **14/14 status:done issues verified and closed** (#784, #774, #723, #758-765, #721, #722, #91, #90) |
+| Phase 2 — E2E | Limited (SSH session). CLI, JSON, exit codes all tested OK |
+| Phase 3 — Exploratory | **Bug found:** browser commands ignore `-j` flag |
+| Phase 4 — Skeptical Evaluator | naturo wins on CLI/JSON/MCP; gaps in browser JSON consistency |
+| Phase 5 — Regression | 4/29 ran, 4 passed (25 need desktop) |
+| Phase 6 — Evolve | Created TC-0049 (browser JSON error format) |
+| Phase 7 — Issues | Filed **#834** (P1: browser -j flag ignored) |
+| Phase 8 — Status | Report committed and pushed to develop |

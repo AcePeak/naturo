@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: form</title>
+</head>
+<body>
+  <h1 id="main-heading">Sign-up Form</h1>
+
+  <!-- Exercises: form filling, dropdown selection, file upload, submit.
+       action is a relative path so submission stays fully offline. -->
+  <form id="signup-form" method="post" action="submit" enctype="multipart/form-data">
+    <label>Username
+      <input type="text" name="username" id="username" value="">
+    </label>
+
+    <label>Email
+      <input type="email" name="email" id="email" value="">
+    </label>
+
+    <label>Biography
+      <textarea name="bio" id="bio" rows="4"></textarea>
+    </label>
+
+    <label>Country
+      <select name="country" id="country">
+        <option value="">-- choose --</option>
+        <option value="us">United States</option>
+        <option value="cn">China</option>
+        <option value="de">Germany</option>
+      </select>
+    </label>
+
+    <label>Avatar
+      <input type="file" name="avatar" id="avatar">
+    </label>
+
+    <label>
+      <input type="checkbox" name="subscribe" id="subscribe" value="yes"> Subscribe
+    </label>
+
+    <button type="submit" id="submit-button">Create account</button>
+  </form>
+
+  <p id="form-status" data-submitted="false">Not submitted.</p>
+
+  <script>
+    // Keep submission offline + deterministic: record state instead of
+    // navigating away, so the After/Before scripts observe the same effect.
+    document.getElementById("signup-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      var status = document.getElementById("form-status");
+      status.textContent = "Submitted: " + document.getElementById("username").value;
+      status.setAttribute("data-submitted", "true");
+    });
+  </script>
+</body>
+</html>

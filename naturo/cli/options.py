@@ -19,19 +19,23 @@ Usage::
 """
 from __future__ import annotations
 
+import re as _re
 from typing import Optional
 
 import click
 
 
+_APP_ID_PATTERN = _re.compile(r"a\d+$")
+
+
 # ── Primary options (visible in --help) ──────────────────────────────────────
 
 def app_option(func):
-    """``--app`` — target application (partial name match)."""
+    """``--app`` — target application (partial name match or app ID)."""
     return click.option(
         "--app",
         default=None,
-        help="Target application (name or partial match)",
+        help='Target application (name, partial match, or app ID like "a1")',
     )(func)
 
 
@@ -132,6 +136,31 @@ def resolve_app_id_to_hwnd(
     return entry.handle
 
 
+def maybe_promote_app_to_app_id(
+    app: str | None,
+    app_id: str | None,
+) -> tuple[str | None, str | None]:
+    """Detect app ID pattern in ``--app`` and promote to ``--app-id``.
+
+    When a user passes ``--app a1`` (an app ID from ``naturo app list``),
+    this function detects the ``a<N>`` pattern and returns it as the
+    ``app_id`` parameter instead, so the caller resolves it via the app
+    ID map rather than fuzzy process-name matching.
+
+    Args:
+        app: The ``--app`` value (process name or possible app ID).
+        app_id: The ``--app-id`` value (explicit app ID).
+
+    Returns:
+        Tuple of ``(app, app_id)`` — if ``app`` matched the app ID
+        pattern and ``app_id`` was not already set, ``app`` is cleared
+        and ``app_id`` is set to the detected value.
+    """
+    if app_id is None and app is not None and _APP_ID_PATTERN.fullmatch(app):
+        return None, app
+    return app, app_id
+
+
 def json_option(func):
     """``--json / -j`` — JSON output mode."""
     return click.option(
@@ -173,13 +202,13 @@ def ai_provider_options(func):
     )(func)
     func = click.option(
         "--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
-        help="AI model name (e.g. claude-sonnet-4-20250514, gpt-4o)",
+        help="AI model name or alias (e.g. opus-4.6, sonnet, 4o, gemini-pro)",
     )(func)
     func = click.option(
         "--provider", "ai_provider",
-        type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+        type=click.Choice(["auto", "anthropic", "openai", "google", "ollama"]),
         default="auto",
-        help="AI provider: auto (default), anthropic, openai, ollama",
+        help="AI provider: auto, anthropic, openai, google (Gemini), ollama",
     )(func)
     return func
 
@@ -211,9 +240,10 @@ def get_vision_provider_from_options(
         If no provider is configured.
     """
     from naturo.providers.base import get_vision_provider
+    from naturo.providers.model_registry import resolve_model as _resolve
     kwargs: dict = {}
     if model:
-        kwargs["model"] = model
+        kwargs["model"] = _resolve(model)
     if api_key:
         kwargs["api_key"] = api_key
     return get_vision_provider(provider, **kwargs)

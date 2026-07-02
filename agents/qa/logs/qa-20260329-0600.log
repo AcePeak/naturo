@@ -1,0 +1,38 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   7c88d07..2eac16b  main       -> origin/main
+Updating 7c88d07..2eac16b
+Fast-forward
+ agents/dev/status.md              | 39 +++++++++--------
+ naturo/backends/windows.py        | 39 ++++++++++++-----
+ naturo/cli/interaction.py         |  6 ++-
+ tests/test_app_control.py         | 41 +++++++++++------
+ tests/test_cli_phase2.py          | 24 +++++-----
+ tests/test_resolve_all_windows.py | 92 +++++++++++++++++++++++++++++++++++++++
+ tests/test_type_paste_and_on.py   | 72 ++++++++++++++++++++++++++++++
+ 7 files changed, 257 insertions(+), 56 deletions(-)
+[2026/03/29 ����  6:00:05.80] Starting QA-Mariana round 
+---
+
+## QA-Mariana Round 62 Complete
+
+### Summary
+
+| Phase | Result |
+|-------|--------|
+| **Phase 0 — CI** | 5 passed, 1 flaky fail, 18 skipped (desktop) + 9 passed (E2E). Filed #567 for flaky test. |
+| **Phase 1 — Verify** | Skipped (no status:done issues) |
+| **Phase 2 — E2E** | Notepad PASS (type/select/delete/JSON), Calculator PASS (7+3=10) |
+| **Phase 3 — Exploratory** | Empty string, special chars, error paths, JSON validity, exit codes — all PASS |
+| **Phase 4 — Scripter** | Scripted 5-step workflow PASS. JSON error responses excellent. App quit unreliable. |
+| **Phase 5 — Regression** | 10/15 passed, 4 failed, 1 blocked, 1 retired (TC-0019) |
+| **Phase 6 — Evolve** | No new cases needed. TC-0019 retired. |
+| **Phase 7 — Issues** | Filed #567 (flaky CI). Commented on #565 (fix confirmed). |
+| **Phase 8 — Status** | Updated `agents/qa/status.md` |
+
+### Top 3 Risks
+1. UWP app matching broken — `--app calculator/calc/计算器` all fail
+2. `click --on` fails for short ASCII text ('C', 'CE')
+3. `naturo app quit` unreliable with multi-PID apps
+
+**[QA-Mariana]**

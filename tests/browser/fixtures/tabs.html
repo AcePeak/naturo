@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: tabs</title>
+</head>
+<body>
+  <h1 id="main-heading">Tab Management</h1>
+  <p>Each button opens another fixture in a new tab/window.</p>
+
+  <!-- Exercises: tab management. window.open() with a named target creates a
+       new browsing context a driver can enumerate and switch to. -->
+  <button class="open-tab" id="open-basic"
+          onclick="window.open('basic.html', 'tab-basic')">Open basic</button>
+  <button class="open-tab" id="open-form"
+          onclick="window.open('form.html', 'tab-form')">Open form</button>
+  <button class="open-tab" id="open-api"
+          onclick="window.open('api-dashboard.html', 'tab-api')">Open API</button>
+
+  <p id="tab-status" data-opened="0">No tabs opened.</p>
+
+  <script>
+    // NOTE: the status element must NOT be held in a global named `status`.
+    // `var status` at the top level aliases the special `window.status`
+    // property, which string-coerces whatever is assigned to it -- the element
+    // reference silently becomes "[object HTMLParagraphElement]" and the
+    // counter update below throws, leaving `data-opened` frozen at 0 (a dead
+    // never-lie counter). Use a non-colliding name. Same class of bug as the
+    // dead scroll fixture fixed in b7a488d.
+    var openedCount = 0;
+    var tabStatus = document.getElementById("tab-status");
+    var buttons = document.querySelectorAll(".open-tab");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () {
+        openedCount += 1;
+        tabStatus.textContent = "Opened " + openedCount + " tab(s).";
+        tabStatus.setAttribute("data-opened", String(openedCount));
+      });
+    }
+  </script>
+</body>
+</html>

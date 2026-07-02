@@ -20,6 +20,16 @@ def _get_python_files():
     return list(pkg_dir.rglob("*.py"))
 
 
+def _get_test_files():
+    """Get all .py files in the tests directory.
+
+    Tests run on the full 3.9-3.13 matrix too, so they must not use stdlib
+    features newer than the lowest supported version without a fallback (#910).
+    """
+    test_dir = Path(__file__).parent
+    return list(test_dir.rglob("*.py"))
+
+
 def _check_file_for_310_syntax(filepath):
     """Check a file for Python 3.10+ syntax patterns.
 
@@ -123,8 +133,12 @@ class TestPython39Compatibility:
                     )
 
     def test_no_tomllib_without_fallback(self):
-        """R-DEV-011: tomllib usage must have fallback for Python < 3.11."""
-        for filepath in _get_python_files():
+        """R-DEV-011: tomllib usage must have fallback for Python < 3.11.
+
+        Scans both the package and the test suite, since tests also run on the
+        3.9/3.10 lanes where ``tomllib`` is absent from the stdlib (#910).
+        """
+        for filepath in (*_get_python_files(), *_get_test_files()):
             source = filepath.read_text(encoding="utf-8")
             if "import tomllib" in source and "sys.version_info" not in source:
                 if "tomli" not in source:

@@ -1,0 +1,21 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[2026/03/31 ÖÜ¶þ 21:00:04.48] Starting QA-Mariana round 
+## QA Round 71 Complete
+
+**Summary:**
+
+| Phase | Result |
+|-------|--------|
+| **Phase 0: CI** | 124 passed, 4 failed, 5 skipped, 7 timeouts (9bc3a02) |
+| **Phase 1: Verify** | #694 blocked (PR #695 not merged) |
+| **Phase 2: E2E** | Explorer PASS, Notepad PASS |
+| **Phase 3: Exploratory** | All 9 tests PASS (boundaries, errors, JSON, exit codes, emoji) |
+| **Phase 4: Accessibility** | Element names screen-reader friendly; `press "alt"` fails (new bug) |
+| **Phase 5: Regression** | 9/10 passed, 1 failed (TC-0034), 1 blocked (TC-0007) |
+| **Phase 6: Test Cases** | Created TC-0035 (standalone modifier keys) |
+| **Phase 7: Issues** | Filed #704 (P2 â€” standalone modifier key press) |
+| **Phase 8: Status** | Report committed and pushed |
+
+**New issue**: [#704](https://github.com/AcePeak/naturo/issues/704) â€” `naturo press` rejects standalone modifier keys (alt, ctrl, shift), blocking keyboard-only accessibility workflows.

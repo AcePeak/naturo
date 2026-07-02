@@ -21,7 +21,7 @@ def test_win32_class_role_mapping():
     assert _WIN32_CLASS_ROLE_MAP["SysTreeView32"] == "Tree"
     assert _WIN32_CLASS_ROLE_MAP["msctls_statusbar32"] == "StatusBar"
     
-    # VB6/Thunder controls (用友U8 ERP)
+    # VB6/Thunder controls — Yonyou U8 ERP (用友U8), a Chinese enterprise system
     assert _WIN32_CLASS_ROLE_MAP["ThunderRT6FormDC"] == "Window"
     assert _WIN32_CLASS_ROLE_MAP["ThunderRT6UserControlDC"] == "Pane"
     assert _WIN32_CLASS_ROLE_MAP["ThunderRT6PictureBoxDC"] == "Pane"
@@ -48,7 +48,7 @@ def test_enumerate_child_windows_live():
     """Live test of Win32 HWND enumeration (requires VB6 app).
     
     This test is skipped by default. To run it:
-    1. Open a VB6/ActiveX application (e.g., 用友U8 ERP)
+    1. Open a VB6/ActiveX application (e.g., Yonyou U8 ERP (用友U8), a Chinese enterprise system)
     2. Get the HWND (e.g., via spy++ or naturo list windows)
     3. Un-skip this test and set the hwnd below
     4. Run: pytest tests/test_win32_fallback.py::test_enumerate_child_windows_live -v

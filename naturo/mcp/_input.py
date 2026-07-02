@@ -88,9 +88,35 @@ def register_input_tools(server, _get_backend, _safe_tool):
         """
         if wpm < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"wpm must be >= 1, got {wpm}"}}
+        # (#960) Opt-in input-content safety guard. When NATURO_SAFE_INPUT=1 is
+        # set (the unattended QA loop), refuse to inject shell-command-like
+        # text — a SendInput focus race could otherwise deliver a destructive
+        # fragment (e.g. "$(rm -rf /)") to a terminal. Normal users (env unset)
+        # are unaffected.
+        from naturo.safety import unsafe_input_reason
+        unsafe = unsafe_input_reason(text)
+        if unsafe:
+            return {
+                "success": False,
+                "error": {
+                    "code": "UNSAFE_INPUT_BLOCKED",
+                    "message": f"Refusing to inject unsafe content ({unsafe}) because "
+                    f"NATURO_SAFE_INPUT=1 is set. Nothing was typed.",
+                },
+            }
         backend = _get_backend()
-        backend.type_text(text=text, wpm=wpm, input_mode=input_mode)
-        return {"success": True}
+        # (#1219) Prefer IME-immune entry: keystroke injection (SendInput) is
+        # intercepted by CJK/TSF IMEs and can corrupt text ("naturo" ->
+        # "nature"). When the focused control exposes a writable ValuePattern,
+        # set its value directly through UIA — bypassing the keyboard and the
+        # IME. Fall back to keystrokes when there is no such control, or when
+        # the caller explicitly asked for keystroke-level "hardware" scan codes.
+        used_value_pattern = False
+        if input_mode == "normal":
+            used_value_pattern = bool(backend.set_focused_element_value(text, append=True))
+        if not used_value_pattern:
+            backend.type_text(text=text, wpm=wpm, input_mode=input_mode)
+        return {"success": True, "method": "value_pattern" if used_value_pattern else "keystroke"}
 
     @server.tool()
     @_safe_tool

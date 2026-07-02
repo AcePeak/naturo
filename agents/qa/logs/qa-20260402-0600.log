@@ -1,0 +1,59 @@
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   c067b05..1362f63  develop    -> origin/develop
+error: you need to resolve your current index first
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+error: Pulling is not possible because you have unmerged files.
+hint: Fix them up in the work tree, and then use 'git add/rm <file>'
+hint: as appropriate to mark resolution and make a commit.
+fatal: Exiting because of an unresolved conflict.
+error: could not write index
+agents/qa/testcases/e2e/calculator-basic-flow.yaml: needs merge
+agents/qa/testcases/e2e/scripted-notepad-workflow.yaml: needs merge
+agents/qa/testcases/exploratory/app-filter-cross-process.yaml: needs merge
+agents/qa/testcases/exploratory/app-id-filter-see.yaml: needs merge
+agents/qa/testcases/exploratory/get-value-unreadable.yaml: needs merge
+agents/qa/testcases/exploratory/multi-window-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/notepad-menu-click-targeting.yaml: needs merge
+agents/qa/testcases/exploratory/press-standalone-modifier.yaml: needs merge
+agents/qa/testcases/regression/app-quit-silent-failure.yaml: needs merge
+agents/qa/testcases/regression/capture-chinese-filepath.yaml: needs merge
+agents/qa/testcases/regression/capture-unicode-path-dll.yaml: needs merge
+agents/qa/testcases/regression/chinese-app-name-matching.yaml: needs merge
+agents/qa/testcases/regression/quit-chinese-app-name.yaml: needs merge
+agents/qa/testcases/regression/uwp-notepad-enumeration.yaml: needs merge
+The stash entry is kept in case you need it again.
+[2026/04/02 ÖÜËÄ  6:00:02.93] Starting QA-Mariana round 
+Background agent confirmed all YAML updates were applied correctly. TC-0041 stays active since #781 is still open. 
+
+Notable: TC-0040 (Unicode path DLL) flipped from pass to fail this round (was at 10 consecutive passes, now reset to 0) â€” and TC-0042 exploratory (JSON stderr) also flipped from pass to fail (was at 2, now 0). These regressions may indicate recent code changes affected these areas, or previous rounds had different test conditions.
+
+Round 89 is fully complete. All changes committed and pushed.

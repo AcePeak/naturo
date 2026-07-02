@@ -1,0 +1,71 @@
+id: TC-0056
+title: "MCP capture_screen returns all-black PNG with success:true when desktop not bindable"
+status: active
+category: regression
+priority: P0
+source_issue: 868
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R153: FAIL — reconfirmed on HEAD `cf1cfb7` (source unchanged since 17aefe6). MCP
+  `capture_screen` (no args) returns {success:true, isError:false, width:3840, height:2160,
+  scale_factor:1.5, dpi:144}. Decoded `.work/qa-r153/capture_screen.png` (24,219 bytes):
+  PIL extrema=((0,0),(0,0),(0,0)), exactly 1 distinct color RGB(0,0,0) over all 8,294,400
+  pixels (100%). CLI `naturo capture` control refuses cleanly (exit 1, NO_DESKTOP_SESSION).
+  #868 unchanged. isError:false on unbindable desktop also reconfirms #882.
+  R152: FAIL — reconfirmed on HEAD `e8cea28` (source unchanged since R145/R150/R151). MCP
+  `capture_screen` returns {success:true, isError:false, width:3840, height:2160, scale_factor:1.5,
+  dpi:144}. Decoded `.work/qa-r152-mcp/capture_screen.png` (24,219 bytes): PIL reports exactly
+  1 distinct color — RGB(0,0,0) covers 8,294,400/8,294,400 pixels (100.00%). CLI `naturo capture`
+  control still refuses cleanly (exit 1, NO_DESKTOP_SESSION). #868 unchanged. isError:false while
+  the desktop is unbindable also reconfirms #882 (isError vs payload.success divergence).
+  R130: FAIL — MCP `capture_screen` in NO_DESKTOP_SESSION returns {success:true, width:3840, height:2160, scale_factor:1.5, dpi:144, data_base64:'iVBORw0KGgo...AAAA...'} with `isError:false`. The very long `AAAA...` runs indicate uniform/black pixels. CLI `naturo capture` correctly refuses with NO_DESKTOP_SESSION. #868 unchanged.
+  R137: FAIL — confirmed again on HEAD `70e6591` with pixel-by-pixel verification. `.work/qa-r137/mcp_capture.png` is 3840×2160, 24KB, **8,294,400/8,294,400 pixels (100%) are RGB (0,0,0)**. Sampled distinct colors across the image: 1 (black). `success:true, isError:false` unchanged.
+  R145: FAIL — confirmed on HEAD `17aefe6`. New evidence: out-of-range `screen_index` (1, 99) ALSO returns success:true with all-black 3840×2160 PNG (`list_monitors` reports only 1 monitor at index 0). PIL extrema=((0,0),(0,0),(0,0)) for indices 0, 1, 99 — identical 24,219-byte files. Metadata differs (index 0 → scale 1.5/dpi 144; index 1 and 99 → scale 1.0/dpi 96) which would mislead an agent into believing different monitors were captured. screen_index=-1 (only) errors with INTERNAL_ERROR `NaturoCoreError: capture_screen: Invalid argument`. Scope-extension comment posted to #868.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "MCP server can start: naturo mcp start --transport stdio"
+  - "A reproducer environment where naturo CLI returns NO_DESKTOP_SESSION (e.g. the same QA agent session that hits #863)"
+
+steps:
+  - description: "Confirm CLI errors cleanly (control)"
+    command: "naturo capture --app notepad -o /tmp/x.png 2>&1; echo EXIT=$?"
+    expect: |
+      stderr contains 'NO_DESKTOP_SESSION' (or 'No interactive desktop in this session') and EXIT=1.
+  - description: "Start MCP server, initialize, tools/list (smoke)"
+    command: "python .work/qa-r121/mcp_client.py | head -10"
+    expect: |
+      Server responds to initialize, tools/list returns 64 tools, capabilities present.
+  - description: "MCP tools/call capture_screen — inspect base64 PNG"
+    command: "python .work/qa-r121/decode_check.py"
+    expect: |
+      Should mirror the CLI failure: result.content[0].text JSON has success:false and an
+      NO_DESKTOP_SESSION-equivalent error code. CURRENT FAIL: success:true, dims=3840x2160,
+      and the decoded PNG has PIL extrema=((0,0),(0,0),(0,0)) — every pixel is black.
+  - description: "Confirm PNG bytes are truly zero-only image data"
+    command: |
+      python -c "from PIL import Image; print(Image.open('.work/qa-r121/mcp_capture.png').getextrema())"
+    expect: |
+      Once fixed: capture_screen errors instead of producing a PNG. CURRENT FAIL output:
+      ((0, 0), (0, 0), (0, 0))
+  - description: "Verify the same silent-success path with capture_screen output_path argument"
+    command: |
+      python -c "
+      import json, subprocess
+      p = subprocess.Popen(['naturo','mcp','start'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+      def s(r): p.stdin.write((json.dumps(r)+'\n').encode()); p.stdin.flush()
+      s({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'qa','version':'0.0.1'}}})
+      p.stdout.readline()
+      s({'jsonrpc':'2.0','method':'notifications/initialized','params':{}})
+      s({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'capture_screen','arguments':{'output_path':'.work/qa-r121/probe.png'}}})
+      print(p.stdout.readline().decode()[:300])
+      p.stdin.close(); p.wait(timeout=3)
+      "
+    expect: |
+      'success: false' with a structured error code. CURRENT FAIL: 'success: true' and probe.png on disk has extrema=((0,0),(0,0),(0,0)).
+
+pass_criteria: "MCP capture_screen mirrors CLI behavior in NO_DESKTOP_SESSION conditions — error with code, not a silent all-zero PNG."
+fail_action: "File or update the MCP silent-black-capture P0 issue."

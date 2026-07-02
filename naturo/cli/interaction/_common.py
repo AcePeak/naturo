@@ -1,14 +1,38 @@
 """Interaction commands: click, type, press (includes hotkey), scroll, drag, move."""
 from __future__ import annotations
 
-import json
+from naturo.cli._jsonio import json_dumps
 import logging
 import sys
-from typing import Optional
+from typing import Callable, NoReturn, Optional
 
 import click
 
 logger = logging.getLogger(__name__)
+
+
+def _is_hwnd_alive(hwnd: int) -> bool:
+    """Check if a window handle (HWND) is still valid.
+
+    On Windows, calls ``user32.IsWindow()``.  On non-Windows platforms,
+    returns True (no validation possible).
+
+    Args:
+        hwnd: The window handle to validate.
+
+    Returns:
+        True if the handle points to a live window.
+    """
+    if not hwnd:
+        return False
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            return bool(ctypes.windll.user32.IsWindow(hwnd))
+        except Exception:
+            pass
+    # Non-Windows: no way to validate, assume alive
+    return True
 
 
 def _find_element_by_text_fallback(
@@ -18,7 +42,7 @@ def _find_element_by_text_fallback(
     hwnd: Optional[int] = None,
     window_title: Optional[str] = None,
     pid: Optional[int] = None,
-):
+) -> tuple[int, int] | None:
     """Fallback element search when C++ exact UIA Name match fails.
 
     Searches the target app's element tree for elements whose name matches
@@ -116,7 +140,7 @@ def _find_element_by_text_fallback(
 # ── --see flag (post-action UI snapshot) ─────────────────────────────────────
 
 
-def _see_options(func):
+def _see_options(func: Callable) -> Callable:
     """Shared Click decorator that adds --see and --settle to action commands.
 
     When ``--see`` is passed, the command re-captures the UI element tree
@@ -139,7 +163,7 @@ def _see_options(func):
     return func
 
 
-def _verify_options(func):
+def _verify_options(func: Callable) -> Callable:
     """Shared Click decorator that adds --verify/--no-verify to action commands.
 
     Post-action verification checks whether the action actually had effect.
@@ -275,7 +299,7 @@ def _post_action_see(
         # Print tree with refs
         _ref_counter = [0]
 
-        def _print_tree(el, indent=0):
+        def _print_tree(el, indent=0) -> None:
             _ref_counter[0] += 1
             ref = f"e{_ref_counter[0]}"
             prefix = "  " * indent
@@ -295,8 +319,9 @@ def _post_action_see(
 
 
 def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
-    """No-op stub — recording command removed."""
-    pass
+    """Append action to active recording (if any)."""
+    from naturo.recording import append_step_to_active
+    append_step_to_active(command, args, duration_ms)
 
 
 # ── Method override ──────────────────────────────────────────────────────────
@@ -306,7 +331,7 @@ def _record_action(command: str, args: dict, duration_ms: float = 0.0) -> None:
 VALID_METHODS = ("auto", "cdp", "uia", "msaa", "ia2", "jab", "vision")
 
 
-def _method_option(func):
+def _method_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --method to an action command.
 
     The flag lets users bypass auto-detection and force a specific
@@ -339,7 +364,7 @@ def _validate_method(method: str, json_output: bool) -> bool:
 # ── Selector support (#103) ──────────────────────────────────────────────────
 
 
-def _selector_option(func):
+def _selector_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --selector to action commands."""
     return click.option(
         "--selector",
@@ -353,7 +378,7 @@ def _selector_option(func):
     )(func)
 
 
-def _app_id_option(func):
+def _app_id_option(func: Callable) -> Callable:
     """Shared Click decorator that adds --app-id to action commands.
 
     Accepts a stable app/window ID (e.g. ``a1``) assigned by ``naturo app list``.
@@ -395,6 +420,11 @@ def _resolve_app_id(
         Tuple of (app, hwnd, pid) — possibly overridden from the ID map.
         Returns (None, None, None) with error emitted if ID is invalid.
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    if app_id is None and app is not None:
+        from naturo.cli.options import maybe_promote_app_to_app_id
+        app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     if app_id is None:
         return app, hwnd, pid
 
@@ -407,6 +437,18 @@ def _resolve_app_id(
             f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.',
             json_output,
             code="APP_ID_NOT_FOUND",
+        )
+        return None, None, None
+
+    # (#788) Validate that the stored HWND is still alive.  After an app
+    # restart, the cached HWND becomes stale and focus_window/SendInput
+    # will silently drop keystrokes to a dead window.
+    if entry.handle and not _is_hwnd_alive(entry.handle):
+        _json_err(
+            f'App ID "{app_id}" points to a stale window (app may have '
+            f'restarted). Run "naturo app list" to refresh.',
+            json_output,
+            code="APP_ID_STALE",
         )
         return None, None, None
 
@@ -448,6 +490,80 @@ def _elementinfo_to_dict(el) -> dict:
     return result
 
 
+def _resolve_wildcard_host_forest(
+    backend,
+    ast,
+    depth: int,
+    method: Optional[str] = None,
+) -> Optional[list[dict]]:
+    """Build a window-tree forest for an emitted wildcard-host selector (#1190).
+
+    A selector that ``see``/``find`` emit leads with a concrete
+    ``Window[@name="…"]`` segment under the portable wildcard host ``app://*``
+    (e.g. ``app://*/Window[@name="无标题 - Notepad"]/Document[@name="…"]``). For
+    that emitted selector to round-trip without an extra ``--hwnd``/``--app``
+    flag, the named window must be located across ALL top-level windows — not
+    just the foreground window ``get_element_tree`` returns when no target is
+    given (which is usually NOT the window the selector names, hence the
+    ``SELECTOR_NOT_FOUND`` reported in #1190).
+
+    The leading ``Window`` title narrows the search via ``_resolve_hwnds`` so
+    only the matching window's tree is fetched. The function deliberately acts
+    ONLY on this concrete-leading-window shape: it returns ``None`` for any other
+    selector (a bare ``//Role`` short-form, a wildcard/empty leading title, a
+    non-wildcard host), leaving the caller's normal single-window resolution path
+    — and its existing behavior — entirely untouched.
+
+    Args:
+        backend: Platform backend exposing ``_resolve_hwnds`` and
+            ``get_element_tree``.
+        ast: Parsed selector AST.
+        depth: Maximum tree depth to fetch per window.
+        method: Accessibility backend to forward to ``get_element_tree``
+            (``None`` lets the backend pick its default).
+
+    Returns:
+        A list of window element dicts (a forest the resolver can walk), or
+        ``None`` when this narrow shape does not apply or no window matched.
+    """
+    if ast.app != "*" or not ast.nodes:
+        return None
+    leading = ast.nodes[0]
+    if leading.role.lower() != "window":
+        return None
+    title = leading.name
+    if not title or "*" in title or "?" in title:
+        return None
+    if not (hasattr(backend, "_resolve_hwnds")
+            and hasattr(backend, "get_element_tree")):
+        return None
+
+    try:
+        hwnds = backend._resolve_hwnds(window_title=title)
+    except Exception:
+        # A window-enumeration fault must not escape uncaught — fall through to
+        # the caller's normal single-window path, which attributes its own tree
+        # faults to TREE_ERROR (error-attribution discipline, #1047/#1067).
+        return None
+    if not hwnds:
+        return None
+
+    tree_kwargs: dict = {"depth": depth}
+    if method is not None:
+        tree_kwargs["backend"] = method
+
+    forest: list[dict] = []
+    for hwnd in hwnds:
+        try:
+            subtree = backend.get_element_tree(hwnd=hwnd, **tree_kwargs)
+        except Exception:
+            # A single unreadable window must not abort the whole search.
+            continue
+        if subtree is not None:
+            forest.append(_elementinfo_to_dict(subtree))
+    return forest or None
+
+
 def _resolve_selector_target(
     selector_str: str,
     backend,
@@ -480,6 +596,15 @@ def _resolve_selector_target(
         parse, SelectorParseError, SelectorResolver, normalize_app_name,
     )
 
+    # Resolve @app/name references to stored selector strings (#105)
+    if selector_str.startswith("@"):
+        from naturo.cli.selector_cmd import resolve_named_selector
+        try:
+            selector_str = resolve_named_selector(selector_str)
+        except (KeyError, ValueError) as exc:
+            _json_err(str(exc), json_output, code="SELECTOR_REF_ERROR")
+            return None
+
     # Parse the selector
     try:
         ast = parse(selector_str)
@@ -505,30 +630,43 @@ def _resolve_selector_target(
         )
         return None
 
-    try:
-        tree = backend.get_element_tree(
-            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-            depth=20,
-        )
-    except Exception as exc:
-        _json_err(
-            f"Failed to get UI tree for selector resolution: {exc}",
-            json_output,
-            code="TREE_ERROR",
-        )
-        return None
+    # An emitted wildcard-host selector (app://*/Window[@name="…"]/…) with no
+    # explicit window target resolves across all top-level windows so it
+    # round-trips straight back from see/find (#1190); the helper returns None
+    # for every other selector shape, leaving the normal single-window path
+    # (and its behavior) unchanged.
+    forest = None
+    if (ast.app == "*" and app is None and window_title is None
+            and hwnd is None and pid is None):
+        forest = _resolve_wildcard_host_forest(backend, ast, depth=20)
 
-    if tree is None:
-        _json_err(
-            "No window found for selector resolution. "
-            "Check that the target application is running and visible.",
-            json_output,
-            code="WINDOW_NOT_FOUND",
-        )
-        return None
+    if forest is not None:
+        tree_dict = forest
+    else:
+        try:
+            tree = backend.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=20,
+            )
+        except Exception as exc:
+            _json_err(
+                f"Failed to get UI tree for selector resolution: {exc}",
+                json_output,
+                code="TREE_ERROR",
+            )
+            return None
 
-    # Convert ElementInfo tree to dict tree for the resolver
-    tree_dict = [_elementinfo_to_dict(tree)]
+        if tree is None:
+            _json_err(
+                "No window found for selector resolution. "
+                "Check that the target application is running and visible.",
+                json_output,
+                code="WINDOW_NOT_FOUND",
+            )
+            return None
+
+        # Convert ElementInfo tree to dict tree for the resolver
+        tree_dict = [_elementinfo_to_dict(tree)]
 
     # Resolve
     resolver = SelectorResolver()
@@ -563,6 +701,71 @@ def _resolve_selector_target(
     return (x, y)
 
 
+def _resolve_text_or_ref_target(
+    target_id: str,
+    backend,
+    app: Optional[str],
+    json_output: bool,
+) -> Optional[tuple]:
+    """Resolve an element text / automation-id / ``eN`` ref to (x, y) coordinates.
+
+    Shared by ``scroll`` and ``move`` for their ``--on``/``--to`` (text) and
+    ``--id`` targeting. An ``eN`` token is resolved against the most recent
+    ``see`` snapshot; any other string is looked up by name/automation-id through
+    the backend's element search and reduced to the matched element's centre.
+
+    On failure this emits the canonical error envelope — ``STALE_SNAPSHOT_CACHE``
+    for a stale ``eN`` ref (matching ``get``/``set``), ``ELEMENT_NOT_FOUND`` for a
+    missing text/id target — and terminates the process (via :func:`_json_err`),
+    so callers treat a ``None`` return as "stop".
+
+    Args:
+        target_id: The element token — an ``eN`` snapshot ref, visible text, or
+            automation ID.
+        backend: The platform backend instance.
+        app: Application name filter, used when resolving an ``eN`` ref.
+        json_output: Whether to emit a JSON error envelope on failure.
+
+    Returns:
+        ``(x, y)`` centre coordinates of the resolved element, or ``None`` on
+        failure (after an error has already been emitted).
+    """
+    import re as _re
+    if _re.fullmatch(r"e\d+", target_id):
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
+        resolved = mgr.resolve_ref(target_id, app_name=app)
+        if resolved:
+            return resolved[0], resolved[1]
+        _json_err(
+            f"Element ref '{target_id}' not found. Run 'naturo see' first to "
+            f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+            json_output,
+            code="STALE_SNAPSHOT_CACHE",
+            context={"ref": target_id},
+        )
+        return None
+
+    # Text / automation-id lookup — find element center via backend.
+    try:
+        elem = backend.find_element(target_id)
+    except Exception as exc:
+        _json_err(
+            f"Failed to find element '{target_id}': {exc}",
+            json_output,
+            code="ELEMENT_NOT_FOUND",
+        )
+        return None
+    if elem:
+        return elem.x + elem.width // 2, elem.y + elem.height // 2
+    _json_err(
+        f"Element '{target_id}' not found.",
+        json_output,
+        code="ELEMENT_NOT_FOUND",
+    )
+    return None
+
+
 # ── Shared helper ────────────────────────────────────────────────────────────
 
 
@@ -586,16 +789,14 @@ def _is_current_session_interactive() -> bool:
     try:
         import ctypes
         import ctypes.wintypes
+        import os
+
+        from naturo.process import _get_process_session_id
 
         # --------------- session ID for current process ---------------
-        pid = ctypes.windll.kernel32.GetCurrentProcessId()  # type: ignore[attr-defined]
-        session_id = ctypes.wintypes.DWORD(0)
-        ok = ctypes.windll.kernel32.ProcessIdToSessionId(  # type: ignore[attr-defined]
-            pid, ctypes.byref(session_id),
-        )
-        if not ok:
+        sid = _get_process_session_id(os.getpid())
+        if sid == -1:
             return False
-        sid = session_id.value
 
         # Session 0 is always the non-interactive services session.
         if sid == 0:
@@ -706,30 +907,34 @@ def _check_desktop_session() -> None:
 
 
 def _get_backend(json_output: bool = False):
-    """Return the platform backend, raising UsageError if unavailable.
+    """Return the platform backend, failing loudly if unavailable.
 
-    Also performs a pre-flight check for an interactive desktop session
-    on Windows to provide clear errors instead of cryptic COM exceptions.
+    Performs a pre-flight check for an interactive desktop session on Windows
+    to provide clear errors instead of cryptic COM exceptions.  A missing
+    desktop or unavailable backend is a runtime/environment failure, not a
+    CLI usage error: it exits with status 1 and a clean message (JSON envelope
+    under ``-j``), never Click's exit-2 ``Usage:`` banner (#866).
 
     Args:
-        json_output: When True, emit JSON-formatted error and sys.exit
-            instead of raising an exception for NoDesktopSessionError.
+        json_output: When True, emit a JSON error envelope; when False, emit a
+            clean ``Error: ...`` message.  Either way the process exits 1 on
+            failure.
+
+    Returns:
+        A Backend instance for the current platform.
+
+    Raises:
+        SystemExit: With status 1 if no desktop session or no backend.
     """
     try:
         _check_desktop_session()
     except Exception as exc:
-        if json_output:
-            from naturo.cli.error_helpers import json_error
-            click.echo(json_error("NO_DESKTOP_SESSION", str(exc)))
-            sys.exit(1)
-        raise click.UsageError(str(exc))
+        _json_err(str(exc), json_output, code="NO_DESKTOP_SESSION")
     from naturo.backends.base import get_backend
     try:
         return get_backend()
     except Exception as exc:
-        if json_output:
-            _json_err(str(exc), True, code="BACKEND_ERROR")
-        raise click.UsageError(str(exc))
+        _json_err(str(exc), json_output, code="BACKEND_ERROR")
 
 
 _VERIFICATION_KEYS = frozenset({
@@ -750,7 +955,7 @@ def _json_ok(data: dict, json_output: bool) -> None:
     end users (#273).  JSON mode retains all fields.
     """
     if json_output:
-        click.echo(json.dumps({"success": True, "data": data}))
+        click.echo(json_dumps({"success": True, "data": data}))
     else:
         for k, v in data.items():
             if k in _VERIFICATION_KEYS:
@@ -759,14 +964,45 @@ def _json_ok(data: dict, json_output: bool) -> None:
 
 
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
-              code: str = "ACTION_ERROR") -> None:
+              code: str = "ACTION_ERROR", *,
+              exc: Optional[BaseException] = None,
+              context: Optional[dict] = None) -> NoReturn:
     """Emit error result as JSON or plain text, then exit.
 
     Includes agent-friendly recovery hints from the error_helpers registry.
+    The plain-text path prints ``Error: <msg>`` to stderr (no Click ``Usage:``
+    banner) so runtime failures keep exit code 1 instead of Click's usage-error
+    exit code 2 (#866).  Always terminates the process; never returns.
+
+    When ``exc`` is a semantic :class:`~naturo.errors.NaturoError`, its full
+    envelope (``code``/``category``/``suggested_action``/``recoverable``) is
+    preserved instead of being flattened to the generic ``code`` — so an
+    action-phase ``ElementNotFoundError`` surfaces as ``ELEMENT_NOT_FOUND``/
+    ``automation`` with its recovery hint, identical to ``get``/``scroll``,
+    rather than ``ACTION_ERROR``/``unknown`` (#1004). ``code`` is still used as
+    the fallback for non-``NaturoError`` exceptions and the ``exc``-less callers,
+    and the plain-text ``Error: <message>`` line is unchanged in every case
+    (``str(NaturoError) == NaturoError.message``).
+
+    Args:
+        msg: Human-readable error message (used as-is when no semantic ``exc``).
+        json_output: Whether to emit the JSON envelope instead of plain text.
+        exit_code: Process exit code (default 1).
+        code: Error code for the JSON envelope and the non-semantic fallback.
+        exc: The original exception, when available, so a ``NaturoError``'s
+            structured identity can be preserved.
+        context: Structured detail merged into the JSON envelope's ``context``
+            field (e.g. ``{"ref": "e7"}`` for a stale snapshot ref). Ignored on
+            the ``exc`` and plain-text paths.
     """
+    from naturo.errors import NaturoError
+    if isinstance(exc, NaturoError):
+        from naturo.cli.error_helpers import emit_exception_error
+        emit_exception_error(exc, json_output, fallback_code=code,
+                             exit_code=exit_code)
     if json_output:
         from naturo.cli.error_helpers import json_error
-        click.echo(json_error(code, msg))
+        click.echo(json_error(code, msg, context=context))
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(exit_code)

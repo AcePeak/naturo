@@ -38,6 +38,30 @@ class ProcessInfo:
     window_count: int = 0
 
 
+def _parse_tasklist_csv_line(line: str) -> tuple[str, int] | None:
+    """Parse a single ``tasklist /FO CSV`` output line into (name, pid).
+
+    Args:
+        line: A single CSV line from ``tasklist /FO CSV /NH`` output.
+
+    Returns:
+        A ``(process_name, pid)`` tuple, or ``None`` if the line is
+        malformed or empty.
+    """
+    line = line.strip()
+    if not line:
+        return None
+    parts = line.strip('"').split('","')
+    if len(parts) >= 2:
+        name = parts[0]
+        try:
+            pid = int(parts[1])
+            return (name, pid)
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
 def _list_processes() -> list[ProcessInfo]:
     """List running processes using platform-appropriate methods."""
     system = platform.system()
@@ -53,16 +77,9 @@ def _list_processes() -> list[ProcessInfo]:
                 errors="replace", timeout=10,
             )
             for line in result.stdout.strip().split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
-                parts = line.split('","')
-                if len(parts) >= 2:
-                    name = parts[0].strip('"')
-                    try:
-                        pid = int(parts[1].strip('"'))
-                    except (ValueError, IndexError):
-                        continue
+                parsed = _parse_tasklist_csv_line(line)
+                if parsed:
+                    name, pid = parsed
                     processes.append(ProcessInfo(pid=pid, name=name, is_running=True))
         except Exception as exc:
             logger.debug("Failed to list processes on Windows: %s", exc)
@@ -105,7 +122,8 @@ def _get_console_session_id() -> int:
         if session_id == 0xFFFFFFFF:
             return -1
         return session_id
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to get console session ID: %s", exc)
         return -1
 
 
@@ -130,7 +148,8 @@ def _get_process_session_id(pid: int) -> int:
         if success:
             return session_id.value
         return -1
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to get session ID for PID %d: %s", pid, exc)
         return -1
 
 
@@ -342,6 +361,9 @@ def launch_app(
 
     cmd_args = args or []
     system = platform.system()
+    # Set when launching via cmd /c start — triggers PID resolution (#785)
+    _resolve_real_pid: str | None = None
+    _resolve_real_alias: str | None = None
 
     try:
         if system == "Windows":
@@ -387,6 +409,11 @@ def launch_app(
                     # Launched but already exited — report success with a dummy PID
                     return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
                 proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
+                # cmd.exe exits quickly after launching the target app.
+                # Mark for real PID resolution below — proc.pid is cmd.exe,
+                # not the actual application (#785).
+                _resolve_real_pid = resolved_name
+                _resolve_real_alias = name
         elif system == "Darwin":
             if path:
                 proc = subprocess.Popen([path] + cmd_args)
@@ -429,15 +456,43 @@ def launch_app(
     except OSError as exc:
         raise AppNotFoundError(launch_target, suggested_action=str(exc))
 
+    # Resolve real PID when launched via cmd /c start (#785).
+    # cmd.exe exits after spawning the target app; proc.pid is the wrapper,
+    # not the actual application (especially for UWP apps like Calculator).
+    real_pid = proc.pid
+    real_name = name or os.path.basename(path or "")
+    real_path = path or ""
+    if _resolve_real_pid is not None:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        # Poll for the real process — give UWP apps time to start
+        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 3.0)
+        while time.monotonic() < poll_deadline:
+            found = find_process(name=_resolve_real_pid)
+            if not found and _resolve_real_alias and _resolve_real_alias != _resolve_real_pid:
+                found = find_process(name=_resolve_real_alias)
+            if found:
+                real_pid = found.pid
+                real_name = found.name
+                real_path = found.path or ""
+                break
+            time.sleep(0.3)
+
     info = ProcessInfo(
-        pid=proc.pid,
-        name=name or os.path.basename(path or ""),
-        path=path or "",
+        pid=real_pid,
+        name=real_name,
+        path=real_path,
         is_running=True,
         window_count=0,
     )
 
     if wait_until_ready:
+        # If we already resolved the real PID via find_process (#785),
+        # the app is confirmed running — skip the poll loop.
+        if _resolve_real_pid is not None and real_pid != proc.pid:
+            return info
         start = time.monotonic()
         while time.monotonic() - start < timeout:
             time.sleep(0.5)
@@ -460,13 +515,49 @@ def launch_app(
     return info
 
 
+def _matches_app_by_process_name(proc_name_lower: str, name_lower: str) -> bool:
+    """Check if a process name matches the given app name or its aliases.
+
+    Uses process-name matching only (no title matching) to avoid
+    cross-process contamination (#465, #743).  For example, "记事本"
+    resolves via ``_LAUNCH_ALIASES`` to "notepad" which matches
+    "notepad.exe".
+
+    Args:
+        proc_name_lower: Lowercase process basename (e.g. "notepad.exe").
+        name_lower: Lowercase user-provided app name (e.g. "记事本").
+
+    Returns:
+        True if the process matches by direct name or alias.
+    """
+    # Strip .exe suffix for stem matching
+    proc_stem = proc_name_lower.removesuffix(".exe")
+
+    # Direct match: user name appears in process name
+    if name_lower in proc_name_lower:
+        return True
+
+    # Alias match: resolve CJK/friendly names to English process names
+    aliases = _LAUNCH_ALIASES.get(name_lower, [])
+    for alias in aliases:
+        alias_lower = alias.lower()
+        if alias_lower == proc_stem or alias_lower in proc_name_lower:
+            return True
+
+    return False
+
+
 def _resolve_pid_from_backend(name: str) -> int | None:
     """Resolve a PID via the window backend for UWP-aware lookup (#505).
 
-    The backend's ``list_windows()`` applies UWP child process resolution
-    (finding the real app PID inside ApplicationFrameHost), which raw
-    ``tasklist`` does not.  This ensures ``app quit notepad`` targets the
-    actual Notepad process, not the stale AFH host PID.
+    First tries ``list_windows()`` with direct process-name matching.
+    Falls back to ``list_apps()`` which applies UWP child process
+    resolution (finding the real app PID inside ApplicationFrameHost).
+    This ensures ``app quit "计算器"`` targets the actual CalculatorApp
+    process, not the stale AFH host PID (#750).
+
+    Uses process-name matching only (no title matching) to avoid
+    cross-process contamination (#465, #743).
     """
     try:
         from naturo.backends.base import get_backend
@@ -475,8 +566,17 @@ def _resolve_pid_from_backend(name: str) -> int | None:
         name_lower = name.lower()
         for w in be.list_windows():
             proc_name = os.path.basename(w.process_name).lower()
-            if name_lower in proc_name or name_lower in w.title.lower():
+            if _matches_app_by_process_name(proc_name, name_lower):
                 return w.pid
+
+        # Fallback: list_apps() resolves UWP child PIDs inside
+        # ApplicationFrameHost windows (#750).  list_windows() reports
+        # UWP apps as "ApplicationFrameHost.exe" which never matches
+        # user-facing names like "计算器".
+        for app in be.list_apps():
+            proc_name = os.path.basename(app.get("process", "")).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
+                return app["pid"]
     except Exception:
         logger.debug("Backend PID resolution failed for %r, falling back", name)
     return None
@@ -489,11 +589,16 @@ def _close_all_windows_for_app(name: str) -> list[int]:
     matching the app name.  WM_CLOSE triggers a proper graceful close that
     does not activate Windows session restore (unlike ``taskkill /F``).
 
+    For UWP apps hosted by ApplicationFrameHost.exe, uses ``list_apps()``
+    to resolve the real child process and identify the correct AFH windows
+    to close (#750).
+
     Args:
-        name: Application name (fuzzy-matched against process names and titles).
+        name: Application name (matched against process names and aliases).
 
     Returns:
-        List of PIDs that had windows closed.
+        List of PIDs that had windows closed (includes resolved UWP child
+        PIDs so the caller can wait for the real app process to exit).
     """
     try:
         from naturo.backends.base import get_backend
@@ -507,15 +612,46 @@ def _close_all_windows_for_app(name: str) -> list[int]:
     name_lower = name.lower()
     closed_pids: list[int] = []
 
+    # Resolve UWP app PIDs and their AFH window titles via list_apps()
+    # (#750).  list_windows() reports UWP apps as ApplicationFrameHost.exe,
+    # so process-name matching alone misses them.
+    uwp_resolved_pids: set[int] = set()
+    uwp_afh_titles: set[str] = set()
+    try:
+        for app in be.list_apps():
+            proc_name = os.path.basename(app.get("process", "")).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
+                uwp_resolved_pids.add(app["pid"])
+                if app.get("title"):
+                    uwp_afh_titles.add(app["title"])
+    except Exception:
+        logger.debug("list_apps() fallback failed for %r", name)
+
     for w in windows:
         proc_name = os.path.basename(w.process_name).lower()
-        if name_lower in proc_name or name_lower in w.title.lower():
+        match = _matches_app_by_process_name(proc_name, name_lower)
+
+        # For AFH windows: match by UWP-resolved title (#750).
+        # This is safe because we only check AFH windows whose titles
+        # were confirmed by list_apps() to belong to matching UWP apps.
+        if not match and w.title in uwp_afh_titles:
+            proc_stem = proc_name.removesuffix(".exe")
+            if proc_stem == "applicationframehost":
+                match = True
+
+        if match:
             try:
                 be.close_window(hwnd=w.handle)
                 if w.pid not in closed_pids:
                     closed_pids.append(w.pid)
             except Exception:
                 logger.debug("Failed to close window hwnd=%s for %r", w.handle, name)
+
+    # Include resolved UWP child PIDs so the caller can wait for the
+    # real app process to exit, not just the AFH host (#750).
+    for pid in uwp_resolved_pids:
+        if pid not in closed_pids:
+            closed_pids.append(pid)
 
     return closed_pids
 
@@ -661,8 +797,12 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
     Used by ``_verify_quit`` to distinguish a true respawn (windows visible)
     from a ghost host process with no windows (#620).
 
+    Checks both ``list_windows()`` (direct process-name match) and
+    ``list_apps()`` (UWP-resolved match) to correctly detect UWP apps
+    hosted by ApplicationFrameHost (#750).
+
     Args:
-        name: Application name (fuzzy-matched against process names/titles).
+        name: Application name (matched against process names and aliases).
         exclude_pid: PID to ignore (the already-killed target).
 
     Returns:
@@ -677,7 +817,17 @@ def _app_has_visible_windows(name: str, exclude_pid: int | None = None) -> bool:
             if exclude_pid is not None and w.pid == exclude_pid:
                 continue
             proc_name = os.path.basename(w.process_name).lower()
-            if name_lower in proc_name or name_lower in w.title.lower():
+            if _matches_app_by_process_name(proc_name, name_lower):
+                return True
+
+        # Also check list_apps() which resolves UWP child PIDs (#750).
+        # list_windows() reports UWP apps as ApplicationFrameHost.exe,
+        # so the loop above never matches them by process name.
+        for app in be.list_apps():
+            if exclude_pid is not None and app["pid"] == exclude_pid:
+                continue
+            proc_name = os.path.basename(app.get("process", "")).lower()
+            if _matches_app_by_process_name(proc_name, name_lower):
                 return True
     except Exception:
         logger.debug("Backend unavailable for window check of %r", name)
@@ -703,8 +853,8 @@ def _force_kill(pid: int, system: str) -> None:
             )
         else:
             os.kill(pid, signal.SIGKILL)
-    except (ProcessLookupError, OSError, subprocess.TimeoutExpired):
-        pass  # Already dead
+    except (ProcessLookupError, OSError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Force kill of PID %d failed (may already be dead): %s", pid, exc)
 
 
 def relaunch_app(

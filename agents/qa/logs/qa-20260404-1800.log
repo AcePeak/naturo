@@ -1,0 +1,95 @@
+Saved working directory and index state WIP on develop: 86e534d qa: round 106 report [skip ci]
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+   71f07f7..a140e8b  develop    -> origin/develop
+Your branch is behind 'origin/develop' by 5 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating 86e534d..a140e8b
+Fast-forward
+ .work/reviews/2026-04-04-0930-daily-review.md      |  36 ++
+ agents/STATE.md                                    |  26 +-
+ agents/github-queue/pending-issues.md              | 112 +++---
+ agents/qa/.last-ci-sha                             |   2 +-
+ agents/qa/status.md                                |  16 +-
+ agents/qa/testcases/e2e/mcp-agent-workflow.yaml    |   4 +-
+ .../exploratory/app-filter-cross-process.yaml      |   4 +-
+ .../app-title-matching-multiwindow.yaml            |   6 +-
+ .../exploratory/browser-json-error-format.yaml     |   2 +-
+ .../exploratory/json-stderr-duplicate-error.yaml   |   2 +-
+ .../regression/chinese-app-name-matching.yaml      |   4 +-
+ .../json-mode-exit-code-zero-on-failure.yaml       |   4 +-
+ .../regression/mcp-stdout-debug-output.yaml        |   4 +-
+ .../regression/see-error-exit-code-zero.yaml       |   4 +-
+ tests/qa-reports/QA-Mariana-20260404-1712.md       |  74 ++++
+ tests/test_cascade_coverage_helpers.py             | 298 ++++++++++++++++
+ tests/test_config.py                               | 142 ++++++++
+ tests/test_detect_probes.py                        | 392 +++++++++++++++++++++
+ 18 files changed, 1025 insertions(+), 107 deletions(-)
+ create mode 100644 .work/reviews/2026-04-04-0930-daily-review.md
+ create mode 100644 tests/qa-reports/QA-Mariana-20260404-1712.md
+ create mode 100644 tests/test_cascade_coverage_helpers.py
+ create mode 100644 tests/test_config.py
+ create mode 100644 tests/test_detect_probes.py
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/logs/qa-20260404-1500.log
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260404-1600.log
+	agents/qa/logs/qa-20260404-1700.log
+	agents/qa/logs/qa-20260404-1800.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (45663c5c11fbf5869f05e3c7ad73a43284118513)
+[2026/04/04 ÖÜÁù 18:00:06.87] Starting QA-Mariana round 
+Last background task from Phase 3 boundary testing completed. QA Round 108 is fully wrapped up â€” all tasks, agents, and background commands finished.

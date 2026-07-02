@@ -3,12 +3,12 @@ title: "capture --app captures wrong/tiny image when popup menu is open"
 status: active
 category: exploratory
 priority: P1
-source_issue: null
+source_issue: 843
 created: 2026-03-27
-last_run: 2026-03-27
-last_result: blocked
+last_run: 2026-04-05
+last_result: fail
 consecutive_passes: 0
-notes: "2026-03-27 R5: PR #444 (fix) still unmerged. Cannot retest. #440 still open."
+notes: "2026-04-05 R114: FAIL — capture --app notepad misses popup File menu. Full-screen capture shows menu, app capture does not. Menu is a separate popup window excluded from app-specific capture."
 
 preconditions:
   - "naturo is installed and in PATH"

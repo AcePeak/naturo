@@ -1,0 +1,25 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   eb94a93..8c79156  main       -> origin/main
+Updating eb94a93..8c79156
+Fast-forward
+ agents/dev/status.md                 |  35 +++---
+ agents/orchestrator/dev-prompt.md    |  29 ++++-
+ agents/orchestrator/qa-prompt.md     |  10 +-
+ naturo/cli/interaction.py            |  45 +++++--
+ tests/test_click_ref_skip_routing.py | 226 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 311 insertions(+), 34 deletions(-)
+ create mode 100644 tests/test_click_ref_skip_routing.py
+[2026/03/28 ÖÜÁù  5:00:02.80] Starting QA-Mariana round 
+## Round 49 Complete
+
+**Summary:**
+- **CI**: 109+8 passed, 2 failed (known flaky `test_window_lifecycle` #472)
+- **Verified**: #469 (Chinese app name aliases) â€” PASS
+- **E2E**: Notepad PASS, Calculator PASS (5+3=8)
+- **Regression**: 3/6 passed, 3 failed (TC-0003, TC-0007, TC-0012), 2 blocked
+- **New issue filed**: #474 â€” `type --app` silent failure (exits 0 on "App not found", types to wrong window)
+- **New test case**: TC-0013 for the silent failure
+- **Persona**: Accessibility User â€” found that eN-based interaction works well for mouse-free use, but Alt+keyboard shortcuts may route to wrong window
+
+**Top risks**: `--pid` completely broken (#471), `type --app` silent failure (#474), 6 fix PRs awaiting merge.

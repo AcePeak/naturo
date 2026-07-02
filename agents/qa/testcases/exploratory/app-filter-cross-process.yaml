@@ -3,12 +3,12 @@ title: "--app filter matches wrong process when target app name appears in other
 status: active
 category: exploratory
 priority: P2
-source_issue: null
+source_issue: 789
 created: 2026-03-28
-last_run: 2026-03-31
+last_run: 2026-04-04
 last_result: pass
-consecutive_passes: 5
-notes: "2026-03-31 R71: PASS — see --app notepad returns 'No window found' when Notepad not running. Chrome with 'notepad' in title not matched."
+consecutive_passes: 2
+notes: "2026-04-04 R107: PASS — see --app notepad with Notepad not running correctly returns 'not found' (no cross-process match). Consecutive 1."
 
 preconditions:
   - "naturo is installed and in PATH"

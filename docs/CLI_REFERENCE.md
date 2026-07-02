@@ -163,7 +163,10 @@ Search for UI elements matching a query.
 | `--depth`, `-d` | integer | Maximum tree depth (default 20; use lower values for performance) |
 | `--limit` | integer | Maximum number of results (default: `50`) |
 | `--ai` | boolean | Use AI vision to find element by natural language |
-| `--screenshot` | path | Use existing screenshot (for --ai mode) |
+| `--image` | path | Locate a template image (PNG/JPG) on the target window or screen via normalized cross-correlation (no UIA tree needed) |
+| `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
+| `--selector` | text | Resolve a unified selector path to an element (the same strategy `click`/`type` use). URI (`app://proc.exe/Button[@name="Save"]`), descendant shorthand (`//Edit[@name="Search"]`), or saved (`@app/name`) |
+| `--screenshot` | path | Match against this existing screenshot instead of capturing live (for `--ai` and `--image`). With `--image` the screenshot is the haystack, coordinates are screenshot-relative, and window-targeting flags are rejected |
 | `--app` | text | Target app window |
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--json`, `-j` | boolean | JSON output |
@@ -184,7 +187,26 @@ naturo find "the save button" --ai       # AI vision search
 naturo find "Save" --app "Notepad"              # search in specific app
 naturo find "search field" --ai --app "Chrome"  # AI + specific app
 naturo find "OK" --backend msaa          # MSAA for legacy apps
+naturo find --image submit.png           # template match on the screen
+naturo find --image icon.png --app Notepad --all  # all matches in an app
+naturo find --image btn.png --threshold 0.85      # looser match threshold
+naturo find --image btn.png --screenshot saved.png  # match offline against a saved screenshot
+naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
+naturo find --selector 'app://notepad.exe/Edit[@automationid="15"]'
+naturo find --selector @chrome/login-button --all  # every match of a saved selector
 ```
+
+Found matches get `eN` refs in the snapshot (like a normal `find`), so you can
+follow up with `naturo click e<N>`. With `--image` the reported `x,y` are the
+match's screen-absolute top-left (the JSON envelope's `coordinate_frame` is
+`screen`); the JSON envelope also includes `center_x`, `center_y`, and the NCC
+`score`. Passing `--screenshot <file>` matches offline against that image
+instead of capturing live — useful for replay, headless pipelines, and
+regression fixtures — and the coordinates are then relative to the screenshot
+(`coordinate_frame` is `screenshot`); window-targeting flags do not apply and
+are rejected. With `--selector` the element is resolved the
+same way `click`/`type` resolve it (URI / XML / `//` shorthand / `@named`, with
+flexible app-name matching), so a path that clicks will also `find`.
 
 ## `naturo get`
 
@@ -298,6 +320,9 @@ List open windows.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--app` | text | Target application (name or partial match) |
+| `--window` | text | Window title pattern (substring match) |
+| `--hwnd` | integer | Window handle (HWND) |
+| `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
@@ -382,6 +407,8 @@ Click on a UI element, text, or coordinates.
 | `--on` | text | Target element (eN ref or text label) |
 | `--id` | text | Automation element ID |
 | `--coords` | integer | X Y coordinates |
+| `--image` | path | Locate a template image (PNG/JPG) on the target window or screen and click the center of the best match (see `naturo find --image`) |
+| `--threshold` | float | Minimum match score in [0.0, 1.0] for `--image` (higher is stricter, default `0.9`) |
 | `--double` | boolean | Double-click |
 | `--right` | boolean | Right-click |
 | `--app` | text | Target application (name or partial match) |
@@ -407,9 +434,17 @@ Click on a UI element, text, or coordinates.
 naturo click --coords 500 300
 naturo click --coords 500 300 --right
 naturo click --id "button_ok"
+naturo click --image submit.png                   # click the center of a template match
+naturo click --image icon.png --app Notepad --threshold 0.85  # match within an app
 naturo click e42 --paste
 naturo click e42 --copy
 ```
+
+`--image` reuses the `naturo find --image` matcher: it captures the target
+window (when `--app`/`--window`/`--hwnd`/`--pid` is given) or the screen, locates
+the best template match above `--threshold`, and clicks its center. When no match
+clears the threshold it returns `ELEMENT_NOT_FOUND` and clicks nothing rather than
+guessing a location.
 
 ## `naturo drag`
 
@@ -677,6 +712,7 @@ Close an application window (graceful or forced).
 | `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--force` | boolean | Force terminate the process |
 | `--json`, `-j` | boolean | JSON output |
 
@@ -685,8 +721,9 @@ Close an application window (graceful or forced).
 ```bash
 naturo app close notepad
 naturo app close --app notepad
-naturo app close feishu --window "群聊"
+naturo app close feishu --window "Chat"
 naturo app close --hwnd 12345 --force
+naturo app close --pid 1234
 ```
 
 ### `naturo app find`
@@ -723,6 +760,7 @@ Focus an application window (bring to foreground).
 | `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
@@ -730,9 +768,9 @@ Focus an application window (bring to foreground).
 ```bash
 naturo app focus feishu
 naturo app focus --app feishu
-naturo app focus feishu --window "群聊"
-naturo app focus --app feishu
+naturo app focus feishu --window "Chat"
 naturo app focus --hwnd 12345
+naturo app focus --pid 1234
 ```
 
 ### `naturo app inspect`
@@ -812,15 +850,19 @@ Maximize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app maximize feishu
+naturo app maximize --app feishu
 naturo app maximize --hwnd 12345
+naturo app maximize --pid 1234
 ```
 
 ### `naturo app minimize`
@@ -837,15 +879,19 @@ Minimize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app minimize feishu
+naturo app minimize --app feishu
 naturo app minimize --hwnd 12345
+naturo app minimize --pid 1234
 ```
 
 ### `naturo app move`
@@ -862,8 +908,10 @@ Move and/or resize an application window.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--x` | integer | Target X position |
 | `--y` | integer | Target Y position |
 | `--width` | integer | New width in pixels (optional) |
@@ -875,7 +923,7 @@ Move and/or resize an application window.
 ```bash
 naturo app move feishu --x 100 --y 100
 naturo app move feishu --x 100 --y 100 --width 800 --height 600
-naturo app move feishu --width 800 --height 600
+naturo app move --pid 1234 --width 800 --height 600
 ```
 
 ### `naturo app quit`
@@ -939,15 +987,19 @@ Restore a minimized or maximized window to normal state.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--app` | text | Application name (alternative to positional NAME) |
 | `--window` | text | Window title pattern (substring match) |
 | `--hwnd` | integer | Window handle (HWND) |
+| `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
 
 **Examples:**
 
 ```bash
 naturo app restore feishu
+naturo app restore --app feishu
 naturo app restore --hwnd 12345
+naturo app restore --pid 1234
 ```
 
 ### `naturo app windows`
@@ -1439,6 +1491,13 @@ naturo clipboard clear                  # Clear clipboard
 
 Read current clipboard content.
 
+When the clipboard holds non-text data (an image or a file-drop list) there is
+no text to return: the plain output reports `(clipboard contains non-text data:
+image|files)` rather than falsely claiming the clipboard is empty, and the JSON
+`format` field reflects the real content type (`image`/`files`/`empty`/`text`)
+with `has_text` indicating whether text is present — consistent with `clipboard
+info`.
+
 **Options:**
 
 | Flag | Type | Description |
@@ -1478,19 +1537,25 @@ Write text to the clipboard.
 
 | Name | Type | Required |
 |------|------|----------|
-| `TEXT` | text | yes |
+| `TEXT` | text | no — supply via `TEXT`, `--file`, or stdin (`-`) |
 
 **Options:**
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--file PATH` | path | Read text from a file (mirrors `naturo type --file`) |
 | `--json`, `-j` | boolean | JSON output |
+
+Exactly one source must be supplied. `--file` and stdin avoid the shell
+ARG_MAX limit (~32 KB) that caps a positional argument, and preserve real
+newlines without shell-specific quoting.
 
 **Examples:**
 
 ```bash
-naturo clipboard set "hello world"      # Set clipboard text
-naturo clipboard set "line1\nline2"     # Multi-line text
+naturo clipboard set "hello world"      # Literal text
+naturo clipboard set --file notes.txt   # Read text from a file
+naturo see -j | naturo clipboard set -  # Read text from stdin
 ```
 
 ## `naturo config`

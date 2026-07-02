@@ -1,0 +1,34 @@
+{
+  "address-bar": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Edit[@name=\"Address and search bar\"]",
+    "description": "URL address bar and search input"
+  },
+  "tab-strip": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Tab",
+    "description": "Tab strip containing all browser tabs"
+  },
+  "new-tab-button": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"New Tab\"]",
+    "description": "New tab button next to tab strip"
+  },
+  "back-button": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Back\"]",
+    "description": "Navigation back button"
+  },
+  "forward-button": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Forward\"]",
+    "description": "Navigation forward button"
+  },
+  "reload-button": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Reload\"]",
+    "description": "Page reload button"
+  },
+  "menu-button": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/Button[@name=\"Chrome menu\"]",
+    "description": "Three-dot menu button"
+  },
+  "bookmark-bar": {
+    "selector": "app://chrome.exe/Window[@name=\"*Google Chrome\"]/Pane[@cls=\"Chrome_WidgetWin_1\"]/ToolBar[@name=\"Bookmarks\"]",
+    "description": "Bookmarks toolbar"
+  }
+}

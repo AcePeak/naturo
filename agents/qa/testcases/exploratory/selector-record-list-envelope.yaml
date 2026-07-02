@@ -1,0 +1,32 @@
+id: TC-0063
+title: "selector/record/visual list -j omit top-level 'success' field"
+status: active
+category: exploratory
+priority: P2
+source_issue: 876
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R150 (Scripter/Automator): FAIL — re-confirmed on HEAD c15be18. `selector list -j` → `{}` (empty object, no success field), `record list -j` → `{recordings:[...]}` (no success field). A `jq -e '.success'` guard fails/errors on both. Callsites unchanged.
+  R147: FAIL — re-confirmed on HEAD e2afdcb. `selector list -j={}`, `record list -j={recordings:[...]}` (no success), `visual list -j={baselines:[]}` (no success). All three callsites unchanged.
+  Adjacent finding (Chinese User persona): `naturo selector show <existent> -j` returns `{"user":{...}, "builtin":{...}}` and `selector show <nonexistent> -j` returns `{"user":{}, "builtin":{}}` — BOTH lack a `success` field AND the no-match case is indistinguishable from "selectors exist but empty". This is a fourth envelope-drift callsite of the same pattern. Will extend #876 with this case.
+  R144: FAIL — re-confirmed on HEAD 893209e. selector list -j={}, record list -j={recordings:[...]} (no success), visual list -j={baselines:[]} (no success). All three callsites unchanged.
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "selector list -j must include top-level 'success' field"
+    command: "naturo -j selector list"
+    expect: 'Output is JSON object with top-level "success": true (currently outputs bare {})'
+  - description: "record list -j must include top-level 'success' field"
+    command: "naturo -j record list"
+    expect: 'Output is JSON object with top-level "success": true and a "count" field (currently outputs bare {"recordings": [...]})'
+  - description: "visual list -j must include top-level 'success' field"
+    command: "naturo -j visual list"
+    expect: 'Output is JSON object with top-level "success": true and a "count" field (currently outputs bare {"baselines": []})'
+
+pass_criteria: "All three outputs parse as JSON AND .success is true (or false on error). Matches envelope from list apps / clipboard get."
+fail_action: "Update or reopen #876"

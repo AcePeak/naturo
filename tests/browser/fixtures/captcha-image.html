@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: captcha-image</title>
+  <style>
+    #captcha-grid {
+      display: grid; grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px); gap: 4px;
+    }
+    .captcha-cell {
+      border: 1px solid #888; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; user-select: none;
+    }
+    .captcha-cell.selected { outline: 3px solid #1976d2; }
+  </style>
+</head>
+<body>
+  <h1 id="main-heading">Image Captcha</h1>
+  <p>Click the cell containing the target (cell index 4, the center).</p>
+
+  <!-- Exercises: click offset. The grid has a known target cell; clicking it
+       passes. Coordinates are deterministic (80px cells), so a click-offset
+       script can target the center reliably. -->
+  <div id="captcha-grid" data-target="4">
+    <div class="captcha-cell" data-index="0">0</div>
+    <div class="captcha-cell" data-index="1">1</div>
+    <div class="captcha-cell" data-index="2">2</div>
+    <div class="captcha-cell" data-index="3">3</div>
+    <div class="captcha-cell" data-index="4">★</div>
+    <div class="captcha-cell" data-index="5">5</div>
+    <div class="captcha-cell" data-index="6">6</div>
+    <div class="captcha-cell" data-index="7">7</div>
+    <div class="captcha-cell" data-index="8">8</div>
+  </div>
+  <p id="captcha-status" data-passed="false">Select the target cell.</p>
+
+  <script>
+    // Note: this status element must NOT be held in a global `var status`.
+    // A global `var status = ...` aliases the special `window.status` string
+    // property, which coerces the assigned element to "[object ...]"; every
+    // later `.setAttribute`/`.textContent` then throws or no-ops, freezing
+    // data-passed and turning this never-lie oracle into a dead fixture.
+    var grid = document.getElementById("captcha-grid");
+    var captchaStatus = document.getElementById("captcha-status");
+    var target = grid.getAttribute("data-target");
+
+    grid.addEventListener("click", function (event) {
+      var cell = event.target.closest(".captcha-cell");
+      if (!cell) { return; }
+      var cells = grid.querySelectorAll(".captcha-cell");
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].classList.remove("selected");
+      }
+      cell.classList.add("selected");
+      var passed = cell.getAttribute("data-index") === target;
+      captchaStatus.setAttribute("data-passed", String(passed));
+      captchaStatus.textContent = passed ? "Captcha passed." : "Wrong cell.";
+    });
+  </script>
+</body>
+</html>

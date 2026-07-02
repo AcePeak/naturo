@@ -1,0 +1,33 @@
+id: TC-0082
+title: "see snapshot schema missing UIA accessibility properties (IsKeyboardFocusable / HasKeyboardFocus / HelpText / IsEnabled / IsOffscreen / LocalizedControlType)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 896
+created: 2026-05-28
+last_run: 2026-05-28
+consecutive_passes: 0
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Python is in PATH (for schema inspection)"
+
+steps:
+  - description: "Inspect UIElement dataclass field list"
+    command: 'python -c "from naturo.models.snapshot import UIElement; import dataclasses; print(sorted(f.name for f in dataclasses.fields(UIElement)))"'
+    expect: "Field list contains is_keyboard_focusable, has_keyboard_focus, help_text, is_enabled, is_offscreen, localized_control_type (in addition to existing fields). Today it does NOT."
+
+  - description: "Grep source for UIA property usage"
+    command: "grep -rnE 'IsKeyboardFocusable|HasKeyboardFocus|HelpText|IsEnabled|IsOffscreen|LocalizedControlType' naturo/ core/"
+    expect: "At least one match in core/src/element.cpp showing the UIA backend queries these properties. Today: zero matches across naturo/ and core/."
+
+  - description: "Inspect naturo find filter surface"
+    command: "naturo find --help"
+    expect: "Help text lists --focusable, --enabled, --visible filters (matching IsKeyboardFocusable / IsEnabled / not IsOffscreen). Today: only --role and --actionable exposed."
+
+  - description: "Inspect press/type focus path documentation"
+    command: "naturo press --help | grep -i 'on TEXT' -A 1; naturo type --help | grep -i 'on' -A 2"
+    expect: "Help text describes a UIA SetFocus path option (e.g., --focus-via uia). Today: help says 'click to focus before pressing/typing' — mouse-click-only focus path even though backends/windows/_input.py:601 has focus_element_uia available."
+
+pass_criteria: "All four steps show the schema/CLI surface DOES expose the listed accessibility properties — schema fields present, UIA backend queries them, and find/press/type expose them as filters/options."
+fail_action: "Bump #896 if more accessibility scenarios surface; do not file duplicate."

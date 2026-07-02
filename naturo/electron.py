@@ -92,9 +92,10 @@ def _get_process_command_line(pid: int) -> Optional[str]:
             ],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
         )
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             if line.startswith("CommandLine="):
                 return line[len("CommandLine=") :]
     except (subprocess.TimeoutExpired, OSError):
@@ -124,9 +125,10 @@ def _get_process_exe_path(pid: int) -> Optional[str]:
             ],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
         )
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             if line.startswith("ExecutablePath="):
                 return line[len("ExecutablePath=") :]
     except (subprocess.TimeoutExpired, OSError):
@@ -155,9 +157,14 @@ def _bulk_get_process_info() -> Dict[int, Dict[str, str]]:
             ],
             capture_output=True,
             text=True,
+            # (#1156) Decode defensively: a process whose command line or path
+            # contains non-UTF-8 bytes (common on Windows for legacy-codepage
+            # apps) would otherwise raise UnicodeDecodeError in the reader
+            # thread, leaving ``stdout`` as ``None`` and crashing the parse.
+            errors="replace",
             timeout=15,
         )
-        lines = result.stdout.strip().splitlines()
+        lines = (result.stdout or "").strip().splitlines()
         # CSV header line: Node,CommandLine,ExecutablePath,ProcessId
         header_idx = -1
         for i, line in enumerate(lines):
@@ -206,10 +213,11 @@ def _find_processes_by_name(name: str) -> List[Dict[str, Any]]:
             ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
         )
         name_lower = name.lower()
-        for line in result.stdout.splitlines():
+        for line in (result.stdout or "").splitlines():
             line = line.strip()
             if not line:
                 continue
@@ -358,6 +366,15 @@ def detect_electron_app(app_name: str) -> Dict[str, Any]:
             "main_pid": None,
         }
 
+    # Bulk-fetch command lines and exe paths in a single wmic call to avoid
+    # per-PID subprocess overhead. Apps that match many processes (UWP apps,
+    # Chrome/Edge/Teams) would otherwise pay ~0.86 s per PID for the two wmic
+    # calls in each helper, stalling the see/find cascade for 20+ s. This
+    # mirrors list_electron_apps, which already applies the BUG-007 batching
+    # fix that detect_electron_app — the function the cascade actually calls —
+    # was missing (#1023).
+    proc_info = _bulk_get_process_info()
+
     # Check each process for Electron characteristics
     is_electron = False
     debug_port = None
@@ -365,11 +382,11 @@ def detect_electron_app(app_name: str) -> Dict[str, Any]:
 
     for proc in processes:
         pid = proc["pid"]
-        if _is_electron_process(pid):
+        if _is_electron_process(pid, proc_info=proc_info):
             is_electron = True
             if main_pid is None:
                 main_pid = pid
-            port = _find_debug_port_from_cmdline(pid)
+            port = _find_debug_port_from_cmdline(pid, proc_info=proc_info)
             if port is not None:
                 debug_port = port
                 break
@@ -425,6 +442,7 @@ def list_electron_apps() -> Dict[str, Any]:
             ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
         )
     except (subprocess.TimeoutExpired, OSError):
@@ -432,7 +450,7 @@ def list_electron_apps() -> Dict[str, Any]:
 
     # Group processes by executable name
     exe_groups: Dict[str, List[int]] = {}
-    for line in result.stdout.splitlines():
+    for line in (result.stdout or "").splitlines():
         line = line.strip()
         if not line:
             continue

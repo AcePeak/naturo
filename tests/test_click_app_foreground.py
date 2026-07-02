@@ -218,6 +218,7 @@ class TestClickAppForeground:
         backend = MagicMock()
         backend.focus_window.side_effect = OSError("focus failed")
         backend._is_afh_window.return_value = False
+        backend._is_winui_window.return_value = False
         mock_get_backend.return_value = backend
 
         runner = CliRunner()

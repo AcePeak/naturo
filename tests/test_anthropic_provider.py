@@ -95,10 +95,10 @@ class TestResolveModel:
         assert _resolve_model("sonnet") == "claude-sonnet-4-20250514"
 
     def test_alias_haiku(self) -> None:
-        assert _resolve_model("haiku") == "claude-3-haiku-20240307"
+        assert _resolve_model("haiku") == "claude-haiku-4-5-20251001"
 
     def test_alias_opus(self) -> None:
-        assert _resolve_model("opus") == "claude-opus-4-20250514"
+        assert _resolve_model("opus") == "claude-opus-4-6"
 
     def test_passthrough(self) -> None:
         assert _resolve_model("claude-sonnet-4-20250514") == "claude-sonnet-4-20250514"
@@ -154,19 +154,19 @@ class TestResolveAuth:
 # ---------------------------------------------------------------------------
 
 class TestCredentialsIO:
-    @patch("naturo.providers.anthropic_provider._CREDENTIALS_PATH")
+    @patch("naturo.config.CREDENTIALS_PATH")
     def test_load_missing_file(self, mock_path: MagicMock) -> None:
         mock_path.exists.return_value = False
         assert _load_credentials() == {}
 
-    @patch("naturo.providers.anthropic_provider._CREDENTIALS_PATH")
+    @patch("naturo.config.CREDENTIALS_PATH")
     def test_load_valid_json(self, mock_path: MagicMock) -> None:
         mock_path.exists.return_value = True
         mock_path.read_text.return_value = '{"anthropic": {"token": "abc"}}'
         result = _load_credentials()
         assert result == {"anthropic": {"token": "abc"}}
 
-    @patch("naturo.providers.anthropic_provider._CREDENTIALS_PATH")
+    @patch("naturo.config.CREDENTIALS_PATH")
     def test_load_invalid_json(self, mock_path: MagicMock) -> None:
         mock_path.exists.return_value = True
         mock_path.read_text.return_value = "not-json"
@@ -174,7 +174,7 @@ class TestCredentialsIO:
 
     def test_save_and_load(self, tmp_path: Path) -> None:
         creds_path = tmp_path / "credentials.json"
-        with patch("naturo.providers.anthropic_provider._CREDENTIALS_PATH", creds_path):
+        with patch("naturo.config.CREDENTIALS_PATH", creds_path):
             _save_credentials({"anthropic": {"token": "test"}})
             result = _load_credentials()
             assert result["anthropic"]["token"] == "test"
@@ -290,7 +290,7 @@ class TestGetOAuthAccessToken:
 class TestPersistRefreshToken:
     def test_persist(self, tmp_path: Path) -> None:
         creds_path = tmp_path / "credentials.json"
-        with patch("naturo.providers.anthropic_provider._CREDENTIALS_PATH", creds_path):
+        with patch("naturo.config.CREDENTIALS_PATH", creds_path):
             _persist_refresh_token("sk-ant-oat01-new")
             data = json.loads(creds_path.read_text())
             assert data["anthropic"]["token"] == "sk-ant-oat01-new"
@@ -331,7 +331,7 @@ class TestAnthropicVisionProviderInit:
 
     def test_model_alias(self) -> None:
         p = AnthropicVisionProvider(api_key="sk-ant-api03-test", model="haiku")
-        assert p._model == "claude-3-haiku-20240307"
+        assert p._model == "claude-haiku-4-5-20251001"
 
     def test_model_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("NATURO_AI_MODEL", "claude-3-opus-20240229")
@@ -408,7 +408,7 @@ class TestAnthropicDescribeScreenshot:
         result = p.describe_screenshot(fake_image)
 
         assert result.description == "Notepad window"
-        assert result.model == "claude-sonnet-4-20250514"
+        assert result.model == "claude-opus-4-6"
         assert result.tokens_used == 150
 
     @patch("naturo.providers.anthropic_provider.AnthropicVisionProvider._get_client")

@@ -1,0 +1,46 @@
+id: TC-0078
+title: "MCP tools silently drop unknown arguments — typos fall back to defaults instead of raising validation error"
+status: active
+category: exploratory
+priority: P2
+source_issue: 891
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R137: FAIL — confirmed on HEAD `70e6591` via focus_window. Calling with the correct schema param `title:'claude'` focuses the window. Calling with a plausible typo `window_title:'claude'` (no `title`) silently drops the unknown key and falls back to default title=None → "foreground" → WINDOW_NOT_FOUND "Window not found: foreground" — no diagnostic that the supplied key was ignored. Behavior is Pydantic v2 default (`extra='ignore'`); affects all 64 MCP tools.
+  R145: FAIL — confirmed on HEAD `17aefe6`. (a) `list_apps {"definitely_not_a_real_arg":true,"page_size":999}` returns the full normal app list, success:true — both unknown keys dropped without diagnostic. (b) `focus_window {"window":12345}` (CLI uses `--window`; MCP expects `title`) silently drops `window` and resolves to default title=None → "Window not found: foreground". The drop is **most dangerous** when paired with a name drift between CLI and MCP (see new finding/issue about `--window` ↔ `title` ↔ `window_title` triple drift).
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "MCP server can start: naturo mcp start --transport stdio"
+  - "A window with title 'claude' (or any real window) is visible — for the positive control"
+
+steps:
+  - description: "Correct param name — positive control"
+    command: |
+      Send tools/call focus_window {"title": "claude"}
+    expect: '{"success": true, "action": "focus"}, isError:false'
+
+  - description: "Typo param name — should reject, currently drops silently"
+    command: |
+      Send tools/call focus_window {"window_title": "claude"}
+    expect: |
+      Expected (post-fix): isError:true OR {"success": false, "error": {"code": "INVALID_INPUT", "message": "unknown argument: window_title"}}.
+      Actual (FAIL): {"success": false, "error": {"code": "WINDOW_NOT_FOUND", "message": "Window not found: foreground", ...}} — the unknown key is dropped, default title=None resolves to "foreground", and the error message gives no hint that the supplied window_title was ignored.
+
+  - description: "Extra unknown key alongside valid args — silently accepted"
+    command: |
+      Send tools/call focus_window {"title": "claude", "bogus_extra_param": "foo"}
+    expect: |
+      Expected (post-fix): isError:true OR error mentioning bogus_extra_param.
+      Actual (FAIL): {"success": true, "action": "focus"} — extra key silently dropped, no diagnostic.
+
+pass_criteria: |
+  Every MCP tool either:
+  (a) rejects unknown keys with a clear payload that lists the dropped keys, OR
+  (b) echoes the dropped keys in the response so an agent can detect the drift.
+  Today neither happens: agent has no signal that a typed/drifted parameter name was ignored.
+
+fail_action: "Update #891 with regression scope when fix lands. Verification gate must include both 'typo only' and 'typo alongside valid args' cases — they have different observable shapes."

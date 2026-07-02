@@ -1,0 +1,26 @@
+{
+  "mail-list": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Table[@name=\"*Message list*\"]",
+    "description": "Email message list"
+  },
+  "reading-pane": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Pane[@name=\"Reading Pane*\"]",
+    "description": "Email reading/preview pane"
+  },
+  "folder-list": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Tree[@name=\"*Folder*\"]",
+    "description": "Folder navigation tree (Inbox, Sent, etc.)"
+  },
+  "new-email-button": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Button[@name=\"New Email*\"]",
+    "description": "New email compose button"
+  },
+  "search-box": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Edit[@name=\"Search*\"]",
+    "description": "Mail search box"
+  },
+  "ribbon": {
+    "selector": "app://outlook.exe/Window[@name=\"*Outlook*\"]/Pane[@automationid=\"Ribbon\"]",
+    "description": "Ribbon toolbar"
+  }
+}

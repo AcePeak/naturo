@@ -194,7 +194,8 @@ class TestResolveAppId:
         entry.pid = 888
         mock_map = MagicMock()
         mock_map.resolve.return_value = entry
-        with patch("naturo.app_ids.get_app_id_map", return_value=mock_map):
+        with patch("naturo.app_ids.get_app_id_map", return_value=mock_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True):
             result = self._call("a1")
         assert result == (None, 999, 888)
 
@@ -204,6 +205,91 @@ class TestResolveAppId:
         with patch("naturo.app_ids.get_app_id_map", return_value=mock_map), \
              pytest.raises(SystemExit):
             self._call("a99", json_output=False)
+
+    def test_stale_hwnd_emits_app_id_stale_error(self, capsys):
+        """#788: stale HWND after app restart triggers APP_ID_STALE error."""
+        entry = MagicMock()
+        entry.handle = 0xDEAD
+        entry.pid = 999
+        mock_map = MagicMock()
+        mock_map.resolve.return_value = entry
+        with patch("naturo.app_ids.get_app_id_map", return_value=mock_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=False), \
+             pytest.raises(SystemExit) as exc_info:
+            self._call("a1", json_output=True)
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert data["success"] is False
+        assert data["error"]["code"] == "APP_ID_STALE"
+        assert "stale" in data["error"]["message"].lower()
+
+    def test_stale_hwnd_text_mode(self, capsys):
+        """#788: stale HWND in text mode prints error to stderr."""
+        entry = MagicMock()
+        entry.handle = 0xDEAD
+        entry.pid = 999
+        mock_map = MagicMock()
+        mock_map.resolve.return_value = entry
+        with patch("naturo.app_ids.get_app_id_map", return_value=mock_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=False), \
+             pytest.raises(SystemExit):
+            self._call("a1", json_output=False)
+        err = capsys.readouterr().err
+        assert "stale" in err.lower()
+
+    def test_alive_hwnd_passes_validation(self):
+        """#788: alive HWND proceeds normally."""
+        entry = MagicMock()
+        entry.handle = 0x1234
+        entry.pid = 555
+        mock_map = MagicMock()
+        mock_map.resolve.return_value = entry
+        with patch("naturo.app_ids.get_app_id_map", return_value=mock_map), \
+             patch("naturo.cli.interaction._common._is_hwnd_alive", return_value=True):
+            result = self._call("a1")
+        assert result == (None, 0x1234, 555)
+
+
+# ── _is_hwnd_alive tests (#788) ─────────────────────────────────────────
+
+
+class TestIsHwndAlive:
+    """Tests for _is_hwnd_alive — HWND validity check."""
+
+    @patch("sys.platform", "linux")
+    def test_returns_true_on_non_windows(self):
+        """On Linux/macOS (sys.platform != win32), always returns True.
+
+        ``sys.platform`` is forced to ``"linux"`` so the non-Windows branch is
+        exercised regardless of the host running the suite — on Windows the real
+        ``user32.IsWindow(0x1234)`` would return 0 for this fake handle (#870).
+        """
+        from naturo.cli.interaction._common import _is_hwnd_alive
+        assert _is_hwnd_alive(0x1234) is True
+
+    def test_returns_false_for_zero_handle(self):
+        """A zero/null HWND is never alive."""
+        from naturo.cli.interaction._common import _is_hwnd_alive
+        assert _is_hwnd_alive(0) is False
+
+    @patch("sys.platform", "win32")
+    def test_returns_true_when_window_valid(self):
+        """IsWindow() returns nonzero for valid handles on Windows."""
+        from naturo.cli.interaction._common import _is_hwnd_alive
+        mock_ctypes = MagicMock()
+        mock_ctypes.windll.user32.IsWindow.return_value = 1
+        with patch.dict("sys.modules", {"ctypes": mock_ctypes}):
+            assert _is_hwnd_alive(0x1234) is True
+
+    @patch("sys.platform", "win32")
+    def test_returns_false_when_window_dead(self):
+        """IsWindow() returns 0 for stale handles on Windows."""
+        from naturo.cli.interaction._common import _is_hwnd_alive
+        mock_ctypes = MagicMock()
+        mock_ctypes.windll.user32.IsWindow.return_value = 0
+        with patch.dict("sys.modules", {"ctypes": mock_ctypes}):
+            assert _is_hwnd_alive(0xDEAD) is False
 
 
 # ── _json_ok / _json_err tests ───────────────────────────────────────────
@@ -557,15 +643,18 @@ class TestGetBackend:
             result = _get_backend()
         assert result is mock_backend
 
-    def test_raises_usage_error_on_no_desktop(self):
+    def test_exits_1_on_no_desktop_plain(self):
+        # A missing desktop is a runtime failure: exit 1, never Click's exit-2
+        # UsageError / 'Usage:' banner (#866).
         from naturo.cli.interaction._common import _get_backend
         from naturo.errors import NoDesktopSessionError
         with patch(
             "naturo.cli.interaction._common._check_desktop_session",
             side_effect=NoDesktopSessionError("no desktop"),
         ):
-            with pytest.raises(Exception):  # click.UsageError
+            with pytest.raises(SystemExit) as exc_info:
                 _get_backend(json_output=False)
+        assert exc_info.value.code == 1
 
     def test_json_mode_exits_on_no_desktop(self):
         from naturo.cli.interaction._common import _get_backend

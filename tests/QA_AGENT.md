@@ -88,10 +88,23 @@ naturo app list
 - DLL 崩溃后下一次调用能恢复吗
 
 ### 第七轮：安全和权限（Security）
-- 命令注入：`naturo see --app "; rm -rf /"`
-- 路径穿越：`naturo capture live --path "../../etc/passwd"`
-- 超长输入导致缓冲区问题
-- 敏感信息是否出现在日志或错误消息中
+> 🛑 **这一轮只能用 argv 级 / pytest 级验证,绝不经 live `naturo type` / 键盘注入复现。**
+> 注入/穿越测试天然带 shell 元字符;在真桌面上,全局 SendInput 的焦点竞争可能把片段溅进真实终端。
+> 所以:**这些 payload 只能作为命令行参数(`naturo see --app "..."` 里被解析、永不执行)或在进程内 pytest
+> 里验证;永远不要把它们打进任何活窗口。** 历史教训:R-SEC-012 + 本节的 `rm -rf /` 曾被 agent 经 `naturo type`
+> 溅进 Notepad——这是绝对红线。
+>
+> ⛔ **即便如此,payload 仍必须永远无害**(双保险):绝不用真实破坏性命令(`rm -rf`、`del`、`format`、
+> `shutdown` 等),只用无害哨兵 `; echo INJECTED`——被错误执行也只打印 `INJECTED`。路径穿越同理用无害探针。
+>
+> ✅ **注入安全这一条已是进程内断言,不是 live 动作(#976):** `tests/test_input_injection_safety_976.py`
+> 在进程内断言守卫拒绝 shell 元字符且**零击键**(对 mock 的 SendInput/Phys32 边界);`tests/conftest.py` 的
+> 会话级 tripwire 进一步保证**任何**测试都无法把 shell 元字符经真实键盘打出(命中即 `AssertionError`)。
+> 因此 QA 只需运行 `pytest`,**不要**自己经 live `naturo type` 复现注入。
+- 命令注入(**仅 argv,传给 `see --app`,绝不 `type`**)：`naturo see --app "; echo INJECTED"`
+- 路径穿越(**仅 argv**)：`naturo capture live --path "../../naturo-path-traversal-probe.txt"`(无害探针)
+- 超长输入缓冲区(**用无害字符如 `A`×N,经 pytest 或 argv,不经 live type**)
+- 敏感信息是否出现在日志或错误消息中(纯观察,无输入)
 
 ## 测试工具箱
 

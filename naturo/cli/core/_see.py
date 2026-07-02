@@ -1,7 +1,7 @@
 """See command — capture screenshot and analyze UI elements."""
 from __future__ import annotations
 
-import json as json_module
+from naturo.cli._jsonio import json_dumps
 import re as _re_mod
 from typing import Any
 
@@ -32,6 +32,9 @@ import naturo.cli.core._common as _common
               help="Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision")
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered UI regions (requires AI provider)")
+@click.option("--ocr", "run_ocr", is_flag=True,
+              help="Run local OCR (rapidocr) to recover text baked into images/canvas; "
+                   "nodes are tagged 'ocr' (uncertain) and warned")
 @click.option("--stats", "show_stats", is_flag=True,
               help="Show per-provider recognition statistics after output")
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
@@ -48,11 +51,20 @@ import naturo.cli.core._common as _common
 )
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
+@click.option("--ai-provider", "ai_provider",
+              type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
+              default="auto",
+              help="AI vision provider for --cascade/--fill-gaps (default: auto)")
+@click.option("--ai-model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
+              help="AI model override (e.g. claude-opus-4-6, gpt-4o)")
+@click.option("--ai-api-key", "ai_api_key", default=None,
+              help="AI provider API key (overrides env var / credentials file)")
 def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | None,
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
-        session: str | None, cascade: bool, fill_gaps: bool, show_stats: bool,
+        session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
-        json_output: bool, backend: str, app_id: str | None) -> None:
+        json_output: bool, backend: str, app_id: str | None,
+        ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
     Inspects the UI element tree of the foreground window (or a specific
@@ -80,10 +92,15 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     Examples:
         naturo see --app feishu --cascade      # UIA + CDP for Electron content
         naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
+        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # Use specific AI model
         naturo see --app feishu --cascade --stats      # Show provider breakdown
         naturo see --app feishu --backend auto         # Try all A11y backends
         naturo see --app feishu --backend hybrid       # Per-node backend selection
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
@@ -118,12 +135,17 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             click.echo(f"Error: {msg}", err=True)
         raise SystemExit(1)
 
+    # (#1022) Auto-create the parent directory for --path so a missing folder
+    # doesn't surface as a raw [Errno 2] mislabeled as UNKNOWN_ERROR on save.
+    if path:
+        _common._ensure_output_dir(path, json_output)
+
     try:
         be = _common._get_backend(json_output)
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
-        if cascade or backend == "auto" or backend == "hybrid":
+        if cascade or backend in ("auto", "hybrid", "cdp"):
             # (#275) Auto-capture screenshot for cascade mode so AI vision
             # fallback can trigger when UIA tree is too shallow.
             # (#694) Use capture_window with resolved hwnd so the screenshot
@@ -172,11 +194,15 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 backend_name=backend,
                 coverage_target=coverage_target,
                 fill_gaps_ai=fill_gaps,
+                ai_provider=ai_provider,
+                ai_model=ai_model,
+                ai_api_key=ai_api_key,
                 screenshot_path=cascade_screenshot,
                 screenshot_scale_factor=(
                     cascade_capture_result.scale_factor
                     if cascade_capture_result else 1.0
                 ),
+                run_ocr=run_ocr,
             )
             tree = cascade_result.tree
             cascade_stats = cascade_result.stats
@@ -327,6 +353,17 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             el_dict = _el_to_selector_dict(el)
             return _sel_builder.build_uri(el_dict, ancestors_dicts, app=_selector_app)
 
+        # (M1) Unified Auto Element Tree: fusion tags + AI/image warning.
+        # recognition_summary only counts cascade-tagged nodes, so a plain
+        # (non-cascade) tree yields an empty summary and no false warning.
+        from naturo.cascade._correctness import (
+            annotate as _fusion_annotate,
+            recognition_summary as _fusion_summary,
+            uncertain_warning as _fusion_warning,
+        )
+        _recognition = _fusion_summary(tree)
+        _recognition_warning = _fusion_warning(_recognition)
+
         if json_output:
             # (#237) Use a sequential counter matching _flatten() DFS order
             # to assign unique display IDs.  The previous reverse-map approach
@@ -416,6 +453,13 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
                     d["source"] = props["source"]
+                # (M1) Correctness-tagged fusion: every cascade node carries
+                # techniques[] + correctness + confidence; deterministic first.
+                _fusion = _fusion_annotate(props)
+                if _fusion is not None:
+                    d["techniques"] = _fusion["techniques"]
+                    d["correctness"] = _fusion["correctness"]
+                    d["confidence"] = _fusion["confidence"]
                 return d
             out = to_dict(tree)
             assert out is not None, "Root element should never be filtered"
@@ -423,6 +467,10 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 out["snapshot_id"] = snapshot_id
             if cascade_stats:
                 out["cascade_stats"] = cascade_stats.to_dict()
+            # (M1) Structured recognition summary so agents can branch on
+            # correctness without parsing the stderr warning.
+            if _recognition["total_nodes"] > 0:
+                out["recognition_summary"] = _recognition
 
             # Add DPI context so AI agents know coordinate scaling
             try:
@@ -439,13 +487,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
 
 
-            click.echo(json_module.dumps(out, indent=2))
+            click.echo(json_dumps(out, indent=2))
+            # (M1) Correctness warning to stderr keeps --json stdout pure.
+            if _recognition_warning:
+                click.echo(_recognition_warning, err=True)
         else:
             # BUG-071: include short element IDs (e1, e2, ...) that can be
             # passed to ``naturo click e3`` for quick interaction.
             _ref_counter = [0]
 
-            def print_tree(el, indent=0, ancestors_dicts=None):
+            def print_tree(el, indent=0, ancestors_dicts=None) -> None:
                 """Print element tree with short element refs."""
                 if ancestors_dicts is None:
                     ancestors_dicts = []
@@ -498,6 +549,9 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     print_tree(child, indent + 1, child_ancestors)
 
             print_tree(tree)
+            # (M1) Warn (stderr) when any node is AI/image-only (uncertain).
+            if _recognition_warning:
+                click.echo(_recognition_warning, err=True)
             if snapshot_id:
                 click.echo(f"\nSnapshot: {snapshot_id}")
                 if show_selectors:

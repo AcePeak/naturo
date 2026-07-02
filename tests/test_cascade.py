@@ -282,6 +282,37 @@ class TestRunCascade:
         # CDP path was entered (no exception)
         assert result.tree is not None
 
+    def test_cdp_elements_grafted_onto_tree(self):
+        """Auto-cascade CDP elements must be attached to the fused tree, not
+        merely counted for coverage.
+
+        Regression: the auto CDP branch appended fetched elements only to the
+        internal coverage list and dropped the ``root_tree.children.append``
+        step the JAB branch performs, so ``see --cascade --json`` recognized
+        web DOM content (cdp: ok/N in stats) but never emitted a cdp-tagged
+        node — no uia+cdp fusion ever reached the tree.
+        """
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+        cdp_el = _make_el(id="cdp_1", role="Button", name="Save Order",
+                          x=10, y=10, w=80, h=30, props={"source": "cdp"})
+
+        with patch("naturo.cascade._fetch_cdp_elements", return_value=[cdp_el]), \
+             patch("naturo.cascade.find_cdp_port", return_value=9222):
+            result = run_cascade(be, backend_name="auto", pid=1234)
+
+        from naturo.cascade import _flatten, recognition_summary
+        ids = [e.id for e in _flatten(result.tree)]
+        assert "cdp_1" in ids, "CDP node was discarded instead of grafted onto the tree"
+        summary = recognition_summary(result.tree)
+        assert summary["by_technique"].get("cdp") == 1
+        # cdp is deterministic — the fused node must be preferred deterministically.
+        cdp_node = next(e for e in _flatten(result.tree) if e.id == "cdp_1")
+        from naturo.cascade import annotate
+        fusion = annotate(cdp_node.properties)
+        assert fusion["correctness"] == "deterministic"
+        assert fusion["techniques"] == ["cdp"]
+
     def test_ai_fill_gaps_skipped_without_screenshot(self):
         """AI vision not attempted when no screenshot_path provided."""
         tree = _make_el(id="root")
@@ -316,6 +347,49 @@ class TestRunCascade:
         assert vision_stat.elements == 1
         assert vision_stat.status == "ok"
 
+    def test_ai_model_and_api_key_threaded_to_fetch(self, tmp_path):
+        """ai_model and ai_api_key are forwarded to _fetch_ai_elements."""
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+
+        fake_screenshot = str(tmp_path / "screen.png")
+        Path(fake_screenshot).write_bytes(b"fake")
+
+        with patch("naturo.cascade._fetch_ai_elements", return_value=[]) as mock_ai:
+            run_cascade(
+                be, backend_name="uia",
+                fill_gaps_ai=True,
+                ai_provider="anthropic",
+                ai_model="claude-opus-4-6",
+                ai_api_key="sk-test-key",
+                screenshot_path=fake_screenshot,
+            )
+
+        mock_ai.assert_called_once()
+        call_kwargs = mock_ai.call_args
+        assert call_kwargs.kwargs.get("model") == "claude-opus-4-6"
+        assert call_kwargs.kwargs.get("api_key") == "sk-test-key"
+
+    def test_ai_model_defaults_to_none(self, tmp_path):
+        """When ai_model is not specified, None is passed to _fetch_ai_elements."""
+        tree = _make_el(id="root", w=1000, h=600)
+        be = _make_backend(tree)
+
+        fake_screenshot = str(tmp_path / "screen.png")
+        Path(fake_screenshot).write_bytes(b"fake")
+
+        with patch("naturo.cascade._fetch_ai_elements", return_value=[]) as mock_ai:
+            run_cascade(
+                be, backend_name="uia",
+                fill_gaps_ai=True,
+                screenshot_path=fake_screenshot,
+            )
+
+        mock_ai.assert_called_once()
+        call_kwargs = mock_ai.call_args
+        assert call_kwargs.kwargs.get("model") is None
+        assert call_kwargs.kwargs.get("api_key") is None
+
 
 # ── CLI integration ───────────────────────────────────────────────────────────
 
@@ -349,6 +423,21 @@ class TestSeeCascadeCLI:
         runner = CliRunner()
         result = runner.invoke(main, ["see", "--help"])
         assert "--coverage" in result.output
+
+    def test_ai_provider_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-provider" in result.output
+
+    def test_ai_model_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-model" in result.output
+
+    def test_ai_api_key_flag_exists(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["see", "--help"])
+        assert "--ai-api-key" in result.output
 
     def test_cascade_invokes_run_cascade(self):
         """When --cascade is passed, run_cascade() is called."""

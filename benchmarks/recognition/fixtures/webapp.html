@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Naturo Recognition Benchmark — Sample Web/Electron App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; }
+    header { background: #1d76db; color: #fff; padding: 12px 16px; }
+    nav button { margin-right: 8px; }
+    main { display: flex; }
+    aside { width: 240px; border-right: 1px solid #ddd; padding: 8px; }
+    section { flex: 1; padding: 16px; }
+    .row { margin: 6px 0; }
+    .card { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin: 8px 0; }
+    .list-item { padding: 6px 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sample App</h1>
+    <nav aria-label="Main toolbar">
+      <button id="btn-new">New</button>
+      <button id="btn-open">Open</button>
+      <button id="btn-save">Save</button>
+      <button id="btn-export" role="button">Export</button>
+    </nav>
+  </header>
+  <main>
+    <aside aria-label="Sidebar">
+      <!-- A sidebar list: each item is an independently clickable element -->
+      <div class="list-item" role="button" tabindex="0">Inbox</div>
+      <div class="list-item" role="button" tabindex="0">Starred</div>
+      <div class="list-item" role="button" tabindex="0">Sent</div>
+      <div class="list-item" role="button" tabindex="0">Drafts</div>
+      <div class="list-item" role="button" tabindex="0">Archive</div>
+      <div class="list-item" role="button" tabindex="0">Trash</div>
+      <div class="list-item" role="button" tabindex="0">Spam</div>
+      <div class="list-item" role="button" tabindex="0">Settings</div>
+    </aside>
+    <section>
+      <div class="row">
+        <label for="search">Search</label>
+        <input id="search" type="search" placeholder="Search messages...">
+        <button id="btn-search">Go</button>
+      </div>
+      <div class="row">
+        <label for="filter">Filter</label>
+        <select id="filter">
+          <option>All</option>
+          <option>Unread</option>
+          <option>Flagged</option>
+        </select>
+        <input id="chk-attach" type="checkbox"><label for="chk-attach">Has attachment</label>
+      </div>
+
+      <div class="card">
+        <h3>Message 1</h3>
+        <a href="#m1-open">Open</a>
+        <a href="#m1-reply">Reply</a>
+        <a href="#m1-forward">Forward</a>
+        <a href="#m1-delete">Delete</a>
+      </div>
+      <div class="card">
+        <h3>Message 2</h3>
+        <a href="#m2-open">Open</a>
+        <a href="#m2-reply">Reply</a>
+        <a href="#m2-forward">Forward</a>
+        <a href="#m2-delete">Delete</a>
+      </div>
+      <div class="card">
+        <h3>Message 3</h3>
+        <a href="#m3-open">Open</a>
+        <a href="#m3-reply">Reply</a>
+        <a href="#m3-forward">Forward</a>
+        <a href="#m3-delete">Delete</a>
+      </div>
+      <div class="card">
+        <h3>Compose</h3>
+        <div class="row"><label for="to">To</label><input id="to" type="email"></div>
+        <div class="row"><label for="subject">Subject</label><input id="subject" type="text"></div>
+        <div class="row"><textarea id="body" rows="4" placeholder="Write a message..."></textarea></div>
+        <div class="row">
+          <button id="btn-send">Send</button>
+          <button id="btn-discard">Discard</button>
+          <button id="btn-attach">Attach</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

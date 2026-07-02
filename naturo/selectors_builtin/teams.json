@@ -1,0 +1,26 @@
+{
+  "chat-list": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/List[@name=\"*Chat*\"]",
+    "description": "Chat conversation list"
+  },
+  "message-input": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/Edit[@name=\"*message*\"]",
+    "description": "Message compose input field"
+  },
+  "send-button": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/Button[@name=\"Send*\"]",
+    "description": "Send message button"
+  },
+  "call-button": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/Button[@name=\"*call*\"]",
+    "description": "Start call button"
+  },
+  "search-box": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/Edit[@name=\"Search*\"]",
+    "description": "Search bar for chats, people, and files"
+  },
+  "activity-nav": {
+    "selector": "app://ms-teams.exe/Window[@name=\"*Teams*\"]/Button[@name=\"Activity\"]",
+    "description": "Activity navigation button"
+  }
+}

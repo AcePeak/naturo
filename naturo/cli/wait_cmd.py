@@ -1,8 +1,9 @@
 """CLI wait command — wait for a duration, or for elements/windows to appear/disappear."""
-import json
+from naturo.cli._jsonio import json_dumps
+import math
 import time
 
-from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli.error_helpers import build_error_object, json_error as _json_error_str
 from naturo.cli.options import app_id_option, resolve_app_id_to_hwnd
 import sys
 import click
@@ -22,7 +23,7 @@ import click
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
 def wait(ctx, duration, element, window_title, gone, timeout, interval,
-         app, hwnd, pid, app_id, json_output):
+         app, hwnd, pid, app_id, json_output) -> None:
     """Wait for a duration, or for a UI element/window to appear or disappear.
 
     \b
@@ -43,6 +44,10 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
       naturo wait --gone "Dialog:Loading" --app notepad --timeout 30
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
+
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
 
     # Resolve --app-id to hwnd (#595)
     resolved_hwnd = resolve_app_id_to_hwnd(app_id, hwnd, json_output)
@@ -78,12 +83,51 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
             sys.exit(1)
             return
 
-        time.sleep(duration)
+        # (#1164) Reject non-finite durations (NaN/inf) up front. `duration < 0`
+        # above lets NaN through (every comparison with NaN is False), and both
+        # NaN and inf would otherwise crash `time.sleep` below with a raw
+        # ValueError/OverflowError — leaking a traceback and, under -j, emitting
+        # no JSON envelope at all (a broken --json contract).
+        if not math.isfinite(duration):
+            msg = f"Duration must be a finite number, got {duration}"
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
+
+        # (#1164) `time.sleep` converts the duration to an int64-nanosecond
+        # deadline and raises OverflowError for values past the platform sleep
+        # limit (~9.22e9 s). Translate that into the same structured
+        # INVALID_INPUT contract as the bounds checks above so a huge duration
+        # never leaks a raw traceback (and always emits JSON under -j). The
+        # error CODE is platform-invariant even though the exact threshold is
+        # not, so the bad-input contract is identical on every OS.
+        try:
+            time.sleep(duration)
+        except (OverflowError, ValueError):
+            msg = (
+                f"Duration too large: {duration}s exceeds the maximum sleep "
+                f"supported on this platform"
+            )
+            if json_output:
+                click.echo(_json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            sys.exit(1)
+            return
         if json_output:
-            click.echo(json.dumps({
+            # Canonical success envelope shared with the predicate sub-modes
+            # (#895): the predicate-only ``found``/``warnings`` keys are present
+            # but carry their empty values so a ``-j`` consumer never has to know
+            # which sub-mode ran to parse the result.
+            click.echo(json_dumps({
                 "success": True,
                 "mode": "duration",
                 "wait_time": round(duration, 3),
+                "found": None,
+                "warnings": [],
             }, indent=2))
         else:
             click.echo(f"Waited {duration:.1f}s")
@@ -116,6 +160,12 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
         sys.exit(1)
         return
 
+    # (#885) Condition waits poll the live UI tree.  Without a desktop session
+    # the poll trivially observes "not present" and `wait --gone` returns
+    # success on iteration 1 (a false negative) — refuse loudly instead.
+    from naturo.cli.core._common import _enforce_desktop_session
+    _enforce_desktop_session(json_output)
+
     # Import here to avoid import-time side effects
     from naturo.wait import wait_for_element, wait_until_gone, wait_for_window
 
@@ -138,7 +188,7 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
             return  # unreachable
     except NaturoError as exc:
         if json_output:
-            click.echo(json.dumps(exc.to_json_response(), indent=2))
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
             click.echo(f"Error: {exc.message}", err=True)
         sys.exit(1)
@@ -151,11 +201,15 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
         sys.exit(1)
         return
 
+    # Discriminator for the canonical envelope, matching the dispatch above (#895).
+    mode = "element" if element else "gone" if gone else "window"
+
     if json_output:
         output = {
             "success": result.found,
-            "found": result.found,
+            "mode": mode,
             "wait_time": round(result.wait_time, 3),
+            "found": result.found,
             "warnings": result.warnings,
         }
         if result.element:
@@ -169,7 +223,22 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
                 "width": result.element.width,
                 "height": result.element.height,
             }
-        click.echo(json.dumps(output, indent=2))
+        if not result.found:
+            # (#1089) A predicate timeout reports success:false *without* raising,
+            # so it never reaches the ``_json_error_str`` path every other failure
+            # uses. Attach the standard error block here — alongside, not in place
+            # of, the #895 canonical success-shape keys — so a ``-j`` agent gets
+            # the same code/category/message/recovery contract on the most common
+            # ``wait`` failure (target never appears) as on validation failures.
+            # ``TIMEOUT`` (category automation, recoverable) is the operation-level
+            # outcome for every appear/disappear mode; the message mirrors the
+            # human path's ``Error: Timeout after ...`` text.
+            target = element or gone or window_title
+            output["error"] = build_error_object(
+                "TIMEOUT",
+                f"Timeout after {result.wait_time:.1f}s waiting for '{target}'",
+            )
+        click.echo(json_dumps(output, indent=2))
         if not result.found:
             sys.exit(1)
     else:

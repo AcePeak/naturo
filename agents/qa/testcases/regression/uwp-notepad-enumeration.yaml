@@ -1,0 +1,38 @@
+id: TC-0038
+title: "UWP Notepad intermittently invisible to naturo list apps after launch"
+status: active
+category: regression
+priority: P0
+source_issue: null
+created: 2026-04-01
+last_run: 2026-04-05
+last_result: pass
+consecutive_passes: 25
+notes: "2026-04-05 R114: PASS — Notepad (14 tabs) visible in list apps after launch. Consecutive 25."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "No Notepad windows are open"
+
+steps:
+  - description: "Launch Notepad"
+    command: "naturo app launch notepad"
+    expect: "Notepad opens successfully, PID reported"
+  - description: "Wait for UWP process to settle"
+    command: "sleep 5"
+    expect: "Give UWP ApplicationFrameHost time to host the window"
+  - description: "Check if Notepad appears in app list"
+    command: "naturo list apps"
+    expect: "Notepad should appear in list with its title (e.g. '无标题 - Notepad' on Chinese Windows)"
+  - description: "Try to see Notepad elements"
+    command: "naturo see --app notepad"
+    expect: "Element tree shows Notepad UI (Document, tabs, etc.)"
+  - description: "Verify with desktop screenshot"
+    command: "naturo capture -o /tmp/tc-0038.png"
+    expect: "Screenshot shows Notepad is visible on screen"
+  - description: "Cleanup"
+    command: "powershell -Command 'Stop-Process -Name Notepad -Force -ErrorAction SilentlyContinue'"
+    expect: "All Notepad processes cleaned up"
+
+pass_criteria: "Notepad appears in list apps AND naturo see --app notepad returns elements within 5 seconds of launch"
+fail_action: "File P0 bug: UWP Notepad window enumeration is broken on Chinese Windows — app is visible but invisible to naturo"

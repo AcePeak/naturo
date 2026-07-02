@@ -1,0 +1,26 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   6a7e2d2..9753135  main       -> origin/main
+Updating 6a7e2d2..9753135
+Fast-forward
+ agents/dev/status.md               |  33 ++++++------
+ naturo/backends/windows.py         |  44 ++++++++++++++--
+ naturo/detect/probes.py            |  94 +++++++++++++++++++++++++++++++---
+ tests/test_detect.py               |  76 +++++++++++++++++++++++++++
+ tests/test_phase2_comprehensive.py |  38 +++++++-------
+ tests/test_resolve_hwnd_session.py | 102 +++++++++++++++++++++++++++++++++++++
+ 6 files changed, 343 insertions(+), 44 deletions(-)
+[2026/03/28 ����  3:00:03.91] Starting QA-Mariana round 
+## Round 47 Complete — Summary
+
+**CI**: 109 passed, 1 failed (known #446), 18 skipped. E2E: 8 passed, 1 failed (same).
+
+**Verification**: #465 and #456 both blocked — PRs #468 and #466 not merged.
+
+**E2E**: Calculator (8×7=56, 6+4=10) and Notepad (Chinese text + emoji + special chars) — all PASS with screenshot verification.
+
+**Regression**: 7/9 passed, 1 failed (TC-0007, PR not merged), 1 blocked. **TC-0002 retired** (5 passes + #426 closed).
+
+**Chinese User Simulation**: All Chinese workflows work today. Filed **#469** — PR #468 will break `--app 记事本`/`--app 计算器` for Chinese users. Needs localized alias map.
+
+**Top risk**: 5 unmerged PRs blocking all recent fixes from reaching users.

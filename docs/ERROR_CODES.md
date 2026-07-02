@@ -8,11 +8,29 @@ All Naturo CLI commands return structured errors in `--json` mode with the forma
   "error": {
     "code": "ERROR_CODE",
     "message": "Human-readable description",
+    "category": "automation",
+    "context": {},
     "suggested_action": "What to do to recover (for AI agents)",
     "recoverable": true
   }
 }
 ```
+
+Every `error` object carries the **same six keys, in this order**, regardless of
+which command failed or whether the code is recognised — so a scripted consumer
+can rely on each field being present without defensive checks. Fields degrade
+gracefully rather than being omitted: an unrecognised code yields
+`category: "unknown"`, `context: {}`, `suggested_action: null` and
+`recoverable: false`.
+
+- `category` — the error class for branching without parsing the message:
+  one of `environment`, `automation`, `validation`, `permissions`, `io`,
+  `session`, `ai`, `configuration`, `network` or `unknown`.
+- `context` — structured detail about the failure (e.g. `{"ref": "e1"}`);
+  `{}` when there is none.
+- `suggested_action` — recovery hint for AI agents, or `null` when the code has
+  no registered hint.
+- `recoverable` — whether retrying after the suggested fix might succeed.
 
 ## Error Codes
 

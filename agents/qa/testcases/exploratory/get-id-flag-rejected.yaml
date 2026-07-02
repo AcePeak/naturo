@@ -1,0 +1,40 @@
+id: TC-0052
+title: "Element-targeting commands reject --id eN (only click accepts it)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 864
+created: 2026-05-27
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R130: FAIL — `get --id`, `set --id`, `see --id` reject the option (Click UsageError). `type --id` explicitly says 'Possible options: --app-id, --pid, --window'. #864 unchanged."
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "click accepts --id (control case)"
+    command: "naturo click --id e1"
+    expect: "Click parses the flag; failure (if any) is from a downstream cause, not 'No such option: --id'"
+  - description: "get rejects --id"
+    command: "naturo get --id e1"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id (Possible options: --aid, --app-id, --window)' exit=2"
+  - description: "type rejects --id"
+    command: "naturo type --id e1 hello"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id' exit=2"
+  - description: "press rejects --id"
+    command: "naturo press --id e1 enter"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id' exit=2"
+  - description: "find rejects --id"
+    command: "naturo find --id e1"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id' exit=2"
+  - description: "drag rejects --id"
+    command: "naturo drag --id e1 --to e2"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id' exit=2"
+  - description: "highlight rejects --id"
+    command: "naturo highlight --id e1"
+    expect: "Should accept --id eN; currently fails with 'Error: No such option: --id' exit=2"
+
+pass_criteria: "All 7 element-targeting commands accept --id eN consistently (issue #864 fixed)"
+fail_action: "Comment on #864 with the per-command exit status; re-run after each propagation PR"

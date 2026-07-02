@@ -1,0 +1,310 @@
+{
+  "manifest_version": "0.3",
+  "name": "naturo",
+  "display_name": "Naturo Desktop Automation",
+  "version": "0.3.2",
+  "description": "Windows desktop automation engine — see, click, type, and automate any app through UIA, MSAA, IA2, Java Access Bridge, Electron/CDP, and AI vision.",
+  "long_description": "Naturo exposes Windows desktop automation as MCP tools so AI agents can inspect the accessibility tree, capture screenshots, click, type, manage windows and apps, and drive dialogs. This bundle launches the installed `naturo` CLI via `naturo mcp start`; run `pip install naturo` first.",
+  "author": {
+    "name": "Ace Li",
+    "email": "ace@scoutli.ai",
+    "url": "https://github.com/AcePeak/naturo"
+  },
+  "homepage": "https://github.com/AcePeak/naturo",
+  "documentation": "https://github.com/AcePeak/naturo#readme",
+  "support": "https://github.com/AcePeak/naturo/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AcePeak/naturo"
+  },
+  "license": "MIT",
+  "keywords": [
+    "automation",
+    "windows",
+    "desktop",
+    "ui",
+    "rpa",
+    "accessibility",
+    "uia",
+    "mcp"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "naturo",
+    "mcp_config": {
+      "command": "naturo",
+      "args": [
+        "mcp",
+        "start"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ],
+    "runtimes": {
+      "python": ">=3.9"
+    }
+  },
+  "tools_generated": false,
+  "tools": [
+    {
+      "name": "app_hide",
+      "description": "Hide (minimize) all windows of an application."
+    },
+    {
+      "name": "app_inspect",
+      "description": "Probe an application to detect its UI framework and available interaction methods."
+    },
+    {
+      "name": "app_switch",
+      "description": "Switch to (focus) the most recent window of an application."
+    },
+    {
+      "name": "app_unhide",
+      "description": "Unhide (restore) all windows of an application."
+    },
+    {
+      "name": "capture_screen",
+      "description": "Capture a screenshot of the entire screen."
+    },
+    {
+      "name": "capture_window",
+      "description": "Capture a screenshot of a specific window."
+    },
+    {
+      "name": "click",
+      "description": "Click at coordinates or on a UI element."
+    },
+    {
+      "name": "clipboard_clear",
+      "description": "Clear the system clipboard contents."
+    },
+    {
+      "name": "clipboard_get",
+      "description": "Read the current clipboard text content."
+    },
+    {
+      "name": "clipboard_info",
+      "description": "Get information about the current clipboard contents."
+    },
+    {
+      "name": "clipboard_set",
+      "description": "Write text to the system clipboard."
+    },
+    {
+      "name": "create_snapshot",
+      "description": "Create a snapshot of the current UI state (screenshot + element tree)."
+    },
+    {
+      "name": "dialog_accept",
+      "description": "Accept (confirm) the active dialog by clicking OK/Yes/Open/Save."
+    },
+    {
+      "name": "dialog_click_button",
+      "description": "Click a specific button in the active dialog by name."
+    },
+    {
+      "name": "dialog_detect",
+      "description": "Detect active dialog windows (message boxes, file pickers, etc.)."
+    },
+    {
+      "name": "dialog_dismiss",
+      "description": "Dismiss (cancel) the active dialog by clicking Cancel/No/Close."
+    },
+    {
+      "name": "dialog_type",
+      "description": "Type text into a dialog's input field."
+    },
+    {
+      "name": "drag",
+      "description": "Drag from one point to another."
+    },
+    {
+      "name": "excel_info",
+      "description": "Get used range info for an Excel worksheet."
+    },
+    {
+      "name": "excel_list_sheets",
+      "description": "List all sheets in an Excel workbook."
+    },
+    {
+      "name": "excel_open",
+      "description": "Open an Excel workbook and return its info."
+    },
+    {
+      "name": "excel_read",
+      "description": "Read a cell or range value from an Excel workbook."
+    },
+    {
+      "name": "excel_run_macro",
+      "description": "Run a VBA macro in an Excel workbook."
+    },
+    {
+      "name": "excel_write",
+      "description": "Write a value to a cell in an Excel workbook."
+    },
+    {
+      "name": "expand_collapse_element",
+      "description": "Expand or collapse a combo box or tree item via ExpandCollapsePattern."
+    },
+    {
+      "name": "find_element",
+      "description": "Find a UI element by selector."
+    },
+    {
+      "name": "focus_window",
+      "description": "Bring a window to the foreground and give it focus."
+    },
+    {
+      "name": "get_element_value",
+      "description": "Read the current value/text of a UI element."
+    },
+    {
+      "name": "get_snapshot",
+      "description": "Retrieve a previously created snapshot."
+    },
+    {
+      "name": "hotkey",
+      "description": "Press a keyboard shortcut (key combination)."
+    },
+    {
+      "name": "launch_app",
+      "description": "Launch an application by name."
+    },
+    {
+      "name": "list_apps",
+      "description": "List running applications."
+    },
+    {
+      "name": "list_monitors",
+      "description": "List all connected monitors/displays."
+    },
+    {
+      "name": "list_snapshots",
+      "description": "List recent snapshots."
+    },
+    {
+      "name": "list_windows",
+      "description": "List all visible windows on the desktop."
+    },
+    {
+      "name": "menu_inspect",
+      "description": "Inspect the menu bar of an application."
+    },
+    {
+      "name": "move_mouse",
+      "description": "Move the mouse cursor to a position."
+    },
+    {
+      "name": "press_key",
+      "description": "Press a key or key combination."
+    },
+    {
+      "name": "quit_app",
+      "description": "Quit an application."
+    },
+    {
+      "name": "scroll",
+      "description": "Scroll the mouse wheel."
+    },
+    {
+      "name": "see_ui_tree",
+      "description": "Inspect the UI accessibility tree of a window."
+    },
+    {
+      "name": "select_element",
+      "description": "Select a list item, radio button, or tab via SelectionItemPattern."
+    },
+    {
+      "name": "set_element_value",
+      "description": "Set the value/text of a UI element via UIA ValuePattern."
+    },
+    {
+      "name": "taskbar_click",
+      "description": "Click a taskbar item to activate its window."
+    },
+    {
+      "name": "taskbar_list",
+      "description": "List items on the Windows taskbar."
+    },
+    {
+      "name": "toggle_element",
+      "description": "Toggle a checkbox or toggle button via UIA TogglePattern."
+    },
+    {
+      "name": "tray_click",
+      "description": "Click a system tray icon."
+    },
+    {
+      "name": "tray_list",
+      "description": "List system tray (notification area) icons."
+    },
+    {
+      "name": "type_text",
+      "description": "Type text using keyboard input."
+    },
+    {
+      "name": "virtual_desktop_close",
+      "description": "Close a virtual desktop."
+    },
+    {
+      "name": "virtual_desktop_create",
+      "description": "Create a new virtual desktop."
+    },
+    {
+      "name": "virtual_desktop_list",
+      "description": "List all virtual desktops (Windows 10/11)."
+    },
+    {
+      "name": "virtual_desktop_move_window",
+      "description": "Move a window to a different virtual desktop."
+    },
+    {
+      "name": "virtual_desktop_switch",
+      "description": "Switch to a virtual desktop by index."
+    },
+    {
+      "name": "wait_for_element",
+      "description": "Wait for a UI element to appear."
+    },
+    {
+      "name": "wait_for_window",
+      "description": "Wait for a window to appear."
+    },
+    {
+      "name": "wait_until_gone",
+      "description": "Wait for a UI element to disappear."
+    },
+    {
+      "name": "window_close",
+      "description": "Close a window (graceful or forced)."
+    },
+    {
+      "name": "window_maximize",
+      "description": "Maximize a window."
+    },
+    {
+      "name": "window_minimize",
+      "description": "Minimize a window."
+    },
+    {
+      "name": "window_move",
+      "description": "Move a window to a position (keeps current size)."
+    },
+    {
+      "name": "window_resize",
+      "description": "Resize a window (keeps current position)."
+    },
+    {
+      "name": "window_restore",
+      "description": "Restore a minimized or maximized window to normal state."
+    },
+    {
+      "name": "window_set_bounds",
+      "description": "Set window position and size in one call."
+    }
+  ]
+}

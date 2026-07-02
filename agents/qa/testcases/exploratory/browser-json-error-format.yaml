@@ -1,0 +1,32 @@
+id: TC-0049
+title: "Browser commands ignore -j flag, output plain text errors instead of JSON"
+status: active
+category: exploratory
+priority: P1
+source_issue: 834
+created: 2026-04-04
+last_run: 2026-05-28
+last_result: pass
+consecutive_passes: 2
+notes: "R130: PASS — browser navigate -j returns proper {success:false, error:{code:BROWSER_CONNECTION_ERROR, ...}} envelope. #834 fix holds."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Chrome is NOT running with --remote-debugging-port"
+
+steps:
+  - description: "Run browser navigate with -j flag"
+    command: "naturo -j browser navigate 'https://example.com' 2>&1"
+    expect: "JSON error with success:false and structured error object"
+  - description: "Run browser find with -j flag"
+    command: "naturo -j browser find '#test' 2>&1"
+    expect: "JSON error with success:false and structured error object"
+  - description: "Run browser click with -j flag"
+    command: "naturo -j browser click '#test' 2>&1"
+    expect: "JSON error with success:false and structured error object"
+  - description: "Verify plain text error is output instead"
+    command: "naturo -j browser navigate 'https://example.com' 2>&1 | python -m json.tool > /dev/null 2>&1; echo EXIT=$?"
+    expect: "EXIT=1 (JSON parse failure proves output is not JSON)"
+
+pass_criteria: "All browser commands respect -j flag and output structured JSON errors"
+fail_action: "File P1 bug: browser subcommand ignores global -j flag for error output"

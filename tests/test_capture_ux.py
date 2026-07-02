@@ -28,7 +28,7 @@ def test_capture_ref_alias():
     # This will fail with "Element ref 'e999' not found" which proves --ref is accepted
     result = runner.invoke(main, ["capture", "--ref", "e999", "--json"])
     assert "--ref" not in result.output or "No such option" not in result.output
-    # Should get REF_NOT_FOUND or similar, not "No such option: --ref"
+    # Should get STALE_SNAPSHOT_CACHE or similar, not "No such option: --ref"
     if result.exit_code != 0:
         assert "No such option" not in result.output
 

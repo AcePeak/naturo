@@ -359,7 +359,9 @@ class TestUwpAppListDedup:
         ]
 
         backend = WindowsBackend.__new__(WindowsBackend)
-        with patch.object(backend, "list_windows", return_value=fake_windows):
+        # list_apps consumes the *unresolved* window list (#958): it runs its
+        # own UWP child resolution, so patch the raw source it actually reads.
+        with patch.object(backend, "_list_windows_unresolved", return_value=fake_windows):
             apps = backend.list_apps()
 
         uwp_names = [a["name"] for a in apps]
@@ -450,17 +452,18 @@ class TestAppLifecycleE2EWindows:
         return False
 
     @staticmethod
-    def _poll_for_notepad(backend, is_notepad_fn, timeout=15.0, interval=0.5):
-        """Poll for a visible Notepad window with retry (#560, #697).
+    def _poll_for_notepad(backend, is_notepad_fn, timeout=20.0, interval=0.5):
+        """Poll for a Notepad window with retry (#560, #697, #729).
 
         UWP Notepad on Windows 11 launches through a broker process;
         the actual window may take several seconds to appear.
 
-        Timeout reduced from 30s to 15s (#697) to prevent hanging the
-        CI pipeline when --timeout-method=thread is used with ctypes.
+        Does NOT filter by ``is_visible`` during polling — UWP windows
+        may not report ``is_visible=True`` immediately after launch,
+        causing the poll to time out on CI (#729).
 
         Returns:
-            List of matching visible WindowInfo objects.
+            List of matching WindowInfo objects.
         """
         import time
         deadline = time.monotonic() + timeout
@@ -468,7 +471,7 @@ class TestAppLifecycleE2EWindows:
             windows = backend.list_windows()
             notepad_wins = [
                 w for w in windows
-                if is_notepad_fn(w) and w.is_visible
+                if is_notepad_fn(w)
             ]
             if notepad_wins:
                 return notepad_wins
@@ -484,7 +487,8 @@ class TestAppLifecycleE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
             assert len(notepad_wins) >= 1, "Notepad not found in window list after launch"
@@ -501,14 +505,8 @@ class TestAppLifecycleE2EWindows:
             assert len(still_open) == 0, "Notepad window still in list after close"
 
         finally:
-            # UWP Notepad: launcher PID differs from app PID, taskkill by name
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True, timeout=5,
-                )
-            except Exception:
-                pass
+            # PID-scoped teardown via tracked_launch reaps the UWP window-owner
+            # without killing pre-existing Notepad windows the user opened (M4-3).
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
@@ -523,7 +521,8 @@ class TestAppLifecycleE2EWindows:
         from naturo.backends.windows import WindowsBackend
         backend = WindowsBackend()
 
-        proc = subprocess.Popen(["notepad.exe"])
+        from tests._launch import NOTEPAD_IMAGES, tracked_launch
+        proc = tracked_launch(["notepad.exe"], NOTEPAD_IMAGES)
         try:
             notepad_wins = self._poll_for_notepad(backend, self._is_notepad_window)
             notepad = notepad_wins[0] if notepad_wins else None
@@ -542,13 +541,7 @@ class TestAppLifecycleE2EWindows:
             assert target is not None
 
         finally:
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "Notepad.exe"],
-                    capture_output=True, timeout=5,
-                )
-            except Exception:
-                pass
+            # PID-scoped teardown via tracked_launch — no image-name kill (M4-3).
             try:
                 proc.terminate()
                 proc.wait(timeout=3)

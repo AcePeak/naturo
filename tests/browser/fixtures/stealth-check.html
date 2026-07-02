@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>naturo fixture: stealth-check</title>
+</head>
+<body>
+  <h1 id="main-heading">Automation Stealth Check</h1>
+  <p>Reports whether common automation markers are detectable.</p>
+
+  <!-- Exercises: anti-detection. Each vector renders PASS (looks human) or
+       FAIL (automation detected). A stealthy driver should PASS every row. -->
+  <table>
+    <tbody>
+      <tr><td>navigator.webdriver</td><td id="webdriver-result" data-pass="">?</td></tr>
+      <tr><td>chrome runtime</td><td id="chrome-result" data-pass="">?</td></tr>
+      <tr><td>cdc_ injection</td><td id="cdc-result" data-pass="">?</td></tr>
+      <tr><td>plugins length</td><td id="plugins-result" data-pass="">?</td></tr>
+    </tbody>
+  </table>
+  <p id="stealth-summary" data-passed="">Running checks...</p>
+
+  <script>
+    function render(id, pass) {
+      var cell = document.getElementById(id);
+      cell.textContent = pass ? "PASS" : "FAIL";
+      cell.setAttribute("data-pass", String(pass));
+      return pass;
+    }
+
+    // PASS means the automation marker is absent (i.e. looks like a human).
+    var checks = [
+      render("webdriver-result", navigator.webdriver !== true),
+      render("chrome-result", typeof window.chrome !== "undefined"),
+      render("cdc-result", Object.keys(window).every(function (key) {
+        return key.indexOf("cdc_") !== 0;
+      })),
+      render("plugins-result", navigator.plugins.length > 0)
+    ];
+
+    var allPassed = checks.every(function (value) { return value; });
+    var summary = document.getElementById("stealth-summary");
+    summary.textContent = allPassed ? "All checks passed." : "Automation detected.";
+    summary.setAttribute("data-passed", String(allPassed));
+  </script>
+</body>
+</html>

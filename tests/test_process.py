@@ -7,7 +7,9 @@ from naturo.process import (
     relaunch_app, list_apps, _list_processes, _verify_quit,
     _close_all_windows_for_app, _app_has_visible_windows,
     _get_console_session_id, _get_process_session_id,
+    _parse_tasklist_csv_line,
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
+    _matches_app_by_process_name,
 )
 from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
 
@@ -239,6 +241,27 @@ class TestFindProcessAliasResolution:
         assert result.pid == 200, "Alias match should prefer interactive session"
 
 
+class TestParseTasklistCsvLine:
+    """Tests for _parse_tasklist_csv_line utility."""
+
+    def test_normal_line(self):
+        assert _parse_tasklist_csv_line('"notepad.exe","1234","Console","1","12,345 K"') == ("notepad.exe", 1234)
+
+    def test_empty_line(self):
+        assert _parse_tasklist_csv_line("") is None
+        assert _parse_tasklist_csv_line("   ") is None
+
+    def test_malformed_line(self):
+        assert _parse_tasklist_csv_line("garbage") is None
+
+    def test_non_numeric_pid(self):
+        assert _parse_tasklist_csv_line('"notepad.exe","abc"') is None
+
+    def test_unicode_process_name(self):
+        result = _parse_tasklist_csv_line('"记事本.exe","5678","Console","1","8,192 K"')
+        assert result == ("记事本.exe", 5678)
+
+
 class TestSessionHelpers:
     """Tests for session ID helper functions."""
 
@@ -409,6 +432,119 @@ class TestLaunchApp:
 
         with pytest.raises(AppNotFoundError):
             launch_app(name="app", wait_until_ready=True, timeout=2.0)
+
+
+@patch(
+    "naturo.cli.interaction._is_current_session_interactive",
+    return_value=True,
+)
+class TestLaunchAppPidResolution:
+    """Tests for real PID resolution after cmd /c start (#785).
+
+    On Windows, launch_app uses ``cmd /c start`` which returns cmd.exe's PID,
+    not the actual application.  These tests verify that the real app PID is
+    resolved via find_process.
+    """
+
+    @staticmethod
+    def _make_run_result(returncode=0, stdout="", stderr=""):
+        import subprocess as _sp
+        return _sp.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_resolves_real_pid_after_cmd_start(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When find_process locates the real app, its PID replaces cmd.exe's."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100  # cmd.exe PID
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\notepad.exe")
+        mock_find.return_value = ProcessInfo(pid=5678, name="notepad.exe", path="C:\\notepad.exe")
+
+        info = launch_app(name="notepad")
+        assert info.pid == 5678
+        assert info.name == "notepad.exe"
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_falls_back_to_cmd_pid_when_process_not_found(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When find_process returns None, falls back to cmd.exe's PID."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\notepad.exe")
+        mock_find.return_value = None
+
+        info = launch_app(name="notepad", timeout=0.5)
+        assert info.pid == 100  # Fallback to cmd.exe PID
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_resolves_via_alias_fallback(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """When the resolved name doesn't match, tries the original name."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\calc.exe")
+
+        # First call (resolved_name) returns None, second call (original name) finds it
+        mock_find.side_effect = [None, ProcessInfo(pid=7777, name="calc.exe", path="C:\\calc.exe")]
+
+        info = launch_app(name="calculator")
+        assert info.pid == 7777
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process")
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_wait_until_ready_skips_poll_when_resolved(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """wait_until_ready returns immediately when real PID is already found."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 100
+        mock_proc.wait.return_value = 0
+        mock_proc.poll.return_value = 0  # cmd.exe already exited
+        mock_popen.return_value = mock_proc
+        mock_run.return_value = self._make_run_result(returncode=0, stdout="C:\\app.exe")
+        mock_find.return_value = ProcessInfo(pid=9999, name="app.exe")
+
+        info = launch_app(name="app", wait_until_ready=True, timeout=1.0)
+        assert info.pid == 9999
+        assert info.is_running is True
+
+    @patch("naturo.process.platform.system", return_value="Windows")
+    @patch("naturo.process.find_process", return_value=None)
+    @patch("naturo.process.subprocess.run")
+    @patch("naturo.process.subprocess.Popen")
+    def test_path_launch_skips_pid_resolution(
+        self, mock_popen, mock_run, mock_find, _mock_platform, _mock_session,
+    ):
+        """Launching by --path uses Popen directly, no PID resolution needed."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 4444
+        mock_proc.wait.return_value = 0
+        mock_popen.return_value = mock_proc
+
+        with patch("os.path.isfile", return_value=True):
+            info = launch_app(path="C:\\notepad.exe")
+        assert info.pid == 4444
+        mock_find.assert_not_called()
 
 
 class TestResolveLaunchName:
@@ -605,6 +741,42 @@ class TestQuitApp:
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
 
+class TestMatchesAppByProcessName:
+    """Tests for _matches_app_by_process_name (#743)."""
+
+    def test_direct_name_match(self):
+        """Direct substring match on process name works."""
+        assert _matches_app_by_process_name("notepad.exe", "notepad") is True
+
+    def test_direct_name_no_match(self):
+        """Non-matching name returns False."""
+        assert _matches_app_by_process_name("explorer.exe", "notepad") is False
+
+    def test_chinese_name_via_alias(self):
+        """Chinese app name resolves via _LAUNCH_ALIASES to process name (#743)."""
+        assert _matches_app_by_process_name("notepad.exe", "记事本") is True
+
+    def test_chinese_name_no_match_wrong_process(self):
+        """Chinese name does not match unrelated processes."""
+        assert _matches_app_by_process_name("explorer.exe", "记事本") is False
+
+    def test_chinese_calculator_alias(self):
+        """Chinese calculator name resolves to calc.exe."""
+        assert _matches_app_by_process_name("calc.exe", "计算器") is True
+        assert _matches_app_by_process_name("calculatorapp.exe", "计算器") is True
+
+    def test_title_not_used(self):
+        """Process name matching only — title-like strings in process name don't cause false matches."""
+        # A process named "ApplicationFrameHost.exe" should not match "notepad"
+        # even though a window of that process might have "Notepad" in its title
+        assert _matches_app_by_process_name("applicationframehost.exe", "notepad") is False
+        assert _matches_app_by_process_name("applicationframehost.exe", "记事本") is False
+
+    def test_case_insensitive_alias(self):
+        """Alias matching is case-insensitive."""
+        assert _matches_app_by_process_name("Notepad.exe".lower(), "Notepad".lower()) is True
+
+
 class TestResolvePidFromBackend:
     """Tests for UWP-aware PID resolution via backend (#505)."""
 
@@ -622,6 +794,43 @@ class TestResolvePidFromBackend:
 
         pid = _resolve_pid_from_backend("notepad")
         assert pid == 36328
+
+    @patch("naturo.backends.base.get_backend")
+    def test_chinese_name_resolves_via_alias(self, mock_get_backend):
+        """Chinese app name '记事本' resolves to Notepad PID via alias (#743)."""
+        mock_window = MagicMock()
+        mock_window.process_name = "C:\\Windows\\Notepad.exe"
+        mock_window.title = "无标题 - 记事本"
+        mock_window.pid = 89080
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [mock_window]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("记事本")
+        assert pid == 89080
+
+    @patch("naturo.backends.base.get_backend")
+    def test_chinese_name_ignores_title_only_match(self, mock_get_backend):
+        """Chinese name does NOT match by title alone — prevents wrong PID (#743)."""
+        # Simulate a non-Notepad window whose title happens to contain "记事本"
+        wrong_window = MagicMock()
+        wrong_window.process_name = "C:\\Windows\\explorer.exe"
+        wrong_window.title = "记事本快捷方式"
+        wrong_window.pid = 37476  # Wrong PID!
+
+        right_window = MagicMock()
+        right_window.process_name = "C:\\Windows\\Notepad.exe"
+        right_window.title = "无标题 - 记事本"
+        right_window.pid = 89080  # Correct PID
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [wrong_window, right_window]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("记事本")
+        # Should skip explorer.exe (title-only match) and find Notepad.exe (alias match)
+        assert pid == 89080
 
     @patch("naturo.backends.base.get_backend")
     def test_returns_none_when_no_match(self, mock_get_backend):
@@ -714,8 +923,8 @@ class TestCloseAllWindowsForApp:
         assert _close_all_windows_for_app("notepad") == []
 
     @patch("naturo.backends.base.get_backend")
-    def test_matches_by_title(self, mock_get_backend):
-        """Matches windows by title when process name doesn't match."""
+    def test_no_title_only_matching(self, mock_get_backend):
+        """Title-only matching is disabled to prevent cross-process contamination (#743)."""
         w1 = MagicMock(process_name="ApplicationFrameHost.exe",
                         title="Untitled - Notepad", pid=100, handle=0x1001)
 
@@ -725,8 +934,9 @@ class TestCloseAllWindowsForApp:
 
         pids = _close_all_windows_for_app("notepad")
 
-        assert pids == [100]
-        mock_be.close_window.assert_called_once_with(hwnd=0x1001)
+        # Should NOT match: "notepad" is in the title but not in the process name
+        assert pids == []
+        mock_be.close_window.assert_not_called()
 
     @patch("naturo.backends.base.get_backend")
     def test_individual_close_failure_continues(self, mock_get_backend):
@@ -865,3 +1075,122 @@ class TestListApps:
     def test_empty(self, mock_list):
         mock_list.return_value = []
         assert list_apps() == []
+
+
+class TestUWPQuitResolution:
+    """#750: app quit must handle UWP apps hosted by ApplicationFrameHost."""
+
+    @patch("naturo.backends.base.get_backend")
+    def test_resolve_pid_falls_back_to_list_apps_for_uwp(self, mock_get_backend):
+        """_resolve_pid_from_backend uses list_apps() when list_windows()
+        reports ApplicationFrameHost instead of the real app name (#750)."""
+        # list_windows() returns AFH — no process-name match for "计算器"
+        afh_window = MagicMock()
+        afh_window.process_name = "C:\\Windows\\ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000  # AFH PID
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        # list_apps() resolves the real child process
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "C:\\Program Files\\CalculatorApp.exe",
+             "process": "C:\\Program Files\\CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pid = _resolve_pid_from_backend("计算器")
+        assert pid == 2000  # Resolved child PID, not AFH PID
+
+    @patch("naturo.backends.base.get_backend")
+    def test_close_all_windows_closes_afh_for_uwp(self, mock_get_backend):
+        """_close_all_windows_for_app sends WM_CLOSE to AFH window
+        hosting a matching UWP app (#750)."""
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000
+        afh_window.handle = 0xAF01
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("计算器")
+
+        mock_be.close_window.assert_called_once_with(hwnd=0xAF01)
+        assert 1000 in pids  # AFH PID (window was closed)
+        assert 2000 in pids  # Resolved child PID (for wait/verify)
+
+    @patch("naturo.backends.base.get_backend")
+    def test_close_all_windows_no_false_positive_on_afh(self, mock_get_backend):
+        """AFH windows that do NOT host a matching app are NOT closed (#743)."""
+        # Calculator AFH window — should NOT be closed when quitting "notepad"
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.title = "计算器"
+        afh_window.pid = 1000
+        afh_window.handle = 0xAF01
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        pids = _close_all_windows_for_app("notepad")
+
+        mock_be.close_window.assert_not_called()
+        assert pids == []
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_has_visible_windows_detects_uwp(self, mock_get_backend):
+        """_app_has_visible_windows detects UWP apps via list_apps() (#750)."""
+        # list_windows() only shows AFH — no process-name match
+        afh_window = MagicMock()
+        afh_window.process_name = "ApplicationFrameHost.exe"
+        afh_window.pid = 1000
+
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = [afh_window]
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        assert _app_has_visible_windows("计算器") is True
+
+    @patch("naturo.backends.base.get_backend")
+    def test_app_has_visible_windows_excludes_killed_uwp_pid(self, mock_get_backend):
+        """_app_has_visible_windows respects exclude_pid for UWP apps (#750)."""
+        mock_be = MagicMock()
+        mock_be.list_windows.return_value = []
+        mock_be.list_apps.return_value = [
+            {"name": "计算器", "pid": 2000, "title": "计算器",
+             "path": "CalculatorApp.exe", "process": "CalculatorApp.exe"},
+        ]
+        mock_get_backend.return_value = mock_be
+
+        # When the killed PID matches the resolved app PID, should return False
+        assert _app_has_visible_windows("计算器", exclude_pid=2000) is False
+
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
+    @patch("naturo.process.find_process")
+    def test_verify_quit_catches_surviving_uwp_app(self, mock_find, mock_has_windows):
+        """_verify_quit raises when UWP app survives quit attempt (#750)."""
+        # Target PID (AFH) is dead, but app respawned/survived under new PID
+        mock_find.side_effect = [
+            None,  # target_pid dead
+            ProcessInfo(pid=3000, name="calculatorapp.exe"),  # respawn check
+        ]
+
+        with pytest.raises(InteractionFailedError, match="still running"):
+            _verify_quit("计算器", None, target_pid=1000, timeout=0.5)

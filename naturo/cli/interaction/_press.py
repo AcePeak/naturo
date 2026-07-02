@@ -1,6 +1,7 @@
 """Press and hotkey commands — single keys, combos, or sequential sequences."""
 from __future__ import annotations
 
+import difflib
 import logging
 
 import click
@@ -10,9 +11,92 @@ import naturo.cli.interaction._common as _common
 logger = logging.getLogger(__name__)
 
 
+# Representative valid key names, used only to build recovery hints and the
+# fuzzy "did you mean" suggestion (#991).  This list is NEVER consulted to
+# decide whether a key is valid — the native core is the sole authority on
+# that — so an omission here can only cost a suggestion, never wrongly reject a
+# key the core would have accepted.
+_COMMON_KEY_NAMES: tuple[str, ...] = (
+    "enter", "tab", "escape", "esc", "space", "backspace", "delete",
+    "insert", "home", "end", "pageup", "pagedown",
+    "up", "down", "left", "right",
+    "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
+    "ctrl", "alt", "shift", "win",
+)
+
+_VALID_KEY_HINT = (
+    "Valid keys include enter, tab, esc, space, up/down/left/right, f1-f12, "
+    "and combos like 'ctrl+c'. Run 'naturo press --help' for examples."
+)
+
+
+def _emit_unknown_key_error(key_spec: str, json_output: bool) -> None:
+    """Emit an ``INVALID_INPUT`` envelope for a key the native core rejected.
+
+    The core rejects an unrecognized key name with a generic ``Invalid
+    argument`` whose message leaks the internal function name (e.g.
+    ``key_press('entr')``) and carries no recovery guidance (#991).  Translate
+    that into the same agent-friendly envelope every other command emits: an
+    ``INVALID_INPUT`` code, a clean user-facing message, and a
+    ``suggested_action`` listing valid keys plus a fuzzy "did you mean" hint
+    for near-misses.  Validity itself is never decided here — this runs only
+    after the core has already rejected the key.
+
+    Args:
+        key_spec: The key spec the user supplied (e.g. ``"entr"`` or
+            ``"ctrl+notakey"``), reported back verbatim so the caller can see
+            exactly what was rejected.
+        json_output: Whether to emit the JSON envelope instead of plain text.
+
+    Returns:
+        Never returns — always exits the process with status 1.
+    """
+    from naturo.cli.error_helpers import emit_error
+
+    stripped = key_spec.strip()
+    if not stripped:
+        message = "Empty key name."
+        suggested_action = _VALID_KEY_HINT
+    else:
+        message = f"Unknown key: {key_spec!r}"
+        suggested_action = _VALID_KEY_HINT
+        # Bonus: fuzzy "did you mean" for a single near-miss key name (#149).
+        if "+" not in stripped:
+            close = difflib.get_close_matches(
+                stripped.lower(), _COMMON_KEY_NAMES, n=1, cutoff=0.6,
+            )
+            if close:
+                suggested_action = f"Did you mean '{close[0]}'? {suggested_action}"
+
+    emit_error("INVALID_INPUT", message, json_output,
+               suggested_action=suggested_action)
+
+
 def _is_combo(key_str: str) -> bool:
     """Return True if *key_str* looks like a key combination (e.g. ``ctrl+c``)."""
     return "+" in key_str
+
+
+# Modifier keys that can be pressed standalone (e.g. Alt activates the menu bar).
+# These cannot go through key_press() which only handles regular named keys;
+# instead they are routed through hotkey() with modifier-only flags.
+_MODIFIER_NORMALIZE: dict[str, str] = {
+    "alt": "alt", "lalt": "alt", "ralt": "alt",
+    "ctrl": "ctrl", "control": "ctrl", "lctrl": "ctrl", "rctrl": "ctrl",
+    "shift": "shift", "lshift": "shift", "rshift": "shift",
+    "win": "win", "meta": "win", "super": "win",
+    "command": "win", "cmd": "win", "lwin": "win", "rwin": "win",
+}
+
+
+def _is_standalone_modifier(key_str: str) -> bool:
+    """Return True if *key_str* is a modifier key pressed alone."""
+    return key_str.lower().strip() in _MODIFIER_NORMALIZE
+
+
+def _normalize_modifier(key_str: str) -> str:
+    """Normalize a modifier alias to the canonical name used by the bridge."""
+    return _MODIFIER_NORMALIZE[key_str.lower().strip()]
 
 
 @click.command()
@@ -20,7 +104,7 @@ def _is_combo(key_str: str) -> bool:
 @click.option("--count", "-n", type=int, default=1, help="Number of times to press", show_default=True)
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
 @click.option("--hold-duration", type=float, default=None, help="Hold duration for combos (ms)")
-@click.option("--on", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
+@click.option("--on", "--id", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
@@ -56,6 +140,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
       naturo press ctrl+c                 # key combination (was: hotkey)
       naturo press ctrl+a ctrl+c          # sequential combos
       naturo press alt+f4
+      naturo press enter --id e42          # focus element e42 then press
       naturo press enter --selector 'app://*/Button[@name="OK"]'
     """
     # (#361) Resolve --app-id to app/hwnd/pid before any other logic
@@ -122,7 +207,8 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     f"Element ref '{on_element}' not found. Run 'naturo see' first to "
                     f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
                     json_output,
-                    code="REF_NOT_FOUND",
+                    code="STALE_SNAPSHOT_CACHE",
+                    context={"ref": on_element},
                 )
                 return
         else:
@@ -140,7 +226,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     )
                     return
             except Exception as exc:
-                _common._json_err(str(exc), json_output)
+                _common._json_err(str(exc), json_output, exc=exc)
                 return
         try:
             backend.click(click_x, click_y, button="left", input_mode=input_mode)
@@ -149,7 +235,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
             _common._json_err(f"Failed to click target element: {exc}", json_output)
             return
 
-    # (#230/#612) Focus target window before sending key input.
+    # (#230/#612/#807) Focus target window before sending key input.
     # SendInput/key_press deliver to the foreground window, so we must
     # ensure the correct window has focus when --app/--hwnd is specified.
     # Uses backend.focus_window() which employs AttachThreadInput on
@@ -162,30 +248,44 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                 _target_hwnd = backend._resolve_hwnd(
                     app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 )
-            if _target_hwnd:
-                backend.focus_window(hwnd=_target_hwnd)
-                # Record actual focused PID for routing accuracy
+            if not _target_hwnd:
+                _target_desc = app or window_title or f"PID {pid}" or f"HWND {hwnd}"
+                _common._json_err(
+                    f"Could not find window for '{_target_desc}'. "
+                    "Is the application running and visible?",
+                    json_output,
+                    code="WINDOW_NOT_FOUND",
+                )
+                return
+            backend.focus_window(hwnd=_target_hwnd)
+            # Record actual focused PID for routing accuracy
+            try:
+                import ctypes
+                import ctypes.wintypes
+                _focused_pid = ctypes.wintypes.DWORD()
+                ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
+                    _target_hwnd, ctypes.byref(_focused_pid)
+                )
+                if route_info and _focused_pid.value:
+                    route_info["focused_pid"] = _focused_pid.value
+                    route_info["focused_hwnd"] = _target_hwnd
+            except Exception as exc:
+                logger.debug("PID recording failed (Windows-only): %s", exc)
+            # Also try UIA SetFocus for schtasks/remote contexts (#226)
+            if hasattr(backend, "focus_element_uia"):
                 try:
-                    import ctypes
-                    import ctypes.wintypes
-                    _focused_pid = ctypes.wintypes.DWORD()
-                    ctypes.windll.user32.GetWindowThreadProcessId(  # type: ignore[attr-defined]
-                        _target_hwnd, ctypes.byref(_focused_pid)
-                    )
-                    if route_info and _focused_pid.value:
-                        route_info["focused_pid"] = _focused_pid.value
-                        route_info["focused_hwnd"] = _target_hwnd
+                    backend.focus_element_uia(hwnd=_target_hwnd)
                 except Exception as exc:
-                    logger.debug("PID recording failed (Windows-only): %s", exc)
-                # Also try UIA SetFocus for schtasks/remote contexts (#226)
-                if hasattr(backend, "focus_element_uia"):
-                    try:
-                        backend.focus_element_uia(hwnd=_target_hwnd)
-                    except Exception as exc:
-                        logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
-                time.sleep(0.15)
+                    logger.debug("UIA SetFocus failed (hwnd=%s): %s", _target_hwnd, exc)
+            time.sleep(0.15)
         except Exception as exc:
-            logger.warning("Failed to focus target window for press: %s", exc)
+            _common._json_err(
+                f"Failed to focus target window: {exc}. "
+                f"Cannot guarantee keypresses reach '{app or window_title}'.",
+                json_output,
+                code="WINDOW_FOCUS_ERROR",
+            )
+            return
 
     # (#231) Capture before-state for post-action verification
     _before_state = None
@@ -230,6 +330,18 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
                     )
                     _common._record_action("hotkey", {"keys": key_list, "hold_duration": hold_duration or 0.05})
                     results.append({"action": "hotkey", "combo": "+".join(key_list)})
+                elif _is_standalone_modifier(key_spec):
+                    # Standalone modifier keys (alt, ctrl, shift, win) are
+                    # routed through hotkey() because key_press() in the DLL
+                    # only handles regular named keys.  hotkey() with a
+                    # modifier-only bitmask performs press-then-release (#704).
+                    backend.hotkey(
+                        _normalize_modifier(key_spec),
+                        hold_duration_ms=int(hold_duration) if hold_duration else 50,
+                        input_mode=input_mode,
+                    )
+                    _common._record_action("press", {"key": key_spec, "count": 1})
+                    results.append({"action": "pressed", "key": key_spec})
                 else:
                     backend.press_key(key_spec, input_mode=input_mode)
                     _common._record_action("press", {"key": key_spec, "count": 1})
@@ -240,7 +352,15 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
             if idx < len(keys) - 1 and delay > 0:
                 time.sleep(delay / 1000.0)
     except Exception as exc:
-        _common._json_err(str(exc), json_output)
+        # An unrecognized key name reaches us as NaturoCoreError(code=-1)
+        # ("Invalid argument") — bad input, not a runtime action failure.
+        # Re-map it to a clean INVALID_INPUT envelope (#991); ``key_spec`` is
+        # the key the loop was processing when the core rejected it.
+        from naturo.bridge import NaturoCoreError
+        if isinstance(exc, NaturoCoreError) and exc.code == -1:
+            _emit_unknown_key_error(key_spec, json_output)
+            return
+        _common._json_err(str(exc), json_output, exc=exc)
         return
     finally:
         if _orig_handler is not None:
@@ -328,7 +448,7 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
 @_common._see_options
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
-           input_mode, method, app_id, verify, see_after, settle, json_output):
+           input_mode, method, app_id, verify, see_after, settle, json_output) -> None:
     """Press a hotkey combination (alias for 'press').
 
     \b

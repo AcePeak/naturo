@@ -1,0 +1,59 @@
+From https://github.com/AcePeak/naturo
+ * branch            main       -> FETCH_HEAD
+   37c6066..7a52fc1  main       -> origin/main
+Updating 37c6066..7a52fc1
+Fast-forward
+ .github/workflows/build.yml               |  10 +-
+ .github/workflows/desktop-tests.yml       |   2 +-
+ .github/workflows/publish.yml             |   2 +-
+ naturo/backends/windows/_element.py       |  89 +++-
+ naturo/backends/windows/_input.py         |  27 +-
+ naturo/cli/interaction/_click.py          |   4 +-
+ tests/test_app_alias_localized.py         |  33 +-
+ tests/test_app_filter_process_priority.py | 165 +++++-
+ tests/test_cli_capture.py                 | 268 ++++++++++
+ tests/test_cli_click.py                   | 289 +++++++++++
+ tests/test_cli_core_common.py             | 112 ++++
+ tests/test_cli_core_tools.py              |  38 ++
+ tests/test_cli_highlight.py               | 165 ++++++
+ tests/test_cli_list.py                    | 192 +++++++
+ tests/test_cli_menu.py                    | 164 ++++++
+ tests/test_cli_press.py                   | 312 +++++++++++
+ tests/test_cli_see.py                     | 829 ++++++++++++++++++++++++++++++
+ tests/test_cli_type.py                    | 389 ++++++++++++++
+ tests/test_click_app_foreground.py        |   2 +-
+ tests/test_interaction_common.py          | 435 ++++++++++++++++
+ tests/test_linux_backend.py               |  89 ++++
+ tests/test_mcp_excel.py                   | 214 ++++++++
+ tests/test_mcp_inspect.py                 | 361 +++++++++++++
+ tests/test_mcp_snapshot.py                |  29 +-
+ tests/test_uwp_fallback.py                |  79 +++
+ tests/test_windows_core.py                | 213 ++++++++
+ 26 files changed, 4458 insertions(+), 54 deletions(-)
+ create mode 100644 tests/test_cli_capture.py
+ create mode 100644 tests/test_cli_click.py
+ create mode 100644 tests/test_cli_core_common.py
+ create mode 100644 tests/test_cli_core_tools.py
+ create mode 100644 tests/test_cli_highlight.py
+ create mode 100644 tests/test_cli_list.py
+ create mode 100644 tests/test_cli_menu.py
+ create mode 100644 tests/test_cli_press.py
+ create mode 100644 tests/test_cli_see.py
+ create mode 100644 tests/test_cli_type.py
+ create mode 100644 tests/test_interaction_common.py
+ create mode 100644 tests/test_linux_backend.py
+ create mode 100644 tests/test_mcp_excel.py
+ create mode 100644 tests/test_mcp_inspect.py
+ create mode 100644 tests/test_windows_core.py
+[2026/03/31 ÖÜ¶þ 17:00:04.42] Starting QA-Mariana round 
+## QA-Mariana Round 67 Complete
+
+**Summary:**
+- **CI**: 24 passed, 5 failed (2 regressions from previously fixed issues)
+- **E2E**: Notepad and Calculator both PASS (type, click, capture all verified via screenshots)
+- **Exploratory**: All boundary values, error paths, JSON, exit codes PASS
+- **AI Agent Builder simulation**: Found **P1 bug #682** â€” MCP `click` cannot use element refs from `see_ui_tree`, breaking the core AI agent workflow
+- **Regression**: 10/12 passed, TC-0030 (backslash escape) flipped from FAIL to PASS
+- **New issues filed**: #682 (MCP click element_id), #683 (CI regression)
+- **New test case**: TC-0033 (MCP click element_id)
+- **Report pushed** to `tests/qa-reports/QA-Mariana-20260331-1726.md`

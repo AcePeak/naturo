@@ -1,0 +1,5 @@
+# Electron and npm install artifacts are reproducible from package.json +
+# package-lock.json; never commit them.
+node_modules/
+npm-debug.log*
+.npm/

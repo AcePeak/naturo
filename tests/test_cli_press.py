@@ -8,7 +8,10 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from naturo.cli.interaction._press import _is_combo, press, hotkey
+from naturo.bridge import NaturoCoreError
+from naturo.cli.interaction._press import (
+    _is_combo, _is_standalone_modifier, _normalize_modifier, press, hotkey,
+)
 
 
 @pytest.fixture
@@ -40,6 +43,115 @@ class TestIsCombo:
     def test_plus_only_is_combo(self):
         # "+" by itself has a + character
         assert _is_combo("+") is True
+
+
+# ── _is_standalone_modifier / _normalize_modifier (#704) ────
+
+
+class TestStandaloneModifier:
+    """Tests for standalone modifier key detection and normalization (#704)."""
+
+    @pytest.mark.parametrize("key", ["alt", "Alt", "ALT", "ctrl", "Ctrl", "shift", "win"])
+    def test_common_modifiers_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["control", "meta", "super", "command", "cmd"])
+    def test_modifier_aliases_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["lalt", "ralt", "lctrl", "rctrl", "lshift", "rshift", "lwin", "rwin"])
+    def test_left_right_variants_detected(self, key):
+        assert _is_standalone_modifier(key) is True
+
+    @pytest.mark.parametrize("key", ["enter", "tab", "escape", "f1", "a", "space"])
+    def test_regular_keys_not_modifiers(self, key):
+        assert _is_standalone_modifier(key) is False
+
+    def test_normalize_alt(self):
+        assert _normalize_modifier("alt") == "alt"
+        assert _normalize_modifier("lalt") == "alt"
+        assert _normalize_modifier("ralt") == "alt"
+
+    def test_normalize_ctrl_aliases(self):
+        assert _normalize_modifier("ctrl") == "ctrl"
+        assert _normalize_modifier("control") == "ctrl"
+        assert _normalize_modifier("lctrl") == "ctrl"
+
+    def test_normalize_win_aliases(self):
+        assert _normalize_modifier("win") == "win"
+        assert _normalize_modifier("meta") == "win"
+        assert _normalize_modifier("super") == "win"
+        assert _normalize_modifier("command") == "win"
+        assert _normalize_modifier("cmd") == "win"
+
+
+class TestStandaloneModifierPress:
+    """Test that standalone modifier keys are routed through hotkey() (#704)."""
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_alt_uses_hotkey(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press alt`` routes through hotkey(), not press_key()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["alt"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.hotkey.assert_called_once()
+        mock_be.press_key.assert_not_called()
+        # Verify the normalized key name was passed
+        args = mock_be.hotkey.call_args
+        assert args[0] == ("alt",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_control_normalizes_to_ctrl(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press control`` normalizes to ``ctrl`` for bridge compat."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["control"], catch_exceptions=False)
+        assert result.exit_code == 0
+        args = mock_be.hotkey.call_args
+        assert args[0] == ("ctrl",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_shift_uses_hotkey(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press shift`` routes through hotkey()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["shift"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.hotkey.assert_called_once()
+        assert mock_be.hotkey.call_args[0] == ("shift",)
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_regular_key_still_uses_press_key(self, mock_resolve, mock_get_be, mock_route, runner):
+        """Regular keys like ``enter`` still use press_key()."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["enter"], catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_be.press_key.assert_called_once_with("enter", input_mode="normal")
+        mock_be.hotkey.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_press_alt_json_output(self, mock_resolve, mock_get_be, mock_route, runner):
+        """``naturo press alt --json`` returns proper JSON result."""
+        mock_be = MagicMock()
+        mock_get_be.return_value = mock_be
+        result = runner.invoke(press, ["alt", "--json"], catch_exceptions=False)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["data"]["action"] == "pressed"
+        assert data["data"]["key"] == "alt"
 
 
 # ── press command — validation ───────────────────
@@ -214,6 +326,170 @@ class TestPressErrors:
         assert result.exit_code != 0
         assert "key not recognized" in result.output
 
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_focus_failure_exits_with_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app must exit with WINDOW_FOCUS_ERROR when focus_window fails (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = 12345
+        backend.focus_window.side_effect = RuntimeError("cannot attach to thread")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_FOCUS_ERROR"
+        # Keys must NOT be sent when focus fails
+        backend.press_key.assert_not_called()
+        backend.hotkey.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_window_not_found_exits_with_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app must exit with WINDOW_NOT_FOUND when target window cannot be resolved (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = None
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+        backend.press_key.assert_not_called()
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=("notepad.exe", None, None))
+    def test_focus_success_sends_keys(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """press --app sends keys normally when focus_window succeeds (#807)."""
+        backend = MagicMock()
+        backend._resolve_hwnd.return_value = 12345
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(
+            press, ["enter", "--app", "notepad.exe", "--json", "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code == 0
+        backend.focus_window.assert_called_once_with(hwnd=12345)
+        backend.press_key.assert_called_once()
+
+
+# ── press command — invalid key name (#991) ─────
+
+
+class TestPressInvalidKey:
+    """#991: an unknown key name must surface as an agent-friendly INVALID_INPUT
+    envelope (clean message + suggested_action), not a raw ACTION_ERROR that
+    leaks the internal ``key_press('...')`` function name.
+
+    The native core is the sole authority on key validity: it rejects an
+    unknown key with ``NaturoCoreError(code=-1)`` ("Invalid argument"). The CLI
+    translates *only* that code into INVALID_INPUT — a genuine runtime failure
+    (code=-2, System/COM error) must keep its ACTION_ERROR categorization.
+    """
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_single_key_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["category"] == "validation"
+        # Clean, user-facing message — names the offending key, hides internals.
+        assert err["message"] == "Unknown key: 'entr'"
+        assert "key_press(" not in result.output
+        assert "Invalid argument" not in result.output
+        # Recovery guidance is present (unlike the old null suggested_action).
+        assert err["suggested_action"]
+        assert "press --help" in err["suggested_action"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_single_key_fuzzy_did_you_mean(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--json", "--no-verify"], catch_exceptions=False)
+        err = json.loads(result.output)["error"]
+        assert "Did you mean 'enter'?" in err["suggested_action"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_key_in_combo_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.hotkey.side_effect = NaturoCoreError(-1, "key_hotkey(('ctrl', 'notakey'))")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["ctrl+notakey", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["message"] == "Unknown key: 'ctrl+notakey'"
+        assert "key_hotkey(" not in result.output
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_empty_key_is_invalid_input(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "INVALID_INPUT"
+        assert err["message"] == "Empty key name."
+        assert "key_press(" not in result.output
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_system_error_stays_action_error(self, mock_resolve, mock_get_backend, mock_route, runner):
+        """A genuine runtime failure (code=-2) must NOT be remapped to INVALID_INPUT."""
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-2, "key_press('enter')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["enter", "--json", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        err = json.loads(result.output)["error"]
+        assert err["code"] == "ACTION_ERROR"
+        assert "System/COM error" in err["message"]
+
+    @patch("naturo.cli.interaction._common._auto_route", return_value=None)
+    @patch("naturo.cli.interaction._common._get_backend")
+    @patch("naturo.cli.interaction._common._resolve_app_id", return_value=(None, None, None))
+    def test_unknown_key_plain_text(self, mock_resolve, mock_get_backend, mock_route, runner):
+        backend = MagicMock()
+        backend.press_key.side_effect = NaturoCoreError(-1, "key_press('entr')")
+        mock_get_backend.return_value = backend
+
+        result = runner.invoke(press, ["entr", "--no-verify"], catch_exceptions=False)
+        assert result.exit_code != 0
+        assert "Unknown key: 'entr'" in result.output
+        assert "key_press(" not in result.output
+
 
 # ── press command — --on element ────────────────
 
@@ -260,7 +536,7 @@ class TestPressOnElement:
                 catch_exceptions=False,
             )
             assert result.exit_code != 0
-            assert "REF_NOT_FOUND" in result.output or "not found" in result.output.lower()
+            assert "STALE_SNAPSHOT_CACHE" in result.output or "not found" in result.output.lower()
 
     @patch("naturo.cli.interaction._common._auto_route", return_value=None)
     @patch("naturo.cli.interaction._common._get_backend")
@@ -279,6 +555,61 @@ class TestPressOnElement:
         backend.find_element.assert_called_once_with("OK Button")
         backend.click.assert_called_once()
         backend.press_key.assert_called_once()
+
+
+# ── --app window focus (#807) ───────────────────
+
+
+def _patch_backend(mock_backend):
+    return patch("naturo.cli.interaction._common._get_backend",
+                 return_value=mock_backend)
+
+
+def _patch_resolve_app_id(app=None, hwnd=None, pid=None):
+    return patch("naturo.cli.interaction._common._resolve_app_id",
+                 return_value=(app, hwnd, pid))
+
+
+def _patch_auto_route(route=None):
+    return patch("naturo.cli.interaction._common._auto_route",
+                 return_value=route or {})
+
+
+class TestAppFocus:
+    """#807: press --app must exit with error when window focus fails."""
+
+    @pytest.fixture
+    def mock_backend(self):
+        backend = MagicMock()
+        backend.press_key.return_value = None
+        backend.hotkey.return_value = None
+        backend.focus_window.return_value = None
+        backend._resolve_hwnd.return_value = 12345
+        return backend
+
+    def test_focus_failure_exits_with_error(self, runner, mock_backend):
+        mock_backend._resolve_hwnd.side_effect = Exception("window not found")
+
+        with _patch_resolve_app_id(app="gone"), \
+             _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                press, ["enter", "--app", "gone", "--json"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code != 0
+        assert "WINDOW_FOCUS_ERROR" in result.output
+
+    def test_focus_failure_plain_text(self, runner, mock_backend):
+        mock_backend._resolve_hwnd.side_effect = Exception("window not found")
+
+        with _patch_resolve_app_id(app="gone"), \
+             _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                press, ["enter", "--app", "gone"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code != 0
+        assert "focus" in result.output.lower() or "Error" in result.output
 
 
 # ── hotkey command (deprecated alias) ────────────
@@ -310,3 +641,84 @@ class TestHotkeyAlias:
             result = runner.invoke(hotkey, ["--json"], catch_exceptions=False)
             assert result.exit_code != 0
             assert "INVALID_INPUT" in result.output or "keys" in result.output.lower()
+
+
+class TestPressFocusFailure:
+    """#807: press --app must error when the target window cannot be focused."""
+
+    def test_press_app_focus_error_json(self, runner):
+        """When focus_window raises, press should emit WINDOW_FOCUS_ERROR JSON."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = 12345
+        mock_backend.focus_window.side_effect = RuntimeError("cannot focus")
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("FakeApp", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "FakeApp", "--json"],
+                catch_exceptions=False,
+            )
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "WINDOW_FOCUS_ERROR"
+
+    def test_press_app_window_not_found_json(self, runner):
+        """When _resolve_hwnd returns None, press should emit WINDOW_NOT_FOUND."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = None
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("FakeApp", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "FakeApp", "--json"],
+                catch_exceptions=False,
+            )
+            data = json.loads(result.output)
+            assert data["success"] is False
+            assert data["error"]["code"] == "WINDOW_NOT_FOUND"
+
+    def test_press_app_focus_success_sends_keys(self, runner):
+        """When focus succeeds, press should send keys normally."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.return_value = 12345
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("notepad", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["enter", "--app", "notepad", "--json", "--no-verify"],
+                catch_exceptions=False,
+            )
+            assert result.exit_code == 0
+            mock_backend.focus_window.assert_called_once_with(hwnd=12345)
+            mock_backend.press_key.assert_called_once()
+
+    def test_press_app_no_keys_sent_on_failure(self, runner):
+        """When focus fails, no keys must be sent to avoid hitting wrong process."""
+        mock_backend = MagicMock()
+        mock_backend._resolve_hwnd.side_effect = Exception("Window not found")
+
+        with patch("naturo.cli.interaction._common._resolve_app_id",
+                   return_value=("notepad", None, None)), \
+             patch("naturo.cli.interaction._common._get_backend",
+                   return_value=mock_backend), \
+             patch("naturo.cli.interaction._common._auto_route",
+                   return_value=None):
+            result = runner.invoke(
+                press, ["ctrl+c", "--app", "notepad", "--json"],
+                catch_exceptions=False,
+            )
+            assert result.exit_code != 0
+            mock_backend.press_key.assert_not_called()
+            mock_backend.hotkey.assert_not_called()

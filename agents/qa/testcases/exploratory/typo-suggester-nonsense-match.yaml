@@ -1,0 +1,34 @@
+id: TC-0076
+title: "'Did you mean' suggester returns semantically wrong matches for short queries (#889)"
+status: active
+category: exploratory
+priority: P2
+source_issue: 889
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R136: FAIL — `naturo ai` → 'Did you mean wait?' (zero semantic overlap); `naturo tap` → 'Did you mean app?' (nearest semantic match is `click`, not `app`). Click's difflib cutoff (default 0.6) is too lax for 2-3 char queries against a 30+ command surface."
+
+preconditions:
+  - "naturo is installed and in PATH"
+
+steps:
+  - description: "Confirm `naturo ai` produces a misleading suggestion"
+    command: "naturo ai 2>&1 | grep -cE \"Did you mean '(wait|see|find|app)'\""
+    expect: "0 once fixed; currently 1 (FAIL — 'wait' is unrelated to 'ai')"
+  - description: "Confirm `naturo tap` (touch synonym for click) does not point to `app`"
+    command: "naturo tap 2>&1 | grep -cE \"Did you mean 'app'\""
+    expect: "0 once fixed; currently 1 (FAIL — semantic match would be `click`, not `app`)"
+  - description: "Sanity: short typos that have a true near-match still suggest correctly"
+    command: "naturo apps 2>&1 | grep -c \"Did you mean 'app'\""
+    expect: "1 (true plural form, should keep working)"
+  - description: "Sanity: `clik` (real typo for click) still suggests correctly"
+    command: "naturo clik 2>&1 | grep -c \"Did you mean 'click'\""
+    expect: "1 (true near-miss, should keep working)"
+  - description: "Sanity: garbage that matches nothing emits no suggestion"
+    command: "naturo zzqqxx 2>&1 | grep -c 'Did you mean'"
+    expect: "0 (no false positives)"
+
+pass_criteria: "True near-misses (`apps`→`app`, `clik`→`click`) still surface; semantically unrelated short queries (`ai`, `tap`) do NOT surface a suggestion"
+fail_action: "Update or reopen #889"

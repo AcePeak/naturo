@@ -1,0 +1,32 @@
+id: TC-0066
+title: "browser launch -j returns {status: ok, ...} envelope instead of standard {success: true, ...}"
+status: active
+category: exploratory
+priority: P2
+source_issue: 879
+created: 2026-05-28
+last_run: 2026-05-28
+last_result: fail
+consecutive_passes: 0
+notes: "R134: FAIL (with new wrinkle) — `naturo browser launch -j` now returns {success:false, error:{code:UNKNOWN_ERROR, message:'Chrome exited with code 0 before CDP became available'}} but EXIT CODE IS 0 on failure. Envelope key changed from status→success since R130, but exit code drift remains. Filed as comment on #879."
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "Chrome is installed and launchable in the current session"
+
+steps:
+  - description: "Launch Chrome via naturo with -j"
+    command: "naturo browser launch --headless -j"
+    expect: 'JSON output contains top-level "success": true (currently uses "status": "ok" instead — FAIL)'
+  - description: "Cross-check: browser tabs -j uses the standard envelope on error"
+    command: "naturo browser tabs -j  # with no chrome running"
+    expect: '{"success": false, "error": {...}} — confirms the rest of the browser surface is consistent'
+  - description: "Cross-check: wait -j uses the standard envelope on success"
+    command: "naturo wait 0.05 -j"
+    expect: '{"success": true, "mode": "duration", "wait_time": 0.05}'
+  - description: "Cleanup"
+    command: "powershell -NoProfile -Command \"Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force\""
+    expect: "Chrome processes terminated"
+
+pass_criteria: "browser launch -j returns {\"success\": true, ...} with the standard envelope; any 'status' key is either removed or kept alongside 'success' for one release"
+fail_action: "Update or reopen #879"

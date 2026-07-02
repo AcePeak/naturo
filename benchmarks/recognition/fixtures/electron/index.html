@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'">
+  <title>Naturo Electron Recognition Fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; color: #1c1c1c; }
+    header { background: #2d2d6b; color: #fff; padding: 10px 16px; }
+    header h1 { font-size: 18px; margin: 0 0 6px; }
+    .toolbar button { margin-right: 6px; }
+    main { display: flex; gap: 0; }
+    .tree-pane { width: 260px; border-right: 1px solid #ddd; padding: 8px; }
+    .content-pane { flex: 1; padding: 16px; }
+    .tree-item, .tree-child { padding: 3px 6px; cursor: pointer; }
+    .tree-child { padding-left: 22px; }
+    .form-row { margin: 8px 0; }
+    label { display: inline-block; min-width: 90px; }
+    table { border-collapse: collapse; margin-top: 12px; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+    th { background: #eef; }
+    ul.task-list { list-style: none; padding: 0; }
+    ul.task-list li { padding: 4px 6px; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Project Console (Electron fixture)</h1>
+    <nav class="toolbar" aria-label="Primary toolbar">
+      <button id="btn-build">Build</button>
+      <button id="btn-deploy">Deploy</button>
+      <button id="btn-rollback">Rollback</button>
+      <button id="btn-refresh" role="button">Refresh</button>
+      <button id="btn-settings" role="button">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- A real tree control: expandable groups with child nodes. -->
+    <aside class="tree-pane" role="tree" aria-label="Environment tree">
+      <div class="tree-item" role="treeitem" aria-expanded="true" tabindex="0">Production</div>
+      <div class="tree-child" role="treeitem" tabindex="0">web-prod-01</div>
+      <div class="tree-child" role="treeitem" tabindex="0">web-prod-02</div>
+      <div class="tree-child" role="treeitem" tabindex="0">db-prod-primary</div>
+      <div class="tree-item" role="treeitem" aria-expanded="true" tabindex="0">Staging</div>
+      <div class="tree-child" role="treeitem" tabindex="0">web-stage-01</div>
+      <div class="tree-child" role="treeitem" tabindex="0">db-stage</div>
+      <div class="tree-item" role="treeitem" aria-expanded="false" tabindex="0">Development</div>
+      <div class="tree-child" role="treeitem" tabindex="0">localhost-sandbox</div>
+    </aside>
+
+    <section class="content-pane">
+      <!-- Varied text inputs and selects. -->
+      <div class="form-row">
+        <label for="release-name">Release name</label>
+        <input id="release-name" type="text" placeholder="e.g. 2026.06-hotfix">
+      </div>
+      <div class="form-row">
+        <label for="release-tag">Git tag</label>
+        <input id="release-tag" type="text" placeholder="v0.0.0">
+      </div>
+      <div class="form-row">
+        <label for="target-env">Target</label>
+        <select id="target-env">
+          <option>Production</option>
+          <option>Staging</option>
+          <option>Development</option>
+        </select>
+        <input id="chk-canary" type="checkbox"><label for="chk-canary" style="min-width:auto">Canary first</label>
+      </div>
+      <div class="form-row">
+        <label for="notes">Notes</label>
+        <textarea id="notes" rows="3" placeholder="Release notes..."></textarea>
+      </div>
+      <div class="form-row">
+        <button id="btn-validate">Validate</button>
+        <button id="btn-submit">Submit release</button>
+        <button id="btn-cancel">Cancel</button>
+      </div>
+
+      <!-- A task list. -->
+      <h3>Pending tasks</h3>
+      <ul class="task-list" aria-label="Pending tasks">
+        <li><input type="checkbox" id="t1"><label for="t1">Run migrations</label></li>
+        <li><input type="checkbox" id="t2"><label for="t2">Warm caches</label></li>
+        <li><input type="checkbox" id="t3"><label for="t3">Notify on-call</label></li>
+        <li><input type="checkbox" id="t4"><label for="t4">Update status page</label></li>
+      </ul>
+
+      <!-- A data table with interactive row actions. -->
+      <h3>Recent deployments</h3>
+      <table aria-label="Recent deployments">
+        <thead>
+          <tr><th>Build</th><th>Environment</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>#4821</td><td>Production</td><td>Succeeded</td><td><button>View log</button></td></tr>
+          <tr><td>#4820</td><td>Staging</td><td>Succeeded</td><td><button>View log</button></td></tr>
+          <tr><td>#4819</td><td>Production</td><td>Failed</td><td><button>Retry</button></td></tr>
+          <tr><td>#4818</td><td>Development</td><td>Succeeded</td><td><button>View log</button></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

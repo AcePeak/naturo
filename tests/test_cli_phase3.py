@@ -388,7 +388,9 @@ class TestAppListFiltering:
         mock_win_system.process_name = "ApplicationFrameHost.exe"
         mock_win_system.title = "Some Frame"
 
-        with patch.object(backend, "list_windows", return_value=[mock_win_visible, mock_win_empty, mock_win_system]):
+        # list_apps consumes the unresolved window list (#958) and runs its own
+        # UWP resolution; patch the raw source it reads.
+        with patch.object(backend, "_list_windows_unresolved", return_value=[mock_win_visible, mock_win_empty, mock_win_system]):
             apps = backend.list_apps()
 
         # Notepad + UWP app (ApplicationFrameHost with title) should survive

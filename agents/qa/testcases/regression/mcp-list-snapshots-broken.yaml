@@ -1,0 +1,50 @@
+id: TC-0077
+title: "MCP list_snapshots fails 100% — wrapper passes limit= kwarg that SnapshotManager.list_snapshots() doesn't accept"
+status: active
+category: regression
+priority: P1
+source_issue: 890
+created: 2026-05-28
+last_run: 2026-05-29
+last_result: fail
+consecutive_passes: 0
+notes: |
+  R137: FAIL — confirmed on HEAD `70e6591`. Both `tools/call list_snapshots {}` and `tools/call list_snapshots {limit:5}` return identical INTERNAL_ERROR with message `TypeError: SnapshotManager.list_snapshots() got an unexpected keyword argument 'limit'`. CLI `naturo snapshot list -j` works fine — MCP wrapper only. Root cause is at naturo/mcp/_snapshot.py:165 (`manager.list_snapshots(limit=limit)`) vs naturo/snapshot.py:632 (`def list_snapshots(self) -> List[SnapshotInfo]`). #890 filed.
+  R145: FAIL — reproduces on HEAD `17aefe6` via AI Agent Builder persona probe. Same TypeError, both `{}` and `{"limit":5}` invocations. #890 still open.
+
+preconditions:
+  - "naturo is installed and in PATH"
+  - "MCP server can start: naturo mcp start --transport stdio"
+
+steps:
+  - description: "CLI baseline — naturo snapshot list -j must succeed"
+    command: "naturo snapshot list -j"
+    expect: '{"success": true, "session": "default", "snapshots": [...]}'
+
+  - description: "MCP list_snapshots with no args — fails with TypeError leak"
+    command: |
+      python -c "
+      import json, subprocess
+      reqs = [
+        {'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'q','version':'0.1'}}},
+        {'jsonrpc':'2.0','method':'notifications/initialized'},
+        {'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'list_snapshots','arguments':{}}},
+      ]
+      p = subprocess.run(['naturo','mcp','start'], input=('\n'.join(json.dumps(r) for r in reqs)+'\n').encode('utf-8'), capture_output=True, timeout=60)
+      for line in p.stdout.decode('utf-8','replace').splitlines():
+        try: m=json.loads(line)
+        except: continue
+        if m.get('id')==2: print((m.get('result') or {}).get('content',[{}])[0].get('text','')[:200])
+      "
+    expect: |
+      Expected (post-fix): {"success": true, "snapshots": [...up to default-limit entries]}.
+      Actual (FAIL): {"success": false, "error": {"code": "INTERNAL_ERROR", "message": "TypeError: SnapshotManager.list_snapshots() got an unexpected keyword argument 'limit'"}}
+
+  - description: "MCP list_snapshots with explicit limit — same error"
+    command: |
+      Send tools/call list_snapshots {"limit": 5}
+    expect: |
+      Same error payload as the no-args case. Limit is not respected because the call never reaches the manager body.
+
+pass_criteria: "MCP list_snapshots returns the same {success:true, snapshots:[...]} shape as the CLI, optionally trimmed to the supplied limit."
+fail_action: "Update #890 with HEAD where this changed. Auto-retire once #890 is closed and 5 consecutive passes recorded."

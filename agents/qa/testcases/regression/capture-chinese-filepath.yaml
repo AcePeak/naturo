@@ -1,14 +1,14 @@
 id: TC-0034
 title: "naturo capture fails with 'File I/O error' when output path contains Chinese characters"
-status: active
+status: retired
 category: regression
 priority: P1
 source_issue: 693
 created: 2026-03-31
-last_run: 2026-03-31
-last_result: fail
-consecutive_passes: 0
-notes: "2026-03-31 R71: FAIL — naturo capture -o /tmp/中文路径/测试截图.png returns 'File I/O error'. English path works. Issue #693 still open."
+last_run: 2026-04-01
+last_result: pass
+consecutive_passes: 6
+notes: "2026-04-01 R79: Retired — 6 consecutive passes, #693 closed."
 
 preconditions:
   - "naturo is installed and in PATH"

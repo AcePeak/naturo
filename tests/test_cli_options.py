@@ -20,6 +20,7 @@ from naturo.cli.options import (
     app_option,
     hwnd_option,
     json_option,
+    maybe_promote_app_to_app_id,
     on_option,
     pid_option,
     process_name_option,
@@ -86,6 +87,61 @@ class TestResolveAppIdToHwnd:
         runner = CliRunner()
         res = runner.invoke(_test_cmd)
         assert res.exit_code != 0 or "APP_ID_NOT_FOUND" in res.output
+
+
+# ── maybe_promote_app_to_app_id (#752) ───────────────────────────────────
+
+
+class TestMaybePromoteAppToAppId:
+    """Tests for app ID pattern detection in --app flag."""
+
+    def test_app_id_pattern_promoted(self):
+        """'a1' in --app is promoted to --app-id."""
+        app, app_id = maybe_promote_app_to_app_id("a1", None)
+        assert app is None
+        assert app_id == "a1"
+
+    def test_multi_digit_app_id_promoted(self):
+        """'a123' in --app is promoted to --app-id."""
+        app, app_id = maybe_promote_app_to_app_id("a123", None)
+        assert app is None
+        assert app_id == "a123"
+
+    def test_process_name_not_promoted(self):
+        """Normal process names are not promoted."""
+        app, app_id = maybe_promote_app_to_app_id("notepad", None)
+        assert app == "notepad"
+        assert app_id is None
+
+    def test_explicit_app_id_takes_precedence(self):
+        """When --app-id is already set, --app is not promoted."""
+        app, app_id = maybe_promote_app_to_app_id("a2", "a1")
+        assert app == "a2"
+        assert app_id == "a1"
+
+    def test_none_app_unchanged(self):
+        """None --app is returned unchanged."""
+        app, app_id = maybe_promote_app_to_app_id(None, None)
+        assert app is None
+        assert app_id is None
+
+    def test_partial_match_not_promoted(self):
+        """Strings like 'app1' or 'abc' are not promoted."""
+        app, app_id = maybe_promote_app_to_app_id("app1", None)
+        assert app == "app1"
+        assert app_id is None
+
+    def test_uppercase_not_promoted(self):
+        """'A1' (uppercase) is not promoted — app IDs are lowercase."""
+        app, app_id = maybe_promote_app_to_app_id("A1", None)
+        assert app == "A1"
+        assert app_id is None
+
+    def test_bare_a_not_promoted(self):
+        """'a' alone (no digits) is not promoted."""
+        app, app_id = maybe_promote_app_to_app_id("a", None)
+        assert app == "a"
+        assert app_id is None
 
 
 # ── Option decorators ─────────────────────────────────────────────────────

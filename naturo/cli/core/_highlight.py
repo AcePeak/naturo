@@ -1,7 +1,7 @@
 """Highlight command — highlight UI elements on screen."""
 from __future__ import annotations
 
-import json as _json
+from naturo.cli._jsonio import json_dumps
 import logging
 
 import click
@@ -13,9 +13,11 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.argument("positional_refs", nargs=-1)
-@click.option("--on", "on_ref", help="Target element ref (eN) to highlight")
+@click.option("--on", "--id", "on_ref", help="Target element ref (eN) to highlight")
 @click.option("--ref", "-r", "ref_option", multiple=True, help="Specific refs to highlight (e.g. -r e5 -r e10). Omit for all.")
 @click.option("--app", "-a", help="Application name (partial match)")
+@click.option("--window", "window_title", default=None,
+              help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Direct window handle")
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
@@ -40,9 +42,9 @@ logger = logging.getLogger(__name__)
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered regions (requires --cascade)")
 @click.option("--pid", type=int, default=None, help="Process ID")
-def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, duration,
-              json_output, backend, show_all, annotate_path, role_filter,
-              visible_only, cascade, fill_gaps, pid):
+def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_id,
+              depth, duration, json_output, backend, show_all, annotate_path,
+              role_filter, visible_only, cascade, fill_gaps, pid) -> None:
     """Highlight UI elements on screen with colored borders and labels.
 
     By default highlights only actionable elements (Button, Edit, ComboBox,
@@ -63,6 +65,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
       naturo highlight --app notepad             # Actionable only
       naturo highlight --app notepad --all       # All elements
       naturo highlight e11 --app notepad         # Specific ref
+      naturo highlight --id e11 --app notepad    # --id is an alias for the eN ref
       naturo highlight --app notepad --filter Button
       naturo highlight --app notepad --visible-only
       naturo highlight --app feishu --cascade -d 10
@@ -71,6 +74,10 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
       naturo highlight --app notepad --duration 10
       naturo highlight --app legacy --backend win32
     """
+    # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
+    from naturo.cli.options import maybe_promote_app_to_app_id
+    app, app_id = maybe_promote_app_to_app_id(app, app_id)
+
     # (#593) Resolve --app-id to hwnd before any other logic
     if app_id is not None:
         from naturo.app_ids import get_app_id_map
@@ -87,7 +94,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
 
     be = _common._get_backend(json_output)
     try:
-        handle = be._resolve_hwnd(app=app, hwnd=hwnd, pid=pid)
+        handle = be._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
     except Exception as exc:
         if json_output:
             click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(exc)))
@@ -147,7 +154,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
                 )
                 if result_path:
                     if json_output:
-                        click.echo(_json.dumps({
+                        click.echo(json_dumps({
                             "success": True,
                             "backend": backend,
                             "annotate_path": result_path,
@@ -157,7 +164,12 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
                         click.echo(f"Annotated screenshot saved: {result_path}")
                     return
                 else:
-                    msg = "No snapshot with screenshot available for --annotate. Run 'naturo see' first."
+                    msg = (
+                        "No snapshot with a stored screenshot is available for "
+                        "--annotate. Run 'naturo see --path <file>' first: a "
+                        "screenshot is only persisted into the snapshot when "
+                        "'see' is given --path."
+                    )
                     if json_output:
                         click.echo(_common._json_error_str("NO_SNAPSHOT", msg))
                         raise SystemExit(1)
@@ -191,7 +203,7 @@ def highlight(positional_refs, on_ref, ref_option, app, hwnd, app_id, depth, dur
             "refs": refs_list,
             "show_all": show_all,
         }
-        click.echo(_json.dumps(result))
+        click.echo(json_dumps(result))
     else:
         click.echo("Done.")
 

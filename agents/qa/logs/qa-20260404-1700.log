@@ -1,0 +1,83 @@
+Saved working directory and index state WIP on develop: 6108dc1 qa: round 105 report [skip ci]
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Your branch is behind 'origin/develop' by 3 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Already on 'develop'
+From https://github.com/AcePeak/naturo
+ * branch            develop    -> FETCH_HEAD
+Updating 6108dc1..86e534d
+Fast-forward
+ agents/qa/.last-ci-sha                             |  2 +-
+ agents/qa/status.md                                | 25 ++++----
+ .../exploratory/browser-json-error-format.yaml     |  2 +-
+ .../exploratory/json-stderr-duplicate-error.yaml   |  6 +-
+ .../exploratory/press-standalone-modifier.yaml     |  4 +-
+ .../regression/capture-unicode-path-dll.yaml       |  4 +-
+ .../regression/chinese-app-name-matching.yaml      |  4 +-
+ .../json-mode-exit-code-zero-on-failure.yaml       |  4 +-
+ .../regression/see-error-exit-code-zero.yaml       |  4 +-
+ tests/qa-reports/QA-Mariana-20260404-1616.md       | 68 ++++++++++++++++++++++
+ 10 files changed, 96 insertions(+), 27 deletions(-)
+ create mode 100644 tests/qa-reports/QA-Mariana-20260404-1616.md
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   agents/qa/logs/qa-20260404-1500.log
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	._capture.png
+	.work/qa_out.txt
+	.work/qa_out2.txt
+	agents/qa/logs/qa-20260404-1600.log
+	agents/qa/logs/qa-20260404-1700.log
+	core/core/
+	naturo-notepad-20260326-141947.png
+	naturo-notepad-20260329-030134.png
+	naturo-notepad-20260329-040132.png
+	naturo-notepad-20260329-050725.png
+	naturo-notepad-20260329-080127.png
+	naturo-notepad-20260329-170207.png
+	naturo-notepad-20260329-170333.png
+	naturo-notepad-20260329-170451.png
+	naturo-notepad-20260329-170550.png
+	naturo-notepad-20260331-170320.png
+	naturo-notepad-20260331-200254.png
+	naturo-notepad-20260331-200414.png
+	naturo-notepad-20260331-210421.png
+	naturo-notepad-20260331-210539.png
+	naturo/naturo/
+	tc-0003.png
+	tc-0004-final-verify.png
+	tc-0004-final.png
+	tc-0004-step1-verify.png
+	tc-0004-step1.png
+	tc-0004-step2-verify.png
+	tc-0004-step2.png
+	tc-0007.png
+	tc-0008-verify.png
+	tc-0008.png
+	tc-0010.png
+	tc-0012-verify.png
+	tc-0012.png
+	tc-0014-verify.png
+	tc-0014.png
+	tc-0021.png
+	tc-0022.png
+	tc-0024-verify.png
+	test-capture.jpg
+	test-capture.png
+	test_capture.png
+	test_get.txt
+	test_see.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (73ef2fc1b22825ecf8a83e527de018661edba267)
+[2026/04/04 ÖÜÁù 17:00:12.84] Starting QA-Mariana round 
+
+
+The background agent completed all 9 YAML file updates successfully. Round 107 is fully complete â€” report committed, test cases updated, and pushed to develop.

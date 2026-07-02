@@ -310,8 +310,8 @@ def excel_read(
     finally:
         try:
             excel.Quit()
-        except Exception:
-            pass  # Best-effort cleanup: Excel process may already be gone
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
 
 
 def excel_write(
@@ -393,8 +393,8 @@ def excel_write(
     finally:
         try:
             excel.Quit()
-        except Exception:
-            pass  # Best-effort cleanup: Excel process may already be gone
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
 
 
 def excel_list_sheets(path: str) -> dict[str, Any]:
@@ -435,8 +435,8 @@ def excel_list_sheets(path: str) -> dict[str, Any]:
     finally:
         try:
             excel.Quit()
-        except Exception:
-            pass  # Best-effort cleanup: Excel process may already be gone
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
 
 
 def excel_run_macro(
@@ -492,8 +492,8 @@ def excel_run_macro(
     finally:
         try:
             excel.Quit()
-        except Exception:
-            pass  # Best-effort cleanup: Excel process may already be gone
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
 
 
 def excel_get_range_info(
@@ -545,5 +545,5 @@ def excel_get_range_info(
     finally:
         try:
             excel.Quit()
-        except Exception:
-            pass  # Best-effort cleanup: Excel process may already be gone
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
