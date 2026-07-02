@@ -113,6 +113,11 @@ class TestListApps:
 class TestLaunchApp:
 
     def test_launch_app(self, server, mock_backend, mock_launch_app):
+        from types import SimpleNamespace
+        win = SimpleNamespace(handle=555, title="Untitled - Notepad")
+        # empty before launch, one new window after → resolved so the caller
+        # can focus_window/window_close exactly what it opened.
+        mock_backend.list_windows.side_effect = [[], [win], [win]]
         result = _call_tool(server, "launch_app", {"name": "notepad"})
         data = json.loads(result[0].text)
         assert data["success"] is True
@@ -120,6 +125,8 @@ class TestLaunchApp:
         assert data["name"] == "notepad.exe"
         assert data["is_running"] is True
         assert data["window_count"] == 1
+        assert data["hwnd"] == 555
+        assert data["windows"][0]["title"] == "Untitled - Notepad"
 
 
 # ── Quit App ──────────────────────────────────────────────────────────
