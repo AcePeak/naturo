@@ -15,6 +15,7 @@ import logging
 from typing import Optional
 
 from naturo.backends.base import ElementInfo as BaseElementInfo
+from naturo.backends.windows._core import heal_core_on_failure
 from naturo.bridge import populate_hierarchy
 from naturo.errors import NaturoError, StaleSnapshotCacheError
 
@@ -126,6 +127,7 @@ class ElementTreeMixin:
             return True
 
         return False
+    @heal_core_on_failure(retry=True)
     def get_element_tree(self, window_title: Optional[str] = None,
                          depth: int = 3,
                          app: Optional[str] = None,

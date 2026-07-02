@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from naturo.backends.windows._core import heal_core_on_failure
 from naturo.backends.windows._strategies import get_input_strategy
 
 
 class KeyboardMixin:
     """Keyboard interaction: text typing, key presses, and hotkey combinations."""
 
+    @heal_core_on_failure(retry=False)
     def type_text(self, text: str = "", delay_ms: int = 5, profile: str = "linear",
                   wpm: int = 120, input_mode: str = "normal") -> None:
         """Type text using SendInput.
