@@ -236,7 +236,16 @@ def excel_open(
     try:
         wb = excel.Workbooks.Open(abs_path, ReadOnly=read_only)
     except Exception as exc:
-        raise ExcelError(f"Failed to open workbook: {exc}", context={"path": abs_path})
+        raise ExcelError(
+            f"Failed to open workbook: {exc}",
+            context={"path": abs_path},
+            suggested_action=(
+                "Excel COM automation failed. Ensure Microsoft Excel is installed "
+                "and activated — an un-activated or first-run Office can block COM "
+                "automation. Confirm the file exists and is a valid .xlsx/.xls, and "
+                "try opening it in Excel once."
+            ),
+        )
 
     sheets = _get_sheet_names(wb)
     active = wb.ActiveSheet.Name
@@ -389,7 +398,16 @@ def excel_write(
     except (WorkbookNotFoundError, SheetNotFoundError):
         raise
     except Exception as exc:
-        raise ExcelError(f"Failed to write to cell {cell}: {exc}", context={"cell": cell})
+        raise ExcelError(
+            f"Failed to write to cell {cell}: {exc}",
+            context={"cell": cell},
+            suggested_action=(
+                "Excel COM automation failed. Ensure Microsoft Excel is installed "
+                "and activated — an un-activated or first-run Office can block COM "
+                "automation. Try opening the workbook in Excel once, and verify the "
+                "path, the sheet name, and that the cell reference is valid."
+            ),
+        )
     finally:
         try:
             excel.Quit()
