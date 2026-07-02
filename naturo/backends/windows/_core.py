@@ -2,12 +2,61 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Optional
 
-from naturo.bridge import NaturoCore
+from naturo.bridge import NaturoCore, NaturoCoreError
 
 logger = logging.getLogger(__name__)
+
+# Native error codes for which re-initializing the core can plausibly recover —
+# a COM/system apartment that went bad mid-session. Op-level faults (invalid
+# argument, buffer-too-small, file I/O) are not core-state failures and are
+# never healed or retried, so a genuine bad request still surfaces immediately.
+_RECOVERABLE_CORE_CODES = frozenset({-2})  # -2 == System/COM error
+
+
+def heal_core_on_failure(*, retry: bool):
+    """Reset the native core after a recoverable COM/DLL failure so it self-heals.
+
+    Generalizes the comtypes gen-cache self-heal (#1220) to the native
+    recognition/input layers (M4-2): if the cached core/COM instance goes bad
+    mid-session, ``_ensure_core`` would otherwise keep handing back the broken
+    instance forever. On a :class:`NaturoCoreError` whose code marks a recoverable
+    core/COM failure, this drops the cached core (so the next ``_ensure_core``
+    re-initializes it) and logs a WARNING.
+
+    Args:
+        retry: When True the wrapped op — which MUST be idempotent (recognition)
+            — is retried once in place so the same call self-heals. When False
+            (side-effecting input) only the reset happens and the original error
+            propagates, so the *next* call re-inits with no risk of double-acting.
+    """
+
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return fn(self, *args, **kwargs)
+            except NaturoCoreError as exc:
+                if not self._is_recoverable_core_failure(exc):
+                    raise
+                logger.warning(
+                    "native core op %s failed with a recoverable COM/core error "
+                    "(code=%s); resetting core to self-heal %s (M4-2): %s",
+                    fn.__name__, exc.code,
+                    "and retrying now" if retry else "on the next call",
+                    exc,
+                )
+                self._reset_core()
+                if retry:
+                    return fn(self, *args, **kwargs)  # idempotent op → heal in place
+                raise
+
+        return wrapper
+
+    return deco
 
 
 class CoreMixin:
@@ -258,6 +307,21 @@ class CoreMixin:
             self._core.init()
             self._initialized = True
         return self._core
+
+    def _reset_core(self) -> None:
+        """Drop the cached native core so the next :meth:`_ensure_core` rebuilds it.
+
+        The self-heal escape hatch (M4-2) for a core/COM instance that went bad
+        mid-session. Cheap and safe: the core is re-created + re-initialized
+        lazily on the next demand.
+        """
+        self._core = None
+        self._initialized = False
+
+    @staticmethod
+    def _is_recoverable_core_failure(exc: NaturoCoreError) -> bool:
+        """Whether re-initializing the core could plausibly recover from *exc*."""
+        return getattr(exc, "code", None) in _RECOVERABLE_CORE_CODES
 
     @property
     def platform_name(self) -> str:

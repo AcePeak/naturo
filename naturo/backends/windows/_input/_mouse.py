@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Optional
 
+from naturo.backends.windows._core import heal_core_on_failure
 from naturo.backends.windows._strategies import get_input_strategy
 
 
 class MouseMixin:
     """Mouse interaction: click, scroll, drag, and cursor movement."""
 
+    @heal_core_on_failure(retry=False)
     def click(self, x: Optional[int] = None, y: Optional[int] = None,
               element_id: Optional[str] = None, button: str = "left",
               double: bool = False, input_mode: str = "normal",
