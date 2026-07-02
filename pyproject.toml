@@ -110,6 +110,7 @@ markers = [
     "linux: Linux-only test",
     "slow: takes >5s to run",
     "stress: stress/stability test (>30s)",
+    "soak: long-running soak/reliability cycles (M4-4; desktop QA only, opt-in)",
     "e2e: end-to-end workflow test",
     "acceptance: role-based acceptance test",
     "performance: performance benchmark",
