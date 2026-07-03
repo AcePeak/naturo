@@ -210,6 +210,15 @@ class CDPClient:
                 ws_url,
                 timeout=self.timeout,
                 enable_multithread=True,
+                # Chrome/Edge 111+ reject a DevTools WebSocket handshake with
+                # "403 Forbidden" when it carries an Origin header that is not
+                # in --remote-allow-origins. websocket-client sends
+                # "Origin: http://<host>:<port>" by default, so every attach to
+                # a modern Chromium (browser *and* Electron app) was being
+                # refused. Suppressing the Origin header sidesteps the origin
+                # check entirely, so naturo attaches without requiring the
+                # target to be launched with --remote-allow-origins.
+                suppress_origin=True,
             )
         except Exception as exc:
             raise CDPConnectionError(

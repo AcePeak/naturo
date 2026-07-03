@@ -175,6 +175,10 @@
       "description": "Launch an application by name."
     },
     {
+      "name": "launch_browser",
+      "description": "Launch Chrome/Edge wired for automation (CDP) — the correct way to"
+    },
+    {
       "name": "list_apps",
       "description": "List running applications."
     },

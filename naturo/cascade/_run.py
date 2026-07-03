@@ -342,7 +342,23 @@ def run_cascade(
 
                 # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
                 if debug_port is None:
-                    debug_port = _get_cascade_pkg().find_cdp_port(pid)
+                    # Resolve the target window's PID so find_cdp_port can read
+                    # the browser's command line (its Phase 1) and pick up a
+                    # non-default --remote-debugging-port — not only the common
+                    # ports it blind-probes. Windows-only, best-effort.
+                    cdp_pid = pid
+                    if cdp_pid is None and hwnd is not None:
+                        try:
+                            import ctypes
+                            import ctypes.wintypes
+                            _pid = ctypes.wintypes.DWORD()
+                            ctypes.windll.user32.GetWindowThreadProcessId(
+                                int(hwnd), ctypes.byref(_pid)
+                            )
+                            cdp_pid = _pid.value or None
+                        except Exception:
+                            cdp_pid = None
+                    debug_port = _get_cascade_pkg().find_cdp_port(cdp_pid)
             except Exception as exc:
                 logger.debug("CDP port detection failed: %s", exc)
 

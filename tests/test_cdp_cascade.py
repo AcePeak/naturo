@@ -510,3 +510,21 @@ class TestRunCascadeWithCdp:
             )
 
         assert result.primary_provider == "cdp"
+
+
+# ── CDPClient.connect: Origin header suppression ─────────────────────────────
+
+
+class TestConnectSuppressesOrigin:
+    """Chromium 111+ 403s a DevTools WebSocket whose Origin header is not in
+    --remote-allow-origins. connect() must omit the Origin (suppress_origin=True)
+    so naturo attaches to any debuggable Chromium — browser or Electron app —
+    without requiring that launch flag."""
+
+    def test_connect_passes_suppress_origin(self):
+        client = CDPClient(port=9222)
+        mock_ws_mod = MagicMock()
+        with patch.object(client, "_ensure_websocket_module", return_value=mock_ws_mod):
+            client.connect(tab_id="t1")
+        _, kwargs = mock_ws_mod.create_connection.call_args
+        assert kwargs.get("suppress_origin") is True
