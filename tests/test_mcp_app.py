@@ -251,3 +251,35 @@ class TestMenuInspect:
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert data["menu_items"] == []
+
+
+class TestOfficeDismissStartup:
+
+    def test_clicks_blank_template(self, server, mock_backend):
+        blank = SimpleNamespace(role="ListItem", name="空白文档",
+                                x=200, y=200, width=40, height=20, children=[])
+        root = SimpleNamespace(role="Window", name="Word",
+                               x=0, y=0, width=100, height=100, children=[blank])
+        mock_backend._resolve_hwnd.return_value = 123
+        mock_backend.get_element_tree.return_value = root
+        result = _call_tool(server, "office_dismiss_startup", {"window_title": "Word"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["clicked"] == "空白文档"
+        assert data["already_ready"] is False
+        _, kwargs = mock_backend.click.call_args
+        assert kwargs.get("x") == 220 and kwargs.get("y") == 210  # element center
+
+    def test_already_ready_when_no_start_screen(self, server, mock_backend):
+        root = SimpleNamespace(
+            role="Window", name="文档1 - Word", x=0, y=0, width=100, height=100,
+            children=[SimpleNamespace(role="Edit", name="", x=0, y=0,
+                                      width=100, height=100, children=[])],
+        )
+        mock_backend._resolve_hwnd.return_value = 123
+        mock_backend.get_element_tree.return_value = root
+        result = _call_tool(server, "office_dismiss_startup", {"window_title": "Word"})
+        data = json.loads(result[0].text)
+        assert data["already_ready"] is True
+        assert data["clicked"] is None
+        assert not mock_backend.click.called

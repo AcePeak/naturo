@@ -251,6 +251,87 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
 
     @server.tool()
     @_safe_tool
+    def office_dismiss_startup(
+        app: Optional[str] = None,
+        hwnd: Optional[int] = None,
+        window_title: Optional[str] = None,
+    ) -> dict:
+        """Get an Office app past its start screen into a ready, editable document.
+
+        Word / Excel / PowerPoint launch to a Backstage *start screen* — a
+        template picker with **no active document**, where typing and COM writes
+        do not land and agents otherwise waste calls hunting for the blank item.
+        This finds and clicks the blank-document template (空白文档 / 空白工作簿 /
+        空白演示文稿 / Blank document / workbook / presentation) in one call. If the
+        window already shows a document (no start screen), it does nothing and
+        reports ``already_ready``.
+
+        (For pure read/write of Office content, prefer the COM tools —
+        excel_read/write, word_read/write — which never hit the start screen.
+        Use this when you must drive the Office UI itself.)
+
+        Args:
+            app: Office app name (e.g. "word", "excel", "powerpoint").
+            hwnd: Target window handle.
+            window_title: Target window title (partial match).
+
+        Returns:
+            Dict with ``clicked`` (template name, or None) and ``already_ready``.
+        """
+        import time
+
+        backend = _get_backend()
+        if hwnd is None and hasattr(backend, "_resolve_hwnd"):
+            try:
+                hwnd = backend._resolve_hwnd(app=app, window_title=window_title)
+            except Exception:
+                hwnd = None
+        if hwnd is None:
+            return {"success": False, "error": {
+                "code": "WINDOW_NOT_FOUND",
+                "message": "Provide app / hwnd / window_title of an Office window.",
+            }}
+
+        tree = backend.get_element_tree(hwnd=hwnd, depth=10, backend="uia")
+
+        _BLANK_EXACT = {
+            "空白文档", "空白工作簿", "空白演示文稿",
+            "blank document", "blank workbook", "blank presentation",
+        }
+
+        def _is_blank(name: str) -> bool:
+            n = (name or "").strip().lower()
+            return n in _BLANK_EXACT or n.startswith("空白") or n.startswith("blank ")
+
+        found = {"node": None}
+
+        def _walk(node) -> None:
+            if node is None or found["node"] is not None:
+                return
+            role = getattr(node, "role", "") or ""
+            if role in ("ListItem", "Button", "Hyperlink") and _is_blank(getattr(node, "name", "")):
+                found["node"] = node
+                return
+            for child in (getattr(node, "children", None) or []):
+                _walk(child)
+
+        _walk(tree)
+        target = found["node"]
+
+        if target is None:
+            return {
+                "success": True, "clicked": None, "already_ready": True,
+                "note": "No Office start-screen blank template found (likely already in a document).",
+            }
+
+        cx = getattr(target, "x", 0) + (getattr(target, "width", 0) // 2)
+        cy = getattr(target, "y", 0) + (getattr(target, "height", 0) // 2)
+        backend.click(x=cx, y=cy)
+        time.sleep(1.0)
+        return {"success": True, "clicked": getattr(target, "name", ""), "already_ready": False}
+
+    @server.tool()
+    @_safe_tool
     def quit_app(name: str, force: bool = False) -> dict:
         """Quit an application.
 
