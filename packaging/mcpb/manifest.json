@@ -187,10 +187,6 @@
       "description": "Launch an application by name."
     },
     {
-      "name": "office_dismiss_startup",
-      "description": "Get an Office app past its start screen into a ready, editable document."
-    },
-    {
       "name": "launch_browser",
       "description": "Launch a CDP-wired Chrome/Edge to read rendered or logged-in web pages."
     },
