@@ -47,6 +47,42 @@ def _installed(module: str) -> bool:
         return False
 
 
+_comtypes_prepared = False
+
+
+def _prepare_comtypes_gen() -> None:
+    """Point comtypes' generated type-library cache at a fresh writable dir so
+    pywinauto can import here.
+
+    Under a system Python the default ``comtypes/gen`` cache is read-only
+    (PermissionError) and can go stale ("Typelib different than module"); the
+    ``from pywinauto import Desktop`` below then fails and the rival is silently
+    scored as unavailable — understating pywinauto, not naturo. naturo self-heals
+    this (#1219/#1220); the rival does not, so we provision a writable gen dir
+    once before importing it. Idempotent; best-effort.
+    """
+    global _comtypes_prepared
+    if _comtypes_prepared:
+        return
+    _comtypes_prepared = True
+    import os
+    import sys
+    import tempfile
+
+    gen_dir = tempfile.mkdtemp(prefix="naturo_bench_ctgen_")
+    os.environ.setdefault("COMTYPES_GEN_DIR", gen_dir)
+    try:
+        import comtypes
+        import comtypes.client
+        comtypes.client.gen_dir = gen_dir
+        import comtypes.gen
+        comtypes.gen.__path__ = [gen_dir]  # force lookups into the empty dir
+        for mod in [m for m in sys.modules if m.startswith("comtypes.gen.")]:
+            del sys.modules[mod]
+    except Exception:
+        pass  # no comtypes (non-Windows / not installed) — nothing to prepare
+
+
 class Adapter:
     """Base class: how many interactive elements does one tool recognize?"""
 
@@ -135,6 +171,7 @@ class PywinautoAdapter(Adapter):
         window_title: Optional[str] = None,
         depth: int = 15,
     ) -> Optional[int]:
+        _prepare_comtypes_gen()  # unblock pywinauto's comtypes gen-cache
         try:
             from pywinauto import Desktop
         except Exception as exc:  # pragma: no cover - Windows-only import
