@@ -183,7 +183,8 @@ def register_input_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
-    def press_key(key: str, count: int = 1, input_mode: str = "normal", method: str = "auto") -> dict:
+    def press_key(key: str, count: int = 1, input_mode: str = "normal", method: str = "auto",
+                  hwnd: Optional[int] = None, window_title: Optional[str] = None) -> dict:
         """Press a key or key combination.
 
         For single keys pass the key name (e.g. "enter", "tab").
@@ -194,6 +195,9 @@ def register_input_tools(server, _get_backend, _safe_tool):
             count: Number of times to press.
             input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes).
             method: Interaction method override — "auto" (default), "cdp", "uia", "msaa", "ia2", "jab", "vision".
+            hwnd: Target window handle (from ``launch_app``/``list_windows``) — focuses it
+                first so the keys land there, no separate focus_window call and no foreground race.
+            window_title: Target window title (partial match) to focus + send to.
 
         Returns:
             Dict with success flag.
@@ -201,6 +205,11 @@ def register_input_tools(server, _get_backend, _safe_tool):
         if count < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"count must be >= 1, got {count}"}}
         backend = _get_backend()
+        if hwnd is not None or window_title is not None:
+            try:
+                backend.focus_window(hwnd=hwnd, title=window_title)
+            except Exception:
+                pass  # best-effort; fall through to the focused window
         is_combo = "+" in key
         for _ in range(count):
             if is_combo:
@@ -214,7 +223,8 @@ def register_input_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
-    def hotkey(keys: list[str], input_mode: str = "normal") -> dict:
+    def hotkey(keys: list[str], input_mode: str = "normal",
+               hwnd: Optional[int] = None, window_title: Optional[str] = None) -> dict:
         """Press a keyboard shortcut (key combination).
 
         Deprecated: prefer press_key with combo notation (e.g. press_key("ctrl+c")).
@@ -223,6 +233,8 @@ def register_input_tools(server, _get_backend, _safe_tool):
         Args:
             keys: List of keys to press simultaneously (e.g. ["ctrl", "s"] for Ctrl+S).
             input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes).
+            hwnd: Target window handle to focus + send to.
+            window_title: Target window title (partial match) to focus + send to.
 
         Returns:
             Dict with success flag.
@@ -230,6 +242,11 @@ def register_input_tools(server, _get_backend, _safe_tool):
         if not keys:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": "keys list must not be empty"}}
         backend = _get_backend()
+        if hwnd is not None or window_title is not None:
+            try:
+                backend.focus_window(hwnd=hwnd, title=window_title)
+            except Exception:
+                pass  # best-effort; fall through to the focused window
         backend.hotkey(*keys, input_mode=input_mode)
         return {"success": True}
 

@@ -265,6 +265,19 @@ class TestPressKey:
         assert data["error"]["code"] == "INVALID_INPUT"
         mock_backend.press_key.assert_not_called()
 
+    def test_press_key_with_hwnd_focuses_target_first(self, server, mock_backend):
+        """A target hwnd focuses that window first, so the keys land there —
+        no separate focus_window call and no foreground race."""
+        result = _call_tool(server, "press_key", {"key": "enter", "hwnd": 4242})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend.focus_window.assert_called_once_with(hwnd=4242, title=None)
+        mock_backend.press_key.assert_called_once()
+
+    def test_press_key_without_target_does_not_focus(self, server, mock_backend):
+        _call_tool(server, "press_key", {"key": "enter"})
+        mock_backend.focus_window.assert_not_called()
+
 
 # ── Hotkey ────────────────────────────────────────────────────────────
 
