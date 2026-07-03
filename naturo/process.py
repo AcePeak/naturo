@@ -346,6 +346,15 @@ def launch_app(
     if not launch_target:
         raise AppNotFoundError("(no name or path provided)")
 
+    # Agents commonly pass a full executable path as `name` (the prompt gave a
+    # path, not a friendly name). Treat a path-like name pointing at a real file
+    # as `path` so it launches directly (non-blocking Popen) instead of falling
+    # through where/start to a `cmd /c start /wait` that BLOCKS on a GUI app until
+    # it closes — that hang froze a real agent run mid-task.
+    if not path and name and ("\\" in name or "/" in name):
+        if os.path.isfile(name):
+            path = name
+
     # Guard: prevent launching GUI apps in non-interactive sessions (#351).
     # SSH sessions spawn processes in session 0 (invisible on the desktop),
     # creating orphaned processes that accumulate over time.
