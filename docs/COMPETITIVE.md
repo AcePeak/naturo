@@ -32,6 +32,37 @@ only and **fail on Java (Swing/SWT), SAP GUI, and deep Electron**. This is where
 > (needs consolidation out of the stray `naturo/naturo/` nested dir). Maturity varies — Java/Electron/SAP
 > need hardening + a published coverage benchmark to *prove* the lead (#920).
 
+## Measured benchmark results (real runs) — the honest matrix
+
+The table above is a capability *claim*. This is what the runnable benchmark
+(`benchmarks/competitive/`, `python -m benchmarks.competitive.run_competitive --markdown`)
+actually **measured** on a real desktop (2026-07-04, JDK 21), with the UIA-only rival
+**pywinauto** actually running — its comtypes gen-cache had to be unblocked first (#1262/#1263)
+or it was silently scored blocked, which would have flattered naturo. Element counts per tool
+on the same live windows:
+
+| App / fixture | Framework | naturo | pywinauto (UIA-only) | PyAutoGUI |
+|---|---|:--:|:--:|:--:|
+| JavaSwing | Java Access Bridge | **46** | **6** | 0 |
+| Chromium | Electron/CDP (web content) | 85 | 113 | 0 |
+| ExcelCom | Excel COM | 1177 | 1307 | 0 |
+
+**Honest reading — this is the whole point of running the rival, not a proxy:**
+- **Java/Swing is the demonstrable moat** — naturo 46 vs pywinauto **6**. UIA collapses Swing to
+  an opaque frame; the Java Access Bridge is where a UIA-only tool returns ~nothing. SAP GUI and
+  deep CEF are the same UIA-blind class — that is the honest headline.
+- **Electron/Chromium and Excel are NOT a raw-count win** — a UIA-only rival is competitive or
+  higher (Chrome exposes its accessibility tree to UIA; Excel exposes cells to UIA).
+- **Metric caveat:** naturo counts cascade-*recognized* elements; pywinauto counts raw UIA
+  `descendants()` (layout containers + noise). Raw count ≠ agent usefulness — an actionable/
+  "meaningful interactive element" metric is the right next refinement and may change the
+  Electron/Excel picture. Until it exists, claim only the Java/SAP/CEF-depth moat.
+
+> ⚠️ **Reconcile (positioning — Ace-gated):** the capability table above marks Electron/CEF and
+> Excel COM as rival-✗; the measured pywinauto run contradicts that for a UIA-only rival. The
+> public claim should narrow to *deep* CEF (post-navigation DOM via CDP) and Java/SAP, framed as
+> recognition *quality*, not raw presence. The README headline stays Ace-gated.
+
 ## The landscape
 
 | Tier | Projects | Note |
