@@ -197,6 +197,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
     def find_element(
         selector: str,
         window_title: Optional[str] = None,
+        hwnd: Optional[int] = None,
     ) -> dict:
         """Find a UI element by selector.
 
@@ -206,12 +207,14 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         Args:
             selector: Element selector string.
             window_title: Target window (partial match).
+            hwnd: Direct window handle (from ``launch_app``/``list_windows``) —
+                preferred; searches that exact window, no title matching.
 
         Returns:
             Dict with the found element's info or error.
         """
         backend = _get_backend()
-        element = backend.find_element(selector=selector, window_title=window_title)
+        element = backend.find_element(selector=selector, window_title=window_title, hwnd=hwnd)
         if element is None:
             return {"success": False, "error": {"code": "ELEMENT_NOT_FOUND", "message": f"No element matching '{selector}'"}}
         return {

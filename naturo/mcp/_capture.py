@@ -48,12 +48,15 @@ def register_capture_tools(server, _get_backend, _safe_tool):
     def capture_window(
         window_title: Optional[str] = None,
         output_path: str = "capture.png",
+        hwnd: Optional[int] = None,
     ) -> dict:
         """Capture a screenshot of a specific window.
 
         Args:
             window_title: Window title to capture (partial match).
             output_path: Path to save the screenshot.
+            hwnd: Direct window handle (from ``launch_app``/``list_windows``) —
+                preferred; targets that exact window and skips title matching.
 
         Returns:
             Dict with path, width, height, format, scale_factor, dpi.
@@ -68,9 +71,12 @@ def register_capture_tools(server, _get_backend, _safe_tool):
         # naturo/cli/core/_capture.py — to keep the CLI and MCP contracts aligned.
         # Backends whose capture_window does its own title matching (e.g. macOS,
         # which has no _resolve_hwnd) keep receiving the raw window_title.
-        if window_title and hasattr(backend, "_resolve_hwnd"):
-            hwnd = require_hwnd(backend, window_title=window_title)
+        if hwnd is not None:
+            # Direct handle from launch_app/list_windows — no title guessing.
             result = backend.capture_window(hwnd=hwnd, output_path=output_path)
+        elif window_title and hasattr(backend, "_resolve_hwnd"):
+            resolved = require_hwnd(backend, window_title=window_title)
+            result = backend.capture_window(hwnd=resolved, output_path=output_path)
         else:
             result = backend.capture_window(window_title=window_title, output_path=output_path)
         response = {
