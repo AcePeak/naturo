@@ -83,6 +83,14 @@ def _prepare_comtypes_gen() -> None:
         pass  # no comtypes (non-Windows / not installed) — nothing to prepare
 
 
+# Run at import: this module is imported before naturo (lazily loaded inside the
+# adapters below) touches comtypes, so the gen dir is redirected to a writable
+# location first. Calling it only inside count_elements was too late — naturo
+# imports comtypes first and locks the gen dir to the read-only default, leaving
+# pywinauto falsely scored `blocked: needs env` in a real run (verified on host).
+_prepare_comtypes_gen()
+
+
 class Adapter:
     """Base class: how many interactive elements does one tool recognize?"""
 
