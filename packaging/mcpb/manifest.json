@@ -51,20 +51,12 @@
   "tools_generated": false,
   "tools": [
     {
-      "name": "app_hide",
-      "description": "Hide (minimize) all windows of an application."
-    },
-    {
       "name": "app_inspect",
       "description": "Probe an application to detect its UI framework and available interaction methods."
     },
     {
       "name": "app_switch",
       "description": "Switch to (focus) the most recent window of an application."
-    },
-    {
-      "name": "app_unhide",
-      "description": "Unhide (restore) all windows of an application."
     },
     {
       "name": "capture_screen",
@@ -93,10 +85,6 @@
     {
       "name": "clipboard_set",
       "description": "Write text to the system clipboard."
-    },
-    {
-      "name": "create_snapshot",
-      "description": "Create a snapshot of the current UI state (screenshot + element tree)."
     },
     {
       "name": "dialog_accept",
@@ -175,14 +163,6 @@
       "description": "Read the current value/text of a UI element."
     },
     {
-      "name": "get_snapshot",
-      "description": "Retrieve a previously created snapshot."
-    },
-    {
-      "name": "hotkey",
-      "description": "Press a keyboard shortcut (key combination)."
-    },
-    {
       "name": "launch_app",
       "description": "Launch an application by name."
     },
@@ -197,10 +177,6 @@
     {
       "name": "list_monitors",
       "description": "List all connected monitors/displays."
-    },
-    {
-      "name": "list_snapshots",
-      "description": "List recent snapshots."
     },
     {
       "name": "list_windows",

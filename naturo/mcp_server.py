@@ -28,7 +28,6 @@ from naturo.mcp._inspect import register_inspect_tools
 from naturo.mcp._input import register_input_tools
 from naturo.mcp._app import register_app_tools
 from naturo.mcp._wait import register_wait_tools
-from naturo.mcp._snapshot import register_snapshot_tools
 from naturo.mcp._clipboard import register_clipboard_tools
 from naturo.mcp._dialog import register_dialog_tools
 from naturo.mcp._system import register_system_tools
@@ -338,7 +337,6 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     register_input_tools(server, _get_backend, _safe_tool)
     register_app_tools(server, _get_backend, _safe_tool, launch_app_fn=_launch_app)
     register_wait_tools(server, _get_backend, _safe_tool)
-    register_snapshot_tools(server, _get_backend, _safe_tool)
     register_clipboard_tools(server, _get_backend, _safe_tool)
     register_dialog_tools(server, _get_backend, _safe_tool)
     register_system_tools(server, _get_backend, _safe_tool)
