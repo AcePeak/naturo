@@ -363,3 +363,35 @@ class TestExcelMCP:
                      "excel_list_sheets", "excel_run_macro", "excel_info"]
         for name in expected:
             assert name in tool_names, f"MCP tool '{name}' not registered"
+
+
+class TestExcelComRobustness:
+    """DispatchEx (own isolated instance, immune to the Backstage start screen)
+    + CoInitialize (works from the MCP worker thread). See excel.py."""
+
+    def test_get_excel_uses_dispatchex_not_dispatch(self):
+        from unittest.mock import MagicMock, patch
+        import naturo.excel as ex
+        fake = MagicMock()
+        with patch("naturo.excel._require_pywin32", return_value=fake), \
+             patch("naturo.excel._require_windows"):
+            ex._get_excel()
+        assert fake.DispatchEx.called, "must use DispatchEx (dedicated instance)"
+        assert not fake.Dispatch.called, "must NOT plain-Dispatch (attaches to start-screen instance)"
+
+    def test_com_apartment_brackets_body_with_coinit(self):
+        import sys, types
+        from unittest.mock import patch
+        import naturo.excel as ex
+        calls = []
+        pc = types.SimpleNamespace(
+            CoInitialize=lambda: calls.append("init"),
+            CoUninitialize=lambda: calls.append("uninit"),
+        )
+        with patch.dict(sys.modules, {"pythoncom": pc}):
+            @ex._com_apartment
+            def f():
+                calls.append("body")
+                return 7
+            assert f() == 7
+        assert calls == ["init", "body", "uninit"]

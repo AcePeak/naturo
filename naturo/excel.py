@@ -14,12 +14,48 @@ Requires:
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import platform
 from typing import Any
 
 from naturo.errors import NaturoError, ErrorCode, ErrorCategory
+
+
+def _com_apartment(fn):
+    """Initialize COM on the calling thread for the duration of an Excel call.
+
+    Excel COM fails ("CoInitialize has not been called") when run from a thread
+    that has not initialized COM — e.g. the worker thread FastMCP dispatches
+    synchronous MCP tools on. The main thread / CLI auto-initializes COM, which
+    is why the same call works from a fresh process but failed over MCP.
+    CoInitialize is reference-counted, so wrapping every entry point is safe even
+    when COM is already up.
+    """
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            import pythoncom
+        except Exception:
+            return fn(*args, **kwargs)
+        initialized = False
+        try:
+            pythoncom.CoInitialize()
+            initialized = True
+        except Exception:
+            # Already initialized (possibly in an incompatible apartment mode);
+            # proceed without owning teardown.
+            pass
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            if initialized:
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
+    return wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +148,14 @@ def _get_excel(visible: bool = False):  # type: ignore[no-untyped-def]
     win32com_client = _require_pywin32()
 
     try:
-        excel = win32com_client.Dispatch("Excel.Application")
+        # DispatchEx forces a NEW, dedicated Excel process instead of attaching
+        # to whatever instance is in the Running Object Table. A plain Dispatch
+        # can latch onto an interactively-launched Excel sitting on the Backstage
+        # start screen (no active workbook, Workbooks.Count == 0), where
+        # Workbooks.Add / cell writes fail with OLE 0x800a01a8. Our own instance
+        # is automation-ready with no start screen, and every entry point Quits
+        # it in a finally, so nothing leaks.
+        excel = win32com_client.DispatchEx("Excel.Application")
     except Exception as exc:
         raise ExcelNotInstalledError(str(exc))
 
@@ -207,6 +250,7 @@ def _cell_value_to_python(value: Any) -> Any:
 # ── Public API ───────────────────────────────────────────────────────────────
 
 
+@_com_apartment
 def excel_open(
     path: str,
     visible: bool = False,
@@ -258,6 +302,7 @@ def excel_open(
     }
 
 
+@_com_apartment
 def excel_read(
     path: str,
     cell: str,
@@ -323,6 +368,7 @@ def excel_read(
             logger.debug("COM cleanup failed: %s", exc)
 
 
+@_com_apartment
 def excel_write(
     path: str,
     cell: str,
@@ -415,6 +461,7 @@ def excel_write(
             logger.debug("COM cleanup failed: %s", exc)
 
 
+@_com_apartment
 def excel_list_sheets(path: str) -> dict[str, Any]:
     """List all sheets in a workbook.
 
@@ -457,6 +504,7 @@ def excel_list_sheets(path: str) -> dict[str, Any]:
             logger.debug("COM cleanup failed: %s", exc)
 
 
+@_com_apartment
 def excel_run_macro(
     path: str,
     macro_name: str,
@@ -514,6 +562,7 @@ def excel_run_macro(
             logger.debug("COM cleanup failed: %s", exc)
 
 
+@_com_apartment
 def excel_get_range_info(
     path: str,
     sheet: str | None = None,
