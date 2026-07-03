@@ -176,7 +176,7 @@
     },
     {
       "name": "launch_browser",
-      "description": "Launch Chrome/Edge wired for automation (CDP) — the correct way to"
+      "description": "Launch a CDP-wired Chrome/Edge to read rendered or logged-in web pages."
     },
     {
       "name": "list_apps",
@@ -216,7 +216,7 @@
     },
     {
       "name": "see_ui_tree",
-      "description": "Inspect the UI accessibility tree of a window."
+      "description": "Read a window's UI as a structured element tree — naturo's core \"see\" tool."
     },
     {
       "name": "select_element",
@@ -248,7 +248,7 @@
     },
     {
       "name": "type_text",
-      "description": "Type text using keyboard input."
+      "description": "Type text into a target window (or the focused window)."
     },
     {
       "name": "virtual_desktop_close",

@@ -125,8 +125,12 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
         debug_port: int = 9222,
         profile: Optional[str] = None,
     ) -> dict:
-        """Launch Chrome/Edge wired for automation (CDP) — the correct way to
-        read web-page content as structured elements.
+        """Launch a CDP-wired Chrome/Edge to read rendered or logged-in web pages.
+
+        The way to read web content structurally — a JS-rendered DOM, or a page
+        behind the user's login (pass ``profile``) — which a plain web fetch
+        cannot reach. (For static public text a web fetch is faster; use this
+        only when you must drive a real browser.)
 
         A browser opened with ``launch_app`` exposes no DevTools endpoint, so
         ``see_ui_tree(cascade=True)`` recovers only the browser chrome (toolbar/

@@ -224,11 +224,21 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         host=host,
         port=port,
         instructions=(
-            "Naturo — Windows desktop automation engine. "
-            "Use these tools to see, click, type, and automate Windows applications. "
-            "Start with capture_screen or list_windows to understand the current state, "
-            "then use find_element or see_ui_tree to locate UI elements, "
-            "and interact with click, type_text, press_key, etc."
+            "Naturo — Windows desktop & application automation. It sees and "
+            "drives the real screen: native Windows apps, dialogs, menus, the "
+            "tray, and — its moat — content other tools cannot reach: Java/Swing "
+            "(JAB), Excel cells (COM), and a real, JS-rendered or logged-in "
+            "browser (CDP). "
+            "Prefer naturo whenever a task means operating an actual application "
+            "or the user's real browser, reading on-screen / rendered / "
+            "behind-login state, or acting on the UI (click, type, select). "
+            "It is NOT a web fetcher: for plain public web text a direct web "
+            "fetch is faster and better — do not drive a browser for that. "
+            "Typical flow: list_windows / see_ui_tree to observe (pass "
+            "cascade=true to fuse desktop + web + Java + Excel into one "
+            "correctness-tagged tree), then click / type_text / press_key to "
+            "act; launch_browser opens a CDP-wired browser for reading rendered "
+            "or logged-in pages."
         ),
     )
     # (#873) Advertise naturo's own version in the MCP ``serverInfo`` handshake.
