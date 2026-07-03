@@ -232,6 +232,13 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
                 break
             time.sleep(0.15)
 
+        # Remember hwnd -> port so read_web_text / CDP readers attach to THIS
+        # exact instance instead of blind-probing (which reads the wrong browser
+        # when several debuggable ones are alive).
+        from naturo.browser._registry import record as _record_port
+        for w in new_windows:
+            _record_port(w["hwnd"], chrome.port)
+
         return {
             "success": True,
             "debug_port": chrome.port,

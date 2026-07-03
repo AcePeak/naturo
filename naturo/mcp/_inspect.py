@@ -237,20 +237,25 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 "message": "Provide hwnd or window_title of the browser window.",
             }}
 
-        # Resolve the window's PID so the CDP port is found from its command line
-        # (works for the auto-selected non-default port launch_browser may use).
-        pid = None
-        try:
-            import ctypes
-            import ctypes.wintypes
-            _pid = ctypes.wintypes.DWORD()
-            ctypes.windll.user32.GetWindowThreadProcessId(int(hwnd), ctypes.byref(_pid))
-            pid = _pid.value or None
-        except Exception:
+        # Prefer the exact port launch_browser recorded for this window — a blind
+        # CDP probe returns the wrong browser when several debuggable ones are
+        # alive (cross-talk). Fall back to PID-based discovery for windows we did
+        # not open ourselves.
+        from naturo.browser._registry import lookup as _lookup_port
+        port = _lookup_port(hwnd)
+        if not port:
             pid = None
+            try:
+                import ctypes
+                import ctypes.wintypes
+                _pid = ctypes.wintypes.DWORD()
+                ctypes.windll.user32.GetWindowThreadProcessId(int(hwnd), ctypes.byref(_pid))
+                pid = _pid.value or None
+            except Exception:
+                pid = None
 
-        from naturo.cascade import find_cdp_port
-        port = find_cdp_port(pid)
+            from naturo.cascade import find_cdp_port
+            port = find_cdp_port(pid)
         if not port:
             return {"success": False, "error": {
                 "code": "CDP_NOT_AVAILABLE",
