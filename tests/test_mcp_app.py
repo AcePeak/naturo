@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Optional
@@ -173,6 +174,29 @@ class TestLaunchBrowser:
         assert kwargs["profile"] == "Work"
         # A named profile means the real user-data dir, not a throwaway one.
         assert kwargs["user_data_dir"] is None
+
+
+class TestFreeDebugPort:
+
+    def test_returns_preferred_when_free(self):
+        from naturo.mcp._app import _free_debug_port
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            free = s.getsockname()[1]
+        # released above — the preferred port is bindable again
+        assert _free_debug_port(free) == free
+
+    def test_falls_back_when_preferred_taken(self):
+        from naturo.mcp._app import _free_debug_port
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            taken = s.getsockname()[1]
+            # socket held open for the duration → preferred port is unbindable
+            got = _free_debug_port(taken)
+        assert got != taken
+        assert got > 0
 
 
 # ── Quit App ──────────────────────────────────────────────────────────

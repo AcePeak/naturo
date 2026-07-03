@@ -1,7 +1,37 @@
 """MCP tools for application control and menu inspection."""
 from __future__ import annotations
 
+import socket
 from typing import Optional
+
+
+def _free_debug_port(preferred: int) -> int:
+    """Return ``preferred`` if it is bindable on loopback, else a free port.
+
+    ``launch_browser`` starts a fresh browser instance per call. If the
+    requested debug port is already serving — a previous ``launch_browser``
+    instance still running, or the user's own debuggable Chrome — the new
+    instance cannot bind it, yet the DevTools HTTP endpoint still answers (from
+    the *other* instance), so CDP would silently attach to the wrong browser and
+    read the wrong page. Picking a free port keeps each instance's CDP isolated;
+    the cascade discovers the actual port from the window's command line.
+    """
+    # Prefer the ports the cascade blind-probes (9222/9229/9333) so a single
+    # instance stays CDP-discoverable even where the per-process command-line
+    # lookup is unavailable; fall back to an ephemeral port only if all are
+    # taken (correct multi-instance discovery then relies on that lookup).
+    seen: set[int] = set()
+    for candidate in (preferred, 9222, 9229, 9333, 0):
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("127.0.0.1", candidate))
+                return s.getsockname()[1]
+        except OSError:
+            continue
+    return preferred
 
 
 def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
@@ -118,7 +148,9 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
         Args:
             url: URL to open directly — loads before this returns, so there is no
                 address-bar typing and no focus race.
-            debug_port: DevTools port (default 9222; the cascade auto-discovers it).
+            debug_port: Preferred DevTools port (default 9222). If it is already
+                in use, a free port is chosen automatically so instances never
+                collide; the actual port is returned as ``debug_port``.
             profile: Optional Chrome profile name/dir to reuse your logged-in
                 session instead of a throwaway profile.
 
@@ -144,12 +176,18 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
             except Exception:
                 return {}
 
+        # Bind-test the requested port and fall back to a free one if it is
+        # taken, so a second launch_browser (or a stray debuggable Chrome) never
+        # collides on 9222 and attaches CDP to the wrong instance.
+        port = _free_debug_port(debug_port)
+
         # A dedicated profile forces a fresh instance that honors the debug
         # port; only reuse the real profile when the caller explicitly asks.
+        # Keyed by the resolved port so concurrent instances never share a dir.
         user_data_dir = None
         if profile is None:
             user_data_dir = os.path.join(
-                tempfile.gettempdir(), f"naturo-cdp-{debug_port}"
+                tempfile.gettempdir(), f"naturo-cdp-{port}"
             )
 
         # Suppress the first-run experience. A brand-new throwaway profile
@@ -166,7 +204,7 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
 
         before = set(_win_map())
         chrome = launch_chrome(
-            port=debug_port,
+            port=port,
             url=url,
             profile=profile,
             user_data_dir=user_data_dir,
