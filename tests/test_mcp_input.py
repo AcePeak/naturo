@@ -279,31 +279,6 @@ class TestPressKey:
         mock_backend.focus_window.assert_not_called()
 
 
-# ── Hotkey ────────────────────────────────────────────────────────────
-
-
-class TestHotkey:
-
-    def test_hotkey_basic(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": ["ctrl", "s"]})
-        data = json.loads(result[0].text)
-        assert data["success"] is True
-        mock_backend.hotkey.assert_called_once_with("ctrl", "s", input_mode="normal")
-
-    def test_hotkey_empty_list(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": []})
-        data = json.loads(result[0].text)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
-        mock_backend.hotkey.assert_not_called()
-
-    def test_hotkey_single_key(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": ["escape"]})
-        data = json.loads(result[0].text)
-        assert data["success"] is True
-        mock_backend.hotkey.assert_called_once_with("escape", input_mode="normal")
-
-
 # ── Scroll ────────────────────────────────────────────────────────────
 
 

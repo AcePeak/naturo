@@ -223,35 +223,6 @@ def register_input_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
-    def hotkey(keys: list[str], input_mode: str = "normal",
-               hwnd: Optional[int] = None, window_title: Optional[str] = None) -> dict:
-        """Press a keyboard shortcut (key combination).
-
-        Deprecated: prefer press_key with combo notation (e.g. press_key("ctrl+c")).
-        Kept for backward compatibility.
-
-        Args:
-            keys: List of keys to press simultaneously (e.g. ["ctrl", "s"] for Ctrl+S).
-            input_mode: Input method — "normal" (default) or "hardware" (Phys32 scan codes).
-            hwnd: Target window handle to focus + send to.
-            window_title: Target window title (partial match) to focus + send to.
-
-        Returns:
-            Dict with success flag.
-        """
-        if not keys:
-            return {"success": False, "error": {"code": "INVALID_INPUT", "message": "keys list must not be empty"}}
-        backend = _get_backend()
-        if hwnd is not None or window_title is not None:
-            try:
-                backend.focus_window(hwnd=hwnd, title=window_title)
-            except Exception:
-                pass  # best-effort; fall through to the focused window
-        backend.hotkey(*keys, input_mode=input_mode)
-        return {"success": True}
-
-    @server.tool()
-    @_safe_tool
     def scroll(
         direction: str = "down",
         amount: int = 3,

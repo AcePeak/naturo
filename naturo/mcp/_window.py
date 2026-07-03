@@ -229,60 +229,6 @@ def register_window_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
-    def app_hide(name: str) -> dict:
-        """Hide (minimize) all windows of an application.
-
-        Args:
-            name: Application/process name (partial match).
-
-        Returns:
-            Dict with success flag and count of minimized windows.
-        """
-        backend = _get_backend()
-        windows = backend.list_windows()
-        name_lower = name.lower()
-        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
-        if not matched:
-            from naturo.errors import AppNotFoundError
-            raise AppNotFoundError(name)
-        count = 0
-        for w in matched:
-            try:
-                backend.minimize_window(hwnd=w.handle)
-                count += 1
-            except Exception as exc:
-                logger.debug("Failed to minimize window %s: %s", w.handle, exc)
-        return {"success": True, "action": "hide", "app": name, "windows_minimized": count}
-
-    @server.tool()
-    @_safe_tool
-    def app_unhide(name: str) -> dict:
-        """Unhide (restore) all windows of an application.
-
-        Args:
-            name: Application/process name (partial match).
-
-        Returns:
-            Dict with success flag and count of restored windows.
-        """
-        backend = _get_backend()
-        windows = backend.list_windows()
-        name_lower = name.lower()
-        matched = [w for w in windows if name_lower in w.process_name.lower() or name_lower in w.title.lower()]
-        if not matched:
-            from naturo.errors import AppNotFoundError
-            raise AppNotFoundError(name)
-        count = 0
-        for w in matched:
-            try:
-                backend.restore_window(hwnd=w.handle)
-                count += 1
-            except Exception as exc:
-                logger.debug("Failed to restore window %s: %s", w.handle, exc)
-        return {"success": True, "action": "unhide", "app": name, "windows_restored": count}
-
-    @server.tool()
-    @_safe_tool
     def app_switch(name: str) -> dict:
         """Switch to (focus) the most recent window of an application.
 
