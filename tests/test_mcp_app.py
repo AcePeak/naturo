@@ -155,6 +155,11 @@ class TestLaunchBrowser:
         assert kwargs["url"] == "https://example.com"
         assert kwargs["wait_ready"] is True
         assert kwargs["user_data_dir"] is not None
+        # First-run suppression: a fresh profile must not open the welcome /
+        # sign-in / search-engine-choice screen over the page (it steals the
+        # active tab and CDP then reads an empty interstitial).
+        assert "--no-first-run" in kwargs["extra_args"]
+        assert "--disable-search-engine-choice-screen" in kwargs["extra_args"]
 
     def test_profile_uses_real_session_not_throwaway(self, server, mock_backend):
         win = SimpleNamespace(handle=999, title="Chrome")

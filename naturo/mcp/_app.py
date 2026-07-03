@@ -152,12 +152,25 @@ def register_app_tools(server, _get_backend, _safe_tool, *, launch_app_fn):
                 tempfile.gettempdir(), f"naturo-cdp-{debug_port}"
             )
 
+        # Suppress the first-run experience. A brand-new throwaway profile
+        # otherwise opens Chrome's welcome / "Sign in to Chrome" / search-engine
+        # choice screen as the active tab, which covers the target page — so CDP
+        # attaches to that empty interstitial and see_ui_tree(cascade) recovers
+        # only the browser chrome, not the page. These flags open the URL clean.
+        first_run_flags = [
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-search-engine-choice-screen",
+            "--disable-fre",
+        ]
+
         before = set(_win_map())
         chrome = launch_chrome(
             port=debug_port,
             url=url,
             profile=profile,
             user_data_dir=user_data_dir,
+            extra_args=first_run_flags,
             wait_ready=True,
             timeout=15.0,
         )
