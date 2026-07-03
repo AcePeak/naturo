@@ -23,11 +23,15 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         accessibility_backend: str = "uia",
         cascade: bool = False,
     ) -> dict:
-        """Inspect the UI accessibility tree of a window.
+        """Read a window's UI as a structured element tree — naturo's core "see" tool.
 
-        Returns the hierarchical tree of UI elements (buttons, text fields, etc.)
-        with their roles, names, bounds, and properties. Element IDs (eN) can be
-        used in subsequent ``click``, ``type_text``, and other tool calls.
+        Returns the hierarchy of UI elements (buttons, text fields, etc.) with
+        their roles, names, bounds, and properties; element IDs (eN) feed into
+        ``click``, ``type_text``, and other calls. With ``cascade=true`` it fuses
+        ONE tree across desktop UIA plus web (CDP), Java/Swing (JAB) and Excel
+        cells (COM) — rendered, behind-login, Java, or spreadsheet content that
+        plain accessibility (or a web fetch) cannot reach — each node tagged
+        deterministic vs uncertain.
 
         Args:
             window_title: Target window (partial match). None = foreground window.
