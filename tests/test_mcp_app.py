@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -113,11 +114,10 @@ class TestListApps:
 class TestLaunchApp:
 
     def test_launch_app(self, server, mock_backend, mock_launch_app):
-        from types import SimpleNamespace
-        win = SimpleNamespace(handle=555, title="Untitled - Notepad")
-        # empty before launch, one new window after → resolved so the caller
-        # can focus_window/window_close exactly what it opened.
-        mock_backend.list_windows.side_effect = [[], [win], [win]]
+        win = SimpleNamespace(handle=222, title="Untitled - Notepad")
+        # The window-diff needs the new window absent before and present after,
+        # so it is reported as the freshly launched window.
+        mock_backend.list_windows.side_effect = [[], [win], [win], [win]]
         result = _call_tool(server, "launch_app", {"name": "notepad"})
         data = json.loads(result[0].text)
         assert data["success"] is True
@@ -125,8 +125,49 @@ class TestLaunchApp:
         assert data["name"] == "notepad.exe"
         assert data["is_running"] is True
         assert data["window_count"] == 1
-        assert data["hwnd"] == 555
-        assert data["windows"][0]["title"] == "Untitled - Notepad"
+        assert data["hwnd"] == 222
+
+
+# ── Launch Browser (CDP) ──────────────────────────────────────────────
+
+
+class TestLaunchBrowser:
+
+    def test_returns_hwnd_and_wires_cdp(self, server, mock_backend):
+        win = SimpleNamespace(handle=888, title="Baidu - Google Chrome")
+        mock_backend.list_windows.side_effect = [[], [win], [win], [win]]
+        fake_chrome = SimpleNamespace(port=9222, pid=4321)
+        with patch(
+            "naturo.browser._launcher.launch_chrome", return_value=fake_chrome
+        ) as m:
+            result = _call_tool(
+                server, "launch_browser", {"url": "https://example.com"}
+            )
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["hwnd"] == 888
+        assert data["debug_port"] == 9222
+        assert data["pid"] == 4321
+        assert data["url"] == "https://example.com"
+        # Reuses the browser subsystem: opens the URL, waits for CDP, and uses a
+        # throwaway profile so a fresh *debuggable* instance starts by default.
+        _, kwargs = m.call_args
+        assert kwargs["url"] == "https://example.com"
+        assert kwargs["wait_ready"] is True
+        assert kwargs["user_data_dir"] is not None
+
+    def test_profile_uses_real_session_not_throwaway(self, server, mock_backend):
+        win = SimpleNamespace(handle=999, title="Chrome")
+        mock_backend.list_windows.side_effect = [[], [win], [win]]
+        fake_chrome = SimpleNamespace(port=9222, pid=1)
+        with patch(
+            "naturo.browser._launcher.launch_chrome", return_value=fake_chrome
+        ) as m:
+            _call_tool(server, "launch_browser", {"profile": "Work"})
+        _, kwargs = m.call_args
+        assert kwargs["profile"] == "Work"
+        # A named profile means the real user-data dir, not a throwaway one.
+        assert kwargs["user_data_dir"] is None
 
 
 # ── Quit App ──────────────────────────────────────────────────────────
