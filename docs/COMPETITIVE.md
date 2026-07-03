@@ -32,6 +32,34 @@ only and **fail on Java (Swing/SWT), SAP GUI, and deep Electron**. This is where
 > (needs consolidation out of the stray `naturo/naturo/` nested dir). Maturity varies — Java/Electron/SAP
 > need hardening + a published coverage benchmark to *prove* the lead (#920).
 
+## Benchmark: reproducible coverage matrix (real runs)
+
+**Empirical, not a checkmark table.** Every number below is produced by
+`python -m benchmarks.competitive.run` (harness in `benchmarks/competitive/`), which launches the
+**same** real apps and asks each tool how many UI elements it recognizes. Rivals are the
+reproducibly-installable OSS baselines — **pywinauto** (UIA) and **PyAutoGUI** (pixels). naturo counts
+nodes by the technique that recognized them.
+
+| App | Framework | naturo | pywinauto | PyAutoGUI |
+|---|---|---|---|---|
+| Notepad | UIA (native) | 46 (uia:46) | 45 | 0 |
+| jconsole | Java/Swing (JAB) | **38 (uia:7 + jab:31)** | **6** | 0 |
+
+_Run 2026-07-04 on this Windows host (JDK 21). Reproduce: `python -m benchmarks.competitive.run`._
+
+**Reading it honestly:**
+- **UIA native (Notepad)** — near parity (46 vs 45). naturo claims *no* lead where UIA already works; a
+  UIA-only rival is fine here, and the matrix shows it.
+- **Java/Swing (jconsole)** — naturo recognizes **31 Swing controls via the Java Access Bridge** that
+  pywinauto cannot see at all (it gets 6 chrome nodes — UIA collapses Swing into an opaque frame). This
+  is the moat: the frameworks rivals return ~nothing on.
+- **PyAutoGUI** — no element model (pixels only) → structural recognition is 0 everywhere; the honest floor.
+
+Rivals that don't install/run cleanly in a given environment are recorded `blocked: needs env` by the
+harness (pywinauto here needs a writable comtypes gen-cache — the harness provisions one in `_env.py`;
+without it pywinauto fails to import). More frameworks (Excel/COM, Electron/CDP) extend the same
+harness — see `benchmarks/competitive/README.md`.
+
 ## The landscape
 
 | Tier | Projects | Note |
