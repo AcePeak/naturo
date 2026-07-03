@@ -537,3 +537,23 @@ class TestReadWebText:
         data = json.loads(result[0].text)
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_uses_recorded_port_not_probe(self, server, mock_backend):
+        # launch_browser records hwnd -> port; read_web_text must use that exact
+        # port and NOT blind-probe (which cross-talks when several debuggable
+        # browsers are alive).
+        from naturo.browser import _registry
+        _registry.record(777, 9250)
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = "this-window's-own-text"
+        try:
+            with patch("naturo.cascade.find_cdp_port", return_value=None) as fcp, \
+                 patch("naturo.cdp.CDPClient", return_value=fake_client) as cc:
+                result = _call_tool(server, "read_web_text", {"hwnd": 777})
+            data = json.loads(result[0].text)
+            assert data["success"] is True
+            assert data["text"] == "this-window's-own-text"
+            fcp.assert_not_called()
+            cc.assert_called_once_with(port=9250)
+        finally:
+            _registry.forget(777)
