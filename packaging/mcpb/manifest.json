@@ -151,6 +151,10 @@
       "description": "Expand or collapse a combo box or tree item via ExpandCollapsePattern."
     },
     {
+      "name": "read_web_text",
+      "description": "Read rendered text from a browser page via CDP — the static text that"
+    },
+    {
       "name": "find_element",
       "description": "Find a UI element by selector."
     },

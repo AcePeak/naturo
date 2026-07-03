@@ -490,3 +490,50 @@ class TestExpandCollapseElement:
             "expand": True, "name": "Tree", "window_title": "Explorer",
         })
         mock_backend._resolve_hwnd.assert_called_once_with(window_title="Explorer")
+
+
+# ── read_web_text ────────────────────────────────────────────────────
+
+
+class TestReadWebText:
+
+    def test_reads_rendered_text_via_cdp(self, server, mock_backend):
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = (
+            "Artificial intelligence is transforming the world"
+        )
+        with patch("naturo.cascade.find_cdp_port", return_value=9222), \
+             patch("naturo.cdp.CDPClient", return_value=fake_client):
+            result = _call_tool(server, "read_web_text", {"hwnd": 4332842})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert "Artificial intelligence" in data["text"]
+        assert data["char_count"] == len(fake_client.evaluate.return_value)
+        fake_client.connect.assert_called_once()
+
+    def test_selector_targets_element(self, server, mock_backend):
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = "42"
+        with patch("naturo.cascade.find_cdp_port", return_value=9222), \
+             patch("naturo.cdp.CDPClient", return_value=fake_client):
+            result = _call_tool(
+                server, "read_web_text", {"hwnd": 1, "selector": ".result"}
+            )
+        data = json.loads(result[0].text)
+        assert data["text"] == "42"
+        assert data["selector"] == ".result"
+        expr = fake_client.evaluate.call_args[0][0]
+        assert "querySelector" in expr and ".result" in expr
+
+    def test_no_cdp_endpoint_returns_actionable_error(self, server, mock_backend):
+        with patch("naturo.cascade.find_cdp_port", return_value=None):
+            result = _call_tool(server, "read_web_text", {"hwnd": 1})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "CDP_NOT_AVAILABLE"
+
+    def test_requires_a_target_window(self, server, mock_backend):
+        result = _call_tool(server, "read_web_text", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"

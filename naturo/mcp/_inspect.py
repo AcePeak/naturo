@@ -198,6 +198,98 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
+    def read_web_text(
+        hwnd: Optional[int] = None,
+        window_title: Optional[str] = None,
+        selector: Optional[str] = None,
+        max_chars: int = 20000,
+    ) -> dict:
+        """Read rendered text from a browser page via CDP — the static text that
+        see_ui_tree / find_element miss.
+
+        see_ui_tree(cascade) surfaces *interactive* elements (buttons, inputs,
+        links); the visible text of a result — a translation output, an article
+        body, a price, a status line — usually lives in a plain element the
+        interactive tree skips, which otherwise forces a screenshot. This returns
+        that text straight from the rendered DOM (``innerText``), so it reads
+        JS-rendered or logged-in content a web fetch cannot. Point it at a
+        browser opened with ``launch_browser``. A dynamic result may need a
+        moment to appear — read again if the first call comes back empty.
+
+        Args:
+            hwnd: Browser window handle (from ``launch_browser``/``list_windows``).
+            window_title: Browser window title (partial) if ``hwnd`` is unknown.
+            selector: CSS selector to read one element's text; omit to read the
+                whole page's visible text.
+            max_chars: Truncate the returned text to this many characters.
+
+        Returns:
+            Dict with ``text``, ``selector``, ``char_count``, ``truncated``.
+        """
+        import json as _json
+
+        backend = _get_backend()
+        if hwnd is None and window_title is not None and hasattr(backend, "_resolve_hwnd"):
+            hwnd = backend._resolve_hwnd(window_title=window_title)
+        if hwnd is None:
+            return {"success": False, "error": {
+                "code": "INVALID_INPUT",
+                "message": "Provide hwnd or window_title of the browser window.",
+            }}
+
+        # Resolve the window's PID so the CDP port is found from its command line
+        # (works for the auto-selected non-default port launch_browser may use).
+        pid = None
+        try:
+            import ctypes
+            import ctypes.wintypes
+            _pid = ctypes.wintypes.DWORD()
+            ctypes.windll.user32.GetWindowThreadProcessId(int(hwnd), ctypes.byref(_pid))
+            pid = _pid.value or None
+        except Exception:
+            pid = None
+
+        from naturo.cascade import find_cdp_port
+        port = find_cdp_port(pid)
+        if not port:
+            return {"success": False, "error": {
+                "code": "CDP_NOT_AVAILABLE",
+                "message": "No DevTools endpoint for this window.",
+                "suggested_action": "Open the page with launch_browser (it enables CDP), then read it with the returned hwnd.",
+                "recoverable": True,
+            }}
+
+        if selector:
+            expr = (
+                "(function(){var el=document.querySelector(" + _json.dumps(selector)
+                + ");return el?el.innerText:'';})()"
+            )
+        else:
+            expr = "document.body?document.body.innerText:''"
+
+        from naturo.cdp import CDPClient
+        client = CDPClient(port=port)
+        try:
+            client.connect()
+            text = client.evaluate(expr)
+        finally:
+            try:
+                client.close()
+            except Exception:
+                pass
+
+        text = text if isinstance(text, str) else ("" if text is None else str(text))
+        full_len = len(text)
+        return {
+            "success": True,
+            "text": text[:max_chars],
+            "selector": selector,
+            "char_count": full_len,
+            "truncated": full_len > max_chars,
+        }
+
+    @server.tool()
+    @_safe_tool
     def find_element(
         selector: str,
         window_title: Optional[str] = None,
