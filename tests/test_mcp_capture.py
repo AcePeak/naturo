@@ -69,7 +69,10 @@ class TestCaptureScreen:
         assert data["format"] == "png"
         assert data["scale_factor"] == 1.0
         assert data["dpi"] == 96
-        assert "data_base64" in data
+        assert data["path"] == str(png_file)
+        # base64 is opt-in — off by default so a large image never floods the
+        # caller's context; the image is read from the saved path instead.
+        assert "data_base64" not in data
 
     def test_default_arguments(self, server, mock_backend):
         capture_result = MagicMock()
@@ -117,10 +120,30 @@ class TestCaptureScreen:
         capture_result.dpi = 96
         mock_backend.capture_screen.return_value = capture_result
 
-        result = _call_tool(server, "capture_screen", {})
+        # Even when explicitly requested, a missing file yields no base64.
+        result = _call_tool(server, "capture_screen", {"include_base64": True})
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert "data_base64" not in data
+
+    def test_base64_included_only_when_requested(self, server, mock_backend, tmp_path):
+        png_file = tmp_path / "s.png"
+        png_file.write_bytes(b"\x89PNGdata")
+        capture_result = MagicMock()
+        capture_result.path = str(png_file)
+        capture_result.width = 1920
+        capture_result.height = 1080
+        capture_result.format = "png"
+        capture_result.scale_factor = 1.0
+        capture_result.dpi = 96
+        mock_backend.capture_screen.return_value = capture_result
+
+        result = _call_tool(
+            server, "capture_screen",
+            {"output_path": str(png_file), "include_base64": True},
+        )
+        data = json.loads(result[0].text)
+        assert "data_base64" in data
 
 
 class TestCaptureWindow:
@@ -144,7 +167,7 @@ class TestCaptureWindow:
         assert data["success"] is True
         assert data["width"] == 800
         assert data["height"] == 600
-        assert "data_base64" in data
+        assert "data_base64" not in data  # opt-in only; off by default
         # window_title is resolved to an hwnd before capture (#954).
         mock_backend.capture_window.assert_called_once_with(
             hwnd=999, output_path="capture.png"
