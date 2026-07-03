@@ -16,15 +16,24 @@ def register_capture_tools(server, _get_backend, _safe_tool):
     def capture_screen(
         output_path: str = "capture.png",
         screen_index: int = 0,
+        include_base64: bool = False,
     ) -> dict:
         """Capture a screenshot of the entire screen.
+
+        The image is saved to ``output_path`` — read that file to view it.
 
         Args:
             output_path: Path to save the screenshot (PNG/JPG).
             screen_index: Monitor index (0 = primary).
+            include_base64: Inline the PNG as base64 in the response. Off by
+                default: a full-resolution screenshot is hundreds of KB and
+                floods the caller's context (and is not rendered as an image
+                anyway) — prefer reading the saved ``path``. Set True only if
+                you specifically need the bytes in-band.
 
         Returns:
-            Dict with path, width, height, format, and base64-encoded image data.
+            Dict with path, width, height, format, scale_factor, dpi — plus
+            ``data_base64`` only when ``include_base64`` is True.
         """
         backend = _get_backend()
         result = backend.capture_screen(screen_index=screen_index, output_path=output_path)
@@ -37,8 +46,7 @@ def register_capture_tools(server, _get_backend, _safe_tool):
             "scale_factor": result.scale_factor,
             "dpi": result.dpi,
         }
-        # Include base64 data for AI vision
-        if os.path.exists(result.path):
+        if include_base64 and os.path.exists(result.path):
             with open(result.path, "rb") as f:
                 response["data_base64"] = base64.b64encode(f.read()).decode("ascii")
         return response
@@ -49,17 +57,25 @@ def register_capture_tools(server, _get_backend, _safe_tool):
         window_title: Optional[str] = None,
         output_path: str = "capture.png",
         hwnd: Optional[int] = None,
+        include_base64: bool = False,
     ) -> dict:
         """Capture a screenshot of a specific window.
+
+        The image is saved to ``output_path`` — read that file to view it.
 
         Args:
             window_title: Window title to capture (partial match).
             output_path: Path to save the screenshot.
             hwnd: Direct window handle (from ``launch_app``/``list_windows``) —
                 preferred; targets that exact window and skips title matching.
+            include_base64: Inline the PNG as base64 in the response. Off by
+                default: a full window screenshot is hundreds of KB and floods
+                the caller's context — prefer reading the saved ``path``. Set
+                True only if you specifically need the bytes in-band.
 
         Returns:
-            Dict with path, width, height, format, scale_factor, dpi.
+            Dict with path, width, height, format, scale_factor, dpi — plus
+            ``data_base64`` only when ``include_base64`` is True.
         """
         backend = _get_backend()
         # (#954/#957) Resolve window_title to a concrete hwnd via the shared
@@ -88,7 +104,7 @@ def register_capture_tools(server, _get_backend, _safe_tool):
             "scale_factor": result.scale_factor,
             "dpi": result.dpi,
         }
-        if os.path.exists(result.path):
+        if include_base64 and os.path.exists(result.path):
             with open(result.path, "rb") as f:
                 response["data_base64"] = base64.b64encode(f.read()).decode("ascii")
         return response
