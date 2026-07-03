@@ -1194,3 +1194,38 @@ class TestUWPQuitResolution:
 
         with pytest.raises(InteractionFailedError, match="still running"):
             _verify_quit("计算器", None, target_pid=1000, timeout=0.5)
+
+
+class TestPathLikeNameLaunch:
+    """A full path passed as ``name`` (agents do this — the prompt gives a path)
+    must launch directly, never fall through to a ``start /wait`` that blocks on a
+    GUI app until it closes. That hang froze a real agent run mid-task."""
+
+    def test_path_like_name_launches_directly_not_via_start_wait(self):
+        import naturo.process as P
+        from unittest.mock import patch, MagicMock
+        fake = MagicMock(pid=4321)
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.cli.interaction._is_current_session_interactive", return_value=True), \
+             patch("os.path.isfile", return_value=True), \
+             patch("naturo.process.subprocess.Popen", return_value=fake) as popen, \
+             patch("naturo.process.subprocess.run") as run:
+            info = P.launch_app(name=r"C:\tools\jconsole.exe")
+        assert popen.call_args_list[0][0][0] == [r"C:\tools\jconsole.exe"]
+        assert info.pid == 4321
+        for c in run.call_args_list:
+            argv = c.args[0] if c.args else []
+            assert "/wait" not in argv, f"blocking start/wait used: {argv}"
+
+    def test_bare_name_still_resolves_normally(self):
+        """A friendly name (no separator) must NOT be treated as a path."""
+        import naturo.process as P
+        from unittest.mock import patch, MagicMock
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.cli.interaction._is_current_session_interactive", return_value=True), \
+             patch("os.path.isfile", return_value=False), \
+             patch("naturo.process.subprocess.run",
+                   return_value=MagicMock(returncode=0)) as run, \
+             patch("naturo.process.subprocess.Popen", return_value=MagicMock(pid=7)):
+            P.launch_app(name="notepad")
+        assert any("where" in (c.args[0] if c.args else []) for c in run.call_args_list)
