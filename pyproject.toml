@@ -84,6 +84,14 @@ windows = [
     "pywin32>=306,<400; sys_platform == 'win32'",
     "comtypes>=1.2.0,<2.0; sys_platform == 'win32'",
 ]
+competitive = [
+    # OSS rivals for the D1 competitive coverage benchmark
+    # (benchmarks/competitive/): run naturo head-to-head against the real,
+    # installed rival libraries on the same windows. Windows-only — they walk
+    # the live UIA tree / drive SendInput.
+    "pywinauto>=0.6.8,<0.7; sys_platform == 'win32'",
+    "pyautogui>=0.9.50,<1.0; sys_platform == 'win32'",
+]
 
 [project.scripts]
 naturo = "naturo.cli:run"
