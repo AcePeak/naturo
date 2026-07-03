@@ -147,6 +147,14 @@
       "description": "Write a value to a cell in an Excel workbook."
     },
     {
+      "name": "word_write",
+      "description": "Write text to a Word document programmatically (COM) — no UI needed."
+    },
+    {
+      "name": "word_read",
+      "description": "Read the full text of a Word document programmatically (COM)."
+    },
+    {
       "name": "expand_collapse_element",
       "description": "Expand or collapse a combo box or tree item via ExpandCollapsePattern."
     },
