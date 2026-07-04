@@ -114,7 +114,7 @@ class TestSeeUiTreeCascade:
         result = CascadeResult(tree=root, stats=CascadeStats(), primary_provider="uia")
 
         with patch("naturo.cascade.run_cascade", return_value=result) as mock_cascade:
-            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123})
+            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123, "format": "json"})
 
         mock_cascade.assert_called_once()
         data = json.loads(out[0].text)
@@ -135,7 +135,7 @@ class TestSeeUiTreeCascade:
 
     def test_non_cascade_tree_has_no_fusion_tags(self, server, mock_backend):
         # plain (single-backend) path stays unchanged — no techniques/correctness.
-        out = _call_tool(server, "see_ui_tree", {})
+        out = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(out[0].text)
         assert "techniques" not in data["tree"]
         assert "recognition_summary" not in data
@@ -144,7 +144,7 @@ class TestSeeUiTreeCascade:
 class TestSeeUiTree:
 
     def test_returns_tree_structure(self, server, mock_backend):
-        result = _call_tool(server, "see_ui_tree", {})
+        result = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert "tree" in data
@@ -155,6 +155,34 @@ class TestSeeUiTree:
         assert tree["role"] == "Button"
         assert tree["name"] == "OK"
         assert tree["bounds"] == {"x": 100, "y": 200, "width": 80, "height": 30}
+
+    def test_compact_is_default_and_token_lean(self, server, mock_backend):
+        # Default = compact text: one line per actionable/named node, no bounds/
+        # nulls/raw properties → far fewer tokens, and the LLM reads it directly.
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["format"] == "compact"
+        assert "tree_text" in data and "tree" not in data
+        assert "snapshot_id" in data
+        # the OK button shows up as `eN Button "OK"`, and no bounds/properties leak
+        assert 'Button "OK"' in data["tree_text"]
+        assert "bounds" not in data["tree_text"]
+        assert "properties" not in data["tree_text"]
+        # compact must be much smaller than the JSON tree for the same window
+        js = json.loads(_call_tool(server, "see_ui_tree", {"format": "json"})[0].text)
+        assert len(data["tree_text"]) < len(json.dumps(js["tree"]))
+
+    def test_compact_refs_stay_resolvable_for_click(self, server, mock_backend):
+        # eN refs in compact output must be stored so click/type still resolve.
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        import re
+        refs = re.findall(r"\be\d+\b", data["tree_text"])
+        assert refs, "compact output must expose eN refs"
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
+        assert mgr.resolve_ref_element(refs[0], None) is not None
 
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
@@ -204,7 +232,7 @@ class TestSeeUiTree:
         tree2 = _make_element(id="w2", role="Window", name="Win 2")
         mock_backend._resolve_hwnds.return_value = [100, 200]
         mock_backend.get_element_tree.side_effect = [tree1, tree2]
-        result = _call_tool(server, "see_ui_tree", {"app": "MultiWin"})
+        result = _call_tool(server, "see_ui_tree", {"app": "MultiWin", "format": "json"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         tree = data["tree"]
@@ -261,7 +289,7 @@ class TestSeeUiTree:
         child = _make_element(id="child1", role="Text", name="Hello", children=[])
         parent = _make_element(id="root", role="Window", name="Main", children=[child])
         mock_backend.get_element_tree.return_value = parent
-        result = _call_tool(server, "see_ui_tree", {})
+        result = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(result[0].text)
         tree = data["tree"]
         assert len(tree["children"]) == 1
