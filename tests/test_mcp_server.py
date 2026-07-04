@@ -44,6 +44,16 @@ class TestServerCreation:
     def test_server_name(self, server):
         assert server.name == "naturo"
 
+    def test_instructions_teach_the_token_lean_pattern(self, server):
+        # The instructions are the first thing a fresh agent reads — they must
+        # steer it to the optimal path: compact returns, match= for intent, and
+        # reading text (not screenshots) for UI/content.
+        instr = (server.instructions or "").lower()
+        assert "match=" in instr
+        assert "compact" in instr
+        assert "never screenshot to read" in instr
+        assert "not a web fetcher" in instr
+
     def test_server_version_is_naturo_version(self, server):
         """#873: serverInfo.version must be naturo's version, not the mcp SDK's.
 
@@ -69,9 +79,9 @@ class TestServerCreation:
             "list_windows", "focus_window",
             "window_close", "window_minimize", "window_maximize",
             "window_restore", "window_move", "window_resize", "window_set_bounds",
-            "app_hide", "app_unhide", "app_switch",
+            "app_switch",
             "see_ui_tree", "find_element",
-            "click", "type_text", "press_key", "hotkey",
+            "click", "type_text", "press_key",
             "scroll", "drag", "move_mouse",
             "list_apps", "launch_app", "quit_app",
             "menu_inspect",
@@ -212,17 +222,13 @@ class TestToolFunctionsWithMockedBackend:
             mock_backend.click.assert_called_once()
 
     def test_type_text_valid(self, mock_backend):
-        """type_text passes wpm to the keystroke fallback (profile='human' so
-        wpm is actually honored). Force that path by making paste unavailable."""
-        mock_backend.set_focused_element_value.return_value = False
-        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
+        """type_text with valid wpm."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "type_text", {"text": "hello", "wpm": 60})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.type_text.assert_called_once_with(
-                text="hello", wpm=60, input_mode="normal", profile="human")
+            mock_backend.type_text.assert_called_once_with(text="hello", wpm=60, input_mode="normal")
 
     def test_type_text_invalid_wpm(self, mock_backend):
         """type_text with wpm=0 returns validation error."""
