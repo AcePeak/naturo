@@ -23,6 +23,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         accessibility_backend: str = "uia",
         cascade: bool = False,
         format: str = "compact",
+        match: Optional[str] = None,
     ) -> dict:
         """Read a window's UI as a structured element tree — naturo's core "see" tool.
 
@@ -31,6 +32,12 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         tokens than the JSON tree (no bounds/nulls/raw properties), and directly
         readable by the LLM. Click/type by the same ``eN`` ref. Use format="json"
         only when you need bounds, raw properties, or the nested structure.
+
+        match="<intent text>" returns ONLY the elements whose role or name matches
+        (case-insensitive substring, or all words present) — e.g. match="save"
+        yields just the Save controls with their eN refs. Use it when you already
+        know what you're looking for: fewer tokens, fewer turns (target directly
+        instead of reading + scanning the whole tree). (compact format only.)
 
         Returns the hierarchy of UI elements (buttons, text fields, etc.) with
         their roles, names, bounds, and properties; element IDs (eN) feed into
@@ -197,6 +204,14 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         # node — dropping bounds, null fields and raw properties the LLM doesn't
         # need to choose its next action. ~10x fewer tokens than the JSON tree.
         _compact_lines: list[str] = []
+        _q = (match or "").strip().lower()
+        _q_tokens = _q.split()
+
+        def _match_node(name: str, role: str) -> bool:
+            if not _q:
+                return True
+            hay = f"{name} {role}".lower()
+            return _q in hay or all(t in hay for t in _q_tokens)
 
         def _walk_compact(el, depth: int) -> None:
             display_ref = f"e{_counter[0]}"
@@ -205,8 +220,10 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             role = el.role or ""
             name = (el.name or "").strip()
             value = el.value
-            if name or role.lower() in _ACTIONABLE or value:
-                line = f"{'  ' * min(depth, 8)}{display_ref} {role}"
+            if (name or role.lower() in _ACTIONABLE or value) and _match_node(name, role):
+                # flat list when filtering to an intent; indented tree otherwise
+                indent = "" if _q else "  " * min(depth, 8)
+                line = f"{indent}{display_ref} {role}"
                 if name:
                     line += f' "{name}"'
                 if value:
@@ -229,6 +246,9 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 "snapshot_id": snapshot_id,
                 "format": "compact",
             }
+            if _q:
+                result["match"] = match
+                result["matched"] = len(_compact_lines)
 
         # (M3) Expose the structured recognition summary alongside the fused tree
         # so an agent can branch on correctness without walking every node.

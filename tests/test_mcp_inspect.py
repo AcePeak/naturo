@@ -184,6 +184,26 @@ class TestSeeUiTree:
         mgr = get_snapshot_manager()
         assert mgr.resolve_ref_element(refs[0], None) is not None
 
+    def test_match_filters_to_intent(self, server, mock_backend):
+        # match="<intent>" returns only matching elements, with resolvable refs.
+        result = _call_tool(server, "see_ui_tree", {"match": "OK"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["match"] == "OK"
+        assert data["matched"] >= 1
+        assert 'Button "OK"' in data["tree_text"]
+        import re
+        refs = re.findall(r"\be\d+\b", data["tree_text"])
+        from naturo.snapshot import get_snapshot_manager
+        assert get_snapshot_manager().resolve_ref_element(refs[0], None) is not None
+
+    def test_match_no_hits_is_empty_but_ok(self, server, mock_backend):
+        result = _call_tool(server, "see_ui_tree", {"match": "zzznotpresent"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["matched"] == 0
+        assert data["tree_text"] == ""
+
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
         mock_backend.get_element_tree.assert_called_once_with(
