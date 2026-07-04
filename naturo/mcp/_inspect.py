@@ -128,6 +128,25 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 app=app, window_title=window_title, hwnd=hwnd, pid=pid,
                 depth=depth, backend=accessibility_backend,
             )
+            # Auto-JAB fallback: UIA renders Java/Swing (and some other toolkits)
+            # as an opaque frame, so a default read sees ~nothing and the agent
+            # falls back to a screenshot — losing the whole point of structured
+            # reading (and naturo's Java moat). When the default UIA tree is that
+            # sparse, transparently re-read via the Java Access Bridge and adopt
+            # it if it recovers substantially more content.
+            if accessibility_backend == "uia" and tree is not None:
+                def _n(el) -> int:
+                    return 1 + sum(_n(c) for c in (getattr(el, "children", None) or []))
+                if _n(tree) < 12:
+                    try:
+                        _jab = backend.get_element_tree(
+                            app=app, window_title=window_title, hwnd=hwnd,
+                            pid=pid, depth=depth, backend="jab",
+                        )
+                        if _jab is not None and _n(_jab) > _n(tree):
+                            tree = _jab
+                    except Exception as _exc:
+                        logger.debug("auto-JAB fallback skipped: %s", _exc)
         if tree is None:
             return {"success": False, "error": {"code": "WINDOW_NOT_FOUND", "message": "No matching window found"}}
 
