@@ -204,30 +204,65 @@ class TestSeeUiTree:
         assert data["matched"] == 0
         assert data["tree_text"] == ""
 
+    def test_auto_jab_fallback_when_uia_is_opaque(self, server, mock_backend):
+        # UIA renders Java/Swing as an opaque frame (sparse); see_ui_tree must
+        # transparently re-read via JAB so the agent gets the real controls
+        # instead of screenshotting.
+        uia_frame = _make_element(id="frame", role="Window", name="Java App", children=[])
+        swing = _make_element(id="root", role="Window", name="Java App", children=[
+            _make_element(id="b", role="Button", name="Local Process"),
+            _make_element(id="c", role="RadioButton", name="Remote Process"),
+        ])
+
+        def _by_backend(**kw):
+            return swing if kw.get("backend") == "jab" else uia_frame
+
+        mock_backend.get_element_tree.side_effect = _by_backend
+        result = _call_tool(server, "see_ui_tree", {"hwnd": 1})
+        data = json.loads(result[0].text)
+        # the compact output now carries the JAB-recovered Swing controls
+        assert 'Button "Local Process"' in data["tree_text"]
+        assert 'RadioButton "Remote Process"' in data["tree_text"]
+
+    def test_no_jab_fallback_when_uia_already_rich(self, server, mock_backend):
+        # A normal window with a rich UIA tree must NOT trigger a JAB re-read.
+        rich = _make_element(id="w", role="Window", name="App", children=[
+            _make_element(id=f"n{i}", role="Button", name=f"Btn{i}") for i in range(15)
+        ])
+        calls = []
+
+        def _track(**kw):
+            calls.append(kw.get("backend"))
+            return rich
+
+        mock_backend.get_element_tree.side_effect = _track
+        _call_tool(server, "see_ui_tree", {"hwnd": 1})
+        assert "jab" not in calls  # rich UIA tree → no JAB fallback
+
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title="Notepad", hwnd=None, pid=None,
             depth=7, backend="uia",
         )
 
     def test_custom_depth_and_backend(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"depth": 3, "accessibility_backend": "msaa"})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=None, pid=None,
             depth=3, backend="msaa",
         )
 
     def test_with_hwnd(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"hwnd": 12345})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=12345, pid=None,
             depth=7, backend="uia",
         )
 
     def test_with_pid(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"pid": 9999})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=None, pid=9999,
             depth=7, backend="uia",
         )
@@ -242,7 +277,7 @@ class TestSeeUiTree:
         data = json.loads(result[0].text)
         assert data["success"] is True
         mock_backend._resolve_hwnds.assert_called_once_with(app="MyApp")
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             hwnd=100, depth=7, backend="uia",
         )
 
@@ -275,7 +310,7 @@ class TestSeeUiTree:
         _call_tool(server, "see_ui_tree", {"app": "MyApp", "hwnd": 12345})
         # Should NOT call _resolve_hwnds — hwnd takes priority
         mock_backend._resolve_hwnds.assert_not_called()
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app="MyApp", window_title=None, hwnd=12345, pid=None,
             depth=7, backend="uia",
         )
