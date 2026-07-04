@@ -238,7 +238,16 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
             "cascade=true to fuse desktop + web + Java + Excel into one "
             "correctness-tagged tree), then click / type_text / press_key to "
             "act; launch_browser opens a CDP-wired browser for reading rendered "
-            "or logged-in pages."
+            "or logged-in pages. "
+            "Work token-lean (this is the fast, cheap path): see_ui_tree already "
+            "returns COMPACT text — 'eN <role> \"<name>\"' lines you read directly "
+            "(never screenshot to read UI; capture only when you truly need "
+            "pixels). When you know your target, pass match='<intent>' (e.g. "
+            "match='save') to get back ONLY the matching elements — often one line "
+            "instead of the whole tree, the fewest tokens and turns. Act by the eN "
+            "ref (click eN / type_text). Read document/web text with word_read / "
+            "excel_read / read_web_text, not screenshots. Only pass format='json' "
+            "when you actually need bounds or raw properties."
         ),
     )
     # (#873) Advertise naturo's own version in the MCP ``serverInfo`` handshake.
