@@ -255,6 +255,21 @@ class TestTextOutput:
         assert '"OK"' in result.output
         assert "e1" in result.output
 
+    def test_compact_output_is_lean(self, runner, mock_backend):
+        # --compact: eN [role] "name" per line, refs preserved, no per-node
+        # bounds/selectors — far fewer tokens for agents/scripts.
+        with _patch_platform(), _patch_backend(mock_backend):
+            compact = runner.invoke(see, ["--compact", "--no-snapshot"], catch_exceptions=False)
+            verbose = runner.invoke(see, ["--no-snapshot"], catch_exceptions=False)
+        assert compact.exit_code == 0
+        assert 'e1 [Window] "Test Window"' in compact.output
+        assert '[Button] "OK"' in compact.output
+        assert "e" in compact.output  # refs still present for `naturo click eN`
+        # bounds/position suffix "(x,y WxH)" is dropped in compact
+        import re
+        assert not re.search(r"\(\d+,\d+ \d+x\d+\)", compact.output)
+        assert len(compact.output) < len(verbose.output)
+
     def test_text_preview_for_edit(self, runner, mock_backend):
         """Edit elements should show a value preview line."""
         with _patch_platform(), _patch_backend(mock_backend):
