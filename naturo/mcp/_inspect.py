@@ -22,8 +22,15 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         depth: int = 7,
         accessibility_backend: str = "uia",
         cascade: bool = False,
+        format: str = "compact",
     ) -> dict:
         """Read a window's UI as a structured element tree — naturo's core "see" tool.
+
+        format="compact" (default) returns ``tree_text``: one indented line per
+        actionable/named element as ``eN <role> "<name>" [=value]`` — ~10x fewer
+        tokens than the JSON tree (no bounds/nulls/raw properties), and directly
+        readable by the LLM. Click/type by the same ``eN`` ref. Use format="json"
+        only when you need bounds, raw properties, or the nested structure.
 
         Returns the hierarchy of UI elements (buttons, text fields, etc.) with
         their roles, names, bounds, and properties; element IDs (eN) feed into
@@ -157,6 +164,12 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         # returns None and no fusion fields are added (behavior unchanged).
         from naturo.cascade import annotate as _annotate_correctness
 
+        _ACTIONABLE = {
+            "button", "hyperlink", "link", "edit", "text", "checkbox",
+            "radiobutton", "combobox", "menuitem", "listitem", "tab", "tabitem",
+            "treeitem", "slider", "spinner", "document", "datagrid", "dataitem",
+        }
+
         def _serialize(el) -> dict:
             stable_ref = element_obj_to_ref.get(id(el), el.id)
             display_ref = f"e{_counter[0]}"
@@ -179,7 +192,43 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 d["children"] = [_serialize(c) for c in el.children]
             return d
 
-        result = {"success": True, "tree": _serialize(tree), "snapshot_id": snapshot_id}
+        # Compact rendering: assign the SAME eN refs in the SAME DFS order (so
+        # click/type still resolve), but emit one text line per actionable/named
+        # node — dropping bounds, null fields and raw properties the LLM doesn't
+        # need to choose its next action. ~10x fewer tokens than the JSON tree.
+        _compact_lines: list[str] = []
+
+        def _walk_compact(el, depth: int) -> None:
+            display_ref = f"e{_counter[0]}"
+            _counter[0] += 1
+            display_ref_map[display_ref] = element_obj_to_ref.get(id(el), el.id)
+            role = el.role or ""
+            name = (el.name or "").strip()
+            value = el.value
+            if name or role.lower() in _ACTIONABLE or value:
+                line = f"{'  ' * min(depth, 8)}{display_ref} {role}"
+                if name:
+                    line += f' "{name}"'
+                if value:
+                    line += f" ={value!r}"
+                _fusion = _annotate_correctness(el.properties or {})
+                if _fusion is not None and _fusion.get("correctness") != "deterministic":
+                    line += " ~"  # uncertain (vision/image) — verify before trusting
+                _compact_lines.append(line)
+            for c in (el.children or []):
+                _walk_compact(c, depth + 1)
+
+        if format == "json":
+            result = {"success": True, "tree": _serialize(tree), "snapshot_id": snapshot_id}
+        else:
+            _walk_compact(tree, 0)
+            result = {
+                "success": True,
+                "tree_text": "\n".join(_compact_lines),
+                "element_count": _counter[0] - 1,
+                "snapshot_id": snapshot_id,
+                "format": "compact",
+            }
 
         # (M3) Expose the structured recognition summary alongside the fused tree
         # so an agent can branch on correctness without walking every node.
