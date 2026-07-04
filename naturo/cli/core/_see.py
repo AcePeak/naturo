@@ -43,6 +43,10 @@ import naturo.cli.core._common as _common
 @click.option("--selectors", "show_selectors", is_flag=True,
               help="Show unified selectors alongside eN refs (always included in JSON mode)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.option("--compact", "compact", is_flag=True,
+              help='Compact agent-friendly text: one line per element as '
+                   '\'eN [role] "name" [=value]\' — no bounds/props/selectors '
+                   '(fewest tokens; refs still work with \'naturo click eN\')')
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
@@ -63,7 +67,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
-        json_output: bool, backend: str, app_id: str | None,
+        json_output: bool, compact: bool, backend: str, app_id: str | None,
         ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
@@ -495,6 +499,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             # BUG-071: include short element IDs (e1, e2, ...) that can be
             # passed to ``naturo click e3`` for quick interaction.
             _ref_counter = [0]
+            _CLI_ACTIONABLE = {
+                "button", "hyperlink", "link", "edit", "text", "checkbox",
+                "radiobutton", "combobox", "menuitem", "listitem", "tab",
+                "tabitem", "treeitem", "slider", "spinner", "document",
+            }
 
             def print_tree(el, indent=0, ancestors_dicts=None) -> None:
                 """Print element tree with short element refs."""
@@ -524,6 +533,20 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     return
 
                 prefix = "  " * indent
+
+                # (goal) --compact: agent-friendly minimal line — eN [role] "name"
+                # [=value], no bounds/props/selectors. Refs still assigned for all
+                # nodes so `naturo click eN` resolves; only meaningful nodes print.
+                if compact:
+                    _name = f' "{el.name}"' if el.name else ""
+                    _val = getattr(el, "value", None)
+                    _val_str = f" ={_val!r}" if _val else ""
+                    if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
+                        click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}")
+                    for child in el.children:
+                        print_tree(child, indent + 1, child_ancestors)
+                    return
+
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
