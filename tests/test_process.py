@@ -1229,3 +1229,50 @@ class TestPathLikeNameLaunch:
              patch("naturo.process.subprocess.Popen", return_value=MagicMock(pid=7)):
             P.launch_app(name="notepad")
         assert any("where" in (c.args[0] if c.args else []) for c in run.call_args_list)
+
+
+class TestOfficeLaunchResolution:
+    """Office apps aren't on PATH; launch resolves friendly names to exe
+    basenames, then to a full path via the App Paths registry."""
+
+    def test_office_aliases_resolve_to_exe(self):
+        from unittest.mock import patch
+        from naturo.process import _resolve_launch_name
+        # _resolve_launch_name short-circuits to the raw name off-Windows, so the
+        # alias table only applies on Windows — mock it for the assertion.
+        with patch("naturo.process.platform.system", return_value="Windows"):
+            assert _resolve_launch_name("word") == "winword"
+            assert _resolve_launch_name("ppt") == "powerpnt"
+            assert _resolve_launch_name("powerpoint") == "powerpnt"
+            assert _resolve_launch_name("microsoft word") == "winword"
+            assert _resolve_launch_name("演示文稿") == "powerpnt"
+
+    def test_app_paths_resolver_returns_full_path(self):
+        import sys
+        import types
+        from unittest.mock import patch, MagicMock
+        import naturo.process as P
+        fake = types.SimpleNamespace(
+            HKEY_CURRENT_USER=1, HKEY_LOCAL_MACHINE=2,
+            OpenKey=MagicMock(),
+            QueryValueEx=MagicMock(return_value=(r"C:\O\WINWORD.EXE", 1)),
+        )
+        fake.OpenKey.return_value.__enter__ = MagicMock()
+        fake.OpenKey.return_value.__exit__ = MagicMock(return_value=False)
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch.dict(sys.modules, {"winreg": fake}), \
+             patch("os.path.isfile", return_value=True):
+            assert P._resolve_via_app_paths("winword") == r"C:\O\WINWORD.EXE"
+
+    def test_app_paths_resolver_none_when_absent(self):
+        import sys
+        import types
+        from unittest.mock import patch, MagicMock
+        import naturo.process as P
+        fake = types.SimpleNamespace(
+            HKEY_CURRENT_USER=1, HKEY_LOCAL_MACHINE=2,
+            OpenKey=MagicMock(side_effect=OSError), QueryValueEx=MagicMock(),
+        )
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch.dict(sys.modules, {"winreg": fake}):
+            assert P._resolve_via_app_paths("nonesuch") is None

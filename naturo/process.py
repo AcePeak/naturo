@@ -264,7 +264,46 @@ _LAUNCH_ALIASES: dict[str, list[str]] = {
     "命令提示符": ["cmd"],
     "terminal": ["windowsterminal"],
     "终端": ["windowsterminal"],
+    # Office — friendly names → exe basenames. Not on PATH, so launch resolves
+    # them to a full path via the App Paths registry (see _resolve_via_app_paths).
+    "word": ["winword"],
+    "microsoft word": ["winword"],
+    "文字": ["winword"],
+    "excel": ["excel"],
+    "microsoft excel": ["excel"],
+    "powerpoint": ["powerpnt"],
+    "ppt": ["powerpnt"],
+    "microsoft powerpoint": ["powerpnt"],
+    "演示文稿": ["powerpnt"],
 }
+
+
+def _resolve_via_app_paths(name: str) -> "str | None":
+    """Resolve an executable name to a full path via the Windows App Paths
+    registry (``HKLM/HKCU\\...\\App Paths\\<exe>``).
+
+    Covers apps that are registered but not on ``PATH`` — notably Office
+    (winword / excel / powerpnt), which cannot be launched by bare name via
+    ``where`` / ``start`` here. Returns the full path if found and the file
+    exists, else ``None``.
+    """
+    if platform.system() != "Windows":
+        return None
+    exe = name if name.lower().endswith(".exe") else name + ".exe"
+    try:
+        import winreg
+    except Exception:
+        return None
+    subkey = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\\" + exe
+    for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(hive, subkey) as key:
+                path, _ = winreg.QueryValueEx(key, None)
+            if path and os.path.isfile(path):
+                return path
+        except OSError:
+            continue
+    return None
 
 
 def _resolve_launch_name(name: str) -> str:
@@ -395,34 +434,44 @@ def launch_app(
                 except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError):
                     where_result = type("R", (), {"returncode": 1})()
                 if where_result.returncode != 0:
-                    # Also check if it's a known app via start — run synchronously to check
-                    try:
-                        result = subprocess.run(
-                            ["cmd", "/c", "start", "/wait", "", resolved_name] + cmd_args,
-                            capture_output=True, text=True, timeout=10,
-                        )
-                    except subprocess.TimeoutExpired:
-                        # Windows shows an error dialog for unknown apps; timeout is expected
-                        raise AppNotFoundError(
-                            launch_target,
-                            suggested_action="Application not found or failed to launch",
-                        )
-                    if result.returncode != 0:
-                        raise AppNotFoundError(launch_target)
-                    # start /wait succeeded but we need to find the PID now
-                    found = find_process(name=resolved_name)
-                    if not found and resolved_name != (name or ""):
-                        found = find_process(name=name)
-                    if found:
-                        return found
-                    # Launched but already exited — report success with a dummy PID
-                    return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
-                proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
-                # cmd.exe exits quickly after launching the target app.
-                # Mark for real PID resolution below — proc.pid is cmd.exe,
-                # not the actual application (#785).
-                _resolve_real_pid = resolved_name
-                _resolve_real_alias = name
+                    # Not on PATH — try the App Paths registry, which maps an exe
+                    # name to its full path. This covers Office (winword / excel /
+                    # powerpnt), which cannot be launched by bare name via
+                    # where/start in this environment, so agents otherwise had to
+                    # hunt for the full path themselves.
+                    app_path = _resolve_via_app_paths(resolved_name)
+                    if app_path is not None:
+                        proc = subprocess.Popen([app_path] + cmd_args)
+                    else:
+                        # Also check if it's a known app via start — run synchronously to check
+                        try:
+                            result = subprocess.run(
+                                ["cmd", "/c", "start", "/wait", "", resolved_name] + cmd_args,
+                                capture_output=True, text=True, timeout=10,
+                            )
+                        except subprocess.TimeoutExpired:
+                            # Windows shows an error dialog for unknown apps; timeout is expected
+                            raise AppNotFoundError(
+                                launch_target,
+                                suggested_action="Application not found or failed to launch",
+                            )
+                        if result.returncode != 0:
+                            raise AppNotFoundError(launch_target)
+                        # start /wait succeeded but we need to find the PID now
+                        found = find_process(name=resolved_name)
+                        if not found and resolved_name != (name or ""):
+                            found = find_process(name=name)
+                        if found:
+                            return found
+                        # Launched but already exited — report success with a dummy PID
+                        return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
+                else:
+                    proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
+                    # cmd.exe exits quickly after launching the target app.
+                    # Mark for real PID resolution below — proc.pid is cmd.exe,
+                    # not the actual application (#785).
+                    _resolve_real_pid = resolved_name
+                    _resolve_real_alias = name
         elif system == "Darwin":
             if path:
                 proc = subprocess.Popen([path] + cmd_args)
