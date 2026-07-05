@@ -48,3 +48,15 @@ Ace-gated.
 `python -m benchmarks.competitive.run_competitive --markdown` on the fixtures,
 paste the real matrix into `docs/COMPETITIVE.md`, and have QA independently
 reproduce it.
+
+---
+
+## Orc note — 2026-07-05 (next-round slice is now decision-ready)
+
+The next non-Ace-gated D1 slice — the **meaningful-interactive-element metric** — is now fully
+spec'd in `docs/design/MEANINGFUL_INTERACTIVE_ELEMENT_METRIC.md`. It resolves the `docs/COMPETITIVE.md`
+self-contradiction (raw `len(window.descendants())` inflates Chrome/Excel for a UIA-only rival) by
+applying a **symmetric** interactive role/pattern filter across all adapters, retaining the raw count,
+and leaving the Java/SAP/deep-CEF `✗` moat cells untouched. Design is settled → a `/goal` round can go
+straight to TDD build → independent-verify → land, no re-deliberation. This may recover the
+Electron/Excel cells on the merits and shrink the D1 #5 Ace gate. **This is the recommended next round.**
