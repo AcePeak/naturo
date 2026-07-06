@@ -1,7 +1,18 @@
 # Design Spec — "Meaningful Interactive Element" benchmark metric
 
-**Status:** proposed (decision-ready) · **Owner:** next `/goal` round · **Milestone:** D1 (competitive matrix)
-**Author:** Orc-Mycelium · **Date:** 2026-07-05
+**Status:** logic+test LANDED (2026-07-07) — real-desktop data regen (crit #4/#5) PENDING a Windows run
+**Owner:** Orc-Mycelium · **Milestone:** D1 (competitive matrix) · **Date:** 2026-07-05
+
+> **Progress (2026-07-07, Orc):** Acceptance criteria **#1–#3 are implemented, verified and merged**
+> (`matrix.py` symmetric `is_interactive_role`/`count_interactive` filter + `interactive_counts` on
+> `CompetitiveResult` + both adapters wired + dual-metric matrix rendering + pinning tests, all
+> ruff/pytest green and independently verified for anti-cherry-pick symmetry — the filter is one shared
+> function both adapters pass their role list through). The machinery is Linux-collectable and ready.
+> **Still pending (needs the NATUROBOT Windows desktop, cannot be produced off-Windows honestly):**
+> crit **#4** — run `run_competitive --markdown` to regenerate `docs/COMPETITIVE.md`'s measured table with
+> the Interactive column and resolve/annotate the ⚠️ reconcile note from the *measured* interactive
+> numbers; crit **#5** — fresh-context desktop QA re-runs the harness to confirm the numbers are generated,
+> not hand-authored. `docs/COMPETITIVE.md` is intentionally **untouched** until that real run exists.
 
 This is a **decision-ready** slice: the design below is settled so a `/goal` round can go
 straight to TDD build → independent verify → land, with no re-deliberation. It is **non-Ace-gated**
