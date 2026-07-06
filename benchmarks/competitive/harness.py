@@ -34,7 +34,11 @@ import importlib.util
 import logging
 from typing import Dict, List, Optional
 
-from benchmarks.competitive.matrix import NATURO, CompetitiveResult
+from benchmarks.competitive.matrix import (
+    NATURO,
+    CompetitiveResult,
+    count_interactive,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,10 +114,29 @@ class Adapter:
         window_title: Optional[str] = None,
         depth: int = 15,
     ) -> Optional[int]:
-        """Count interactive elements this tool recognizes on one window.
+        """Count the elements this tool recognizes on one window (raw total).
 
         Returns an ``int`` (possibly 0 — ran but saw nothing), or ``None`` when
         the tool could not run at all (→ ``blocked: needs env`` in the matrix).
+        """
+        raise NotImplementedError
+
+    def count_interactive_elements(
+        self,
+        *,
+        hwnd: Optional[int] = None,
+        pid: Optional[int] = None,
+        window_title: Optional[str] = None,
+        depth: int = 15,
+    ) -> Optional[int]:
+        """Count only the **meaningful interactive** elements (the honest metric).
+
+        A raw ``descendants()`` walk inflates on Chromium/Excel with static text,
+        panes and separators the agent cannot act on. This counts only nodes
+        whose role is in :data:`benchmarks.competitive.matrix.INTERACTIVE_ROLES`,
+        via the one shared filter — applied symmetrically to every adapter so the
+        published matrix cannot cherry-pick (D1 crit #3). Returns ``None`` when
+        the tool could not run at all, mirroring :meth:`count_elements`.
         """
         raise NotImplementedError
 
@@ -154,6 +177,53 @@ class NaturoAdapter(Adapter):
             logger.warning("naturo cascade failed: %s", exc)
             return None
         return result.stats.total_elements
+
+    def count_interactive_elements(
+        self,
+        *,
+        hwnd: Optional[int] = None,
+        pid: Optional[int] = None,
+        window_title: Optional[str] = None,
+        depth: int = 15,
+    ) -> Optional[int]:
+        try:
+            from naturo.backends.base import get_backend
+            from naturo.cascade import run_cascade
+        except Exception as exc:  # pragma: no cover - import guard
+            logger.warning("naturo unavailable: %s", exc)
+            return None
+        try:
+            result = run_cascade(
+                get_backend(),
+                hwnd=hwnd,
+                pid=pid,
+                window_title=window_title,
+                depth=depth,
+                backend_name="auto",
+            )
+        except Exception as exc:
+            logger.warning("naturo cascade failed: %s", exc)
+            return None
+        # Walk the fused tree and count nodes whose recognized role is interactive.
+        return count_interactive(_walk_roles(result.tree))
+
+
+def _walk_roles(node: object) -> "list[Optional[str]]":
+    """Flatten an ``ElementInfo`` tree to the list of every node's ``role``.
+
+    Root-inclusive, depth-first. Tolerant of ``None`` (empty tree) and of nodes
+    without a ``children`` list, so a partial cascade result never raises here.
+    """
+    roles: "list[Optional[str]]" = []
+    if node is None:
+        return roles
+    stack = [node]
+    while stack:
+        cur = stack.pop()
+        roles.append(getattr(cur, "role", None))
+        children = getattr(cur, "children", None) or []
+        stack.extend(children)
+    return roles
 
 
 class PywinautoAdapter(Adapter):
@@ -202,6 +272,45 @@ class PywinautoAdapter(Adapter):
             logger.warning("pywinauto walk failed: %s", exc)
             return None
 
+    def count_interactive_elements(
+        self,
+        *,
+        hwnd: Optional[int] = None,
+        pid: Optional[int] = None,
+        window_title: Optional[str] = None,
+        depth: int = 15,
+    ) -> Optional[int]:
+        _prepare_comtypes_gen()
+        try:
+            from pywinauto import Desktop
+        except Exception as exc:  # pragma: no cover - Windows-only import
+            logger.warning("pywinauto unavailable: %s", exc)
+            return None
+        try:
+            desktop = Desktop(backend="uia")
+            if hwnd is not None:
+                window = desktop.window(handle=hwnd)
+            elif window_title is not None:
+                window = desktop.window(title_re=f".*{window_title}.*")
+            elif pid is not None:
+                window = desktop.window(process=pid)
+            else:
+                raise ValueError("Provide hwnd, pid or window_title.")
+            # The crux fix: keep only descendants whose UIA control type is
+            # actionable, via the SAME allowlist naturo is scored against. A bare
+            # len(descendants()) counts static text / panes / separators that
+            # inflate Chromium & Excel without being agent-targetable.
+            roles = []
+            for w in window.descendants():
+                try:
+                    roles.append(w.element_info.control_type)
+                except Exception:
+                    roles.append(None)  # unreadable node → not interactive
+            return count_interactive(roles)
+        except Exception as exc:
+            logger.warning("pywinauto interactive walk failed: %s", exc)
+            return None
+
 
 class PyAutoGUIAdapter(Adapter):
     """``pyautogui`` — pixel/coordinate automation with **no element model**.
@@ -227,6 +336,17 @@ class PyAutoGUIAdapter(Adapter):
         depth: int = 15,
     ) -> Optional[int]:
         # No accessibility/element tree exists in PyAutoGUI's model.
+        return 0
+
+    def count_interactive_elements(
+        self,
+        *,
+        hwnd: Optional[int] = None,
+        pid: Optional[int] = None,
+        window_title: Optional[str] = None,
+        depth: int = 15,
+    ) -> Optional[int]:
+        # No element model at all → zero interactive elements, honestly.
         return 0
 
 
@@ -263,11 +383,22 @@ def measure_competitive(
     """
     adapters = adapters if adapters is not None else default_adapters()
     counts: Dict[str, Optional[int]] = {}
+    interactive_counts: Dict[str, Optional[int]] = {}
     for adapter in adapters:
         if not adapter.available:
             counts[adapter.name] = None
+            interactive_counts[adapter.name] = None
             continue
         counts[adapter.name] = adapter.count_elements(
             hwnd=hwnd, pid=pid, window_title=window_title, depth=depth
         )
-    return CompetitiveResult(app=app, framework=framework, counts=counts, notes=notes)
+        interactive_counts[adapter.name] = adapter.count_interactive_elements(
+            hwnd=hwnd, pid=pid, window_title=window_title, depth=depth
+        )
+    return CompetitiveResult(
+        app=app,
+        framework=framework,
+        counts=counts,
+        interactive_counts=interactive_counts,
+        notes=notes,
+    )
