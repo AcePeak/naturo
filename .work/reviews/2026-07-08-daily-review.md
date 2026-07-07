@@ -1,7 +1,7 @@
 # Daily Review — 2026-07-08
 
 ## Summary
-- **Caught + fixed a false "landed" claim:** PR #1272 (D3 tool-spec export) was reported "verified + landed" on 07-07 but **never merged** — CI Gate was RED (`ModuleNotFoundError: No module named 'mcp'` on the `.[dev]`-only Ubuntu/macOS matrix). Root-caused, fixed, pushed (`bed1f09`); auto-merge still armed.
+- **Caught + fixed a false "landed" claim, then actually landed it:** PR #1272 (D3 tool-spec export) was reported "verified + landed" on 07-07 but **never merged** — CI Gate was RED (`ModuleNotFoundError: No module named 'mcp'` on the `.[dev]`-only Ubuntu/macOS matrix). Root-caused, fixed, pushed (`bed1f09`) → **full matrix went green and auto-merge FIRED: #1272 genuinely MERGED to develop as `1e4cc9d`** (branch auto-deleted). The D3 slice-1 claim is now true.
 - **Blocked:** D1 unchanged — still the same two human/infra gates (NATUROBOT Windows run for `docs/COMPETITIVE.md` crit#2/#3; Ace-gated README crit#5). No engineering reachable on macOS without fabricating.
 - **Next:** confirm #1272 CI goes green and it actually merges; then the next non-gated D3 increment (end-to-end mocked-agent example, or `naturo mcp tools --format …` CLI).
 
@@ -9,7 +9,7 @@
 | Milestone | Open | Closed | Health |
 |-----------|------|--------|--------|
 | D1 (prove #1, competitive matrix) | current | — | **blocked** (2 human/infra gates, both outside Orc/macOS reach) |
-| D3 (agent-framework fit, non-gated lane) | #1272 in CI | — | **at-risk→recovering** (slice-1 was falsely reported merged; now genuinely fixed, awaiting green CI) |
+| D3 (agent-framework fit, non-gated lane) | 0 | #1272 | **on-track** (slice-1 was falsely reported merged 07-07; fixed + genuinely merged `1e4cc9d` this cycle, matrix green) |
 
 ## Actions Taken
 - Investigated #1272 auto-merge stall → found CI Gate FAILURE on all Ubuntu/macOS Python matrix jobs (Windows job green).
@@ -19,8 +19,8 @@
 - Corrected STATE.md: replaced the false "landed" entry with an honest CORRECTION + fix record.
 
 ## Top 3 Priorities (next 24h)
-1. Confirm #1272 CI is green and auto-merge fires (the D3 export claim only becomes true on merge).
-2. If merged, pick the next non-gated D3 increment (mocked-agent end-to-end example, or `naturo mcp tools --format openai|anthropic` CLI so specs ship without importing the package).
+1. **#1272 merged this cycle** — pick the next non-gated D3 increment: a mocked-agent end-to-end example proving an agent completes a task via the exported specs (Linux-green), or a `naturo mcp tools --format openai|anthropic` CLI so specs ship without importing the package.
+2. Apply the verification-hole lesson (below) to the next D3 slice: don't call CI-gated work "verified/landed" until the real CI matrix is green and `mergedAt` is non-null.
 3. D1 remains blocked on the NATUROBOT run + Ace crit#5 — no re-escalation; monitor for the loop resuming.
 
 ## Risks
