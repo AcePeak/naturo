@@ -1,14 +1,28 @@
 """Tests for naturo.agent_tools — framework-ready tool-spec export.
 
 These pin the *contract* of the exported specs (shape + fidelity to the MCP
-registry) so any framework can consume them. They run with no Windows desktop —
-tool schemas are declared statically — so they are Linux/CI-collectable.
+registry) so any framework can consume them. They need no Windows desktop —
+tool schemas are declared statically — but deriving the specs walks the live
+MCP registry, so the optional ``mcp`` package must be importable. Like every
+other MCP-touching test in the suite, they ``skipif`` it is absent (the default
+``[dev]`` CI env on Ubuntu/macOS omits the ``mcp`` extra; the Windows CI job
+installs ``[dev,mcp,...]`` and runs them fully).
 """
 from __future__ import annotations
 
 import json
 
-from naturo.agent_tools import (
+import pytest
+
+mcp_available = True
+try:
+    from naturo.mcp_server import create_server  # noqa: F401
+except ImportError:
+    mcp_available = False
+
+pytestmark = pytest.mark.skipif(not mcp_available, reason="mcp package not installed")
+
+from naturo.agent_tools import (  # noqa: E402
     naturo_tool_specs,
     to_anthropic_tools,
     to_openai_tools,
