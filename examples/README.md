@@ -11,6 +11,7 @@ Working example scripts demonstrating naturo automation patterns.
 | `ui_inspector.py` | Interactive UI element tree explorer | Intermediate |
 | `form_filler.py` | Auto-fill form controls (Calculator demo) | Intermediate |
 | `agent_demo.py` | AI agent integration patterns (CLI, MCP, vision) | Advanced |
+| `agent_frameworks.py` | Plug naturo's tools into OpenAI / Anthropic / LangChain | Advanced |
 
 ## Prerequisites
 
@@ -37,6 +38,12 @@ python form_filler.py
 python agent_demo.py cli      # CLI subprocess loop
 python agent_demo.py mcp      # MCP server setup
 python agent_demo.py vision   # AI vision configuration
+
+# Plug naturo's full tool surface into an agent framework
+python agent_frameworks.py list        # print the exported tools (no framework needed)
+python agent_frameworks.py openai      # OpenAI function-calling wiring
+python agent_frameworks.py anthropic   # Anthropic tool-use wiring
+python agent_frameworks.py langchain   # LangChain StructuredTool wiring
 ```
 
 ## Common Patterns
