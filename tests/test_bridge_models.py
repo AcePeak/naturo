@@ -31,20 +31,37 @@ class TestDecodeNative:
         assert _decode_native(text.encode("utf-8")) == text
 
     def test_fallback_to_system_encoding(self):
-        """When UTF-8 fails, should fall back to locale preferred encoding."""
+        """When UTF-8 fails, should fall back to the locale preferred encoding.
+
+        ``sys.platform`` is pinned off-``win32`` because that is the only branch
+        of :func:`_system_ansi_encoding` that consults ``locale``; on Windows the
+        OS codepage comes from ``GetACP`` and the locale mock is ignored by
+        design (#1150).  Without the pin this asserted GBK output on a host whose
+        real ANSI codepage is cp1252, so it failed on every non-GBK Windows
+        runner.  Windows behaviour is covered by
+        ``test_ansi_fallback_ignores_utf8_mode_locale_on_windows``.
+        """
         # GBK-encoded Chinese text that is NOT valid UTF-8
         gbk_bytes = "测试".encode("gbk")
-        with patch("locale.getpreferredencoding", return_value="gbk"):
+        with patch("naturo.bridge._models.sys.platform", "linux"), patch(
+            "locale.getpreferredencoding", return_value="gbk"
+        ):
             result = _decode_native(gbk_bytes)
             assert result == "测试"
 
     def test_fallback_default_cp936(self):
-        """When locale returns empty string, should default to cp936."""
+        """When locale returns empty string, should default to cp936.
+
+        Pinned off-``win32`` for the same reason as
+        ``test_fallback_to_system_encoding``.
+        """
         gbk_bytes = "你好".encode("gbk")
-        with patch("locale.getpreferredencoding", return_value=""):
+        with patch("naturo.bridge._models.sys.platform", "linux"), patch(
+            "locale.getpreferredencoding", return_value=""
+        ):
             result = _decode_native(gbk_bytes)
             # cp936 is compatible with gbk
-            assert "你好" in result or len(result) > 0
+            assert result == "你好"
 
     def test_empty_bytes(self):
         assert _decode_native(b"") == ""
