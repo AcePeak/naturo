@@ -10,6 +10,47 @@ import click
 import naturo.cli.core._common as _common
 
 
+def _window_state(w) -> str:
+    """Reliable OS-level usability label: "min" (minimized), "hidden" (not
+    visible), or "live". Kept to hard OS facts on purpose — per-handle content
+    probing is unreliable for UWP (the app UI lives in a CoreWindow child and
+    which frame handle "sees" it varies run to run), so this does NOT guess
+    content; the duplicate-handle collapse below is what removes the noise."""
+    if getattr(w, "is_minimized", False):
+        return "min"
+    if not getattr(w, "is_visible", True):
+        return "hidden"
+    return "live"
+
+
+def _dedup_windows(win_list):
+    """Collapse duplicate handles of the SAME window to one usable representative.
+
+    A single window often has SEVERAL top-level HWNDs sharing one (pid, title) —
+    UWP frames, off-screen helper strips, ghost handles — so a raw list gives the
+    caller a pile of interchangeable/unusable handles for one window. Group by
+    (pid, title) and keep the most-usable handle in each group (prefer visible,
+    non-minimized, largest). Genuinely different windows (different titles, or
+    different processes) are never merged.
+    """
+    def _rank(w):
+        return (
+            1 if not getattr(w, "is_minimized", False) else 0,
+            1 if getattr(w, "is_visible", True) else 0,
+            (getattr(w, "width", 0) or 0) * (getattr(w, "height", 0) or 0),
+        )
+    groups: dict = {}
+    order: list = []
+    for w in win_list:
+        key = (w.pid, w.title)
+        if key not in groups:
+            groups[key] = w
+            order.append(key)
+        elif _rank(w) > _rank(groups[key]):
+            groups[key] = w
+    return [groups[k] for k in order]
+
+
 @click.group("list", cls=_common.FuzzyGroup)
 def list_cmd() -> None:
     """List apps, windows, and screens."""
@@ -36,7 +77,11 @@ def apps(ctx, show_all, json_output) -> None:
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
+@click.option("--all", "-a", "show_all", is_flag=True,
+              help="Show every raw HWND. By default, duplicate handles of the "
+                   "same window (UWP frames/helper strips sharing one pid+title) "
+                   "are collapsed to one usable handle per window.")
+def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None:
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
@@ -116,6 +161,14 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
+        # Collapse duplicate handles of the same window (see _dedup_windows) so
+        # the list shows one usable handle per real window instead of a pile of
+        # UWP frame/helper dupes. --all keeps every handle. An explicit --hwnd/
+        # --app-id filter is never collapsed: return exactly the handle asked for.
+        if not show_all and hwnd is None and app_id_handle is None:
+            win_list = _dedup_windows(win_list)
+        _states = {w.handle: _window_state(w) for w in win_list}
+
         # Warn only when an empty result genuinely indicates no interactive
         # desktop session — i.e. the *raw* enumeration found nothing and the
         # canonical WTS check confirms this process has no desktop (#1010).
@@ -163,13 +216,15 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
                 click.echo("No windows found.")
                 return
             # Table-like output
-            click.echo(f"{'HWND':<16} {'PID':<8} {'SIZE':<14} {'TITLE'}")
-            click.echo("-" * 70)
+            click.echo(f"{'HWND':<16} {'PID':<8} {'SIZE':<14} {'STATE':<8} {'TITLE'}")
+            click.echo("-" * 78)
             for w in win_list:
                 size = f"{w.width}x{w.height}"
+                state = _states.get(w.handle, "") or "live"
                 title = w.title[:40] if len(w.title) > 40 else w.title
-                click.echo(f"{w.handle:<16} {w.pid:<8} {size:<14} {title}")
-            click.echo(f"\n{len(win_list)} windows found.")
+                click.echo(f"{w.handle:<16} {w.pid:<8} {size:<14} {state:<8} {title}")
+            _hidden = "" if show_all else "  (duplicate handles collapsed; --all to show every handle)"
+            click.echo(f"\n{len(win_list)} windows found.{_hidden}")
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
