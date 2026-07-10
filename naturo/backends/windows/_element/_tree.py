@@ -553,4 +553,12 @@ class ElementTreeMixin:
                     "source": "snapshot",
                 }
 
+        # Normalize document line endings: a text control's TextPattern can return
+        # lone carriage returns (Win11 Notepad uses \r as its line break), which
+        # render as a mangled single line in a terminal. Convert \r\n and \r to \n
+        # so multi-line content reads/splits as standard text.
+        if isinstance(result, dict) and isinstance(result.get("value"), str) \
+                and "\r" in result["value"]:
+            result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
+
         return result
