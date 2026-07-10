@@ -472,11 +472,12 @@ def find_cdp_port(pid: Optional[int] = None) -> Optional[int]:
                 return port
         return None
 
-    # Phase 3: no target pid → blind-probe common ports (no specific app to
-    # mis-attribute to).
-    for port in [9222, 9229, 9333]:
-        if _cdp_endpoint_responds(port):
-            return port
+    # No target pid → we CANNOT attribute any CDP endpoint to this window, so
+    # refuse. Blind-probing common ports (9222/9229/9333) would graft whatever
+    # unrelated browser happens to be listening (a stray Chrome, Clash Verge,
+    # another Electron app) into this window's tree — the same cross-app
+    # contamination the pid path above guards against. A caller that genuinely
+    # wants a specific endpoint passes its port explicitly.
     return None
 
 

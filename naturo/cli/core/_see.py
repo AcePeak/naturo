@@ -8,9 +8,6 @@ from typing import Any
 import click
 
 import naturo.cli.core._common as _common
-# Shared UWP multi-window resolution (drops empty ghost frames, keeps the live
-# CoreWindow) — used by both this CLI and the MCP see_ui_tree tool.
-from naturo.cascade._appwindows import content_score as _content_score
 
 
 @click.command()
@@ -253,8 +250,12 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     subtree = be.get_element_tree(
                         hwnd=h, depth=depth, backend=backend,
                     )
-                    # Drop content-less zombie windows (see _content_score).
-                    if subtree and _content_score(subtree) > 0:
+                    # Keep every window with a real tree; ghost-frame dropping
+                    # is the job of the cascade path (app_content_tree via
+                    # content_score), not this explicit --backend override, and
+                    # content_score can't tell a legit childless window from a
+                    # ghost anyway (both score 0).
+                    if subtree:
                         window_trees.append((h, subtree))
 
                 if not window_trees:

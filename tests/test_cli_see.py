@@ -234,10 +234,15 @@ class TestAppIdResolution:
                 "--app-id", "a1", "--no-snapshot",
             ], catch_exceptions=False)
         assert result.exit_code == 0
-        # Backend should be called with the resolved hwnd and pid
-        mock_backend.get_element_tree.assert_called_once()
-        call_kwargs = mock_backend.get_element_tree.call_args
-        assert call_kwargs.kwargs.get("hwnd") == 12345 or call_kwargs[1].get("hwnd") == 12345
+        # The app-id must resolve to hwnd 12345 and every backend read must
+        # target it. Cascade (the default auto backend) competes providers —
+        # it reads UIA first, then also probes MSAA to see whether MSAA dwarfs
+        # a thin UIA tree (the "MSAA dwarfs UIA" path opaque-UIA apps like
+        # charmap rely on) — so get_element_tree may be called more than once;
+        # what matters is that each read used the resolved hwnd.
+        assert mock_backend.get_element_tree.called
+        for call in mock_backend.get_element_tree.call_args_list:
+            assert call.kwargs.get("hwnd") == 12345
 
 
 # ── Basic text output ──────────────────────────────────────────────────
@@ -254,6 +259,21 @@ class TestTextOutput:
         assert "[Button]" in result.output
         assert '"OK"' in result.output
         assert "e1" in result.output
+
+    def test_compact_output_is_lean(self, runner, mock_backend):
+        # --compact: eN [role] "name" per line, refs preserved, no per-node
+        # bounds/selectors — far fewer tokens for agents/scripts.
+        with _patch_platform(), _patch_backend(mock_backend):
+            compact = runner.invoke(see, ["--compact", "--no-snapshot"], catch_exceptions=False)
+            verbose = runner.invoke(see, ["--no-snapshot"], catch_exceptions=False)
+        assert compact.exit_code == 0
+        assert 'e1 [Window] "Test Window"' in compact.output
+        assert '[Button] "OK"' in compact.output
+        assert "e" in compact.output  # refs still present for `naturo click eN`
+        # bounds/position suffix "(x,y WxH)" is dropped in compact
+        import re
+        assert not re.search(r"\(\d+,\d+ \d+x\d+\)", compact.output)
+        assert len(compact.output) < len(verbose.output)
 
     def test_text_preview_for_edit(self, runner, mock_backend):
         """Edit elements should show a value preview line."""
