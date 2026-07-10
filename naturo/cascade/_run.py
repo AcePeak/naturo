@@ -252,7 +252,6 @@ def _graft_web_under_control(root_tree, tagged):
         by = min(t.y for t in boxed)
         bw = max(t.x + t.width for t in boxed) - bx
         bh = max(t.y + t.height for t in boxed) - by
-        target_area = max(bw * bh, 1)
         best_key = None
 
         def _walk(node, depth):
@@ -318,9 +317,9 @@ def _webview_uia_content(backend, hwnd, depth):
     try:
         import ctypes
         from ctypes import wintypes
+        user32 = ctypes.windll.user32  # AttributeError on non-Windows -> [] below
     except Exception:
         return []
-    user32 = ctypes.windll.user32
     widgets = []
     buf = ctypes.create_unicode_buffer(128)
 

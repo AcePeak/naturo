@@ -509,7 +509,8 @@ def _process_tree_pids(pid: int) -> set:
                 continue
             # wmic /format:csv columns are alphabetical: Node,ParentProcessId,ProcessId
             try:
-                ppid = int(parts[-2]); cpid = int(parts[-1])
+                ppid = int(parts[-2])
+                cpid = int(parts[-1])
             except Exception:
                 continue
             children.setdefault(ppid, []).append(cpid)
