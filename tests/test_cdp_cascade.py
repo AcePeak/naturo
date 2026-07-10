@@ -333,7 +333,12 @@ class TestFetchCdpElements:
 class TestFindCdpPort:
     """Test the find_cdp_port utility."""
 
-    def test_finds_port_via_http_probe(self):
+    def test_no_blind_probe_without_pid(self):
+        # A CDP endpoint that WOULD answer on a common port must NOT be returned
+        # when there is no pid to attribute it to: find_cdp_port's callers graft
+        # the endpoint's DOM into a specific window, so a stray browser (another
+        # Chrome, Clash Verge, an unrelated Electron app) squatting on 9222 would
+        # leak into that window's tree. No attributable pid → no port.
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
@@ -343,6 +348,21 @@ class TestFindCdpPort:
             from naturo.cascade import find_cdp_port
 
             port = find_cdp_port(pid=None)
+
+        assert port is None
+
+    def test_finds_port_owned_by_pid_tree(self):
+        # WITH a pid, a CDP port listened by that process tree is found.
+        with (
+            patch("naturo.cascade._build._process_tree_pids", return_value={1234}),
+            patch("naturo.cascade._build._listening_ports_for_pids",
+                  return_value=[9222]),
+            patch("naturo.cascade._build._cdp_endpoint_responds", return_value=True),
+            patch("platform.system", return_value="Linux"),
+        ):
+            from naturo.cascade import find_cdp_port
+
+            port = find_cdp_port(pid=1234)
 
         assert port == 9222
 
@@ -510,3 +530,21 @@ class TestRunCascadeWithCdp:
             )
 
         assert result.primary_provider == "cdp"
+
+
+# ── CDPClient.connect: Origin header suppression ─────────────────────────────
+
+
+class TestConnectSuppressesOrigin:
+    """Chromium 111+ 403s a DevTools WebSocket whose Origin header is not in
+    --remote-allow-origins. connect() must omit the Origin (suppress_origin=True)
+    so naturo attaches to any debuggable Chromium — browser or Electron app —
+    without requiring that launch flag."""
+
+    def test_connect_passes_suppress_origin(self):
+        client = CDPClient(port=9222)
+        mock_ws_mod = MagicMock()
+        with patch.object(client, "_ensure_websocket_module", return_value=mock_ws_mod):
+            client.connect(tab_id="t1")
+        _, kwargs = mock_ws_mod.create_connection.call_args
+        assert kwargs.get("suppress_origin") is True
