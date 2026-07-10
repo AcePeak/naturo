@@ -121,8 +121,7 @@ def _run_cdp_only(
         ))
         # Merge CDP elements into root tree (or create a synthetic root)
         if root_tree is not None:
-            for el in cdp_elements:
-                root_tree.children.append(_tag_source(el, "cdp"))
+            _graft_cdp(root_tree, cdp_elements)
         else:
             root_tree = ElementInfo(
                 id="root",
@@ -153,6 +152,204 @@ def _run_cdp_only(
 
 
 # ── Main cascade entry point ──────────────────────────────────────────────────
+
+
+def _dedup_tree(root):
+    """Drop subtrees whose (role, name, bounds) signature repeats.
+
+    Some backends — notably MSAA navigation — loop and re-emit the same window
+    chrome many times (charmap: the title bar / buttons appeared ~25×, inflating
+    a ~40-element window to 922 phantom nodes). Identical bounds mean the same
+    physical element was revisited, so it is safe to drop the repeat. Genuinely
+    repeated controls (list items, grid cells) have DISTINCT bounds and are kept.
+    Blank structural containers (no name, zero size) are never collapsed.
+    """
+    if root is None:
+        return root
+
+    def sig(n):
+        role = (getattr(n, "role", "") or "")
+        name = (getattr(n, "name", "") or "").strip()
+        # Only MSAA trees reach here. Its nav loop re-emits the SAME named chrome
+        # at slightly-varying bounds, so collapse labelled nodes by (role, name)
+        # — an exact-bounds key leaves ~400 near-dup phantoms. Unnamed nodes keep
+        # a bounds key (distinct positions are distinct structural containers).
+        if name:
+            return (role, name)
+        return (role, "", getattr(n, "x", 0), getattr(n, "y", 0),
+                getattr(n, "width", 0), getattr(n, "height", 0))
+
+    seen = {sig(root)}
+
+    def prune(n):
+        kept = []
+        for c in (getattr(n, "children", None) or []):
+            s = sig(c)
+            # only a labelled / sized node counts as a loop-duplicate — this
+            # avoids collapsing many legitimately-blank structural containers
+            if s in seen and (s[1] or s[4] or s[5]):
+                continue
+            seen.add(s)
+            prune(c)
+            kept.append(c)
+        n.children = kept
+
+    prune(root)
+    return root
+
+
+def _web_render_bounds(hwnd):
+    """Screen rect (x, y, w, h) of the embedded Chromium render surface under
+    ``hwnd`` (WebView2/CEF ``Chrome_RenderWidgetHostHWND``), or None.
+
+    CDP ``getBoundingClientRect`` coords are relative to the web VIEWPORT, whose
+    screen origin is this render widget's top-left — NOT the app window's. Using
+    the window origin misplaces the whole page (it floats over the native chrome).
+    """
+    if not hwnd:
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        best = [None, 0]
+        buf = ctypes.create_unicode_buffer(128)
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def _cb(h, _l):
+            user32.GetClassNameW(h, buf, 128)
+            if "Chrome_RenderWidgetHostHWND" in (buf.value or ""):
+                r = wintypes.RECT()
+                user32.GetWindowRect(h, ctypes.byref(r))
+                area = (r.right - r.left) * (r.bottom - r.top)
+                if area > best[1]:
+                    best[0] = (r.left, r.top, r.right - r.left, r.bottom - r.top)
+                    best[1] = area
+            return True
+
+        user32.EnumChildWindows(wintypes.HWND(int(hwnd)), _cb, 0)
+        return best[0]
+    except Exception:
+        return None
+
+
+def _graft_cdp(root_tree, cdp_elements):
+    """Tag CDP web elements and nest them under the browser control's node."""
+    return _graft_web_under_control(
+        root_tree, [_tag_source(el, "cdp") for el in cdp_elements])
+
+
+def _graft_web_under_control(root_tree, tagged):
+    """Nest already-tagged web nodes UNDER the browser control's UIA node (not flat
+    at the window root — the page lives inside the embedded browser). Find the
+    smallest UIA node containing the web content (the WebView2/Chrome host pane),
+    mark it the interactive web surface, and graft there; fall back to the root.
+    """
+    boxed = [t for t in tagged if (t.width or 0) > 0 and (t.height or 0) > 0]
+    host = None
+    if boxed and root_tree is not None and (root_tree.children is not None):
+        bx = min(t.x for t in boxed)
+        by = min(t.y for t in boxed)
+        bw = max(t.x + t.width for t in boxed) - bx
+        bh = max(t.y + t.height for t in boxed) - by
+        target_area = max(bw * bh, 1)
+        best_key = None
+
+        def _walk(node, depth):
+            nonlocal host, best_key
+            nx, ny = node.x, node.y
+            nw, nh = node.width, node.height
+            contains = (nx <= bx + 8 and ny <= by + 8
+                        and nx + nw >= bx + bw - 8 and ny + nh >= by + bh - 8)
+            if contains and node is not root_tree:
+                # Smallest containing node, then shallowest — that is the browser
+                # CONTROL (e.g. the WebView2 host pane), not the whole window and
+                # not a deep redundant Chromium pane. The control is legitimately
+                # bigger than the page content, so don't gate on content size.
+                key = (max(nw * nh, 1), depth)
+                if best_key is None or key < best_key:
+                    host, best_key = node, key
+            for c in (node.children or []):
+                _walk(c, depth + 1)
+
+        _walk(root_tree, 0)
+
+    target = host if host is not None else root_tree
+    if target is not None:
+        if target is not root_tree:
+            props = target.properties if isinstance(target.properties, dict) else {}
+            props["web_host"] = True
+            target.properties = props
+            if not (getattr(target, "name", "") or "").strip():
+                target.name = "Web content"
+        target.children.extend(tagged)
+    return tagged
+
+
+def _web_content_roots(tree):
+    """The content subtree(s) inside a render-widget UIA tree — the Document
+    node(s) (which carry the page), skipping the 'Chrome Legacy Window' wrapper.
+    """
+    found = []
+
+    def _walk(n):
+        if (getattr(n, "role", "") or "").lower() == "document":
+            found.append(n)
+            return
+        for c in (getattr(n, "children", None) or []):
+            _walk(c)
+
+    _walk(tree)
+    return found or list(getattr(tree, "children", None) or [])
+
+
+def _webview_uia_content(backend, hwnd, depth):
+    """No-CDP fallback for embedded browsers: read each Chromium render widget's
+    OWN UIA tree and return the page content, tagged 'uia'.
+
+    Chromium (WebView2/CEF/Electron) exposes its DOM as UIA accessible objects,
+    but naturo's window-level read stops at empty WebView panes — reading the
+    render-widget hwnd directly recovers the real content. Works with NO debug
+    port, so Tauri/WebView2 apps (Clash Verge, etc.) that don't expose CDP are
+    still readable.
+    """
+    if not hwnd:
+        return []
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except Exception:
+        return []
+    user32 = ctypes.windll.user32
+    widgets = []
+    buf = ctypes.create_unicode_buffer(128)
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def _cb(h, _l):
+        try:
+            user32.GetClassNameW(h, buf, 128)
+            if "Chrome_RenderWidgetHostHWND" in (buf.value or ""):
+                widgets.append(h)
+        except Exception:
+            pass
+        return True
+
+    try:
+        user32.EnumChildWindows(wintypes.HWND(int(hwnd)), _cb, 0)
+    except Exception:
+        return []
+
+    nodes = []
+    for wh in widgets:
+        try:
+            tree = backend.get_element_tree(hwnd=wh, depth=depth, backend="uia")
+        except Exception:
+            continue
+        if tree is None:
+            continue
+        for root in _web_content_roots(tree):
+            nodes.append(_tag_source(root, "uia"))
+    return nodes
 
 
 def run_cascade(
@@ -259,10 +456,44 @@ def run_cascade(
     root_tree: Optional[ElementInfo] = None
     window_area = 0
 
-    # ── Provider 1: UIA/MSAA/JAB/IA2 (primary accessibility) ────────────────
-    providers_to_try = (
-        ["uia", "msaa", "jab", "ia2"] if backend_name == "auto" else [backend_name]
-    )
+    # ── Provider 1: pick the RICHEST accessibility tree (UIA/MSAA/JAB/IA2) ──
+    # "first non-empty wins" was wrong: custom-drawn / legacy apps (Creo, the
+    # charmap character grid, old MFC/Delphi) return a THIN opaque frame via UIA
+    # (a few chrome nodes — non-empty but useless), so MSAA/JAB — which actually
+    # see the controls — were never tried.  Now: try UIA first and short-circuit
+    # only if it is already rich; otherwise also probe the others and keep the
+    # tree with the most nodes (the one that truly matches what's on screen).
+    _best_size = -1
+    _best_flat: List[ElementInfo] = []
+    _uia_size = -1  # baseline; a heavier backend only wins if it DWARFS UIA
+
+    # Class-authoritative routing: a window whose class maps to a known provider
+    # (SunAwt→JAB, Mozilla→IA2) is opaque to UIA *by construction*, so trust the
+    # class over any node-count heuristic. Unknown classes (charmap, Creo, …) get
+    # the "MSAA dwarfs UIA" fallback below instead.
+    _class_pref: Optional[str] = None
+    if backend_name == "auto" and hwnd is not None:
+        try:
+            from ._build import _detect_backend_for_class
+            from ._com_excel import _win32_class_name
+            _p = _detect_backend_for_class(_win32_class_name(hwnd) or "")
+            if _p in ("jab", "ia2"):
+                _class_pref = _p
+        except Exception as exc:
+            logger.debug("class-pref detection skipped: %s", exc)
+
+    # For auto, compete only UIA + MSAA generically; add JAB/IA2 ONLY when the
+    # window class calls for it (real Swing/Mozilla). JAB and COM also have
+    # dedicated additive providers (2b/2c) that graft onto whichever base wins —
+    # probing them generically here would double-count and, worse, leave a
+    # "jab ok" stat that suppresses the 2b fallback merge (losing JAB entirely
+    # when class detection misses).
+    if backend_name == "auto":
+        providers_to_try = ["uia", "msaa"]
+        if _class_pref:
+            providers_to_try.append(_class_pref)
+    else:
+        providers_to_try = [backend_name]
 
     for pname in providers_to_try:
         t0 = time.monotonic()
@@ -273,47 +504,79 @@ def run_cascade(
             )
             elapsed = (time.monotonic() - t0) * 1000
 
-            if tree is not None:
+            if tree is None:
+                stats.providers.append(ProviderStat(
+                    name=pname, elapsed_ms=elapsed, status="skipped"))
+                continue
+
+            tagged = _tag_source(tree, pname)
+            flat = _flatten(tagged)
+            elements_count = len(flat)
+
+            # MSAA navigation loops and re-emits the same chrome many times. Dedup
+            # it here (before it competes with UIA) and remember whether it was
+            # MOSTLY a loop: a high collapse ratio means the raw richness was
+            # phantom duplication (taskmgr 1221→38, all chrome — the real process
+            # list is custom-drawn, opaque to MSAA too), NOT real content, so it
+            # must not be trusted to displace a real UIA tree. A low collapse ratio
+            # is genuine content (charmap 922→415) and is allowed to win.
+            _msaa_loopy = False
+            if pname == "msaa":
+                _raw_n = elements_count
+                tree = _dedup_tree(tree)
                 tagged = _tag_source(tree, pname)
                 flat = _flatten(tagged)
                 elements_count = len(flat)
+                _msaa_loopy = _raw_n > 3 * max(elements_count, 1)
 
-                # (#394) A tree with only a root node and zero children is
-                # not useful — likely a UWP/WinUI app where the backend
-                # could not reach the real UI.  Record it but keep trying
-                # the next provider instead of accepting it immediately.
-                if not tree.children:
-                    logger.info(
-                        "Provider %s returned root-only tree (0 children), "
-                        "trying next provider...", pname,
-                    )
-                    stats.providers.append(ProviderStat(
-                        name=pname, elements=elements_count,
-                        elapsed_ms=elapsed, status="empty_tree",
-                    ))
-                    # Keep as fallback in case no provider does better
-                    if root_tree is None:
-                        root_tree = tagged
-                        window_area = _window_area(tree)
-                    continue
-
+            # (#394) A root-only tree (0 children) is not useful — keep trying.
+            if not tree.children:
                 stats.providers.append(ProviderStat(
-                    name=pname, elements=elements_count, elapsed_ms=elapsed, status="ok"
-                ))
-                merged_elements.extend(flat[1:])  # skip root itself (merged below)
+                    name=pname, elements=elements_count,
+                    elapsed_ms=elapsed, status="empty_tree"))
+                if root_tree is None:
+                    root_tree = tagged
+                    window_area = _window_area(tree)
+                continue
+
+            stats.providers.append(ProviderStat(
+                name=pname, elements=elements_count, elapsed_ms=elapsed, status="ok"))
+
+            if pname == "uia":
+                _uia_size = elements_count
+
+            if pname == _class_pref:
+                # Class says this backend is the correct one (e.g. Java→JAB) and
+                # it returned real content → adopt it authoritatively and stop.
+                _best_size, _best_flat = elements_count, flat
                 root_tree = tagged
                 window_area = _window_area(tree)
-                break  # Got a valid tree; stop trying other base providers
-            else:
-                stats.providers.append(ProviderStat(
-                    name=pname, elapsed_ms=elapsed, status="skipped"
-                ))
+                break
+
+            # Otherwise keep the richest tree — but a heavier backend DISPLACES UIA
+            # only when it DWARFS it (opaque UIA: charmap 27→msaa 922 = 34×), never
+            # when merely larger (complete-UIA app where MSAA just adds container
+            # noise: notepad uia 34 vs msaa 300 → keep UIA).
+            if elements_count > _best_size and (
+                pname == "uia" or _uia_size <= 0
+                or (elements_count > 10 * _uia_size and not _msaa_loopy)
+            ):
+                _best_size = elements_count
+                _best_flat = flat
+                root_tree = tagged
+                window_area = _window_area(tree)
+
+            # UIA already rich enough → don't pay for the heavier backends.
+            if pname == "uia" and elements_count >= 60:
+                break
         except Exception as exc:
             elapsed = (time.monotonic() - t0) * 1000
             logger.debug("Provider %s failed: %s", pname, exc)
             stats.providers.append(ProviderStat(
-                name=pname, elapsed_ms=elapsed, status="error"
-            ))
+                name=pname, elapsed_ms=elapsed, status="error"))
+
+    if _best_flat:
+        merged_elements.extend(_best_flat[1:])  # skip root (merged below)
 
     # ── Provider 2: CDP (Electron/CEF apps) ─────────────────────────────────
     should_try_cdp = (
@@ -342,28 +605,42 @@ def run_cascade(
 
                 # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
                 if debug_port is None:
-                    debug_port = _get_cascade_pkg().find_cdp_port(pid)
+                    # Resolve the target window's PID so find_cdp_port can read
+                    # the browser's command line (its Phase 1) and pick up a
+                    # non-default --remote-debugging-port — not only the common
+                    # ports it blind-probes. Windows-only, best-effort.
+                    cdp_pid = pid
+                    if cdp_pid is None and hwnd is not None:
+                        try:
+                            import ctypes
+                            import ctypes.wintypes
+                            _pid = ctypes.wintypes.DWORD()
+                            ctypes.windll.user32.GetWindowThreadProcessId(
+                                int(hwnd), ctypes.byref(_pid)
+                            )
+                            cdp_pid = _pid.value or None
+                        except Exception:
+                            cdp_pid = None
+                    debug_port = _get_cascade_pkg().find_cdp_port(cdp_pid)
             except Exception as exc:
                 logger.debug("CDP port detection failed: %s", exc)
 
             if debug_port:
-                bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+                # Offset CDP viewport coords by the embedded browser's render
+                # surface (not the app window), so the page lands inside the
+                # browser control; fall back to the window origin if not found.
+                bounds = _web_render_bounds(hwnd) or (
+                    root_tree.x, root_tree.y, root_tree.width, root_tree.height)
                 cdp_elements = _get_cascade_pkg()._fetch_cdp_elements(
                     pid or 0, debug_port, bounds
                 )
 
             elapsed = (time.monotonic() - t0) * 1000
             if cdp_elements:
-                # Tag and graft CDP elements onto the tree as children of the
-                # root, mirroring the JAB branch below.  Appending only to
-                # ``merged_elements`` (coverage math) dropped them from the
-                # fused tree, so ``see --cascade --json`` recognized web DOM
-                # content but never emitted a cdp-tagged node (no uia+cdp
-                # fusion).  Same graft as ``_run_cdp_only``.
-                for el in cdp_elements:
-                    tagged_el = _tag_source(el, "cdp")
-                    root_tree.children.append(tagged_el)
-                    merged_elements.append(tagged_el)
+                # Graft CDP web elements UNDER the browser control's UIA node (not
+                # flat at the window root) so the tree reflects that the page lives
+                # inside the embedded browser. Also feed coverage math.
+                merged_elements.extend(_graft_cdp(root_tree, cdp_elements))
 
                 stats.providers.append(ProviderStat(
                     name="cdp", elements=len(cdp_elements), elapsed_ms=elapsed, status="ok"
@@ -373,6 +650,20 @@ def run_cascade(
                     name="cdp", elapsed_ms=elapsed,
                     status="skipped" if debug_port is None else "no_elements"
                 ))
+                # No CDP (no debug port owned by this app) — recover the embedded
+                # web content from the render widget's UIA tree instead. Chromium
+                # exposes its DOM as UIA accessible objects, so Tauri/WebView2/
+                # Electron apps that don't open a debug port (e.g. Clash Verge) are
+                # still readable, structurally, with zero debug port.
+                _t0w = time.monotonic()
+                _web_nodes = _webview_uia_content(backend, hwnd, max(depth, 12))
+                if _web_nodes:
+                    _graft_web_under_control(root_tree, _web_nodes)
+                    for _n in _web_nodes:
+                        merged_elements.extend(_flatten(_n))
+                    stats.providers.append(ProviderStat(
+                        name="webview_uia", elements=len(_web_nodes),
+                        elapsed_ms=(time.monotonic() - _t0w) * 1000, status="ok"))
 
     # ── Provider 2b: Java Access Bridge (Swing/AWT apps) ─────────────────────
     # The primary provider loop above stops at the first non-empty accessibility
@@ -560,6 +851,13 @@ def run_cascade(
             stats.providers.append(ProviderStat(
                 name="ocr", elapsed_ms=elapsed, status="no_elements",
             ))
+
+    # ── De-loop the tree (MSAA navigation loops and re-emits chrome) ─────────
+    # Scoped to MSAA only: UIA/JAB/CDP/COM trees are clean and an exact
+    # (role,name,bounds) collision there is a legitimate node, not a loop.
+    _root_src = (getattr(root_tree, "properties", None) or {}).get("source") if root_tree else None
+    if _root_src == "msaa":
+        root_tree = _dedup_tree(root_tree)
 
     # ── Assemble final stats ─────────────────────────────────────────────────
     stats.total_elements = len(merged_elements)

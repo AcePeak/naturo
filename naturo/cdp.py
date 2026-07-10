@@ -210,6 +210,15 @@ class CDPClient:
                 ws_url,
                 timeout=self.timeout,
                 enable_multithread=True,
+                # Chrome/Edge 111+ reject a DevTools WebSocket handshake with
+                # "403 Forbidden" when it carries an Origin header that is not
+                # in --remote-allow-origins. websocket-client sends
+                # "Origin: http://<host>:<port>" by default, so every attach to
+                # a modern Chromium (browser *and* Electron app) was being
+                # refused. Suppressing the Origin header sidesteps the origin
+                # check entirely, so naturo attaches without requiring the
+                # target to be launched with --remote-allow-origins.
+                suppress_origin=True,
             )
         except Exception as exc:
             raise CDPConnectionError(
@@ -595,11 +604,21 @@ class CDPClient:
         """
         if selector is None:
             selector = (
+                # interactive controls
                 "button, input, textarea, select, a[href], "
                 "[role='button'], [role='checkbox'], [role='combobox'], "
                 "[role='menuitem'], [role='option'], [role='tab'], "
                 "[role='textbox'], [role='link'], [onclick], "
-                "[tabindex]:not([tabindex='-1'])"
+                "[tabindex]:not([tabindex='-1']), "
+                # meaningful VISIBLE TEXT — headings, paragraphs, labels, list /
+                # table cells, status/alert regions — so the tree mirrors what the
+                # eye reads, not only what it can click (issue: web content in an
+                # embedded browser was missing its titles/paragraphs/labels)
+                "h1, h2, h3, h4, h5, h6, p, label, li, dt, dd, td, th, "
+                "figcaption, blockquote, summary, caption, "
+                "[role='heading'], [role='status'], [role='alert'], "
+                "[role='note'], [role='listitem'], [role='cell'], "
+                "[role='gridcell'], [role='rowheader'], [role='columnheader']"
             )
 
         js = f"""
@@ -620,6 +639,10 @@ class CDPClient:
                 const title = el.getAttribute('title') || '';
                 const text = (el.innerText || '').trim().substring(0, 80);
                 const name = ariaLabel || title || el.getAttribute('alt') || text;
+                // Drop nameless non-form nodes — an empty heading/paragraph/label
+                // adds nothing readable (form controls may be legitimately unnamed,
+                // so those are kept).
+                if (!name && !['input','textarea','select','button','a'].includes(tag)) continue;
                 const value = ('value' in el) ? (el.value || null) : null;
                 results.push({{
                     tagName: tag,
