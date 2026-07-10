@@ -545,5 +545,4 @@ def _listening_ports_for_pids(pids: set) -> list:
     except Exception as exc:
         logger.debug("netstat port scan failed: %s", exc)
     # de-dup, preserve order
-    seen = set()
-    return [p for p in ports if not (p in seen or seen.add(p))]
+    return list(dict.fromkeys(ports))
