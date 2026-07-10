@@ -431,6 +431,18 @@ class ElementTreeMixin:
                             f"Element {ref} has no AutomationId, name, or "
                             f"location for value lookup"
                         )
+                # Target the ref's OWN window: `get eN` must read from the window
+                # the snapshot came from, not whatever is foreground now (else a
+                # role/name lookup runs against HWND 0 = the caller's terminal and
+                # finds nothing, or a different app's empty control).
+                if not target_hwnd:
+                    try:
+                        _snap = mgr.get_snapshot(_snap_id)
+                        _wh = getattr(_snap, "window_handle", None)
+                        if _wh:
+                            target_hwnd = _wh
+                    except Exception:
+                        pass
             else:
                 raise StaleSnapshotCacheError(ref)
 
