@@ -228,13 +228,15 @@ class ElementTreeMixin:
             # InternalFrame dialog adds ~5 more. The deepest common case is
             # JConsole's MBean view: DesktopPane > InternalFrame > TabbedPane >
             # SplitPane > ScrollPane > Viewport > JTree, then domain > bean >
-            # attributes/operations nodes — its tree and the right-hand
-            # attribute/descriptor tables sit at JAB depth ~18-20, so an offset of
-            # only +8 (default `see` → 15) captured the tab chrome but NONE of the
-            # tree or tables. Use +13 so the default `see` reaches that content;
-            # shallow Java windows pay nothing (traversal stops at their leaves)
-            # and the native layer still caps the total at 50.
-            jab_depth = min(depth + 13, 50)
+            # attributes/operations, and the right-hand attribute/descriptor
+            # JTables whose name/value/type ROWS sit at JAB depth ~21. An offset
+            # of only +8 (default `see` -> 15) captured the tab chrome but NONE of
+            # the tree or tables; +13 reached the tables but not their rows. Use
+            # +16 (default `see` -> 23) so the rows come through too, with a little
+            # margin for expanded JMX composite attributes. Measured node count is
+            # flat past depth ~21 (nothing nests deeper), shallow Java windows pay
+            # nothing, and the native layer still caps the total at 50.
+            jab_depth = min(depth + 16, 50)
             result = core.jab_get_element_tree(hwnd=handle, depth=jab_depth)
             result = _try_uwp_children(
                 result,
