@@ -66,16 +66,17 @@ class TestJABBackend:
         backend = WindowsBackend.__new__(WindowsBackend)
         result = backend.get_element_tree(backend="jab")
 
-        # The JAB path adds a +8 structural offset to the requested depth so
-        # Java/Swing's deep chrome nesting doesn't hide the real widgets
-        # (default depth 3 -> 11). The native layer caps the total.
-        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=11)
+        # The JAB path adds a +13 structural offset to the requested depth so
+        # Java/Swing's deep chrome nesting doesn't hide the real widgets — the
+        # deepest common case being JConsole's MBean tree and attribute tables at
+        # JAB depth ~18-20 (default depth 3 -> 16). The native layer caps the total.
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=16)
         assert result is None
 
     @patch("naturo.backends.windows.WindowsBackend._ensure_core")
     @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)
     def test_jab_depth_offset_is_capped(self, mock_resolve, mock_core_fn):
-        """The +8 JAB structural offset is bounded at 50, not unbounded."""
+        """The +13 JAB structural offset is bounded at 50, not unbounded."""
         from naturo.backends.windows import WindowsBackend
 
         mock_core = MagicMock()
@@ -83,7 +84,7 @@ class TestJABBackend:
         mock_core_fn.return_value = mock_core
 
         backend = WindowsBackend.__new__(WindowsBackend)
-        backend.get_element_tree(backend="jab", depth=48)  # 48 + 8 = 56 -> 50
+        backend.get_element_tree(backend="jab", depth=48)  # 48 + 13 = 61 -> 50
 
         mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=50)
 

@@ -225,11 +225,16 @@ class ElementTreeMixin:
             # Java/Swing buries logical content under many mandatory structural
             # panes — a normal window spends ~4 levels on RootPane > LayeredPane >
             # glass/content pane before any widget, and a JDesktopPane >
-            # InternalFrame dialog adds ~5 more. So the caller's logical depth
-            # under-reaches the real controls (JConsole's connection fields sit at
-            # depth ~12-15). Add that structural offset so the default `see` still
-            # surfaces the widgets; the native layer caps the total.
-            jab_depth = min(depth + 8, 50)
+            # InternalFrame dialog adds ~5 more. The deepest common case is
+            # JConsole's MBean view: DesktopPane > InternalFrame > TabbedPane >
+            # SplitPane > ScrollPane > Viewport > JTree, then domain > bean >
+            # attributes/operations nodes — its tree and the right-hand
+            # attribute/descriptor tables sit at JAB depth ~18-20, so an offset of
+            # only +8 (default `see` → 15) captured the tab chrome but NONE of the
+            # tree or tables. Use +13 so the default `see` reaches that content;
+            # shallow Java windows pay nothing (traversal stops at their leaves)
+            # and the native layer still caps the total at 50.
+            jab_depth = min(depth + 13, 50)
             result = core.jab_get_element_tree(hwnd=handle, depth=jab_depth)
             result = _try_uwp_children(
                 result,
