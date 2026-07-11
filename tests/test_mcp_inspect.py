@@ -293,6 +293,35 @@ class TestSeeUiTree:
             depth=7, backend="uia",
         )
 
+    def test_long_value_bounded_by_default(self, server, mock_backend):
+        # A big Document value must NOT be dumped in full (token-lean); it is
+        # truncated to a preview with a marker for how much was elided.
+        long_text = "".join(f"line{i} " for i in range(200))  # ~1.7k chars
+        doc = _make_element(id="doc", role="Document", name="Editor", value=long_text)
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {})
+        text = json.loads(result[0].text)["tree_text"]
+        assert "chars)" in text          # "…(+N chars)" elision marker
+        assert long_text not in text     # full body not inlined
+        assert len(text) < len(long_text)
+
+    def test_full_text_inlines_complete_value(self, server, mock_backend):
+        long_text = "".join(f"line{i} " for i in range(200))
+        doc = _make_element(id="doc", role="Document", name="Editor", value=long_text)
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {"full_text": True})
+        text = json.loads(result[0].text)["tree_text"]
+        assert long_text in text         # complete value present
+        assert "chars)" not in text      # no truncation marker
+
+    def test_short_value_shown_in_full_by_default(self, server, mock_backend):
+        doc = _make_element(id="e", role="Edit", name="Search", value="hello world")
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {})
+        text = json.loads(result[0].text)["tree_text"]
+        assert "hello world" in text
+        assert "chars)" not in text
+
     def test_app_param_triggers_multi_window_enumeration(self, server, mock_backend):
         """When app is provided without hwnd, _resolve_hwnds is used (#737)."""
         child = _make_element(id="btn1", role="Button", name="Click Me")

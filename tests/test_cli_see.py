@@ -282,6 +282,24 @@ class TestTextOutput:
         assert result.exit_code == 0
         assert "Hello world" in result.output
 
+    def test_long_document_bounded_by_default_full_on_flag(self, runner, mock_backend):
+        # A long Document body is previewed (bounded) by default with a marker,
+        # and inlined in full only with --full-text — so `naturo see` can dump
+        # all visible text for search without every call paying for huge buffers.
+        long_text = "".join(f"para{i} " for i in range(300))  # ~2k chars
+        doc = FakeElementInfo(id="doc", role="Document", name="Editor",
+                              value=long_text, x=0, y=0, width=800, height=600)
+        mock_backend.get_element_tree.return_value = doc
+        with _patch_platform(), _patch_backend(mock_backend):
+            default = runner.invoke(see, ["--no-snapshot"], catch_exceptions=False)
+            full = runner.invoke(see, ["--no-snapshot", "--full-text"], catch_exceptions=False)
+        assert default.exit_code == 0 and full.exit_code == 0
+        # default: truncated with elision marker, full body absent
+        assert "chars)" in default.output
+        assert long_text.replace("\n", "\\n") not in default.output
+        # --full-text: the complete body is present
+        assert long_text.replace("\n", "\\n") in full.output
+
     def test_no_window_found(self, runner, mock_backend):
         mock_backend.get_element_tree.return_value = None
         with _patch_platform(), _patch_backend(mock_backend):

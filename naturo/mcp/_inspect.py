@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 
 from naturo.mcp._resolve import require_hwnd
+from naturo.value_preview import bounded_value
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         cascade: bool = False,
         format: str = "compact",
         match: Optional[str] = None,
+        full_text: bool = False,
     ) -> dict:
         """Read a window's UI as a structured element tree — naturo's core "see" tool.
 
@@ -38,6 +40,12 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         yields just the Save controls with their eN refs. Use it when you already
         know what you're looking for: fewer tokens, fewer turns (target directly
         instead of reading + scanning the whole tree). (compact format only.)
+
+        Text elements (Document/Edit/Text) include their content as ``=<value>``.
+        Long values are truncated to a preview with a ``…(+N chars)`` marker to
+        stay token-lean — read the whole thing with ``get eN`` (returns the full
+        document). full_text=true inlines every value in full instead, for a
+        one-shot "dump all visible text and search it" read.
 
         Returns the hierarchy of UI elements (buttons, text fields, etc.) with
         their roles, names, bounds, and properties; element IDs (eN) feed into
@@ -257,7 +265,10 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 if name:
                     line += f' "{name}"'
                 if value:
-                    line += f" ={value!r}"
+                    _shown, _elided = bounded_value(value, full=full_text)
+                    line += f" ={_shown!r}"
+                    if _elided:
+                        line += f" …(+{_elided} chars)"
                 _fusion = _annotate_correctness(el.properties or {})
                 if _fusion is not None and _fusion.get("correctness") != "deterministic":
                     line += " ~"  # uncertain (vision/image) — verify before trusting

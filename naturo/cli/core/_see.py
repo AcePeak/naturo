@@ -8,6 +8,7 @@ from typing import Any
 import click
 
 import naturo.cli.core._common as _common
+from naturo.value_preview import bounded_value
 
 
 @click.command()
@@ -50,6 +51,10 @@ import naturo.cli.core._common as _common
               help='Compact agent-friendly text: one line per element as '
                    '\'eN [role] "name" [=value]\' — no bounds/props/selectors '
                    '(fewest tokens; refs still work with \'naturo click eN\')')
+@click.option("--full-text", "full_text", is_flag=True,
+              help="Inline the COMPLETE text of each Document/Edit/Text element "
+                   "instead of a truncated preview (for dumping + searching all "
+                   "visible content in one call)")
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
@@ -70,7 +75,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
-        json_output: bool, compact: bool, backend: str, app_id: str | None,
+        json_output: bool, compact: bool, full_text: bool, backend: str, app_id: str | None,
         ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
@@ -465,9 +470,12 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 if _is_offscreen:
                     d["offscreen"] = True
 
-                # (#372) Value preview for Document/Edit/Text elements
+                # (#372) Value preview for Document/Edit/Text elements. The full
+                # value is already in d["value"]; preview + length let a consumer
+                # decide whether to read more without re-fetching.
                 if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    d["value_preview"] = el.value[:100]
+                    _pv, _ = bounded_value(el.value, full=full_text)
+                    d["value_preview"] = _pv
                     d["value_length"] = len(el.value)
 
                 # (#295) Always use naturo ref for parent, never raw
@@ -565,7 +573,12 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 if compact:
                     _name = f' "{el.name}"' if el.name else ""
                     _val = getattr(el, "value", None)
-                    _val_str = f" ={_val!r}" if _val else ""
+                    _val_str = ""
+                    if _val:
+                        _shown, _elided = bounded_value(_val, full=full_text)
+                        _val_str = f" ={_shown!r}"
+                        if _elided:
+                            _val_str += f" …(+{_elided} chars)"
                     if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
                         click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}")
                     for child in el.children:
@@ -584,14 +597,14 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     selector_str = f"  {selector_uri}"
                 click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{selector_str}")
 
-                # (#372) Show text preview for Document/Edit elements
-                _vp = props.get("value_preview")
-                if _vp:
-                    click.echo(f"{prefix}  \u00bb {_vp}")
-                elif el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    preview = el.value[:100].replace("\n", "\\n").replace("\r", "")
-                    suffix = "\u2026" if len(el.value) > 100 else ""
-                    click.echo(f"{prefix}  \u00bb {preview}{suffix}")
+                # (#372) Show text content for Document/Edit/Text elements: full
+                # when --full-text, otherwise a bounded preview with a marker for
+                # how much was elided (read it all with `naturo get eN`).
+                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+                    _shown, _elided = bounded_value(el.value, full=full_text)
+                    disp = _shown.replace("\n", "\\n").replace("\r", "")
+                    suffix = f" \u2026(+{_elided} chars)" if _elided else ""
+                    click.echo(f"{prefix}  \u00bb {disp}{suffix}")
 
                 for child in el.children:
                     print_tree(child, indent + 1, child_ancestors)

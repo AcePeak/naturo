@@ -321,6 +321,7 @@ class ElementTreeMixin:
         populate_hierarchy(result)
 
         # (#372) Roles that should include a text value preview
+        from naturo.value_preview import PREVIEW_LEN as _PREVIEW_LEN
         _PREVIEW_ROLES = {"Document", "Edit", "Text"}
 
         def convert(el) -> BaseElementInfo:
@@ -342,8 +343,8 @@ class ElementTreeMixin:
             # (#372) Add value preview for Document/Edit/Text elements
             if el.role in _PREVIEW_ROLES and el.value:
                 full_text = el.value
-                preview = full_text[:100]
-                if len(full_text) > 100:
+                preview = full_text[:_PREVIEW_LEN]
+                if len(full_text) > _PREVIEW_LEN:
                     preview += "…"
                 props["value_preview"] = preview
                 props["value_length"] = len(full_text)
