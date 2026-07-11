@@ -311,10 +311,9 @@ extern "C" {
 NATURO_API int naturo_msaa_get_element_tree(uintptr_t hwnd, int depth,
                                              char* result_json, int buf_size) {
     if (!result_json || buf_size <= 0) return -1;
-    // Honor the caller's depth up to a generous bound (matches JAB/UIA and the
-    // CLI's --depth max). The old cap of 10 silently ignored any larger --depth.
-    if (depth < 1) depth = 1;
-    if (depth > 50) depth = 50;
+    // Honor the caller's depth. depth <= 0 means "unlimited";
+    // NATURO_MAX_TREE_DEPTH is a stack-safety backstop, not a content limit.
+    if (depth <= 0 || depth > NATURO_MAX_TREE_DEPTH) depth = NATURO_MAX_TREE_DEPTH;
 
     HWND target = (HWND)hwnd;
     if (!target) {

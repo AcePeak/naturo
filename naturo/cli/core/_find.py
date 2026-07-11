@@ -55,7 +55,9 @@ def _detect_query_strategy(query: str) -> str | None:
               help="Find all elements (equivalent to query \"*\"). Safe from shell glob expansion.")
 @click.option("--role", help="Filter by element role (e.g., Button, Edit)")
 @click.option("--actionable", is_flag=True, help="Only show actionable elements")
-@click.option("--depth", "-d", type=int, default=20, help="Maximum tree depth (default 20; use lower values for performance)")
+@click.option("--depth", "-d", type=int, default=0,
+              help="Maximum tree depth (0 = unlimited, the default; "
+                   "pass a positive N to cap traversal at N levels for performance)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
 @click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
 @click.option("--image", "image_template", type=click.Path(), default=None,
@@ -344,9 +346,10 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                       model=ai_model, api_key=ai_api_key)
         return
 
-    # Validate --depth range (find supports deeper traversal than see)
-    if depth < 1 or depth > 50:
-        msg = f"--depth must be between 1 and 50, got {depth}"
+    # Validate --depth: 0 = unlimited (default), positive caps traversal, only
+    # negative is invalid. No upper bound — the native layer bounds the total.
+    if depth < 0:
+        msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         if json_output:
             click.echo(_common._json_error_str("INVALID_INPUT", msg))
         else:

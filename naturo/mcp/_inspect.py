@@ -20,7 +20,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         app: Optional[str] = None,
         hwnd: Optional[int] = None,
         pid: Optional[int] = None,
-        depth: int = 7,
+        depth: int = 0,
         accessibility_backend: str = "uia",
         cascade: bool = False,
         format: str = "compact",
@@ -64,7 +64,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 hwnd, enumerates ALL windows of the app and merges their trees.
             hwnd: Window handle (integer). Overrides app/window_title.
             pid: Process ID. Filters windows to this process only.
-            depth: How deep to traverse the tree (1-10).
+            depth: How deep to traverse the tree. 0 = unlimited (the default,
+                walks the whole tree); pass a positive N to cap at N levels.
             accessibility_backend: "uia" (default), "msaa" (for legacy apps like
                 MFC, VB6, Delphi), "ia2" (for Firefox, Thunderbird, LibreOffice),
                 "jab" (for Java/Swing/AWT), or "auto" (try UIA → IA2 → JAB → MSAA).
@@ -79,8 +80,8 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         Returns:
             Dict with the element tree structure.
         """
-        if depth < 1 or depth > 10:
-            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"depth must be between 1 and 10, got {depth}"}}
+        if depth < 0:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"depth must be 0 (unlimited) or a positive number, got {depth}"}}
         if accessibility_backend not in ("uia", "msaa", "ia2", "jab", "auto"):
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"accessibility_backend must be uia, msaa, ia2, jab, or auto, got {accessibility_backend}"}}
         backend = _get_backend()

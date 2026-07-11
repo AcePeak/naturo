@@ -66,16 +66,21 @@ class TestJABBackend:
         backend = WindowsBackend.__new__(WindowsBackend)
         result = backend.get_element_tree(backend="jab")
 
-        # The JAB path adds a +8 structural offset to the requested depth so
-        # Java/Swing's deep chrome nesting doesn't hide the real widgets
-        # (default depth 3 -> 11). The native layer caps the total.
-        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=11)
+        # Depth is passed through with no per-backend offset. The default is 0 =
+        # unlimited, so Java/Swing's deep structural nesting (JConsole's MBean
+        # tree/tables at ~24 levels) is reached by walking the whole tree rather
+        # than by a magic "+N". The native layer treats <= 0 as unlimited.
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=0)
         assert result is None
 
     @patch("naturo.backends.windows.WindowsBackend._ensure_core")
     @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)
-    def test_jab_depth_offset_is_capped(self, mock_resolve, mock_core_fn):
-        """The +8 JAB structural offset is bounded at 50, not unbounded."""
+    def test_jab_depth_is_passed_through_unmodified(self, mock_resolve, mock_core_fn):
+        """Depth reaches JAB verbatim — no offset, no Python-side clamp.
+
+        A positive depth is honored as raw tree levels (the native layer bounds
+        the total), and 0 propagates as the 'unlimited' sentinel.
+        """
         from naturo.backends.windows import WindowsBackend
 
         mock_core = MagicMock()
@@ -83,9 +88,13 @@ class TestJABBackend:
         mock_core_fn.return_value = mock_core
 
         backend = WindowsBackend.__new__(WindowsBackend)
-        backend.get_element_tree(backend="jab", depth=48)  # 48 + 8 = 56 -> 50
 
-        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=50)
+        backend.get_element_tree(backend="jab", depth=48)
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=48)
+
+        mock_core.jab_get_element_tree.reset_mock()
+        backend.get_element_tree(backend="jab", depth=0)  # 0 = unlimited
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=0)
 
     @patch("naturo.backends.windows.WindowsBackend._ensure_core")
     @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)

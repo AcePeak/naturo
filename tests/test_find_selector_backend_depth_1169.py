@@ -112,4 +112,6 @@ class TestSelectorForwardsBackendAndDepth:
         backend = _backend_returning(_sample_tree())
         result = _invoke(runner, backend, ["--selector", "//Button", "--json"])
         assert result.exit_code == 0, result.output
-        assert backend.get_element_tree.call_args.kwargs["depth"] == 20
+        # CLI default is now 0 = unlimited (was 20); the selector path must
+        # forward it verbatim, not substitute its own hardcoded value (#1169).
+        assert backend.get_element_tree.call_args.kwargs["depth"] == 0

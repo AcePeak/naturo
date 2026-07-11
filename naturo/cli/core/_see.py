@@ -23,7 +23,9 @@ from naturo.value_preview import bounded_value
     default="full",
     help="Analysis mode: full (all elements), interactive (clickable only), fast (quick scan)",
 )
-@click.option("--depth", "-d", type=int, default=7, help="Maximum tree depth (1-50)")
+@click.option("--depth", "-d", type=int, default=0,
+              help="Maximum tree depth (0 = unlimited, the default; "
+                   "pass a positive N to cap traversal at N levels)")
 @click.option("--path", "-p", help="Save screenshot to path")
 @click.option("--annotate", is_flag=True, help="Annotate screenshot with element labels")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
@@ -141,9 +143,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         hwnd = entry.handle
         pid = entry.pid
 
-    # BUG-028: Validate --depth range (before platform check — input validation first)
-    if depth < 1 or depth > 50:
-        msg = f"--depth must be between 1 and 50, got {depth}"
+    # BUG-028: Validate --depth (before platform check — input validation first).
+    # 0 = unlimited (walk the whole tree); any positive value caps traversal.
+    # Negative is the only invalid input now — the native layer bounds the total.
+    if depth < 0:
+        msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         if json_output:
             click.echo(_common._json_error_str("INVALID_INPUT", msg))
         else:

@@ -412,9 +412,9 @@ NATURO_API int naturo_get_element_tree(uintptr_t hwnd, int depth,
     // Honor the caller's depth up to a generous bound (matches the CLI's
     // --depth max). The old cap of 10 silently ignored any larger --depth, so
     // deeply-nested UIA trees (Electron/WebView DOM-as-UIA, complex WPF/WinForms,
-    // UWP frames) were truncated with no signal.
-    if (depth < 1) depth = 1;
-    if (depth > 50) depth = 50;
+    // UWP frames) were truncated with no signal. depth <= 0 means "unlimited";
+    // NATURO_MAX_TREE_DEPTH is a stack-safety backstop, not a content limit.
+    if (depth <= 0 || depth > NATURO_MAX_TREE_DEPTH) depth = NATURO_MAX_TREE_DEPTH;
 
     HWND target = (HWND)hwnd;
     if (!target) {
