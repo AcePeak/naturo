@@ -155,6 +155,12 @@ class ElementInfo:
     keyboard_shortcut: Optional[str] = None
     hwnd: Optional[int] = None
     states: Optional[str] = None
+    # True per-node capabilities reported by the backend (not role-guessed):
+    # readable = has readable content (Value/TextPattern, JAB AccessibleText);
+    # actionable = clickable/invokable; editable = accepts text input.
+    readable: Optional[bool] = None
+    actionable: Optional[bool] = None
+    editable: Optional[bool] = None
 
 
 def _parse_element(data: dict) -> ElementInfo:
@@ -180,6 +186,9 @@ def _parse_element(data: dict) -> ElementInfo:
         parent_id=data.get("parent_id"),
         keyboard_shortcut=data.get("keyboard_shortcut"),
         states=data.get("states"),
+        readable=data.get("readable"),
+        actionable=data.get("actionable"),
+        editable=data.get("editable"),
     )
 
 

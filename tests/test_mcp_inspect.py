@@ -322,6 +322,23 @@ class TestSeeUiTree:
         assert "hello world" in text
         assert "chars)" not in text
 
+    def test_capability_flags_rendered(self, server, mock_backend):
+        # readable/actionable/editable from the backend surface as [rae] so the
+        # agent targets the real interactive node, not a role guess.
+        edit = _make_element(id="in", role="Edit", name="用户名",
+                             properties={"readable": True, "actionable": True,
+                                         "editable": True})
+        btn = _make_element(id="ok", role="Button", name="连接",
+                            properties={"actionable": True})
+        root = _make_element(id="w", role="Window", name="Dlg", children=[edit, btn])
+        mock_backend.get_element_tree.return_value = root
+        text = json.loads(_call_tool(server, "see_ui_tree", {})[0].text)["tree_text"]
+        # the input carries all three; the button only actionable
+        assert any('"用户名"' in ln and ln.rstrip().endswith("[rae]")
+                   for ln in text.splitlines())
+        assert any('"连接"' in ln and ln.rstrip().endswith("[a]")
+                   for ln in text.splitlines())
+
     def test_app_param_triggers_multi_window_enumeration(self, server, mock_backend):
         """When app is provided without hwnd, _resolve_hwnds is used (#737)."""
         child = _make_element(id="btn1", role="Button", name="Click Me")

@@ -275,7 +275,16 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                     line += f" ={_shown!r}"
                     if _elided:
                         line += f" …(+{_elided} chars)"
-                _fusion = _annotate_correctness(el.properties or {})
+                # True per-node capabilities: [r]eadable / [a]ctionable /
+                # [e]ditable, so the agent targets the real interactive node
+                # instead of guessing from role. Only present flags are shown.
+                _p = el.properties or {}
+                _caps = "".join(c for c, k in (("r", "readable"),
+                                               ("a", "actionable"),
+                                               ("e", "editable")) if _p.get(k))
+                if _caps:
+                    line += f" [{_caps}]"
+                _fusion = _annotate_correctness(_p)
                 if _fusion is not None and _fusion.get("correctness") != "deterministic":
                     line += " ~"  # uncertain (vision/image) — verify before trusting
                 _compact_lines.append(line)

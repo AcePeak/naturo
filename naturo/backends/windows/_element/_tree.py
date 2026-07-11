@@ -345,6 +345,12 @@ class ElementTreeMixin:
                     # fallback, test fixtures) leave the attribute absent → None,
                     # matching the dataclass default rather than crashing.
                     "states": getattr(el, "states", None),
+                    # True per-node capabilities (readable/actionable/editable)
+                    # reported by the backend, surfaced so agents target the real
+                    # interactive node instead of guessing from role.
+                    "readable": getattr(el, "readable", None),
+                    "actionable": getattr(el, "actionable", None),
+                    "editable": getattr(el, "editable", None),
                 }.items() if v is not None
             }
 

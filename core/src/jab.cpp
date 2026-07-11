@@ -451,6 +451,9 @@ struct JABElement {
     std::string name;
     std::string value;    // from description
     std::string states;
+    bool readable;        // exposes text content (AccessibleText)
+    bool actionable;      // supports actions (AccessibleAction)
+    bool editable;        // states include "editable"
     int x, y, width, height;
     int child_count;
     std::vector<JABElement> children;
@@ -517,6 +520,16 @@ static JABElement jab_build_element(long vmID, AccessibleContext ac,
         if (!txt.empty()) el.value = jab_json_escape(txt.c_str());
     }
     el.states = jab_json_escape(info.states_en_US[0] ? info.states_en_US : info.states);
+    // True per-node capabilities read from JAB (faithful, not role-guessed):
+    //  readable   = exposes text content via the AccessibleText interface
+    //  actionable = supports AccessibleAction (click/invoke)
+    //  editable   = the states list marks it editable
+    el.readable = info.accessibleText ? true : false;
+    el.actionable = info.accessibleAction ? true : false;
+    {
+        const wchar_t* st = info.states_en_US[0] ? info.states_en_US : info.states;
+        el.editable = (st && wcsstr(st, L"editable") != NULL);
+    }
     el.x = info.x;
     el.y = info.y;
     el.width = info.width;
@@ -578,6 +591,9 @@ static void jab_element_to_json(const JABElement& el, std::string& out) {
 
     out += "\"states\":\"" + el.states + "\",";
     out += "\"jab_role\":\"" + el.raw_role + "\",";
+    out += std::string("\"readable\":") + (el.readable ? "true" : "false") + ",";
+    out += std::string("\"actionable\":") + (el.actionable ? "true" : "false") + ",";
+    out += std::string("\"editable\":") + (el.editable ? "true" : "false") + ",";
     out += "\"backend\":\"jab\",";
     out += "\"children\":[";
 
