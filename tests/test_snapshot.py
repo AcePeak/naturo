@@ -424,6 +424,56 @@ class TestResolveRefAfterCaptureLive:
         assert element.role == "AXButton"
         assert element.title == "Save"
 
+    def test_resolve_ref_not_hijacked_by_newer_other_window(
+        self, mgr: SnapshotManager, png_file: Path, sample_ui_map: Dict[str, UIElement]
+    ) -> None:
+        """A newer `see` of a DIFFERENT window (its own refs, but not this one)
+        must not hijack resolution — pick the snapshot that actually holds it."""
+        sid_a = mgr.create_snapshot()
+        mgr.store_screenshot(sid_a, str(png_file), {"application_name": "AppA"})
+        mgr.store_detection_result(sid_a, sample_ui_map)  # holds e1, e2
+        mgr.store_ref_map(sid_a, {"e1": "element_0", "e2": "element_1"})
+        time.sleep(0.02)
+
+        other = UIElement(
+            id="e9", element_id="other_0", role="AXButton", title="B-only",
+            label="B-only", value=None, frame=(0, 0, 10, 10),
+            is_actionable=True, parent_id=None, children=[],
+        )
+        sid_b = mgr.create_snapshot()  # newer, different window, different refs
+        mgr.store_screenshot(sid_b, str(png_file), {"application_name": "AppB"})
+        mgr.store_detection_result(sid_b, {"e9": other})
+        mgr.store_ref_map(sid_b, {"e9": "other_0"})
+
+        result = mgr.resolve_ref_element("e1")
+        assert result is not None
+        element, snap_id = result
+        assert snap_id == sid_a  # resolved against the snapshot that HAS e1
+        assert element.title == "Save"
+
+    def test_resolve_ref_prefers_live_window_over_newer_dead_one(
+        self, mgr: SnapshotManager, png_file: Path, sample_ui_map: Dict[str, UIElement]
+    ) -> None:
+        """When two snapshots both hold the ref, prefer the one whose window is
+        still alive over a newer one whose window has since closed."""
+
+        sid_old = mgr.create_snapshot()
+        mgr.store_screenshot(sid_old, str(png_file), {"window_handle": 111})
+        mgr.store_detection_result(sid_old, sample_ui_map)
+        mgr.store_ref_map(sid_old, {"e1": "element_0", "e2": "element_1"})
+        time.sleep(0.02)
+        sid_new = mgr.create_snapshot()  # newer, but its window is dead
+        mgr.store_screenshot(sid_new, str(png_file), {"window_handle": 222})
+        mgr.store_detection_result(sid_new, sample_ui_map)
+        mgr.store_ref_map(sid_new, {"e1": "element_0", "e2": "element_1"})
+
+        with patch.object(SnapshotManager, "_hwnd_alive",
+                          staticmethod(lambda h: h == 111)):
+            result = mgr.resolve_ref_element("e1")
+        assert result is not None
+        _, snap_id = result
+        assert snap_id == sid_old  # the live-window snapshot, not the newer dead one
+
 
 # ── list_snapshots ────────────────────────────────────────────────────────────
 
