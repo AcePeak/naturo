@@ -222,7 +222,15 @@ class ElementTreeMixin:
             return current_result
 
         if backend == "jab":
-            result = core.jab_get_element_tree(hwnd=handle, depth=depth)
+            # Java/Swing buries logical content under many mandatory structural
+            # panes — a normal window spends ~4 levels on RootPane > LayeredPane >
+            # glass/content pane before any widget, and a JDesktopPane >
+            # InternalFrame dialog adds ~5 more. So the caller's logical depth
+            # under-reaches the real controls (JConsole's connection fields sit at
+            # depth ~12-15). Add that structural offset so the default `see` still
+            # surfaces the widgets; the native layer caps the total.
+            jab_depth = min(depth + 8, 50)
+            result = core.jab_get_element_tree(hwnd=handle, depth=jab_depth)
             result = _try_uwp_children(
                 result,
                 lambda h, d: core.jab_get_element_tree(hwnd=h, depth=d),
