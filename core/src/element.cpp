@@ -376,8 +376,12 @@ static HRESULT create_element_cache_request(
 NATURO_API int naturo_get_element_tree(uintptr_t hwnd, int depth,
                                        char* result_json, int buf_size) {
     if (!result_json || buf_size <= 0) return -1;
+    // Honor the caller's depth up to a generous bound (matches the CLI's
+    // --depth max). The old cap of 10 silently ignored any larger --depth, so
+    // deeply-nested UIA trees (Electron/WebView DOM-as-UIA, complex WPF/WinForms,
+    // UWP frames) were truncated with no signal.
     if (depth < 1) depth = 1;
-    if (depth > 10) depth = 10;
+    if (depth > 50) depth = 50;
 
     HWND target = (HWND)hwnd;
     if (!target) {
