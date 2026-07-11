@@ -774,6 +774,33 @@ def run_cascade(
                     name="com", elapsed_ms=elapsed, status="no_elements",
                 ))
 
+        # Provider 2d: Scintilla (Notepad++/SciTE/IDE editors). The Scintilla
+        # editing surface is opaque to UIA — the tree shows the pane but no text.
+        # Read the document via Scintilla's own message API and graft it as a
+        # deterministic node, mirroring the COM/CDP/JAB providers.
+        if com_hwnd is not None and _get_cascade_pkg()._is_scintilla_window(com_hwnd):
+            t0 = time.monotonic()
+            sci_nodes: List[ElementInfo] = []
+            try:
+                sci_nodes = _get_cascade_pkg()._fetch_scintilla_content(com_hwnd)
+            except Exception as exc:
+                logger.debug("Auto cascade: Scintilla probe failed: %s", exc)
+            elapsed = (time.monotonic() - t0) * 1000
+
+            if sci_nodes and root_tree is not None:
+                for node in sci_nodes:
+                    tagged = _tag_source(node, "scintilla")
+                    root_tree.children.append(tagged)
+                    merged_elements.append(tagged)
+                stats.providers.append(ProviderStat(
+                    name="scintilla", elements=len(sci_nodes),
+                    elapsed_ms=elapsed, status="ok",
+                ))
+            else:
+                stats.providers.append(ProviderStat(
+                    name="scintilla", elapsed_ms=elapsed, status="no_elements",
+                ))
+
     # ── Shallow tree detection (issue #275) ────────────────────────────────
     # When the UIA tree is too shallow (few elements, mostly invalid bounds),
     # automatically enable AI vision fallback even without --fill-gaps.
