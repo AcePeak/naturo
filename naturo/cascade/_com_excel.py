@@ -15,7 +15,6 @@ port) — it never raises into the cascade.
 from __future__ import annotations
 
 import logging
-import os
 from typing import List, Optional
 
 from naturo.backends.base import ElementInfo
@@ -23,42 +22,13 @@ from naturo.backends.base import ElementInfo
 logger = logging.getLogger(__name__)
 
 # Defaults bound the tree size and COM round-trips on a huge sheet. They are not
-# silent: truncation is logged, and each is overridable via an env var so a user
-# who needs a bigger slice can raise it (e.g. NATURO_EXCEL_MAX_CELLS=5000):
-#   NATURO_EXCEL_MAX_CELLS — max non-empty cells emitted        (default 500)
-#   NATURO_EXCEL_MAX_ROWS  — max rows scanned of the used range (default 400)
-#   NATURO_EXCEL_MAX_COLS  — max cols scanned of the used range (default 100)
-_DEFAULT_MAX_EXCEL_CELLS = 500
-_DEFAULT_MAX_SCAN_ROWS = 400
-_DEFAULT_MAX_SCAN_COLS = 100
-
-
-def _env_int(name: str, default: int) -> int:
-    """Return positive int from env var ``name``, else ``default``.
-
-    A missing, non-integer, or non-positive value falls back to the default, so
-    a bad override degrades safely instead of disabling the bound.
-    """
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        return default
-    return value if value > 0 else default
-
-
-def _max_excel_cells() -> int:
-    return _env_int("NATURO_EXCEL_MAX_CELLS", _DEFAULT_MAX_EXCEL_CELLS)
-
-
-def _max_scan_rows() -> int:
-    return _env_int("NATURO_EXCEL_MAX_ROWS", _DEFAULT_MAX_SCAN_ROWS)
-
-
-def _max_scan_cols() -> int:
-    return _env_int("NATURO_EXCEL_MAX_COLS", _DEFAULT_MAX_SCAN_COLS)
+# silent (truncation is logged) and, crucially, not global mutable state: a
+# caller that needs a bigger slice passes larger values PER CALL — threaded from
+# `see --excel-max-cells` / see_ui_tree(excel_max_cells=…) through run_cascade —
+# which is safe under multi-process/concurrent use, unlike a process-wide env var.
+_DEFAULT_MAX_EXCEL_CELLS = 500  #: max non-empty cells emitted
+_DEFAULT_MAX_SCAN_ROWS = 400    #: max rows scanned of the used range
+_DEFAULT_MAX_SCAN_COLS = 100    #: max cols scanned of the used range
 
 
 def _win32_class_name(hwnd: int) -> Optional[str]:
@@ -184,7 +154,11 @@ def _cell_to_element(win, cell) -> Optional[ElementInfo]:
 
 
 def fetch_excel_cells(
-    hwnd: int, *, max_cells: Optional[int] = None
+    hwnd: int,
+    *,
+    max_cells: Optional[int] = None,
+    max_rows: Optional[int] = None,
+    max_cols: Optional[int] = None,
 ) -> List[ElementInfo]:
     """Fetch non-empty cells of the active sheet's used range as ``com`` nodes.
 
@@ -192,13 +166,16 @@ def fetch_excel_cells(
     COM error) — the cascade treats it like an unavailable provider.
     Truncation (sheet larger than the scan/emit caps) is logged, never silent.
 
-    The caps default to NATURO_EXCEL_MAX_CELLS / _MAX_ROWS / _MAX_COLS (see the
-    module header); pass ``max_cells`` to override the emit cap for one call.
+    ``max_cells`` / ``max_rows`` / ``max_cols`` override the emit and scan caps
+    for THIS call (``None`` = the module defaults). They are per-call, not global
+    state, so concurrent callers can each choose their own bound safely.
     """
     if max_cells is None:
-        max_cells = _max_excel_cells()
-    max_rows = _max_scan_rows()
-    max_cols = _max_scan_cols()
+        max_cells = _DEFAULT_MAX_EXCEL_CELLS
+    if max_rows is None:
+        max_rows = _DEFAULT_MAX_SCAN_ROWS
+    if max_cols is None:
+        max_cols = _DEFAULT_MAX_SCAN_COLS
 
     xl = _get_running_excel()
     if xl is None:
@@ -234,7 +211,8 @@ def fetch_excel_cells(
     if truncated:
         logger.info(
             "COM/Excel: output bounded to %d cells / %dx%d scan; sheet is larger. "
-            "Raise NATURO_EXCEL_MAX_CELLS / _MAX_ROWS / _MAX_COLS to read more.",
+            "Raise it with `see --excel-max-cells/--excel-max-rows/--excel-max-cols` "
+            "(or the see_ui_tree excel_max_* args) to read more.",
             max_cells, max_rows, max_cols,
         )
     return elements
