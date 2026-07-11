@@ -132,3 +132,87 @@ def test_run_cascade_grafts_scintilla_onto_tree():
     assert any(
         p.name == "scintilla" and p.status == "ok" for p in result.stats.providers
     )
+
+
+# ── Live re-read on `get eN` (snapshot staleness fix) ────────────────────────
+
+
+def _element_tree_mixin():
+    """Import ElementTreeMixin, skipping if the Windows backend can't load here."""
+    import pytest
+
+    try:
+        from naturo.backends.windows._element._tree import ElementTreeMixin
+    except Exception:  # pragma: no cover - non-Windows CI without the DLL
+        pytest.skip("Windows element backend unavailable on this platform")
+    return ElementTreeMixin
+
+
+class _Elem:
+    """Minimal stand-in for a resolved snapshot UIElement."""
+
+    def __init__(self, identifier, role="Document", name="Scintilla editor",
+                 frame=(1, 2, 3, 4)):
+        self.identifier = identifier
+        self.role = role
+        self.title = name
+        self.label = name
+        self.frame = frame
+
+
+def test_get_ref_live_reads_scintilla_control(monkeypatch):
+    mixin = _element_tree_mixin()
+    from naturo.cascade import _scintilla
+
+    # A Scintilla ref must be read LIVE (not from the snapshot value), so an edit
+    # after `see` is reflected. CRLF is normalised to LF like other doc reads.
+    monkeypatch.setattr(_scintilla, "_read_scintilla_text", lambda h: "line1\r\nline2")
+
+    out = mixin._read_scintilla_ref_live(_Elem("scintilla_4242"))
+
+    assert out is not None
+    assert out["value"] == "line1\nline2"
+    assert out["pattern"] == "Scintilla"
+    assert out["source"] == "scintilla"
+    assert (out["x"], out["y"], out["width"], out["height"]) == (1, 2, 3, 4)
+
+
+def test_get_ref_live_reads_hwnd_from_identifier(monkeypatch):
+    mixin = _element_tree_mixin()
+    from naturo.cascade import _scintilla
+
+    seen = {}
+
+    def _read(h):
+        seen["hwnd"] = h
+        return "text"
+
+    monkeypatch.setattr(_scintilla, "_read_scintilla_text", _read)
+    mixin._read_scintilla_ref_live(_Elem("scintilla_8066078"))
+    assert seen["hwnd"] == 8066078
+
+
+def test_get_ref_live_ignores_non_scintilla():
+    mixin = _element_tree_mixin()
+    assert mixin._read_scintilla_ref_live(_Elem("txtSearch", role="Edit")) is None
+    assert mixin._read_scintilla_ref_live(_Elem(None)) is None
+
+
+def test_get_ref_live_empty_document_is_still_read(monkeypatch):
+    mixin = _element_tree_mixin()
+    from naturo.cascade import _scintilla
+
+    # "" is a valid (empty) document — distinct from None (unreadable control).
+    monkeypatch.setattr(_scintilla, "_read_scintilla_text", lambda h: "")
+    out = mixin._read_scintilla_ref_live(_Elem("scintilla_9"))
+    assert out is not None
+    assert out["value"] == ""
+
+
+def test_get_ref_live_none_when_control_gone(monkeypatch):
+    mixin = _element_tree_mixin()
+    from naturo.cascade import _scintilla
+
+    # None → control can't be read → fall through to the normal path.
+    monkeypatch.setattr(_scintilla, "_read_scintilla_text", lambda h: None)
+    assert mixin._read_scintilla_ref_live(_Elem("scintilla_9")) is None

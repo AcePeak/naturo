@@ -377,6 +377,47 @@ class ElementTreeMixin:
             )
 
         return convert(result)
+    @staticmethod
+    def _read_scintilla_ref_live(elem) -> Optional[dict]:
+        """Live-read a Scintilla node's text, or ``None`` if not a Scintilla ref.
+
+        Scintilla nodes carry ``identifier == "scintilla_<child_hwnd>"`` (the id
+        the cascade provider assigned). We recover the HWND and read the current
+        document across the process boundary, so ``get eN`` reflects live edits
+        instead of the value snapshotted at ``see`` time. Returns ``None`` when
+        the ref is not a Scintilla node or the control can no longer be read
+        (caller then falls through to the normal path / snapshot fallback).
+        """
+        ident = getattr(elem, "identifier", None) or ""
+        if not ident.startswith("scintilla_"):
+            return None
+        try:
+            sci_hwnd = int(ident.split("_", 1)[1])
+        except (ValueError, IndexError):
+            return None
+        try:
+            from naturo.cascade._scintilla import _read_scintilla_text
+            text = _read_scintilla_text(sci_hwnd)
+        except Exception:
+            text = None
+        if text is None:  # control gone — let the caller degrade gracefully
+            return None
+        if "\r" in text:
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+        ex, ey, ew, eh = elem.frame
+        return {
+            "role": elem.role,
+            "name": elem.title or elem.label,
+            "value": text,
+            "pattern": "Scintilla",
+            "automation_id": None,
+            "x": ex,
+            "y": ey,
+            "width": ew,
+            "height": eh,
+            "source": "scintilla",
+        }
+
     def get_element_value(
         self,
         ref: Optional[str] = None,
@@ -425,6 +466,15 @@ class ElementTreeMixin:
             result = mgr.resolve_ref_element(ref)
             if result:
                 elem, _snap_id = result
+                # Scintilla nodes (Notepad++/SciTE) are synthetic — grafted by
+                # the cascade, with no live UIA element behind them. A normal ref
+                # lookup would fail the UIA probe and fall back to the value
+                # captured at ``see`` time, which goes stale the moment the user
+                # edits the document. Re-read the control live from the Scintilla
+                # child HWND embedded in the node's id (``scintilla_<hwnd>``).
+                _sci = self._read_scintilla_ref_live(elem)
+                if _sci is not None:
+                    return _sci
                 # Cache the element's own screen point as a disambiguation hint.
                 # A role+name lookup can match several elements (e.g. Windows
                 # Terminal exposes two "命令提示符" Text peers — a label and the
