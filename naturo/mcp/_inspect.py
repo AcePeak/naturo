@@ -80,11 +80,22 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             # multi-framework cascade so every node carries techniques[] +
             # correctness + confidence and the caller gets a recognition_summary.
             from naturo.cascade import run_cascade
-            cascade_result = run_cascade(
-                backend, app=app, window_title=window_title,
-                hwnd=hwnd, pid=pid, depth=depth, backend_name="auto",
-            )
-            tree = cascade_result.tree
+            tree = None
+            # (calc-zombie) --app can resolve to several UWP windows (empty ghost
+            # frames + the live CoreWindow). Gather all of them, cascade each, and
+            # keep only content-bearing ones so we never return a chrome-only ghost.
+            # Shared with the `see` CLI.
+            if app and hwnd is None and not window_title and pid is None:
+                from naturo.cascade._appwindows import app_content_tree
+                tree, _ = app_content_tree(
+                    backend, app, depth=depth, backend_name="auto",
+                )
+            if tree is None:
+                cascade_result = run_cascade(
+                    backend, app=app, window_title=window_title,
+                    hwnd=hwnd, pid=pid, depth=depth, backend_name="auto",
+                )
+                tree = cascade_result.tree
         # (#737) When --app is used without --hwnd, enumerate ALL windows
         # of the application and merge their UI trees (matching CLI behavior).
         elif app and not hwnd and hasattr(backend, "_resolve_hwnds"):

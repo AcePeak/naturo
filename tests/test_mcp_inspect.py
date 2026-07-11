@@ -133,6 +133,32 @@ class TestSeeUiTreeCascade:
         assert data["recognition_summary"]["by_technique"].get("cdp") == 1
         assert data["recognition_summary"]["has_uncertain"] is False
 
+    def test_cascade_with_app_routes_through_app_content_tree(self, server, mock_backend):
+        # (calc-zombie) cascade + --app + no hwnd must gather ALL of the app's
+        # windows via app_content_tree (dropping empty UWP ghost frames), mirroring
+        # `see --app --cascade`, instead of a single run_cascade that can land on a
+        # chrome-only ghost.
+        from naturo.backends.base import ElementInfo
+
+        root = ElementInfo(
+            id="w", role="Window", name="Live", value=None,
+            x=0, y=0, width=200, height=200, children=[],
+            properties={"source": "uia"},
+        )
+        with (
+            patch("naturo.cascade._appwindows.app_content_tree",
+                  return_value=(root, None)) as mock_act,
+            patch("naturo.cascade.run_cascade") as mock_cascade,
+        ):
+            out = _call_tool(server, "see_ui_tree",
+                             {"cascade": True, "app": "calc", "format": "json"})
+
+        mock_act.assert_called_once()
+        mock_cascade.assert_not_called()
+        data = json.loads(out[0].text)
+        assert data["success"] is True
+        assert data["tree"]["name"] == "Live"
+
     def test_non_cascade_tree_has_no_fusion_tags(self, server, mock_backend):
         # plain (single-backend) path stays unchanged — no techniques/correctness.
         out = _call_tool(server, "see_ui_tree", {"format": "json"})
