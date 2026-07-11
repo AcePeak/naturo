@@ -230,6 +230,22 @@ class TestJABRoleMapping:
         assert '"tree") return "Tree"' in content
         assert '"table") return "Table"' in content
 
+    def test_reads_accessible_text_for_content(self):
+        """Text components' real content is pulled via the AccessibleText
+        interface, not just the context description (JConsole's HTML VM Summary
+        reports description='text/html')."""
+        import os
+        jab_cpp = os.path.join(os.path.dirname(__file__), "..", "core", "src", "jab.cpp")
+        if not os.path.exists(jab_cpp):
+            pytest.skip("jab.cpp not found")
+        with open(jab_cpp, "r", encoding="utf-8") as f:
+            content = f.read()
+        # The AccessibleText API is bound and used, gated on info.accessibleText.
+        assert "getAccessibleTextInfo" in content
+        assert "getAccessibleTextRange" in content
+        assert "jab_read_accessible_text" in content
+        assert "info.accessibleText" in content
+
 
 # ── Exports Header Tests ─────────────────────────────
 

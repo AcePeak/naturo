@@ -61,6 +61,18 @@ typedef struct {
     BOOL accessibleInterfaces;
 } AccessibleContextInfo;
 
+// AccessibleText is a SEPARATE JAB interface from AccessibleContextInfo. Text
+// components (JTextArea, JEditorPane, JTextPane, JTextField) expose their actual
+// content ONLY here — the context's `description` is often just the content type
+// (e.g. JConsole's HTML "VM Summary" reports description="text/html", not the
+// text). getAccessibleTextInfo gives the char count; getAccessibleTextRange
+// pulls the characters.
+typedef struct {
+    int charCount;
+    int caretIndex;
+    int indexAtPoint;
+} AccessibleTextInfo;
+
 /* ── JAB Function Pointer Types ───────────────────── */
 
 // The assistive-technology entry point exported by the shipped
@@ -75,6 +87,8 @@ typedef BOOL  (__cdecl *FN_GetAccessibleContextInfo)(long vmID, AccessibleContex
 typedef AccessibleContext (__cdecl *FN_GetAccessibleChildFromContext)(long vmID, AccessibleContext ac, int index);
 typedef AccessibleContext (__cdecl *FN_GetAccessibleParentFromContext)(long vmID, AccessibleContext ac);
 typedef void  (__cdecl *FN_ReleaseJavaObject)(long vmID, JOBJECT64 object);
+typedef BOOL  (__cdecl *FN_GetAccessibleTextInfo)(long vmID, AccessibleContext at, AccessibleTextInfo* info, int x, int y);
+typedef BOOL  (__cdecl *FN_GetAccessibleTextRange)(long vmID, AccessibleContext at, int start, int end, wchar_t* text, short len);
 
 /* ── JAB Singleton ────────────────────────────────── */
 
@@ -93,6 +107,8 @@ struct JABState {
     FN_GetAccessibleChildFromContext pGetChild = nullptr;
     FN_GetAccessibleParentFromContext pGetParent = nullptr;
     FN_ReleaseJavaObject         pReleaseObject = nullptr;
+    FN_GetAccessibleTextInfo     pGetTextInfo = nullptr;
+    FN_GetAccessibleTextRange    pGetTextRange = nullptr;
 };
 
 static JABState g_jab;
@@ -188,6 +204,8 @@ static bool jab_load_library() {
     g_jab.pGetChild       = (FN_GetAccessibleChildFromContext)GetProcAddress(g_jab.dll, "getAccessibleChildFromContext");
     g_jab.pGetParent      = (FN_GetAccessibleParentFromContext)GetProcAddress(g_jab.dll, "getAccessibleParentFromContext");
     g_jab.pReleaseObject  = (FN_ReleaseJavaObject)GetProcAddress(g_jab.dll, "releaseJavaObject");
+    g_jab.pGetTextInfo    = (FN_GetAccessibleTextInfo)GetProcAddress(g_jab.dll, "getAccessibleTextInfo");
+    g_jab.pGetTextRange   = (FN_GetAccessibleTextRange)GetProcAddress(g_jab.dll, "getAccessibleTextRange");
 
     // Require minimum set
     if (!g_jab.pInitialize || !g_jab.pIsJavaWindow ||
@@ -441,6 +459,41 @@ struct JABElement {
 static int g_jab_id_counter = 0;
 
 /**
+ * @brief Read a text component's full content via the AccessibleText interface.
+ *
+ * Text components (JTextArea/JEditorPane/JTextPane/JTextField) expose their real
+ * content ONLY here — the context `description` is often just the content type.
+ * Bounded so a huge document can't bloat the tree; the Python layer previews it
+ * further. Returns the wide text (empty when unavailable).
+ */
+static std::wstring jab_read_accessible_text(long vmID, AccessibleContext ac) {
+    if (!g_jab.pGetTextInfo || !g_jab.pGetTextRange) return L"";
+    AccessibleTextInfo ti;
+    memset(&ti, 0, sizeof(ti));
+    if (!g_jab.pGetTextInfo(vmID, ac, &ti, 0, 0) || ti.charCount <= 0) return L"";
+
+    const int CAP = 65536;                 // hard bound on chars read
+    int total = ti.charCount < CAP ? ti.charCount : CAP;
+    const int CHUNK = 4000;                // getAccessibleTextRange 'len' is a short
+    std::wstring wide;
+    wide.reserve(total);
+    wchar_t buf[CHUNK + 1];
+    for (int start = 0; start < total; ) {
+        int end = start + CHUNK - 1;
+        if (end >= total) end = total - 1;
+        memset(buf, 0, sizeof(buf));
+        short len = (short)(end - start + 2);
+        if (!g_jab.pGetTextRange(vmID, ac, start, end, buf, len)) break;
+        buf[CHUNK] = 0;
+        int got = (int)wcslen(buf);
+        if (got <= 0) break;               // no progress — stop
+        wide.append(buf, got);
+        start += got;                      // advance by chars actually returned
+    }
+    return wide;
+}
+
+/**
  * @brief Build an element from an AccessibleContextInfo.
  */
 static JABElement jab_build_element(long vmID, AccessibleContext ac,
@@ -457,6 +510,12 @@ static JABElement jab_build_element(long vmID, AccessibleContext ac,
     el.role = jab_normalize_role(info.role_en_US[0] ? info.role_en_US : info.role);
     el.name = jab_json_escape(info.name);
     el.value = jab_json_escape(info.description);
+    // Text components carry their real content in AccessibleText, not the
+    // description (which is often just a content type like "text/html").
+    if (info.accessibleText) {
+        std::wstring txt = jab_read_accessible_text(vmID, ac);
+        if (!txt.empty()) el.value = jab_json_escape(txt.c_str());
+    }
     el.states = jab_json_escape(info.states_en_US[0] ? info.states_en_US : info.states);
     el.x = info.x;
     el.y = info.y;
