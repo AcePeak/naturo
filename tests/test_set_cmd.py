@@ -669,3 +669,73 @@ class TestSetAppId:
         result = runner.invoke(main, ["set", "--help"])
         assert result.exit_code == 0
         assert "--app-id" in result.output
+
+
+# ── RangeValuePattern fallback (Slider/Spinner/ProgressBar) ──────────────────
+
+
+class TestSetValueRangeValue:
+    """set_element_value falls back to RangeValuePattern when a control (e.g. a
+    Zoom Slider) has no ValuePattern — and it must not choke on comtypes' NULL
+    pointer for the unsupported pattern."""
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="comtypes/UIA is Windows-only")
+    def test_slider_set_via_rangevalue(self):
+        from naturo.backends.windows import WindowsBackend
+
+        mod = MagicMock()
+        mod.UIA_ValuePatternId = 10002
+        mod.UIA_RangeValuePatternId = 10003
+
+        # ValuePattern → a NULL-like (falsy) COM pointer, as comtypes returns for
+        # an unsupported pattern. Truthiness must skip it, not QueryInterface it.
+        null_vp = MagicMock()
+        null_vp.__bool__.return_value = False
+
+        rv_pattern = MagicMock()
+        rv_pattern.CurrentIsReadOnly = False
+        rv_pattern.CurrentMinimum = 0.0
+        rv_pattern.CurrentMaximum = 100.0
+        rv_ptr = MagicMock()
+        rv_ptr.__bool__.return_value = True
+        rv_ptr.QueryInterface.return_value = rv_pattern
+
+        elem = MagicMock()
+        elem.GetCurrentPattern.side_effect = (
+            lambda pid: rv_ptr if pid == mod.UIA_RangeValuePatternId else null_vp
+        )
+
+        b = WindowsBackend.__new__(WindowsBackend)
+        with patch.object(b, "_init_comtypes_uia", return_value=(MagicMock(), mod)), \
+             patch.object(b, "_resolve_interaction_element", return_value=elem):
+            ok = b.set_element_value(text="50", hwnd=1, name="Zoom", role="Slider")
+
+        assert ok is True
+        rv_pattern.SetValue.assert_called_once_with(50.0)
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="comtypes/UIA is Windows-only")
+    def test_rangevalue_clamped_to_max(self):
+        from naturo.backends.windows import WindowsBackend
+
+        mod = MagicMock()
+        mod.UIA_ValuePatternId = 10002
+        mod.UIA_RangeValuePatternId = 10003
+        null_vp = MagicMock()
+        null_vp.__bool__.return_value = False
+        rv_pattern = MagicMock()
+        rv_pattern.CurrentIsReadOnly = False
+        rv_pattern.CurrentMinimum = 0.0
+        rv_pattern.CurrentMaximum = 100.0
+        rv_ptr = MagicMock()
+        rv_ptr.__bool__.return_value = True
+        rv_ptr.QueryInterface.return_value = rv_pattern
+        elem = MagicMock()
+        elem.GetCurrentPattern.side_effect = (
+            lambda pid: rv_ptr if pid == mod.UIA_RangeValuePatternId else null_vp
+        )
+        b = WindowsBackend.__new__(WindowsBackend)
+        with patch.object(b, "_init_comtypes_uia", return_value=(MagicMock(), mod)), \
+             patch.object(b, "_resolve_interaction_element", return_value=elem):
+            ok = b.set_element_value(text="9999", hwnd=1, name="Zoom", role="Slider")
+        assert ok is True
+        rv_pattern.SetValue.assert_called_once_with(100.0)  # clamped to max

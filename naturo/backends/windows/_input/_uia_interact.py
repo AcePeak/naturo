@@ -541,23 +541,44 @@ class UIAInteractMixin:
                                  name, automation_id, role)
                     return False
 
-            # Try ValuePattern
+            # 1) ValuePattern — text/edit controls. NB: comtypes returns a
+            #    non-None NULL COM pointer for an UNSUPPORTED pattern (a Slider has
+            #    no ValuePattern), so gate on truthiness — `if ptr:` is False for a
+            #    NULL pointer — not `is not None`, which would QueryInterface a NULL
+            #    pointer and raise "NULL COM pointer access".
             pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-            if pat_unk is None:
-                logger.debug("SetValue: element does not support ValuePattern")
-                return False
+            if pat_unk:
+                vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+                if not vp.CurrentIsReadOnly:
+                    vp.SetValue(text)
+                    logger.info("SetValue: set via ValuePattern (name=%r, len=%d)",
+                                name, len(text))
+                    return True
+                logger.debug("SetValue: ValuePattern read-only; trying RangeValue")
 
-            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+            # 2) RangeValuePattern — Slider/Spinner/ProgressBar carry a numeric
+            #    value and do NOT support ValuePattern. Parse the number and clamp
+            #    to the control's [min, max] so an out-of-range request still lands.
+            rv_unk = elem.GetCurrentPattern(mod.UIA_RangeValuePatternId)
+            if rv_unk:
+                rv = rv_unk.QueryInterface(mod.IUIAutomationRangeValuePattern)
+                if rv.CurrentIsReadOnly:
+                    logger.debug("SetValue: RangeValuePattern is read-only")
+                    return False
+                try:
+                    num = float(text)
+                except (TypeError, ValueError):
+                    logger.debug("SetValue: RangeValue needs a number, got %r", text)
+                    return False
+                num = max(rv.CurrentMinimum, min(rv.CurrentMaximum, num))
+                rv.SetValue(num)
+                logger.info("SetValue: set via RangeValuePattern (name=%r, value=%s)",
+                            name, num)
+                return True
 
-            # Check if the value is read-only
-            if vp.CurrentIsReadOnly:
-                logger.debug("SetValue: element's ValuePattern is read-only")
-                return False
-
-            vp.SetValue(text)
-            logger.info("SetValue: successfully set text on element (name=%r, len=%d)",
-                        name, len(text))
-            return True
+            logger.debug("SetValue: element supports neither writable Value nor "
+                         "RangeValue pattern")
+            return False
 
         except (OSError, AttributeError) as exc:
             logger.debug("SetValue failed: %s", exc)
