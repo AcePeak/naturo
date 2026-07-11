@@ -56,6 +56,13 @@ def _detect_backend_for_class(cls_name: str) -> str:
     return "uia"
 
 
+def _subtree_size(node) -> int:
+    """Total node count of a tree (cheap; used to detect UIA-opaque windows)."""
+    if node is None:
+        return 0
+    return 1 + sum(_subtree_size(c) for c in (getattr(node, "children", None) or []))
+
+
 def _is_java_window(hwnd: int) -> bool:
     """Return ``True`` if ``hwnd`` (or a direct child) is a Java Swing/AWT window.
 
@@ -249,6 +256,23 @@ def build_hybrid_tree(
                 ia2_count += len(ia2_elements)
                 enriched_count += len(ia2_elements)
 
+    # ── Generic MSAA fusion for UIA-opaque windows ──────────────────────────
+    # Custom-drawn / legacy apps (Creo, the charmap character grid, old MFC /
+    # Delphi / VB6) expose IAccessible (MSAA) but render opaque to UIA — the
+    # class-driven routing above can't know their bespoke window classes. When
+    # the UIA tree is far thinner than MSAA for this window, fuse the MSAA nodes
+    # in so the unified tree matches what's actually on screen. Gated on a thin
+    # UIA so rich-UIA apps pay nothing and never double-count.
+    msaa_count = 0
+    if uia_tree is not None:
+        uia_size = _subtree_size(uia_tree)
+        if uia_size < 60:
+            msaa_elements = _try_backend_for_hwnd(backend, hwnd, "msaa", depth, "", "")
+            msaa_size = sum(_subtree_size(e) for e in msaa_elements)
+            if msaa_elements and msaa_size > 3 * uia_size:
+                uia_tree.children.extend(msaa_elements)
+                msaa_count = msaa_size
+
     # Record Win32 scan + enrichment stats
     total_enrichment_elapsed = (time.monotonic() - t0) * 1000
     if win32_children:
@@ -269,6 +293,11 @@ def build_hybrid_tree(
     if ia2_count > 0:
         stats.providers.append(ProviderStat(
             name="ia2", elements=ia2_count,
+            elapsed_ms=total_enrichment_elapsed - win32_elapsed, status="ok",
+        ))
+    if msaa_count > 0:
+        stats.providers.append(ProviderStat(
+            name="msaa", elements=msaa_count,
             elapsed_ms=total_enrichment_elapsed - win32_elapsed, status="ok",
         ))
 
@@ -430,18 +459,91 @@ def find_cdp_port(pid: Optional[int] = None) -> Optional[int]:
         except Exception as exc:
             logger.debug("Failed to get command line for PID %d: %s", pid, exc)
 
-    # Phase 2: probe common debug ports via HTTP
-    for port in [9222, 9229, 9333]:
-        try:
-            import urllib.request
-            import urllib.error
+    # Phase 2: a CDP port OWNED by this process tree. The debug port is held by
+    # the app's browser CHILD process (WebView2 → msedgewebview2.exe, CEF/Electron
+    # → a renderer/GPU child), so scan the ports listened by pid + its descendants
+    # and accept the first that speaks CDP. NEVER blind-probe common ports when a
+    # target pid is given: a DIFFERENT app squatting on 9222 would graft its page
+    # into this app's tree (that is exactly how Clash Verge showed WebViewHost's
+    # test page).
+    if pid is not None:
+        for port in _listening_ports_for_pids(_process_tree_pids(pid)):
+            if _cdp_endpoint_responds(port):
+                return port
+        return None
 
-            url = f"http://127.0.0.1:{port}/json/version"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
-                if resp.status == 200:
-                    return port
-        except Exception as exc:
-            logger.debug("CDP port check failed for port %s: %s", port, exc)
-
+    # No target pid → we CANNOT attribute any CDP endpoint to this window, so
+    # refuse. Blind-probing common ports (9222/9229/9333) would graft whatever
+    # unrelated browser happens to be listening (a stray Chrome, Clash Verge,
+    # another Electron app) into this window's tree — the same cross-app
+    # contamination the pid path above guards against. A caller that genuinely
+    # wants a specific endpoint passes its port explicitly.
     return None
+
+
+def _cdp_endpoint_responds(port: int) -> bool:
+    """True if a CDP endpoint answers /json/version on this local port."""
+    try:
+        import urllib.request
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/json/version", timeout=1.0,
+        ) as resp:
+            return resp.status == 200
+    except Exception as exc:
+        logger.debug("CDP port check failed for port %s: %s", port, exc)
+        return False
+
+
+def _process_tree_pids(pid: int) -> set:
+    """``{pid}`` plus every descendant PID (browser child processes own the port)."""
+    pids = {pid}
+    try:
+        import subprocess
+        out = subprocess.run(
+            ["wmic", "process", "get", "ProcessId,ParentProcessId", "/format:csv"],
+            capture_output=True, encoding="utf-8", errors="ignore", timeout=6,
+        ).stdout or ""
+        children: dict = {}
+        for line in out.splitlines():
+            parts = line.strip().split(",")
+            if len(parts) < 3:
+                continue
+            # wmic /format:csv columns are alphabetical: Node,ParentProcessId,ProcessId
+            try:
+                ppid = int(parts[-2])
+                cpid = int(parts[-1])
+            except Exception:
+                continue
+            children.setdefault(ppid, []).append(cpid)
+        stack = [pid]
+        while stack:
+            for c in children.get(stack.pop(), []):
+                if c not in pids:
+                    pids.add(c)
+                    stack.append(c)
+    except Exception as exc:
+        logger.debug("process tree walk failed for PID %s: %s", pid, exc)
+    return pids
+
+
+def _listening_ports_for_pids(pids: set) -> list:
+    """Local TCP ports in LISTENING state owned by any PID in ``pids``."""
+    ports: list = []
+    try:
+        import subprocess
+        out = subprocess.run(
+            ["netstat", "-ano", "-p", "TCP"],
+            capture_output=True, encoding="utf-8", errors="ignore", timeout=6,
+        ).stdout or ""
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) >= 5 and parts[3].upper() == "LISTENING":
+                try:
+                    if int(parts[-1]) in pids:
+                        ports.append(int(parts[1].rsplit(":", 1)[1]))
+                except Exception:
+                    continue
+    except Exception as exc:
+        logger.debug("netstat port scan failed: %s", exc)
+    # de-dup, preserve order
+    return list(dict.fromkeys(ports))

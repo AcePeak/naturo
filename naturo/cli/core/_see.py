@@ -29,7 +29,10 @@ import naturo.cli.core._common as _common
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session name for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--cascade", is_flag=True,
-              help="Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision")
+              help="Add an AI-vision fallback (captures a screenshot) for regions no "
+                   "structural technique reached. NOTE: the fused multi-technique tree "
+                   "— UIA + MSAA + JAB/IA2 + CDP web content + Excel COM — is ALREADY "
+                   "the default under --backend auto; this flag only adds the vision layer.")
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered UI regions (requires AI provider)")
 @click.option("--ocr", "run_ocr", is_flag=True,
@@ -88,18 +91,20 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     tree picks the optimal backend based on its Win32 class (Electron\u2192CDP,
     Java\u2192JAB, Mozilla\u2192IA2, default\u2192UIA).
 
-    Use --cascade to progressively try multiple providers (UIA \u2192 CDP \u2192 AI vision).
-    This maximizes coverage for Electron apps (Feishu, Slack, VS Code, etc.)
-    that render content in a WebView.
+    With the default --backend auto, `see` already returns the FUSED tree from every
+    structural technique (UIA + MSAA + JAB/IA2 + CDP web content + Excel COM), each
+    node tagged with the technique that found it \u2014 no flag needed. --cascade only ADDS
+    a screenshot-based AI-vision fallback for regions no structural technique reached.
+    Pass an explicit --backend (uia/msaa/jab/\u2026) to use a single technique with no fusion.
 
     \b
     Examples:
-        naturo see --app feishu --cascade      # UIA + CDP for Electron content
-        naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
-        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # Use specific AI model
-        naturo see --app feishu --cascade --stats      # Show provider breakdown
-        naturo see --app feishu --backend auto         # Try all A11y backends
-        naturo see --app feishu --backend hybrid       # Per-node backend selection
+        naturo see --app feishu                # fused tree (UIA + CDP + \u2026) \u2014 auto is default
+        naturo see --app feishu --cascade      # also add the AI-vision fallback
+        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # force vision + model
+        naturo see --app feishu --stats        # show which technique found each region
+        naturo see --app feishu --backend uia  # single technique only (no fusion)
+        naturo see --app feishu --backend hybrid       # per-node backend selection
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -188,28 +193,43 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     cascade_screenshot = None
 
             from naturo.cascade import run_cascade
-            cascade_result = run_cascade(
-                be,
-                app=app,
-                window_title=window_title,
-                hwnd=hwnd,
-                pid=pid,
-                depth=depth,
-                backend_name=backend,
-                coverage_target=coverage_target,
-                fill_gaps_ai=fill_gaps,
-                ai_provider=ai_provider,
-                ai_model=ai_model,
-                ai_api_key=ai_api_key,
-                screenshot_path=cascade_screenshot,
-                screenshot_scale_factor=(
-                    cascade_capture_result.scale_factor
-                    if cascade_capture_result else 1.0
-                ),
-                run_ocr=run_ocr,
-            )
-            tree = cascade_result.tree
-            cascade_stats = cascade_result.stats
+            tree = None
+
+            # (calc-zombie) --app can resolve to several UWP windows at once —
+            # empty ApplicationFrameWindow ghosts + the live CoreWindow that holds
+            # the buttons — and a single _resolve_hwnd can pick a ghost, emitting
+            # chrome-only garbage. Gather all the app's windows, cascade each, keep
+            # only the content-bearing ones. Shared with MCP see_ui_tree.
+            if app and hwnd is None and not window_title and pid is None:
+                from naturo.cascade._appwindows import app_content_tree
+                tree, cascade_stats = app_content_tree(
+                    be, app, depth=depth, backend_name=backend,
+                    coverage_target=coverage_target,
+                )
+
+            if tree is None:
+                cascade_result = run_cascade(
+                    be,
+                    app=app,
+                    window_title=window_title,
+                    hwnd=hwnd,
+                    pid=pid,
+                    depth=depth,
+                    backend_name=backend,
+                    coverage_target=coverage_target,
+                    fill_gaps_ai=fill_gaps,
+                    ai_provider=ai_provider,
+                    ai_model=ai_model,
+                    ai_api_key=ai_api_key,
+                    screenshot_path=cascade_screenshot,
+                    screenshot_scale_factor=(
+                        cascade_capture_result.scale_factor
+                        if cascade_capture_result else 1.0
+                    ),
+                    run_ocr=run_ocr,
+                )
+                tree = cascade_result.tree
+                cascade_stats = cascade_result.stats
         else:
             # (#304) When --app is used without --hwnd, enumerate ALL windows
             # of the application and merge their UI trees.
@@ -230,6 +250,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     subtree = be.get_element_tree(
                         hwnd=h, depth=depth, backend=backend,
                     )
+                    # Keep every window with a real tree; ghost-frame dropping
+                    # is the job of the cascade path (app_content_tree via
+                    # content_score), not this explicit --backend override, and
+                    # content_score can't tell a legit childless window from a
+                    # ghost anyway (both score 0).
                     if subtree:
                         window_trees.append((h, subtree))
 

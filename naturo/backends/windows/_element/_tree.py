@@ -438,6 +438,18 @@ class ElementTreeMixin:
                             f"Element {ref} has no AutomationId, name, or "
                             f"location for value lookup"
                         )
+                # Target the ref's OWN window: `get eN` must read from the window
+                # the snapshot came from, not whatever is foreground now (else a
+                # role/name lookup runs against HWND 0 = the caller's terminal and
+                # finds nothing, or a different app's empty control).
+                if not target_hwnd:
+                    try:
+                        _snap = mgr.get_snapshot(_snap_id)
+                        _wh = getattr(_snap, "window_handle", None)
+                        if _wh:
+                            target_hwnd = _wh
+                    except Exception:
+                        pass
             else:
                 raise StaleSnapshotCacheError(ref)
 
@@ -559,5 +571,13 @@ class ElementTreeMixin:
                     "height": eh,
                     "source": "snapshot",
                 }
+
+        # Normalize document line endings: a text control's TextPattern can return
+        # lone carriage returns (Win11 Notepad uses \r as its line break), which
+        # render as a mangled single line in a terminal. Convert \r\n and \r to \n
+        # so multi-line content reads/splits as standard text.
+        if isinstance(result, dict) and isinstance(result.get("value"), str) \
+                and "\r" in result["value"]:
+            result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
 
         return result

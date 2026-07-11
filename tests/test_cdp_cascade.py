@@ -333,7 +333,12 @@ class TestFetchCdpElements:
 class TestFindCdpPort:
     """Test the find_cdp_port utility."""
 
-    def test_finds_port_via_http_probe(self):
+    def test_no_blind_probe_without_pid(self):
+        # A CDP endpoint that WOULD answer on a common port must NOT be returned
+        # when there is no pid to attribute it to: find_cdp_port's callers graft
+        # the endpoint's DOM into a specific window, so a stray browser (another
+        # Chrome, Clash Verge, an unrelated Electron app) squatting on 9222 would
+        # leak into that window's tree. No attributable pid → no port.
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
@@ -343,6 +348,21 @@ class TestFindCdpPort:
             from naturo.cascade import find_cdp_port
 
             port = find_cdp_port(pid=None)
+
+        assert port is None
+
+    def test_finds_port_owned_by_pid_tree(self):
+        # WITH a pid, a CDP port listened by that process tree is found.
+        with (
+            patch("naturo.cascade._build._process_tree_pids", return_value={1234}),
+            patch("naturo.cascade._build._listening_ports_for_pids",
+                  return_value=[9222]),
+            patch("naturo.cascade._build._cdp_endpoint_responds", return_value=True),
+            patch("platform.system", return_value="Linux"),
+        ):
+            from naturo.cascade import find_cdp_port
+
+            port = find_cdp_port(pid=1234)
 
         assert port == 9222
 

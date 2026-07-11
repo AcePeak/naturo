@@ -234,10 +234,15 @@ class TestAppIdResolution:
                 "--app-id", "a1", "--no-snapshot",
             ], catch_exceptions=False)
         assert result.exit_code == 0
-        # Backend should be called with the resolved hwnd and pid
-        mock_backend.get_element_tree.assert_called_once()
-        call_kwargs = mock_backend.get_element_tree.call_args
-        assert call_kwargs.kwargs.get("hwnd") == 12345 or call_kwargs[1].get("hwnd") == 12345
+        # The app-id must resolve to hwnd 12345 and every backend read must
+        # target it. Cascade (the default auto backend) competes providers —
+        # it reads UIA first, then also probes MSAA to see whether MSAA dwarfs
+        # a thin UIA tree (the "MSAA dwarfs UIA" path opaque-UIA apps like
+        # charmap rely on) — so get_element_tree may be called more than once;
+        # what matters is that each read used the resolved hwnd.
+        assert mock_backend.get_element_tree.called
+        for call in mock_backend.get_element_tree.call_args_list:
+            assert call.kwargs.get("hwnd") == 12345
 
 
 # ── Basic text output ──────────────────────────────────────────────────

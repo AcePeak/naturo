@@ -848,6 +848,40 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
     std::string pattern_name = "null";
     bool has_value = false;
 
+    // 0) TextPattern FIRST for text editors (Document/Edit). ValuePattern on a
+    //    rich multi-line editor (Win11 Notepad's Document) returns only a partial,
+    //    order-scrambled fragment, so read the FULL document text via TextPattern
+    //    when the control is a text editor that supports it. Non-editor controls
+    //    skip this (control-type gate); a plain Win32 Edit with no TextPattern
+    //    falls through to ValuePattern unchanged.
+    if (!has_value &&
+        (elem_ct == UIA_DocumentControlTypeId || elem_ct == UIA_EditControlTypeId)) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_TextPatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationTextPattern* txp = NULL;
+            hr = pat_unk->QueryInterface(
+                __uuidof(IUIAutomationTextPattern), (void**)&txp);
+            if (SUCCEEDED(hr) && txp) {
+                IUIAutomationTextRange* range = NULL;
+                hr = txp->get_DocumentRange(&range);
+                if (SUCCEEDED(hr) && range) {
+                    BSTR text = NULL;
+                    hr = range->GetText(1048576, &text);  // 1MB for large docs (#374)
+                    if (SUCCEEDED(hr) && text) {
+                        value = json_escape(text);
+                        SysFreeString(text);
+                        has_value = true;
+                        pattern_name = "\"TextPattern\"";
+                    }
+                    range->Release();
+                }
+                txp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
+
     // 1) ValuePattern
     if (!has_value) {
         IUnknown* pat_unk = NULL;
