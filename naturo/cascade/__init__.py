@@ -67,6 +67,10 @@ from naturo.cascade._com_excel import (
     fetch_excel_cells as _fetch_excel_cells,
     is_excel_window as _is_excel_window,
 )
+from naturo.cascade._scintilla import (
+    fetch_scintilla_content as _fetch_scintilla_content,
+    is_scintilla_window as _is_scintilla_window,
+)
 from naturo.cascade._ocr import fetch_ocr_elements as _fetch_ocr_elements
 from naturo.cascade._correctness import (
     DETERMINISTIC,
@@ -122,6 +126,8 @@ __all__ = [
     "_fetch_cdp_elements",
     "_fetch_excel_cells",
     "_is_excel_window",
+    "_fetch_scintilla_content",
+    "_is_scintilla_window",
     "_fetch_ocr_elements",
     # Correctness / fusion tagging (M1 Unified Auto Element Tree)
     "DETERMINISTIC",
