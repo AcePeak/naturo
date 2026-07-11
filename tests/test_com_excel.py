@@ -184,3 +184,41 @@ def test_run_cascade_grafts_com_cells_onto_tree():
     assert fusion["techniques"] == ["com"]
     # provider stat recorded
     assert any(p.name == "com" and p.status == "ok" for p in result.stats.providers)
+
+
+# ── configurable scan/emit caps (env override) ───────────────────────────────
+
+
+class TestExcelLimitsConfigurable:
+    """The Excel scan/emit caps default sensibly but are env-overridable."""
+
+    def test_env_int_parsing(self):
+        from naturo.cascade._com_excel import _env_int
+
+        with patch.dict("os.environ", {"X": "1500"}):
+            assert _env_int("X", 500) == 1500
+        # missing / non-integer / non-positive all fall back to the default
+        with patch.dict("os.environ", {}, clear=True):
+            assert _env_int("X", 500) == 500
+        with patch.dict("os.environ", {"X": "nope"}):
+            assert _env_int("X", 500) == 500
+        with patch.dict("os.environ", {"X": "0"}):
+            assert _env_int("X", 500) == 500
+        with patch.dict("os.environ", {"X": "-10"}):
+            assert _env_int("X", 500) == 500
+
+    def test_caps_read_from_env(self):
+        from naturo.cascade import _com_excel as m
+
+        with patch.dict("os.environ", {}, clear=True):
+            assert m._max_excel_cells() == 500
+            assert m._max_scan_rows() == 400
+            assert m._max_scan_cols() == 100
+        with patch.dict("os.environ", {
+            "NATURO_EXCEL_MAX_CELLS": "5000",
+            "NATURO_EXCEL_MAX_ROWS": "2000",
+            "NATURO_EXCEL_MAX_COLS": "256",
+        }):
+            assert m._max_excel_cells() == 5000
+            assert m._max_scan_rows() == 2000
+            assert m._max_scan_cols() == 256

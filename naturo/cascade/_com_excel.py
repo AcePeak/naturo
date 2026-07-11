@@ -15,17 +15,50 @@ port) — it never raises into the cascade.
 from __future__ import annotations
 
 import logging
+import os
 from typing import List, Optional
 
 from naturo.backends.base import ElementInfo
 
 logger = logging.getLogger(__name__)
 
-#: Max non-empty cells emitted (a huge sheet must not explode the tree).
-_MAX_EXCEL_CELLS = 500
-#: Max cells *scanned* (bounds COM round-trips on a large used range).
-_MAX_SCAN_ROWS = 400
-_MAX_SCAN_COLS = 100
+# Defaults bound the tree size and COM round-trips on a huge sheet. They are not
+# silent: truncation is logged, and each is overridable via an env var so a user
+# who needs a bigger slice can raise it (e.g. NATURO_EXCEL_MAX_CELLS=5000):
+#   NATURO_EXCEL_MAX_CELLS — max non-empty cells emitted        (default 500)
+#   NATURO_EXCEL_MAX_ROWS  — max rows scanned of the used range (default 400)
+#   NATURO_EXCEL_MAX_COLS  — max cols scanned of the used range (default 100)
+_DEFAULT_MAX_EXCEL_CELLS = 500
+_DEFAULT_MAX_SCAN_ROWS = 400
+_DEFAULT_MAX_SCAN_COLS = 100
+
+
+def _env_int(name: str, default: int) -> int:
+    """Return positive int from env var ``name``, else ``default``.
+
+    A missing, non-integer, or non-positive value falls back to the default, so
+    a bad override degrades safely instead of disabling the bound.
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def _max_excel_cells() -> int:
+    return _env_int("NATURO_EXCEL_MAX_CELLS", _DEFAULT_MAX_EXCEL_CELLS)
+
+
+def _max_scan_rows() -> int:
+    return _env_int("NATURO_EXCEL_MAX_ROWS", _DEFAULT_MAX_SCAN_ROWS)
+
+
+def _max_scan_cols() -> int:
+    return _env_int("NATURO_EXCEL_MAX_COLS", _DEFAULT_MAX_SCAN_COLS)
 
 
 def _win32_class_name(hwnd: int) -> Optional[str]:
@@ -151,14 +184,22 @@ def _cell_to_element(win, cell) -> Optional[ElementInfo]:
 
 
 def fetch_excel_cells(
-    hwnd: int, *, max_cells: int = _MAX_EXCEL_CELLS
+    hwnd: int, *, max_cells: Optional[int] = None
 ) -> List[ElementInfo]:
     """Fetch non-empty cells of the active sheet's used range as ``com`` nodes.
 
     Returns an empty list on any failure (no Excel running, pywin32 missing,
     COM error) — the cascade treats it like an unavailable provider.
     Truncation (sheet larger than the scan/emit caps) is logged, never silent.
+
+    The caps default to NATURO_EXCEL_MAX_CELLS / _MAX_ROWS / _MAX_COLS (see the
+    module header); pass ``max_cells`` to override the emit cap for one call.
     """
+    if max_cells is None:
+        max_cells = _max_excel_cells()
+    max_rows = _max_scan_rows()
+    max_cols = _max_scan_cols()
+
     xl = _get_running_excel()
     if xl is None:
         return []
@@ -167,14 +208,14 @@ def fetch_excel_cells(
         return []
     try:
         used = win.ActiveSheet.UsedRange
-        nrows = min(int(used.Rows.Count), _MAX_SCAN_ROWS)
-        ncols = min(int(used.Columns.Count), _MAX_SCAN_COLS)
+        nrows = min(int(used.Rows.Count), max_rows)
+        ncols = min(int(used.Columns.Count), max_cols)
     except Exception as exc:
         logger.debug("COM/Excel: cannot read used range: %s", exc)
         return []
 
     elements: List[ElementInfo] = []
-    truncated = int(used.Rows.Count) > _MAX_SCAN_ROWS or int(used.Columns.Count) > _MAX_SCAN_COLS
+    truncated = int(used.Rows.Count) > max_rows or int(used.Columns.Count) > max_cols
     for r in range(1, nrows + 1):
         for c in range(1, ncols + 1):
             if len(elements) >= max_cells:
@@ -192,7 +233,8 @@ def fetch_excel_cells(
 
     if truncated:
         logger.info(
-            "COM/Excel: output bounded to %d cells / %dx%d scan; sheet is larger.",
-            max_cells, _MAX_SCAN_ROWS, _MAX_SCAN_COLS,
+            "COM/Excel: output bounded to %d cells / %dx%d scan; sheet is larger. "
+            "Raise NATURO_EXCEL_MAX_CELLS / _MAX_ROWS / _MAX_COLS to read more.",
+            max_cells, max_rows, max_cols,
         )
     return elements
