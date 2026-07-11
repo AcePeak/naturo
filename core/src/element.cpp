@@ -17,6 +17,7 @@
 #include <uiautomation.h>
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <string>
 #include <atomic>
 
@@ -702,9 +703,16 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
  */
 static IUIAutomationElement* find_element_by_id_or_role(
     IUIAutomation* uia, IUIAutomationElement* root,
-    const char* automation_id, const char* role, const char* name)
+    const char* automation_id, const char* role, const char* name,
+    int hint_x, int hint_y)
 {
     IUIAutomationElement* found = NULL;
+    // A snapshot ref carries the exact element's screen point. When several
+    // elements share the same role+name and no AutomationId (e.g. Windows
+    // Terminal exposes two "命令提示符" Text peers — a tiny label and the full
+    // buffer), a bare FindFirst grabs the wrong one. If a hint point is given,
+    // prefer the match whose bounds contain it; fall back to the first match.
+    const bool have_hint = (hint_x != INT_MIN && hint_y != INT_MIN);
 
     if (automation_id && automation_id[0]) {
         // Search by AutomationId
@@ -776,8 +784,25 @@ static IUIAutomationElement* find_element_by_id_or_role(
                 }
 
                 if (match) {
-                    found = elem;
-                    break;
+                    if (!have_hint) {
+                        found = elem;       // no hint: first match wins (legacy)
+                        break;
+                    }
+                    // With a hint, keep the first match as a fallback but prefer
+                    // the one whose bounds contain the hint point.
+                    RECT r = {0, 0, 0, 0};
+                    elem->get_CurrentBoundingRectangle(&r);
+                    bool contains = (hint_x >= r.left && hint_x < r.right &&
+                                     hint_y >= r.top && hint_y < r.bottom);
+                    if (contains) {
+                        if (found) found->Release();
+                        found = elem;       // exact hit — done
+                        break;
+                    }
+                    if (!found) {
+                        found = elem;       // remember first match, keep scanning
+                        continue;           // (don't Release the one we kept)
+                    }
                 }
                 elem->Release();
             }
@@ -797,6 +822,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                                          const char* automation_id,
                                          const char* role_filter,
                                          const char* name_filter,
+                                         int hint_x, int hint_y,
                                          char* result_json, int buf_size) {
     if (!result_json || buf_size <= 0) return -1;
     if (!automation_id && !role_filter && !name_filter) return -1;
@@ -821,7 +847,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
     }
 
     IUIAutomationElement* elem = find_element_by_id_or_role(
-        uia, root, automation_id, role_filter, name_filter);
+        uia, root, automation_id, role_filter, name_filter, hint_x, hint_y);
 
     if (!elem) {
         root->Release();
@@ -1109,11 +1135,14 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                                          const char* automation_id,
                                          const char* role,
                                          const char* name,
+                                         int hint_x, int hint_y,
                                          char* result_json, int buf_size) {
     (void)hwnd;
     (void)automation_id;
     (void)role;
     (void)name;
+    (void)hint_x;
+    (void)hint_y;
     (void)result_json;
     (void)buf_size;
     return -2;  // Not supported on this platform

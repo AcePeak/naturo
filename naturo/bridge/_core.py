@@ -204,7 +204,8 @@ class NaturoCore:
             self._lib.naturo_get_element_value.restype = ctypes.c_int
             self._lib.naturo_get_element_value.argtypes = [
                 ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p,
-                ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int
+                ctypes.c_char_p, ctypes.c_int, ctypes.c_int,
+                ctypes.c_char_p, ctypes.c_int
             ]
         except AttributeError:
             pass  # DLL lacks this export; get_element_value() will raise
@@ -556,6 +557,8 @@ class NaturoCore:
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        hint_x: Optional[int] = None,
+        hint_y: Optional[int] = None,
     ) -> Optional[dict]:
         """Read the current value of a UI element using UIA patterns.
 
@@ -568,6 +571,9 @@ class NaturoCore:
             automation_id: AutomationId of the target element.
             role: Element role filter (used when automation_id is None).
             name: Element name filter (used when automation_id is None).
+            hint_x, hint_y: Optional screen point disambiguating a role+name
+                search when several elements share them (no AutomationId). The
+                match whose bounds contain the point wins; else the first match.
 
         Returns:
             Dict with keys: value, pattern, role, name, automation_id,
@@ -592,7 +598,11 @@ class NaturoCore:
                 "(recompile the DLL with the latest source)",
             )
 
-        rc = fn(hwnd, aid_bytes, role_bytes, name_bytes, buf, buf_size)
+        # INT_MIN sentinel = "no hint" (matches the native have_hint check).
+        _NO_HINT = -2147483648
+        hx = hint_x if hint_x is not None else _NO_HINT
+        hy = hint_y if hint_y is not None else _NO_HINT
+        rc = fn(hwnd, aid_bytes, role_bytes, name_bytes, hx, hy, buf, buf_size)
 
         if rc == 1:
             return None  # Not found
