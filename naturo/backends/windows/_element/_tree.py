@@ -419,6 +419,16 @@ class ElementTreeMixin:
             result = mgr.resolve_ref_element(ref)
             if result:
                 elem, _snap_id = result
+                # Cache the element's own screen point as a disambiguation hint.
+                # A role+name lookup can match several elements (e.g. Windows
+                # Terminal exposes two "命令提示符" Text peers — a label and the
+                # full buffer); the point picks the exact one the snapshot meant.
+                # Harmless when the match is unique, and it does NOT trigger the
+                # coordinate-read path below (that stays gated on no role+name).
+                _hint_frame = getattr(elem, "frame", None)
+                if _hint_frame and (_hint_frame[2] > 0 or _hint_frame[3] > 0):
+                    coords = (_hint_frame[0] + _hint_frame[2] // 2,
+                              _hint_frame[1] + _hint_frame[3] // 2)
                 # Use the element's identifier (AutomationId) if available
                 if elem.identifier:
                     resolved_aid = elem.identifier
@@ -523,6 +533,8 @@ class ElementTreeMixin:
             automation_id=resolved_aid,
             role=resolved_role,
             name=resolved_name,
+            hint_x=coords[0] if coords else None,
+            hint_y=coords[1] if coords else None,
         )
 
         # (#352) Role alias fallback: when an explicit role search fails,
@@ -544,6 +556,8 @@ class ElementTreeMixin:
                     automation_id=resolved_aid,
                     role=alias_role,
                     name=resolved_name,
+                    hint_x=coords[0] if coords else None,
+                    hint_y=coords[1] if coords else None,
                 )
                 if result is not None:
                     break

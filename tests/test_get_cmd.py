@@ -392,7 +392,7 @@ class TestGetElementValueBridge:
             "x": 10, "y": 20, "width": 100, "height": 30,
         }).encode("utf-8")
 
-        def fake_get(hwnd, aid, role, name, buf, size):
+        def fake_get(hwnd, aid, role, name, hint_x, hint_y, buf, size):
             buf.value = mock_response
             return 0
 
@@ -408,6 +408,30 @@ class TestGetElementValueBridge:
         assert result is not None
         assert result["value"] == "test"
         assert result["pattern"] == "ValuePattern"
+
+    def test_bridge_passes_point_hint(self):
+        """A role+name read forwards the disambiguation point; None -> INT_MIN."""
+        from naturo.bridge import NaturoCore
+
+        captured = {}
+
+        def fake_get(hwnd, aid, role, name, hint_x, hint_y, buf, size):
+            captured["hint"] = (hint_x, hint_y)
+            buf.value = json.dumps({"value": "x", "pattern": "TextPattern"}).encode()
+            return 0
+
+        mock_lib = MagicMock()
+        mock_lib.naturo_get_element_value = MagicMock(side_effect=fake_get)
+        core = NaturoCore.__new__(NaturoCore)
+        core._lib = mock_lib
+        core._initialized = True
+
+        core.get_element_value(hwnd=5, role="Text", name="命令提示符",
+                               hint_x=1920, hint_y=1080)
+        assert captured["hint"] == (1920, 1080)
+
+        core.get_element_value(hwnd=5, role="Text", name="命令提示符")
+        assert captured["hint"] == (-2147483648, -2147483648)  # INT_MIN = no hint
 
     def test_bridge_not_found(self):
         """Bridge returns None when element not found (rc=1)."""

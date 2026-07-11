@@ -321,6 +321,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                                          const char* automation_id,
                                          const char* role,
                                          const char* name,
+                                         int hint_x, int hint_y,
                                          char* result_json, int buf_size);
 
 /* ── Hardware-level Keyboard (Phys32) ─────────────── */
