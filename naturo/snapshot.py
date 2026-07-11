@@ -50,6 +50,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -439,11 +440,69 @@ class SnapshotManager:
         cy = ey + eh // 2
         return (cx, cy, recent_id)
 
+    @staticmethod
+    def _hwnd_alive(hwnd: Optional[int]) -> bool:
+        """True if ``hwnd`` names a live top-level window (win32 IsWindow).
+
+        Returns False for a missing handle (aliveness can't be confirmed) and
+        True on non-Windows (no way to validate).
+        """
+        if not hwnd:
+            return False
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                return bool(ctypes.windll.user32.IsWindow(int(hwnd)))
+            except Exception:
+                return True
+        return True
+
+    def _lookup_ref_in_snapshot(self, ref: str, snapshot_id: str) -> Optional[tuple]:
+        """Resolve ``ref`` within one snapshot. Returns ``(element, snapshot)``
+        (the loaded Snapshot, so the caller can inspect its window) or None."""
+        snap_dir = self._snap_dir(snapshot_id)
+        ref_path = snap_dir / "refs.json"
+        with self._lock:
+            if not ref_path.exists():
+                return None
+            try:
+                ref_map = json.loads(ref_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+
+        # (#502) Translate sequential display ref to stable hash-based ref.
+        stable_ref = self._translate_display_ref(ref, snap_dir)
+        element_id = ref_map.get(stable_ref) or ref_map.get(ref)
+        if not element_id:
+            return None
+
+        try:
+            snapshot = self.get_snapshot(snapshot_id)
+        except Exception as exc:
+            logger.debug("Failed to load snapshot %s for ref resolution: %s", snapshot_id, exc)
+            return None
+
+        # (#237) ui_map may be keyed by ref or by backend id.
+        element = (
+            snapshot.ui_map.get(stable_ref)
+            or snapshot.ui_map.get(element_id)
+            or snapshot.ui_map.get(ref)
+        )
+        if not element:
+            return None
+        return (element, snapshot)
+
     def resolve_ref_element(self, ref: str, app_name: Optional[str] = None) -> Optional[tuple]:
         """Resolve a short element ref (e.g. ``e3``) to full element info.
 
-        Searches the most recent valid snapshot for the ref and returns
-        the complete :class:`UIElement` object along with the snapshot ID.
+        Instead of blindly using the single most-recent snapshot, walk the valid
+        snapshots newest-first and return the first one that actually CONTAINS
+        this ref AND whose source window is still alive. This is what makes refs
+        robust under concurrency: a ``see`` of a *different* window (in the same
+        session) no longer hijacks resolution — its newer snapshot simply doesn't
+        contain this ref, so it is skipped. Falls back to the newest snapshot
+        that contains the ref when none of the containing snapshots has a live
+        window (e.g. the window was closed after ``see``).
 
         Parameters
         ----------
@@ -457,48 +516,17 @@ class SnapshotManager:
         tuple | None
             ``(UIElement, snapshot_id)`` or ``None`` if not found.
         """
-        recent_id = self.get_most_recent_snapshot(
-            require_refs=True, app_name=app_name,
-        )
-        if not recent_id:
-            return None
-
-        snap_dir = self._snap_dir(recent_id)
-        ref_path = snap_dir / "refs.json"
-
-        with self._lock:
-            if not ref_path.exists():
-                return None
-            try:
-                ref_map = json.loads(ref_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                return None
-
-        # (#502) Translate sequential display ref to stable hash-based ref.
-        stable_ref = self._translate_display_ref(ref, snap_dir)
-
-        element_id = ref_map.get(stable_ref)
-        if not element_id:
-            element_id = ref_map.get(ref)
-        if not element_id:
-            return None
-
-        try:
-            snapshot = self.get_snapshot(recent_id)
-        except Exception as exc:
-            logger.debug("Failed to load snapshot %s for ref element resolution: %s", recent_id, exc)
-            return None
-
-        # (#237) ui_map may be keyed by ref or by backend id.
-        element = (
-            snapshot.ui_map.get(stable_ref)
-            or snapshot.ui_map.get(element_id)
-            or snapshot.ui_map.get(ref)
-        )
-        if not element:
-            return None
-
-        return (element, recent_id)
+        fallback: Optional[tuple] = None
+        for snap_id in self._valid_snapshot_ids(app_name=app_name, require_refs=True):
+            found = self._lookup_ref_in_snapshot(ref, snap_id)
+            if found is None:
+                continue
+            element, snapshot = found
+            if self._hwnd_alive(getattr(snapshot, "window_handle", None)):
+                return (element, snap_id)
+            if fallback is None:
+                fallback = (element, snap_id)
+        return fallback
 
     def store_annotated(self, snapshot_id: str, annotated_path: str) -> None:
         """Copy an annotated screenshot into the snapshot directory.
@@ -580,12 +608,30 @@ class SnapshotManager:
         str | None
             The snapshot ID, or ``None`` if no valid snapshot exists.
         """
+        ids = self._valid_snapshot_ids(app_name=app_name, require_refs=require_refs)
+        if not ids:
+            logger.debug("No valid snapshots found within %ds window", self._validity_seconds)
+            return None
+        logger.debug("Most recent valid snapshot: %s", ids[0])
+        return ids[0]
+
+    def _valid_snapshot_ids(
+        self,
+        app_name: Optional[str] = None,
+        require_refs: bool = False,
+    ) -> List[str]:
+        """Snapshot IDs within the validity window, newest first.
+
+        Shared by :meth:`get_most_recent_snapshot` (which takes ``[0]``) and
+        :meth:`resolve_ref_element` (which walks all of them to find the one
+        holding a given ref).
+        """
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._validity_seconds)
         candidates: List[tuple] = []  # (mtime, snapshot_id)
 
         with self._lock:
             if not self._root.exists():
-                return None
+                return []
 
             for entry in self._root.iterdir():
                 if not entry.is_dir():
@@ -606,8 +652,6 @@ class SnapshotManager:
                 if mtime < cutoff:
                     continue
 
-                snapshot_id = entry.name
-
                 # Filter by app name if requested
                 if app_name:
                     try:
@@ -618,16 +662,10 @@ class SnapshotManager:
                     except (OSError, json.JSONDecodeError):
                         continue
 
-                candidates.append((mtime, snapshot_id))
-
-        if not candidates:
-            logger.debug("No valid snapshots found within %ds window", self._validity_seconds)
-            return None
+                candidates.append((mtime, entry.name))
 
         candidates.sort(key=lambda x: x[0], reverse=True)
-        best = candidates[0][1]
-        logger.debug("Most recent valid snapshot: %s", best)
-        return best
+        return [sid for _, sid in candidates]
 
     def list_snapshots(self, limit: Optional[int] = None) -> List[SnapshotInfo]:
         """Return summary information for stored snapshots, newest first.
