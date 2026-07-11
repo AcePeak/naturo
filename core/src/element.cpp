@@ -185,6 +185,18 @@ static void append_keyboard_shortcut_field(const std::string& shortcut,
  * @param element Element with cached properties.
  * @param out Output string to append JSON to.
  */
+// Read a cached VT_BOOL property (pattern-availability etc.); false if absent.
+static bool cached_bool(IUIAutomationElement* element, PROPERTYID pid) {
+    VARIANT v;
+    VariantInit(&v);
+    bool result = false;
+    if (SUCCEEDED(element->GetCachedPropertyValue(pid, &v)) && v.vt == VT_BOOL) {
+        result = (v.boolVal != VARIANT_FALSE);
+    }
+    VariantClear(&v);
+    return result;
+}
+
 static void append_element_json_cached(IUIAutomationElement* element,
                                         std::string& out) {
     // Read from cache (no IPC — properties already fetched in batch)
@@ -228,6 +240,18 @@ static void append_element_json_cached(IUIAutomationElement* element,
     // (#886) Emit the keyboard shortcut so UIA elements expose the same
     // accessibility metadata as the MSAA/IA2 backends instead of always null.
     append_keyboard_shortcut_field(read_keyboard_shortcut(element, true), out);
+
+    // True per-node capabilities from UIA pattern availability (faithful, not
+    // role-guessed): readable = Value or Text pattern; editable = a writable
+    // ValuePattern; actionable = Invoke or Toggle pattern.
+    bool has_value = cached_bool(element, UIA_IsValuePatternAvailablePropertyId);
+    bool has_text = cached_bool(element, UIA_IsTextPatternAvailablePropertyId);
+    bool readonly = cached_bool(element, UIA_ValueIsReadOnlyPropertyId);
+    bool has_invoke = cached_bool(element, UIA_IsInvokePatternAvailablePropertyId);
+    bool has_toggle = cached_bool(element, UIA_IsTogglePatternAvailablePropertyId);
+    out += (has_value || has_text) ? ",\"readable\":true" : ",\"readable\":false";
+    out += (has_value && !readonly) ? ",\"editable\":true" : ",\"editable\":false";
+    out += (has_invoke || has_toggle) ? ",\"actionable\":true" : ",\"actionable\":false";
 }
 
 /**
@@ -367,6 +391,14 @@ static HRESULT create_element_cache_request(
     // get_CachedAccessKey resolve without extra cross-process COM calls.
     (*cache_request)->AddProperty(UIA_AcceleratorKeyPropertyId);
     (*cache_request)->AddProperty(UIA_AccessKeyPropertyId);
+    // Per-node capability truth (readable/actionable/editable) — pattern
+    // availability + ValuePattern read-only, batched into the cache so each node
+    // reports what it actually supports without extra COM round-trips.
+    (*cache_request)->AddProperty(UIA_IsValuePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsTextPatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsInvokePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsTogglePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_ValueIsReadOnlyPropertyId);
 
     // Fetch direct children scope for tree walking
     (*cache_request)->put_TreeScope(TreeScope_Element);

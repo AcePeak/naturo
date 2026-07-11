@@ -582,6 +582,12 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 # (goal) --compact: agent-friendly minimal line — eN [role] "name"
                 # [=value], no bounds/props/selectors. Refs still assigned for all
                 # nodes so `naturo click eN` resolves; only meaningful nodes print.
+                # True per-node capabilities: [r]eadable/[a]ctionable/[e]ditable
+                _cp = getattr(el, "properties", {}) or {}
+                _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
+                                               ("e", "editable")) if _cp.get(k))
+                _caps_str = f" [{_caps}]" if _caps else ""
+
                 if compact:
                     _name = f' "{el.name}"' if el.name else ""
                     _val = getattr(el, "value", None)
@@ -592,7 +598,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                         if _elided:
                             _val_str += f" …(+{_elided} chars)"
                     if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
-                        click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}")
+                        click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}{_caps_str}")
                     for child in el.children:
                         print_tree(child, indent + 1, child_ancestors)
                     return
@@ -607,7 +613,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 if show_selectors:
                     selector_uri = _build_selector(el, ancestors_dicts)
                     selector_str = f"  {selector_uri}"
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{selector_str}")
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{_caps_str}{selector_str}")
 
                 # (#372) Show text content for Document/Edit/Text elements: full
                 # when --full-text, otherwise a bounded preview with a marker for
