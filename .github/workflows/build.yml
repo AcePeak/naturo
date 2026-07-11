@@ -270,7 +270,10 @@ jobs:
             2>&1 | tail -10
 
       - name: Run all tests
-        continue-on-error: true  # Step failures must not fail the job check run (#603)
+        # NOTE: still non-blocking — see #603 and the follow-up issue that flips this
+        # job to blocking once the full-suite failure set is known.  The step outcome
+        # is now honest (it reports pytest's real exit code) even while swallowed here.
+        continue-on-error: true
         shell: bash
         timeout-minutes: 10
         run: |
@@ -279,19 +282,29 @@ jobs:
           #
           # Desktop tests run on the self-hosted runner (desktop-tests.yml).
           # See docs/DECISIONS.md "GitHub Actions Windows Runner"
+          #
+          # No `-x`: a single early failure used to abort the session at ~9% of the
+          # suite (632/7030 tests), so the other 91% never ran while the job still
+          # reported success.  Run everything and report the full failure set.
           MARKERS="not ui and not integration and not desktop"
           echo "⚠️ Skipping desktop-dependent tests on CI (covered by self-hosted runner)"
           echo "⚠️ Setting NATURO_CI_NO_UIA=1 to prevent DLL UIA calls during tests"
           export NATURO_CI_NO_UIA=1
+          set +e
           pytest -v -m "$MARKERS" \
             --timeout=60 \
             --ignore=tests/integration \
-            -x --tb=short \
+            --tb=short \
             --junit-xml=pytest-results.xml \
             --cov=naturo --cov-report=xml --cov-report=term-missing \
             -p no:cacheprovider \
             2>&1 | tee pytest-output.txt
-          echo "EXIT_CODE=$?" >> pytest-output.txt
+          # $? here would be tee's status, not pytest's — capture PIPESTATUS instead.
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "EXIT_CODE=$status" >> pytest-output.txt
+          echo "pytest exited $status"
+          exit "$status"
         env:
           PYTEST_TIMEOUT: "30"
           NATURO_CI_NO_UIA: "1"
