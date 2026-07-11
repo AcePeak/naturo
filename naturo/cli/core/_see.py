@@ -39,6 +39,14 @@ from naturo.value_preview import bounded_value
 @click.option("--ocr", "run_ocr", is_flag=True,
               help="Run local OCR (rapidocr) to recover text baked into images/canvas; "
                    "nodes are tagged 'ocr' (uncertain) and warned")
+@click.option("--excel-max-cells", "excel_max_cells", type=int, default=None,
+              help="Cascade Excel: max non-empty cells to emit (default 500). "
+                   "Raise for large sheets; per-invocation, so concurrent runs "
+                   "can differ.")
+@click.option("--excel-max-rows", "excel_max_rows", type=int, default=None,
+              help="Cascade Excel: max rows of the used range to scan (default 400)")
+@click.option("--excel-max-cols", "excel_max_cols", type=int, default=None,
+              help="Cascade Excel: max cols of the used range to scan (default 100)")
 @click.option("--stats", "show_stats", is_flag=True,
               help="Show per-provider recognition statistics after output")
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
@@ -75,6 +83,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
+        excel_max_cells: int | None, excel_max_rows: int | None, excel_max_cols: int | None,
         json_output: bool, compact: bool, full_text: bool, backend: str, app_id: str | None,
         ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
@@ -232,6 +241,9 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                         if cascade_capture_result else 1.0
                     ),
                     run_ocr=run_ocr,
+                    excel_max_cells=excel_max_cells,
+                    excel_max_rows=excel_max_rows,
+                    excel_max_cols=excel_max_cols,
                 )
                 tree = cascade_result.tree
                 cascade_stats = cascade_result.stats

@@ -26,6 +26,9 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         format: str = "compact",
         match: Optional[str] = None,
         full_text: bool = False,
+        excel_max_cells: Optional[int] = None,
+        excel_max_rows: Optional[int] = None,
+        excel_max_cols: Optional[int] = None,
     ) -> dict:
         """Read a window's UI as a structured element tree — naturo's core "see" tool.
 
@@ -102,6 +105,9 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
                 cascade_result = run_cascade(
                     backend, app=app, window_title=window_title,
                     hwnd=hwnd, pid=pid, depth=depth, backend_name="auto",
+                    excel_max_cells=excel_max_cells,
+                    excel_max_rows=excel_max_rows,
+                    excel_max_cols=excel_max_cols,
                 )
                 tree = cascade_result.tree
         # (#737) When --app is used without --hwnd, enumerate ALL windows

@@ -21,11 +21,14 @@ from naturo.backends.base import ElementInfo
 
 logger = logging.getLogger(__name__)
 
-#: Max non-empty cells emitted (a huge sheet must not explode the tree).
-_MAX_EXCEL_CELLS = 500
-#: Max cells *scanned* (bounds COM round-trips on a large used range).
-_MAX_SCAN_ROWS = 400
-_MAX_SCAN_COLS = 100
+# Defaults bound the tree size and COM round-trips on a huge sheet. They are not
+# silent (truncation is logged) and, crucially, not global mutable state: a
+# caller that needs a bigger slice passes larger values PER CALL — threaded from
+# `see --excel-max-cells` / see_ui_tree(excel_max_cells=…) through run_cascade —
+# which is safe under multi-process/concurrent use, unlike a process-wide env var.
+_DEFAULT_MAX_EXCEL_CELLS = 500  #: max non-empty cells emitted
+_DEFAULT_MAX_SCAN_ROWS = 400    #: max rows scanned of the used range
+_DEFAULT_MAX_SCAN_COLS = 100    #: max cols scanned of the used range
 
 
 def _win32_class_name(hwnd: int) -> Optional[str]:
@@ -151,14 +154,29 @@ def _cell_to_element(win, cell) -> Optional[ElementInfo]:
 
 
 def fetch_excel_cells(
-    hwnd: int, *, max_cells: int = _MAX_EXCEL_CELLS
+    hwnd: int,
+    *,
+    max_cells: Optional[int] = None,
+    max_rows: Optional[int] = None,
+    max_cols: Optional[int] = None,
 ) -> List[ElementInfo]:
     """Fetch non-empty cells of the active sheet's used range as ``com`` nodes.
 
     Returns an empty list on any failure (no Excel running, pywin32 missing,
     COM error) — the cascade treats it like an unavailable provider.
     Truncation (sheet larger than the scan/emit caps) is logged, never silent.
+
+    ``max_cells`` / ``max_rows`` / ``max_cols`` override the emit and scan caps
+    for THIS call (``None`` = the module defaults). They are per-call, not global
+    state, so concurrent callers can each choose their own bound safely.
     """
+    if max_cells is None:
+        max_cells = _DEFAULT_MAX_EXCEL_CELLS
+    if max_rows is None:
+        max_rows = _DEFAULT_MAX_SCAN_ROWS
+    if max_cols is None:
+        max_cols = _DEFAULT_MAX_SCAN_COLS
+
     xl = _get_running_excel()
     if xl is None:
         return []
@@ -167,14 +185,14 @@ def fetch_excel_cells(
         return []
     try:
         used = win.ActiveSheet.UsedRange
-        nrows = min(int(used.Rows.Count), _MAX_SCAN_ROWS)
-        ncols = min(int(used.Columns.Count), _MAX_SCAN_COLS)
+        nrows = min(int(used.Rows.Count), max_rows)
+        ncols = min(int(used.Columns.Count), max_cols)
     except Exception as exc:
         logger.debug("COM/Excel: cannot read used range: %s", exc)
         return []
 
     elements: List[ElementInfo] = []
-    truncated = int(used.Rows.Count) > _MAX_SCAN_ROWS or int(used.Columns.Count) > _MAX_SCAN_COLS
+    truncated = int(used.Rows.Count) > max_rows or int(used.Columns.Count) > max_cols
     for r in range(1, nrows + 1):
         for c in range(1, ncols + 1):
             if len(elements) >= max_cells:
@@ -192,7 +210,9 @@ def fetch_excel_cells(
 
     if truncated:
         logger.info(
-            "COM/Excel: output bounded to %d cells / %dx%d scan; sheet is larger.",
-            max_cells, _MAX_SCAN_ROWS, _MAX_SCAN_COLS,
+            "COM/Excel: output bounded to %d cells / %dx%d scan; sheet is larger. "
+            "Raise it with `see --excel-max-cells/--excel-max-rows/--excel-max-cols` "
+            "(or the see_ui_tree excel_max_* args) to read more.",
+            max_cells, max_rows, max_cols,
         )
     return elements

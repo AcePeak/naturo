@@ -166,7 +166,7 @@ def test_run_cascade_grafts_com_cells_onto_tree():
     com_cell = _win("DataItem", "Widget", source="com", x=100, y=120, w=48, h=16)
 
     with patch.object(cascade_pkg, "_is_excel_window", lambda h: True), \
-         patch.object(cascade_pkg, "_fetch_excel_cells", lambda h: [com_cell]), \
+         patch.object(cascade_pkg, "_fetch_excel_cells", lambda h, **k: [com_cell]), \
          patch.object(cascade_pkg, "_is_java_window", lambda h: False), \
          patch.object(cascade_pkg, "find_cdp_port", lambda pid: None), \
          patch.object(cascade_pkg, "_fetch_cdp_elements", lambda *a, **k: []):
@@ -184,3 +184,51 @@ def test_run_cascade_grafts_com_cells_onto_tree():
     assert fusion["techniques"] == ["com"]
     # provider stat recorded
     assert any(p.name == "com" and p.status == "ok" for p in result.stats.providers)
+
+
+# ── configurable scan/emit caps (per-call params, concurrency-safe) ──────────
+
+
+class TestExcelLimitsConfigurable:
+    """The Excel caps default sensibly but are overridable per call — no global
+    (env/module) mutable state, so concurrent callers can each choose a bound."""
+
+    @staticmethod
+    def _grid3x3():
+        return {(r, c): _FakeCell(f"v{r}.{c}", 10 * c, 10 * r, addr=f"{chr(64 + c)}{r}")
+                for r in range(1, 4) for c in range(1, 4)}
+
+    def test_defaults_apply_when_unset(self):
+        # None on every knob -> the module defaults, no reliance on process env.
+        with patch("naturo.cascade._com_excel._get_running_excel",
+                   return_value=_excel_with(self._grid3x3(), hwnd=123)):
+            cells = fetch_excel_cells(123)  # 9 cells < default 500 -> all emitted
+        assert len(cells) == 9
+
+    def test_scan_rows_cols_are_per_call(self):
+        # A 3x3 grid scanned with max_rows=1, max_cols=2 -> only (1,1),(1,2).
+        with patch("naturo.cascade._com_excel._get_running_excel",
+                   return_value=_excel_with(self._grid3x3(), hwnd=123)):
+            cells = fetch_excel_cells(123, max_rows=1, max_cols=2)
+        names = sorted(e.name for e in cells)
+        assert names == ["v1.1", "v1.2"]
+
+    def test_run_cascade_threads_excel_limits(self):
+        # run_cascade forwards excel_max_* to the provider per call.
+        captured = {}
+
+        def _spy(hwnd, **kw):
+            captured.update(kw)
+            return []
+
+        root = _win("Window", "Book1 - Excel", w=800, h=600)
+        backend = _FakeBackend(root)
+        with patch.object(cascade_pkg, "_is_excel_window", lambda h: True), \
+             patch.object(cascade_pkg, "_fetch_excel_cells", _spy), \
+             patch.object(cascade_pkg, "_is_java_window", lambda h: False), \
+             patch.object(cascade_pkg, "find_cdp_port", lambda pid: None), \
+             patch.object(cascade_pkg, "_fetch_cdp_elements", lambda *a, **k: []):
+            run_cascade(backend, backend_name="auto", hwnd=999,
+                        excel_max_cells=5000, excel_max_rows=2000, excel_max_cols=256)
+
+        assert captured == {"max_cells": 5000, "max_rows": 2000, "max_cols": 256}

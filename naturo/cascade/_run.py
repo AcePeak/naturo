@@ -368,6 +368,9 @@ def run_cascade(
     screenshot_path: Optional[str] = None,
     screenshot_scale_factor: float = 1.0,
     run_ocr: bool = False,
+    excel_max_cells: Optional[int] = None,
+    excel_max_rows: Optional[int] = None,
+    excel_max_cols: Optional[int] = None,
 ) -> CascadeResult:
     """Run progressive recognition and return a merged element tree.
 
@@ -747,7 +750,12 @@ def run_cascade(
             t0 = time.monotonic()
             com_cells: List[ElementInfo] = []
             try:
-                com_cells = _get_cascade_pkg()._fetch_excel_cells(com_hwnd)
+                com_cells = _get_cascade_pkg()._fetch_excel_cells(
+                    com_hwnd,
+                    max_cells=excel_max_cells,
+                    max_rows=excel_max_rows,
+                    max_cols=excel_max_cols,
+                )
             except Exception as exc:
                 logger.debug("Auto cascade: COM/Excel probe failed: %s", exc)
             elapsed = (time.monotonic() - t0) * 1000
