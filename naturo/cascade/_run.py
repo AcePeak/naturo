@@ -358,7 +358,7 @@ def run_cascade(
     window_title: Optional[str] = None,
     hwnd: Optional[int] = None,
     pid: Optional[int] = None,
-    depth: int = 3,
+    depth: int = 0,
     backend_name: str = "uia",
     coverage_target: float = 0.0,
     fill_gaps_ai: bool = False,
@@ -658,7 +658,10 @@ def run_cascade(
                 # Electron apps that don't open a debug port (e.g. Clash Verge) are
                 # still readable, structurally, with zero debug port.
                 _t0w = time.monotonic()
-                _web_nodes = _webview_uia_content(backend, hwnd, max(depth, 12))
+                # Webview DOM-as-UIA needs a deeper probe than the surrounding
+                # chrome; keep a floor of 12 unless the caller asked for unlimited.
+                _web_depth = depth if depth <= 0 else max(depth, 12)
+                _web_nodes = _webview_uia_content(backend, hwnd, _web_depth)
                 if _web_nodes:
                     _graft_web_under_control(root_tree, _web_nodes)
                     for _n in _web_nodes:

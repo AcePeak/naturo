@@ -269,7 +269,7 @@ class TestSeeUiTree:
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
         mock_backend.get_element_tree.assert_any_call(
             app=None, window_title="Notepad", hwnd=None, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
     def test_custom_depth_and_backend(self, server, mock_backend):
@@ -283,14 +283,14 @@ class TestSeeUiTree:
         _call_tool(server, "see_ui_tree", {"hwnd": 12345})
         mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=12345, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
     def test_with_pid(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"pid": 9999})
         mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=None, pid=9999,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
     def test_long_value_bounded_by_default(self, server, mock_backend):
@@ -350,7 +350,7 @@ class TestSeeUiTree:
         assert data["success"] is True
         mock_backend._resolve_hwnds.assert_called_once_with(app="MyApp")
         mock_backend.get_element_tree.assert_any_call(
-            hwnd=100, depth=7, backend="uia",
+            hwnd=100, depth=0, backend="uia",
         )
 
     def test_app_with_multiple_windows_merges_trees(self, server, mock_backend):
@@ -384,20 +384,34 @@ class TestSeeUiTree:
         mock_backend._resolve_hwnds.assert_not_called()
         mock_backend.get_element_tree.assert_any_call(
             app="MyApp", window_title=None, hwnd=12345, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
-    def test_depth_below_range_returns_error(self, server):
-        result = _call_tool(server, "see_ui_tree", {"depth": 0})
+    def test_negative_depth_returns_error(self, server):
+        # Only a negative depth is invalid now — 0 = unlimited, positive = honored.
+        result = _call_tool(server, "see_ui_tree", {"depth": -1})
         data = json.loads(result[0].text)
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    def test_depth_above_range_returns_error(self, server):
-        result = _call_tool(server, "see_ui_tree", {"depth": 11})
+    def test_zero_depth_is_valid_unlimited(self, server):
+        # 0 (unlimited, the default) must NOT be rejected as invalid input.
+        result = _call_tool(server, "see_ui_tree", {"depth": 0})
         data = json.loads(result[0].text)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        assert not (
+            data.get("success") is False
+            and data.get("error", {}).get("code") == "INVALID_INPUT"
+        )
+
+    def test_large_depth_is_valid(self, server):
+        # A depth beyond the old 10 ceiling is accepted (native-bounded), so
+        # setting the parameter is never silently useless.
+        result = _call_tool(server, "see_ui_tree", {"depth": 40})
+        data = json.loads(result[0].text)
+        assert not (
+            data.get("success") is False
+            and data.get("error", {}).get("code") == "INVALID_INPUT"
+        )
 
     def test_invalid_backend_returns_error(self, server):
         result = _call_tool(server, "see_ui_tree", {"accessibility_backend": "invalid"})

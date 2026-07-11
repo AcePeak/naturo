@@ -129,7 +129,7 @@ class ElementTreeMixin:
         return False
     @heal_core_on_failure(retry=True)
     def get_element_tree(self, window_title: Optional[str] = None,
-                         depth: int = 3,
+                         depth: int = 0,
                          app: Optional[str] = None,
                          hwnd: Optional[int] = None,
                          pid: Optional[int] = None,
@@ -202,9 +202,11 @@ class ElementTreeMixin:
                         return child_result
 
                 # (#394) WinUI 3 apps may need deeper traversal.
-                # Retry child HWNDs with increased depth if original
-                # depth was low and yielded nothing.
-                if depth < 15:
+                # Retry child HWNDs with increased depth if the original depth was
+                # an explicit low value that yielded nothing. depth <= 0 already
+                # means unlimited (the first pass went as deep as possible), so
+                # there is nothing deeper to retry — skip it.
+                if 0 < depth < 15:
                     deeper = min(depth * 2, 20)
                     logger.debug(
                         "UWP fallback: retrying children with depth=%d "
@@ -222,15 +224,14 @@ class ElementTreeMixin:
             return current_result
 
         if backend == "jab":
-            # Java/Swing buries logical content under many mandatory structural
-            # panes — a normal window spends ~4 levels on RootPane > LayeredPane >
-            # glass/content pane before any widget, and a JDesktopPane >
-            # InternalFrame dialog adds ~5 more. So the caller's logical depth
-            # under-reaches the real controls (JConsole's connection fields sit at
-            # depth ~12-15). Add that structural offset so the default `see` still
-            # surfaces the widgets; the native layer caps the total.
-            jab_depth = min(depth + 8, 50)
-            result = core.jab_get_element_tree(hwnd=handle, depth=jab_depth)
+            # Depth is honored as-is, with no per-backend offset. Java/Swing does
+            # bury content under many structural panes (JConsole's MBean tree and
+            # attribute-table rows sit ~24 levels deep), but the fix for that is
+            # the unlimited default (depth <= 0 walks the whole tree) rather than a
+            # magic "+N" that every deeper control forces us to keep raising. A
+            # positive --depth therefore means raw tree levels here, consistent
+            # with UIA/MSAA/IA2; the native layer treats <= 0 as unlimited.
+            result = core.jab_get_element_tree(hwnd=handle, depth=depth)
             result = _try_uwp_children(
                 result,
                 lambda h, d: core.jab_get_element_tree(hwnd=h, depth=d),

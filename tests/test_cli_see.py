@@ -156,28 +156,32 @@ def _patch_assign_refs(ref_map=None):
 
 
 class TestDepthValidation:
+    # Depth is caller-driven: 0 = unlimited (the default), any positive value is
+    # honored (the native layer bounds the total), and only a negative value is
+    # rejected. See #1288 follow-up — the old 1-50 clamp/offset was removed.
 
-    def test_depth_too_low(self, runner):
+    def test_negative_depth_rejected(self, runner):
+        result = runner.invoke(see, ["--depth", "-1"], catch_exceptions=False)
+        assert result.exit_code == 1
+        assert "--depth must be 0 (unlimited) or a positive number" in result.output
+
+    def test_negative_depth_rejected_json(self, runner):
+        result = runner.invoke(see, ["--depth", "-1", "--json"], catch_exceptions=False)
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_zero_depth_is_valid_unlimited(self, runner):
+        # 0 (unlimited) must pass validation — it should NOT raise INVALID_INPUT.
+        # It proceeds past validation (and then fails later without a real
+        # window/platform), so we only assert the validation error is absent.
         result = runner.invoke(see, ["--depth", "0"], catch_exceptions=False)
-        assert result.exit_code == 1
-        assert "--depth must be between 1 and 50" in result.output
+        assert "must be 0 (unlimited) or a positive number" not in result.output
 
-    def test_depth_too_high(self, runner):
-        result = runner.invoke(see, ["--depth", "51"], catch_exceptions=False)
-        assert result.exit_code == 1
-        assert "--depth must be between 1 and 50" in result.output
-
-    def test_depth_too_low_json(self, runner):
-        result = runner.invoke(see, ["--depth", "0", "--json"], catch_exceptions=False)
-        assert result.exit_code == 1
-        data = json.loads(result.output)
-        assert data["error"]["code"] == "INVALID_INPUT"
-
-    def test_depth_too_high_json(self, runner):
-        result = runner.invoke(see, ["--depth", "51", "--json"], catch_exceptions=False)
-        assert result.exit_code == 1
-        data = json.loads(result.output)
-        assert data["error"]["code"] == "INVALID_INPUT"
+    def test_large_depth_is_valid(self, runner):
+        # A depth beyond the old 50 ceiling is now accepted (native-bounded).
+        result = runner.invoke(see, ["--depth", "100"], catch_exceptions=False)
+        assert "must be 0 (unlimited) or a positive number" not in result.output
 
 
 # ── Platform check ─────────────────────────────────────────────────────

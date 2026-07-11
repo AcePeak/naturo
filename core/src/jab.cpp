@@ -679,11 +679,11 @@ NATURO_API int naturo_jab_get_element_tree(uintptr_t hwnd, int depth,
 
     // Java/Swing wraps content in many structural panes (a JDesktopPane >
     // InternalFrame dialog nests RootPane > LayeredPane > content pane > … before
-    // any control), so the real widgets routinely sit 10-12 levels deep. A cap of
-    // 10 silently truncated every --depth above it and hid those controls; allow
-    // the caller's depth up to a generous bound (matches the CLI's --depth max).
-    if (depth < 1) depth = 1;
-    if (depth > 50) depth = 50;
+    // any control), so the real widgets routinely sit deep — JConsole's MBean
+    // tree/table rows reach ~24 levels. depth <= 0 means "unlimited" so the
+    // default `see` surfaces all of it without a per-backend offset;
+    // NATURO_MAX_TREE_DEPTH is a stack-safety backstop, not a content limit.
+    if (depth <= 0 || depth > NATURO_MAX_TREE_DEPTH) depth = NATURO_MAX_TREE_DEPTH;
 
     if (!jab_ensure_init()) return -6; // JAB not available
 

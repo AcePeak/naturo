@@ -26,6 +26,20 @@
 extern "C" {
 #endif
 
+/* ── Tree traversal depth ─────────────────────────────
+ *
+ * Depth is caller-driven, not clamped to a magic content limit: a caller depth
+ * of <= 0 means "unlimited" (walk the whole accessibility tree), and any
+ * positive depth is honored as-is. NATURO_MAX_TREE_DEPTH is NOT a content
+ * limit — it is a pure stack-safety backstop for the recursive tree walkers.
+ * Real accessibility trees are well under ~30 levels deep (JConsole's MBean
+ * view, one of the deepest, bottoms out around 24), so this ~4x-headroom bound
+ * is only ever reached by a pathological or cyclic tree, where it prevents a
+ * thread-stack overflow. "Unlimited" resolves to this bound; a positive caller
+ * depth larger than it is also clamped here.
+ */
+#define NATURO_MAX_TREE_DEPTH 100
+
 /* ── Lifecycle ────────────────────────────────────── */
 
 /**
