@@ -33,7 +33,12 @@ if _CI_WINDOWS:
                 allow_module_level=True,
             )
 
-    class _SkippingNaturoCore:
+    class _SkippingNaturoCore(_OrigNaturoCore):
+        # Must subclass the real core (like _SkippingWindowsBackend above): tests
+        # introspect the class itself — signature checks, `mock.patch.object`,
+        # `MagicMock(spec=NaturoCore)` — and a bare stub exposes none of the 34
+        # native methods, so those tests raise AttributeError instead of skipping.
+        # Overriding __init__ keeps the DLL unloaded, which is the actual guard.
         def __init__(self, *args, **kwargs):
             import threading
             if threading.current_thread() is not threading.main_thread():
