@@ -2,6 +2,10 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
+    # All development happens on `develop`; `main` only receives releases.
+    # Without this, dependabot targets the default branch (main) and develop's
+    # pins silently age (see #1295).
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -13,6 +17,8 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    # See note above (#1295): keep develop's CI action pins current.
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
