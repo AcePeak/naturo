@@ -1,0 +1,66 @@
+diff --git a/naturo/mcp/_input.py b/naturo/mcp/_input.py
+index 3c27d77..6e64ca0 100644
+--- a/naturo/mcp/_input.py
++++ b/naturo/mcp/_input.py
+@@ -5,6 +5,8 @@ import logging
+ import re
+ from typing import Optional
+ 
++from naturo.mcp._resolve import require_hwnd
++
+ logger = logging.getLogger(__name__)
+ 
+ _EN_REF_RE = re.compile(r"e\d+")
+@@ -42,6 +44,28 @@ def _paste_text(backend, text: str) -> bool:
+     return delivered
+ 
+ 
++def _focus_target(backend, *, hwnd: Optional[int], window_title: Optional[str]) -> None:
++    """Focus the window the caller asked for, or fail loudly (#1291).
++
++    Input tools used to focus best-effort (``except Exception: pass``), so an
++    ``hwnd``/``window_title`` that did not resolve fell through and the
++    keystrokes landed in whatever window happened to be foreground — reported as
++    ``success:true``. That is the #957 silent-fallback class, and on the input
++    path it is a wrong-window *write*. Resolution now goes through the shared
++    :func:`require_hwnd`, so an unmatched selector raises ``WindowNotFoundError``
++    (mapped to a ``WINDOW_NOT_FOUND`` envelope) and nothing is typed.
++
++    Backends without HWND resolution (macOS/Linux) return ``0`` from
++    ``require_hwnd``; they keep focusing by the raw selector, which is the only
++    targeting they have.
++    """
++    resolved = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
++    if resolved:
++        backend.focus_window(hwnd=resolved, title=None)
++    else:
++        backend.focus_window(hwnd=hwnd, title=window_title)
++
++
+ def register_input_tools(server, _get_backend, _safe_tool):
+     """Register input action MCP tools."""
+ 
+@@ -150,10 +174,7 @@ def register_input_tools(server, _get_backend, _safe_tool):
+         # foreground to drift, the failure mode that made a separate
+         # focus_window + type_text land input in the wrong window.
+         if hwnd is not None or window_title is not None:
+-            try:
+-                backend.focus_window(hwnd=hwnd, title=window_title)
+-            except Exception:
+-                pass  # best-effort; fall through to whatever is focused
++            _focus_target(backend, hwnd=hwnd, window_title=window_title)
+         # (#1219) Prefer IME-immune entry: keystroke injection (SendInput) is
+         # intercepted by CJK/TSF IMEs and can corrupt text ("naturo" ->
+         # "nature"). When the focused control exposes a writable ValuePattern,
+@@ -206,10 +227,7 @@ def register_input_tools(server, _get_backend, _safe_tool):
+             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"count must be >= 1, got {count}"}}
+         backend = _get_backend()
+         if hwnd is not None or window_title is not None:
+-            try:
+-                backend.focus_window(hwnd=hwnd, title=window_title)
+-            except Exception:
+-                pass  # best-effort; fall through to the focused window
++            _focus_target(backend, hwnd=hwnd, window_title=window_title)
+         is_combo = "+" in key
+         for _ in range(count):
+             if is_combo:
