@@ -51,12 +51,20 @@
   "tools_generated": false,
   "tools": [
     {
+      "name": "app_hide",
+      "description": "Hide (minimize) all windows of an application."
+    },
+    {
       "name": "app_inspect",
       "description": "Probe an application to detect its UI framework and available interaction methods."
     },
     {
       "name": "app_switch",
       "description": "Switch to (focus) the most recent window of an application."
+    },
+    {
+      "name": "app_unhide",
+      "description": "Unhide (restore) all windows of an application."
     },
     {
       "name": "capture_screen",
@@ -135,20 +143,8 @@
       "description": "Write a value to a cell in an Excel workbook."
     },
     {
-      "name": "word_write",
-      "description": "Write text to a Word document programmatically (COM) — no UI needed."
-    },
-    {
-      "name": "word_read",
-      "description": "Read the full text of a Word document programmatically (COM)."
-    },
-    {
       "name": "expand_collapse_element",
       "description": "Expand or collapse a combo box or tree item via ExpandCollapsePattern."
-    },
-    {
-      "name": "read_web_text",
-      "description": "Read rendered text from a browser page via CDP — the static text that"
     },
     {
       "name": "find_element",
@@ -163,12 +159,16 @@
       "description": "Read the current value/text of a UI element."
     },
     {
-      "name": "launch_app",
-      "description": "Launch an application by name."
+      "name": "get_snapshot",
+      "description": "Retrieve a previously created snapshot."
     },
     {
-      "name": "office_dismiss_startup",
-      "description": "Get an Office app past its start screen into a ready, editable document."
+      "name": "hotkey",
+      "description": "Press a keyboard shortcut (key combination)."
+    },
+    {
+      "name": "launch_app",
+      "description": "Launch an application by name."
     },
     {
       "name": "launch_browser",
@@ -183,6 +183,10 @@
       "description": "List all connected monitors/displays."
     },
     {
+      "name": "list_snapshots",
+      "description": "List recent snapshots."
+    },
+    {
       "name": "list_windows",
       "description": "List all visible windows on the desktop."
     },
@@ -195,12 +199,20 @@
       "description": "Move the mouse cursor to a position."
     },
     {
+      "name": "office_dismiss_startup",
+      "description": "Get an Office app past its start screen into a ready, editable document."
+    },
+    {
       "name": "press_key",
       "description": "Press a key or key combination."
     },
     {
       "name": "quit_app",
       "description": "Quit an application."
+    },
+    {
+      "name": "read_web_text",
+      "description": "Read rendered text from a browser page via CDP — the static text that"
     },
     {
       "name": "scroll",
@@ -301,6 +313,14 @@
     {
       "name": "window_set_bounds",
       "description": "Set window position and size in one call."
+    },
+    {
+      "name": "word_read",
+      "description": "Read the full text of a Word document programmatically (COM)."
+    },
+    {
+      "name": "word_write",
+      "description": "Write text to a Word document programmatically (COM) — no UI needed."
     }
   ]
 }
