@@ -5,6 +5,8 @@ import logging
 import re
 from typing import Optional
 
+from naturo.mcp._resolve import require_hwnd
+
 logger = logging.getLogger(__name__)
 
 _EN_REF_RE = re.compile(r"e\d+")
@@ -149,11 +151,14 @@ def register_input_tools(server, _get_backend, _safe_tool):
         # this is one atomic focus+type with no cross-call round-trip for the
         # foreground to drift, the failure mode that made a separate
         # focus_window + type_text land input in the wrong window.
+        # (#1291) Resolve the window selector loudly BEFORE focusing. An
+        # unresolvable window_title/hwnd raises WindowNotFoundError (mapped to a
+        # success:false / WINDOW_NOT_FOUND envelope) instead of silently
+        # swallowing the miss and typing into whatever window happens to be
+        # focused — the cardinal Never-Lie violation this guards against (#957).
         if hwnd is not None or window_title is not None:
-            try:
-                backend.focus_window(hwnd=hwnd, title=window_title)
-            except Exception:
-                pass  # best-effort; fall through to whatever is focused
+            target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
+            backend.focus_window(hwnd=target_hwnd, title=window_title)
         # (#1219) Prefer IME-immune entry: keystroke injection (SendInput) is
         # intercepted by CJK/TSF IMEs and can corrupt text ("naturo" ->
         # "nature"). When the focused control exposes a writable ValuePattern,
@@ -205,11 +210,10 @@ def register_input_tools(server, _get_backend, _safe_tool):
         if count < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"count must be >= 1, got {count}"}}
         backend = _get_backend()
+        # (#1291) Loud window resolution — see type_text for rationale (#957).
         if hwnd is not None or window_title is not None:
-            try:
-                backend.focus_window(hwnd=hwnd, title=window_title)
-            except Exception:
-                pass  # best-effort; fall through to the focused window
+            target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
+            backend.focus_window(hwnd=target_hwnd, title=window_title)
         is_combo = "+" in key
         for _ in range(count):
             if is_combo:
