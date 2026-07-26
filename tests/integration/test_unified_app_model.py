@@ -80,6 +80,7 @@ def _run_naturo(*args: str, timeout: int = 15) -> Dict[str, Any]:
         cmd,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=timeout,
     )
     return json.loads(result.stdout)
