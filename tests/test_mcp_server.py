@@ -222,13 +222,28 @@ class TestToolFunctionsWithMockedBackend:
             mock_backend.click.assert_called_once()
 
     def test_type_text_valid(self, mock_backend):
-        """type_text with valid wpm."""
+        """type_text reaches the backend on the keystroke path with the given wpm.
+
+        #1219/#1239 introduced a reliability ladder — writable ValuePattern →
+        clipboard paste → keystroke — so keystroke injection (the rung this test
+        asserts) only runs when the earlier rungs cannot apply: the fixture
+        already returns no writable ValuePattern (set_focused_element_value=False),
+        and we make clipboard paste unavailable here. wpm/input_mode reach the
+        backend; profile="human" is also passed (#1239, so wpm is honored), so we
+        assert the relevant kwargs rather than an exact call. The full ladder is
+        covered in tests/test_mcp_input.py.
+        """
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "type_text", {"text": "hello", "wpm": 60})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.type_text.assert_called_once_with(text="hello", wpm=60, input_mode="normal")
+            mock_backend.type_text.assert_called_once()
+            call_kwargs = mock_backend.type_text.call_args.kwargs
+            assert call_kwargs["text"] == "hello"
+            assert call_kwargs["wpm"] == 60
+            assert call_kwargs["input_mode"] == "normal"
 
     def test_type_text_invalid_wpm(self, mock_backend):
         """type_text with wpm=0 returns validation error."""
@@ -321,23 +336,28 @@ class TestToolFunctionsWithMockedBackend:
             assert data["success"] is False
             assert "duration" in data["error"]["message"]
 
-    def test_see_ui_tree_invalid_depth_zero(self, mock_backend):
-        """see_ui_tree with depth=0 returns validation error."""
+    def test_see_ui_tree_depth_zero_is_unlimited(self, mock_backend):
+        """#1289: depth=0 means unlimited (the default), not an invalid value —
+        it must be accepted, never rejected as INVALID_INPUT."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 0})
             data = json.loads(result[0].text)
+            # mock_backend.get_element_tree returns None → WINDOW_NOT_FOUND, which
+            # proves depth=0 passed validation (a rejected depth would short-circuit
+            # to INVALID_INPUT before ever reaching the backend).
             assert data["success"] is False
-            assert data["error"]["code"] == "INVALID_INPUT"
-            assert "depth" in data["error"]["message"]
+            assert data["error"]["code"] != "INVALID_INPUT"
 
-    def test_see_ui_tree_invalid_depth_eleven(self, mock_backend):
-        """see_ui_tree with depth=11 returns validation error."""
+    def test_see_ui_tree_large_depth_is_valid(self, mock_backend):
+        """#1289: depth has no upper clamp — a large positive depth is valid and
+        passed through verbatim (was rejected as >10 under the old 1-10 rule)."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 11})
             data = json.loads(result[0].text)
             assert data["success"] is False
+            assert data["error"]["code"] != "INVALID_INPUT"
 
     def test_see_ui_tree_no_window(self, mock_backend):
         """see_ui_tree returns WINDOW_NOT_FOUND when no matching window."""

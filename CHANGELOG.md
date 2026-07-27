@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **MCP contract/response-schema tests realigned to the intended design (no production change)** — a set of MCP tests had gone red against the *current, intended* MCP contract because they still encoded superseded pre-change behaviour; the production code was correct and is unchanged. Confirmed platform-independent (mock-based, no desktop). Realigned to the intended contracts: (a) `see_ui_tree` depth is fully caller-driven — `depth=0` means **unlimited** and there is **no upper clamp**, so `depth=0`/`depth=11` are valid and only a negative depth is an `INVALID_INPUT` validation error ([#1289](https://github.com/AcePeak/naturo/issues/1289)); (b) the **compact text (`tree_text`) is the default `see_ui_tree` response** and carries no `tree` key — the structured JSON `tree` is returned only with `format="json"`; the compact `see`→`eN`→`click` round-trip (the primary agent loop) resolves refs via the stored snapshot and is unchanged ([#1265](https://github.com/AcePeak/naturo/issues/1265)); (c) `find_element` forwards `hwnd` to the backend for uniform window targeting ([#1246](https://github.com/AcePeak/naturo/issues/1246)); (d) `type_text` follows the reliability ladder (writable ValuePattern → clipboard paste → keystroke, with `profile="human"` so `wpm` is honored), so keystroke injection runs only when the earlier rungs cannot apply ([#1219](https://github.com/AcePeak/naturo/issues/1219)/[#1239](https://github.com/AcePeak/naturo/issues/1239)). ([#1293](https://github.com/AcePeak/naturo/issues/1293))
+
 ## [0.3.2] - 2026-07-02
 
 ### Highlights
