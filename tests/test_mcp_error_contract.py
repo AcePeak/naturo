@@ -105,7 +105,10 @@ def test_unified_cascade_tree_is_reachable_via_mcp(server):
 
 
 def test_invalid_input_has_full_contract(server):
-    err = _error_of(_call(server, "see_ui_tree", {"depth": 99}))
+    # #1289 made tree depth fully caller-driven (0 = unlimited, no upper clamp),
+    # so a large positive depth is now VALID; a negative depth is the remaining
+    # input-validation failure and must surface the full INVALID_INPUT contract.
+    err = _error_of(_call(server, "see_ui_tree", {"depth": -1}))
     assert err["code"] == ErrorCode.INVALID_INPUT
     assert err["category"] == "validation"
     _assert_full_contract(err)

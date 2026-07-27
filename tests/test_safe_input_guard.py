@@ -262,6 +262,12 @@ class TestMcpTypeGuard:
         from unittest.mock import MagicMock
 
         backend = MagicMock()
+        # #1219/#1239: type_text prefers ValuePattern → clipboard paste before the
+        # keystroke rung. Steer to keystroke (no writable ValuePattern, no paste)
+        # so backend.type_text is the delivery proof that the content was NOT
+        # blocked when NATURO_SAFE_INPUT is unset.
+        backend.set_focused_element_value.return_value = False
+        backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with self._server(backend):
             server = create_server()
             with mock.patch.dict("os.environ", {}, clear=True):

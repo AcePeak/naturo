@@ -456,14 +456,16 @@ class TestFindElement:
         assert data["success"] is True
         assert data["element"]["role"] == "Button"
         assert data["element"]["name"] == "OK"
+        # #1246 added hwnd to find_element for uniform window targeting, so the
+        # MCP tool now forwards hwnd (None when unspecified) to the backend.
         mock_backend.find_element.assert_called_once_with(
-            selector="Button:OK", window_title=None,
+            selector="Button:OK", window_title=None, hwnd=None,
         )
 
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "find_element", {"selector": "Edit:*search*", "window_title": "Firefox"})
         mock_backend.find_element.assert_called_once_with(
-            selector="Edit:*search*", window_title="Firefox",
+            selector="Edit:*search*", window_title="Firefox", hwnd=None,
         )
 
     def test_element_not_found(self, server, mock_backend):

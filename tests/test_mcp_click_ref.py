@@ -76,8 +76,12 @@ class TestClickWithEnRef:
 
     def test_see_then_click_resolves_ref(self, server, mock_backend):
         """Core workflow: see_ui_tree → click(element_id=eN) succeeds."""
-        # Step 1: Call see_ui_tree to capture the element tree
-        see_result = _call_tool(server, "see_ui_tree", {})
+        # Step 1: Call see_ui_tree to capture the element tree. #1265 made the
+        # compact text (tree_text) the DEFAULT response; the structured JSON tree
+        # this test navigates now lives behind format="json". The compact-default
+        # see→click round-trip is covered by
+        # tests/test_mcp_inspect.py::test_compact_refs_stay_resolvable_for_click.
+        see_result = _call_tool(server, "see_ui_tree", {"format": "json"})
         see_data = json.loads(see_result[0].text)
         assert see_data["success"] is True
 
@@ -105,8 +109,9 @@ class TestClickWithEnRef:
                                x=0, y=0, width=800, height=50, children=[child])
         mock_backend.get_element_tree.return_value = parent
 
-        # Capture tree
-        see_result = _call_tool(server, "see_ui_tree", {})
+        # Capture tree (format="json" for structured child navigation; see note
+        # in test_see_then_click_resolves_ref re: #1265 compact default).
+        see_result = _call_tool(server, "see_ui_tree", {"format": "json"})
         see_data = json.loads(see_result[0].text)
         child_ref = see_data["tree"]["children"][0]["id"]
 
@@ -153,7 +158,7 @@ class TestClickWithEnRef:
 
     def test_click_right_button_with_ref(self, server, mock_backend):
         """Right-click using an eN ref."""
-        see_result = _call_tool(server, "see_ui_tree", {})
+        see_result = _call_tool(server, "see_ui_tree", {"format": "json"})
         see_data = json.loads(see_result[0].text)
         element_ref = see_data["tree"]["id"]
 
@@ -167,7 +172,7 @@ class TestClickWithEnRef:
 
     def test_click_double_with_ref(self, server, mock_backend):
         """Double-click using an eN ref."""
-        see_result = _call_tool(server, "see_ui_tree", {})
+        see_result = _call_tool(server, "see_ui_tree", {"format": "json"})
         see_data = json.loads(see_result[0].text)
         element_ref = see_data["tree"]["id"]
 
