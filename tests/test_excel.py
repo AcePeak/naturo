@@ -352,7 +352,10 @@ class TestExcelMCP:
 
     def test_excel_mcp_tools_registered(self):
         """Excel MCP tools are registered in create_server."""
-        pytest.importorskip("mcp")
+        # Guard on mcp.server.fastmcp, not bare "mcp" — see test_desktop.py for
+        # why (a partial mcp on the runner passes importorskip("mcp") but has no
+        # FastMCP, so it can't build the server).
+        pytest.importorskip("mcp.server.fastmcp")
 
         from naturo.mcp_server import create_server
 
