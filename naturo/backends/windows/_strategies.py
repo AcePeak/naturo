@@ -139,6 +139,148 @@ class Phys32Strategy(InputStrategy):
         self._core.mouse_scroll(delta, horizontal)
 
 
+class PostMessageStrategy(InputStrategy):
+    """Window-message input via ``PostMessage`` (no OS input stack).
+
+    Delivers mouse/keyboard input by posting ``WM_*`` messages directly to
+    the target window, instead of injecting into the session-wide input
+    stream with ``SendInput``.  This is the only mechanism that works in a
+    **headless/disconnected session** (an RDP session with no attached,
+    rendering client, or a ``tscon``-redirected console) where synthetic
+    input is silently dropped: there ``SendInput``/``SetCursorPos`` succeed
+    but move nothing and actuate nothing.
+
+    Because the messages are posted to a specific ``HWND`` rather than the
+    shared input queue, this bypasses that dead input stack — and, when the
+    driving process is **elevated**, it also bypasses UIPI, so it can drive
+    higher-integrity windows (e.g. security suites).  It works for classic
+    Win32 controls and for single-HWND custom/self-drawn toolkits such as Qt
+    (whose window proc dispatches the posted message to the widget at the
+    given client coordinates), where UIA/MSAA expose nothing.
+
+    Trade-offs vs. ``SendInput``: no real cursor movement (some apps that
+    read the global cursor rather than the message's ``lParam`` may not
+    react), and keystrokes go to the foreground window's focus.  Locate
+    targets by element geometry / vision, then post by client coordinate.
+    """
+
+    #: Per-button (down, up, dblclk, wParam-when-pressed) message quads.
+    _BTN = {
+        0: (0x0201, 0x0202, 0x0203, 0x0001),  # left:   DOWN/UP/DBLCLK, MK_LBUTTON
+        1: (0x0204, 0x0205, 0x0206, 0x0002),  # right:  DOWN/UP/DBLCLK, MK_RBUTTON
+        2: (0x0207, 0x0208, 0x0209, 0x0010),  # middle: DOWN/UP/DBLCLK, MK_MBUTTON
+    }
+    _WM_MOUSEMOVE = 0x0200
+    _WM_MOUSEWHEEL = 0x020A
+    _WM_CHAR = 0x0102
+    _WM_KEYDOWN = 0x0100
+    _WM_KEYUP = 0x0101
+
+    def __init__(self, core: NaturoCore) -> None:
+        self._core = core  # kept for interface symmetry; not used for delivery
+
+    @staticmethod
+    def _u32():
+        import ctypes
+        return ctypes.windll.user32  # type: ignore[union-attr]
+
+    def _target_at(self, x: int, y: int):
+        """Return (hwnd, clientX, clientY) for screen point (x, y)."""
+        import ctypes
+        from ctypes import wintypes
+        u = self._u32()
+        pt = wintypes.POINT(x, y)
+        hwnd = u.WindowFromPoint(pt)
+        if not hwnd:
+            return None, x, y
+        cpt = wintypes.POINT(x, y)
+        u.ScreenToClient(hwnd, ctypes.byref(cpt))
+        return hwnd, cpt.x, cpt.y
+
+    @staticmethod
+    def _lparam(x: int, y: int) -> int:
+        return ((y & 0xFFFF) << 16) | (x & 0xFFFF)
+
+    def _foreground(self):
+        return self._u32().GetForegroundWindow()
+
+    def click(self, x: int, y: int, button: int = 0,
+              double: bool = False) -> None:
+        import time
+        u = self._u32()
+        hwnd, cx, cy = self._target_at(x, y)
+        if not hwnd:
+            raise RuntimeError(f"PostMessage click: no window at ({x}, {y})")
+        down, up, dbl, mk = self._BTN.get(button, self._BTN[0])
+        lp = self._lparam(cx, cy)
+        u.PostMessageW(hwnd, self._WM_MOUSEMOVE, 0, lp)
+        time.sleep(0.02)
+        u.PostMessageW(hwnd, down, mk, lp)
+        time.sleep(0.02)
+        u.PostMessageW(hwnd, up, 0, lp)
+        if double:
+            time.sleep(0.02)
+            u.PostMessageW(hwnd, dbl, mk, lp)
+            time.sleep(0.02)
+            u.PostMessageW(hwnd, up, 0, lp)
+
+    def type_text(self, text: str, delay_ms: int = 5) -> None:
+        import time
+        u = self._u32()
+        hwnd = self._foreground()
+        if not hwnd:
+            raise RuntimeError("PostMessage type_text: no foreground window")
+        for ch in text:
+            u.PostMessageW(hwnd, self._WM_CHAR, ord(ch), 1)
+            if delay_ms:
+                time.sleep(delay_ms / 1000.0)
+
+    def press_key(self, key: str) -> None:
+        import time
+        u = self._u32()
+        hwnd = self._foreground()
+        if not hwnd:
+            raise RuntimeError("PostMessage press_key: no foreground window")
+        vk = _VK_MAP.get(key.lower())
+        if vk is None:
+            if len(key) == 1:
+                vk = ord(key.upper())
+            else:
+                raise ValueError(f"PostMessage press_key: unknown key {key!r}")
+        u.PostMessageW(hwnd, self._WM_KEYDOWN, vk, 1)
+        time.sleep(0.02)
+        u.PostMessageW(hwnd, self._WM_KEYUP, vk, 1)
+
+    def hotkey(self, *keys: str) -> None:
+        # WM_KEYDOWN/UP cannot faithfully model held modifiers via PostMessage
+        # (no shared keyboard state); fall back to SendInput for combos.
+        SendInputStrategy(self._core).hotkey(*keys)
+
+    def scroll(self, delta: int, horizontal: bool = False) -> None:
+        import ctypes
+        from ctypes import wintypes
+        u = self._u32()
+        pt = wintypes.POINT()
+        u.GetCursorPos(ctypes.byref(pt))
+        hwnd, _, _ = self._target_at(pt.x, pt.y)
+        if not hwnd:
+            hwnd = self._foreground()
+        wm = 0x020E if horizontal else self._WM_MOUSEWHEEL  # WM_MOUSEHWHEEL
+        wparam = (delta & 0xFFFF) << 16
+        u.PostMessageW(hwnd, wm, wparam, self._lparam(pt.x, pt.y))
+
+
+#: Common key-name -> virtual-key code for PostMessage keyboard events.
+_VK_MAP = {
+    "enter": 0x0D, "return": 0x0D, "tab": 0x09, "esc": 0x1B, "escape": 0x1B,
+    "space": 0x20, "backspace": 0x08, "delete": 0x2E, "del": 0x2E,
+    "up": 0x26, "down": 0x28, "left": 0x25, "right": 0x27,
+    "home": 0x24, "end": 0x23, "pageup": 0x21, "pagedown": 0x22,
+    "f1": 0x70, "f2": 0x71, "f3": 0x72, "f4": 0x73, "f5": 0x74, "f6": 0x75,
+    "f7": 0x76, "f8": 0x77, "f9": 0x78, "f10": 0x79, "f11": 0x7A, "f12": 0x7B,
+}
+
+
 def get_input_strategy(
     core: NaturoCore,
     input_mode: str = "normal",
@@ -147,7 +289,11 @@ def get_input_strategy(
 
     Args:
         core: Loaded ``NaturoCore`` instance.
-        input_mode: ``"normal"`` for SendInput, ``"hardware"`` for Phys32.
+        input_mode: ``"normal"`` for SendInput, ``"hardware"`` for Phys32,
+            ``"postmessage"`` for ``PostMessage`` window-message delivery
+            (works in headless/disconnected sessions where the OS input
+            stack is dead; requires elevation to drive higher-integrity
+            windows).
 
     Returns:
         An ``InputStrategy`` implementation.
@@ -157,9 +303,11 @@ def get_input_strategy(
     """
     if input_mode == "hardware":
         return Phys32Strategy(core)
+    if input_mode == "postmessage":
+        return PostMessageStrategy(core)
     if input_mode == "normal":
         return SendInputStrategy(core)
     raise ValueError(
         f"Unknown input_mode {input_mode!r}. "
-        f"Supported modes: 'normal', 'hardware'."
+        f"Supported modes: 'normal', 'hardware', 'postmessage'."
     )

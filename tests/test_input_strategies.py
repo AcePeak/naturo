@@ -18,6 +18,7 @@ import pytest
 from naturo.backends.windows._strategies import (
     InputStrategy,
     Phys32Strategy,
+    PostMessageStrategy,
     SendInputStrategy,
     get_input_strategy,
 )
@@ -159,6 +160,52 @@ class TestPhys32Strategy:
 # ── Factory Tests ────────────────────────────────────────────────────────────
 
 
+class TestPostMessageStrategy:
+    """PostMessageStrategy delivers input by posting WM_* window messages."""
+
+    def test_click_posts_button_down_up(self):
+        s = PostMessageStrategy(_make_core())
+        u = MagicMock()
+        with patch.object(PostMessageStrategy, "_u32", staticmethod(lambda: u)), \
+             patch.object(PostMessageStrategy, "_target_at",
+                          lambda self, x, y: (1234, 10, 20)):
+            s.click(100, 200, button=0)
+        msgs = [c.args[1] for c in u.PostMessageW.call_args_list]
+        assert 0x0201 in msgs  # WM_LBUTTONDOWN
+        assert 0x0202 in msgs  # WM_LBUTTONUP
+        # posted to the resolved target hwnd, at client-space lParam
+        assert all(c.args[0] == 1234 for c in u.PostMessageW.call_args_list)
+
+    def test_click_no_window_raises(self):
+        s = PostMessageStrategy(_make_core())
+        u = MagicMock()
+        with patch.object(PostMessageStrategy, "_u32", staticmethod(lambda: u)), \
+             patch.object(PostMessageStrategy, "_target_at",
+                          lambda self, x, y: (None, x, y)):
+            with pytest.raises(RuntimeError, match="no window"):
+                s.click(5, 5)
+
+    def test_type_text_posts_wm_char(self):
+        s = PostMessageStrategy(_make_core())
+        u = MagicMock()
+        u.GetForegroundWindow.return_value = 999
+        with patch.object(PostMessageStrategy, "_u32", staticmethod(lambda: u)):
+            s.type_text("ab", delay_ms=0)
+        posted = [(c.args[1], c.args[2]) for c in u.PostMessageW.call_args_list]
+        assert (0x0102, ord("a")) in posted  # WM_CHAR 'a'
+        assert (0x0102, ord("b")) in posted  # WM_CHAR 'b'
+
+    def test_press_key_enter_posts_keydown_keyup(self):
+        s = PostMessageStrategy(_make_core())
+        u = MagicMock()
+        u.GetForegroundWindow.return_value = 999
+        with patch.object(PostMessageStrategy, "_u32", staticmethod(lambda: u)):
+            s.press_key("enter")
+        posted = [(c.args[1], c.args[2]) for c in u.PostMessageW.call_args_list]
+        assert (0x0100, 0x0D) in posted  # WM_KEYDOWN VK_RETURN
+        assert (0x0101, 0x0D) in posted  # WM_KEYUP VK_RETURN
+
+
 class TestGetInputStrategy:
     """get_input_strategy returns the correct strategy for each mode."""
 
@@ -171,6 +218,11 @@ class TestGetInputStrategy:
         core = _make_core()
         s = get_input_strategy(core, "hardware")
         assert isinstance(s, Phys32Strategy)
+
+    def test_postmessage_returns_postmessage(self):
+        core = _make_core()
+        s = get_input_strategy(core, "postmessage")
+        assert isinstance(s, PostMessageStrategy)
 
     def test_default_is_normal(self):
         core = _make_core()

@@ -113,9 +113,9 @@ def _normalize_modifier(key_str: str) -> str:
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option(
     "--input-mode",
-    type=click.Choice(["normal", "hardware", "hook"]),
+    type=click.Choice(["normal", "hardware", "hook", "postmessage"]),
     default="normal",
-    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
+    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection), postmessage (WM_* window messages; works in headless/disconnected sessions, needs elevation for higher-integrity windows)",
 )
 @_common._method_option
 @_common._selector_option
@@ -438,9 +438,9 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
 @click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option(
     "--input-mode",
-    type=click.Choice(["normal", "hardware", "hook"]),
+    type=click.Choice(["normal", "hardware", "hook", "postmessage"]),
     default="normal",
-    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection)",
+    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection), postmessage (WM_* window messages; works in headless/disconnected sessions, needs elevation for higher-integrity windows)",
 )
 @_common._method_option
 @_common._app_id_option
