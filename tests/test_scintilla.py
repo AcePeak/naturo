@@ -216,3 +216,114 @@ def test_get_ref_live_none_when_control_gone(monkeypatch):
     # None → control can't be read → fall through to the normal path.
     monkeypatch.setattr(_scintilla, "_read_scintilla_text", lambda h: None)
     assert mixin._read_scintilla_ref_live(_Elem("scintilla_9")) is None
+
+
+# ── Write side: set_scintilla_text routing + `set eN` short-circuit ───────────
+
+
+def test_set_scintilla_text_writes_to_scintilla_child(monkeypatch):
+    # hwnd is already a Scintilla control → write to it directly (no child search).
+    class _U:
+        def GetClassNameW(self, hwnd, buf, n):
+            buf.value = "Scintilla"
+            return 9
+
+    monkeypatch.setattr(_scintilla, "_win32", lambda: (_U(), object()))
+    calls = {}
+    monkeypatch.setattr(
+        _scintilla, "_write_scintilla_text",
+        lambda h, t: (calls.__setitem__("args", (h, t)), True)[1],
+    )
+    assert _scintilla.set_scintilla_text(4242, "new text") is True
+    assert calls["args"] == (4242, "new text")
+
+
+def test_set_scintilla_text_finds_child_when_given_parent(monkeypatch):
+    # hwnd is NOT a Scintilla control → find the biggest Scintilla child first.
+    class _U:
+        def GetClassNameW(self, hwnd, buf, n):
+            buf.value = "Notepad++"
+            return 9
+
+    monkeypatch.setattr(_scintilla, "_win32", lambda: (_U(), object()))
+    monkeypatch.setattr(
+        _scintilla, "_find_scintilla_windows", lambda h: [(777, (0, 0, 800, 600))]
+    )
+    seen = {}
+    monkeypatch.setattr(
+        _scintilla, "_write_scintilla_text",
+        lambda h, t: (seen.__setitem__("hwnd", h), True)[1],
+    )
+    assert _scintilla.set_scintilla_text(100, "x") is True
+    assert seen["hwnd"] == 777
+
+
+def test_set_scintilla_text_false_when_no_scintilla(monkeypatch):
+    class _U:
+        def GetClassNameW(self, hwnd, buf, n):
+            buf.value = "Notepad++"
+            return 9
+
+    monkeypatch.setattr(_scintilla, "_win32", lambda: (_U(), object()))
+    monkeypatch.setattr(_scintilla, "_find_scintilla_windows", lambda h: [])
+    assert _scintilla.set_scintilla_text(100, "x") is False
+
+
+def test_set_scintilla_text_false_for_zero_hwnd():
+    assert _scintilla.set_scintilla_text(0, "x") is False
+
+
+def test_write_refuses_readonly_control(monkeypatch):
+    # SCI_GETREADONLY -> 1 must abort the write (never a phantom success), and
+    # must NOT reach OpenProcess/WriteProcessMemory.
+    reached = {"open": False}
+
+    class _U:
+        def SendMessageW(self, hwnd, msg, w, l):
+            if msg == _scintilla._SCI_GETREADONLY:
+                return 1  # read-only
+            return 0
+
+    class _K:
+        def OpenProcess(self, *a):
+            reached["open"] = True
+            return 0
+
+    monkeypatch.setattr(_scintilla, "_win32", lambda: (_U(), _K()))
+    assert _scintilla._write_scintilla_text(555, "nope") is False
+    assert reached["open"] is False
+
+
+def test_set_element_value_routes_scintilla_identifier(monkeypatch):
+    # `set eN` on a Scintilla node passes automation_id="scintilla_<hwnd>" into
+    # set_element_value, which must short-circuit to the cross-process writer
+    # (parsing the child hwnd) instead of the doomed UIA path.
+    import pytest
+
+    try:
+        from naturo.backends.windows._input._uia_interact import UIAInteractMixin
+    except Exception:  # pragma: no cover - non-Windows CI without the DLL
+        pytest.skip("Windows interaction backend unavailable on this platform")
+
+    seen = {}
+    monkeypatch.setattr(
+        _scintilla, "set_scintilla_text",
+        lambda h, t: (seen.__setitem__("args", (h, t)), True)[1],
+    )
+    mixin = UIAInteractMixin.__new__(UIAInteractMixin)
+    ok = mixin.set_element_value(text="payload", automation_id="scintilla_8066078")
+    assert ok is True
+    assert seen["args"] == (8066078, "payload")
+
+
+def test_set_element_value_scintilla_bad_identifier(monkeypatch):
+    import pytest
+
+    try:
+        from naturo.backends.windows._input._uia_interact import UIAInteractMixin
+    except Exception:  # pragma: no cover
+        pytest.skip("Windows interaction backend unavailable on this platform")
+
+    # Malformed "scintilla_" id (no parseable hwnd) → False, no crash.
+    mixin = UIAInteractMixin.__new__(UIAInteractMixin)
+    assert mixin.set_element_value(text="x", automation_id="scintilla_notanint") is False
