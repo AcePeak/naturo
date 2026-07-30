@@ -268,7 +268,10 @@ class TestMCPSeeUITreeMSAA:
 
     def test_mcp_see_ui_tree_has_backend_param(self):
         """see_ui_tree function signature includes accessibility_backend."""
-        pytest.importorskip("mcp")
+        # Guard on mcp.server.fastmcp, not bare "mcp" — see test_desktop.py for
+        # why (a partial mcp on the runner passes importorskip("mcp") but has no
+        # FastMCP, so it can't build the server).
+        pytest.importorskip("mcp.server.fastmcp")
         from naturo.mcp_server import create_server
         import inspect
 
