@@ -509,6 +509,23 @@ class UIAInteractMixin:
         Returns:
             True if SetValue succeeded, False otherwise.
         """
+        # Scintilla editors (Notepad++/SciTE) are synthetic cascade nodes with no
+        # live UIA element, carrying identifier "scintilla_<child_hwnd>". A normal
+        # SetValue would fail the UIA lookup, so write the document live via the
+        # provider's cross-process SCI_SETTEXT — the write-side mirror of the
+        # get eN live read. Returns False for a read-only editor (never a phantom
+        # success), letting the caller report SET_VALUE_FAILED.
+        if automation_id and automation_id.startswith("scintilla_"):
+            try:
+                sci_hwnd = int(automation_id.split("_", 1)[1])
+            except (ValueError, IndexError):
+                return False
+            from naturo.cascade._scintilla import set_scintilla_text
+            ok = set_scintilla_text(sci_hwnd, text)
+            if ok:
+                logger.info("SetValue: wrote Scintilla document (len=%d)", len(text))
+            return ok
+
         try:
             uia, mod = self._init_comtypes_uia()
         except (ImportError, Exception):

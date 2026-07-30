@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 # Scintilla messages (Scintilla.h).
 _SCI_GETLENGTH = 2006
 _SCI_GETTEXT = 2182
+_SCI_SETTEXT = 2181  # replace the WHOLE document (lParam = zero-terminated bytes)
+_SCI_GETREADONLY = 2140
 
 _SCINTILLA_CLASS = "Scintilla"
 #: Upper bound on bytes read from one editor (a giant file must not blow memory).
@@ -66,6 +68,11 @@ def _win32():
     ]
     kernel32.ReadProcessMemory.restype = wintypes.BOOL
     kernel32.ReadProcessMemory.argtypes = [
+        wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+    ]
+    kernel32.WriteProcessMemory.restype = wintypes.BOOL
+    kernel32.WriteProcessMemory.argtypes = [
         wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
         ctypes.POINTER(ctypes.c_size_t),
     ]
@@ -155,6 +162,90 @@ def _read_scintilla_text(sci_hwnd: int) -> Optional[str]:
         if remote:
             kernel32.VirtualFreeEx(proc, remote, 0, _MEM_RELEASE)
         kernel32.CloseHandle(proc)
+
+
+def _write_scintilla_text(sci_hwnd: int, text: str) -> bool:
+    """Replace a Scintilla control's whole document across the process boundary.
+
+    Mirror of :func:`_read_scintilla_text`: SCI_SETTEXT takes a zero-terminated
+    byte buffer whose pointer must live in the *target* process, so we encode the
+    text as UTF-8 (Scintilla stores bytes; the read path decodes UTF-8), allocate
+    the buffer in that process (VirtualAllocEx), copy the bytes in
+    (WriteProcessMemory), then send SCI_SETTEXT. Returns False on any failure —
+    including a read-only control, which must not silently look like success.
+    """
+    win = _win32()
+    if win is None:
+        return False
+    user32, kernel32 = win
+
+    # Refuse a read-only editor rather than reporting a phantom success.
+    if user32.SendMessageW(sci_hwnd, _SCI_GETREADONLY, 0, 0):
+        logger.debug("Scintilla: control is read-only, refusing write")
+        return False
+
+    payload = text.encode("utf-8") + b"\x00"  # SCI_SETTEXT wants a NUL terminator
+    if len(payload) - 1 > _MAX_SCINTILLA_BYTES:
+        logger.debug("Scintilla: write payload exceeds cap, refusing")
+        return False
+
+    pid = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(sci_hwnd, ctypes.byref(pid))
+    if not pid.value:
+        return False
+
+    proc = kernel32.OpenProcess(
+        _PROCESS_VM_OPERATION | _PROCESS_VM_READ | _PROCESS_VM_WRITE,
+        False, pid.value,
+    )
+    if not proc:
+        logger.debug("Scintilla: OpenProcess failed for pid %s", pid.value)
+        return False
+
+    remote = None
+    try:
+        remote = kernel32.VirtualAllocEx(
+            proc, None, len(payload), _MEM_COMMIT | _MEM_RESERVE, _PAGE_READWRITE,
+        )
+        if not remote:
+            return False
+        written = ctypes.c_size_t(0)
+        ok = kernel32.WriteProcessMemory(
+            proc, remote, payload, len(payload), ctypes.byref(written),
+        )
+        if not ok:
+            logger.debug("Scintilla: WriteProcessMemory failed")
+            return False
+        # SCI_SETTEXT(<unused>, lParam = buffer) replaces the whole document.
+        user32.SendMessageW(sci_hwnd, _SCI_SETTEXT, 0, remote)
+        return True
+    finally:
+        if remote:
+            kernel32.VirtualFreeEx(proc, remote, 0, _MEM_RELEASE)
+        kernel32.CloseHandle(proc)
+
+
+def set_scintilla_text(hwnd: int, text: str) -> bool:
+    """Replace the document of the (biggest) Scintilla editor under ``hwnd``.
+
+    ``hwnd`` may be either the top-level window OR the Scintilla child handle
+    itself (as encoded in a ``scintilla_<hwnd>`` node id). Returns True only if
+    the write landed; False if there is no Scintilla control or it is read-only.
+    """
+    if not hwnd:
+        return False
+    # If hwnd is already a Scintilla control, write to it directly; otherwise
+    # find the biggest Scintilla child (same choice the reader/graft makes).
+    win = _win32()
+    if win is not None:
+        buf = ctypes.create_unicode_buffer(64)
+        win[0].GetClassNameW(wintypes.HWND(hwnd), buf, 64)
+        if buf.value == _SCINTILLA_CLASS:
+            return _write_scintilla_text(hwnd, text)
+    found = _find_scintilla_windows(hwnd)
+    if not found:
+        return False
+    return _write_scintilla_text(found[0][0], text)
 
 
 def is_scintilla_window(hwnd: int) -> bool:
