@@ -1,0 +1,133 @@
+# Naturo Software Support catalog. See README.md for the G1–G7 acceptance gate.
+# framework = best guess, confirmed at test time. versions = range to pin on install (G7).
+# status: candidate | in-progress | supported | blocked
+# valuable_data = the core data this product exists to produce (the G1/G2 target).
+
+meta:
+  phase: 1
+  region: chinese-world-mainstream
+  target_count: 100
+  updated: 2026-07-30
+
+apps:
+  # ── 办公文档 / Office & Docs ──────────────────────────────
+  - {id: wps,           name: WPS Office,          category: 办公文档, framework: "自绘/Qt",        versions: "12.x (2024–2026)", valuable_data: "文档正文 / 表格单元格 / 演示大纲", status: candidate}
+  - {id: msword,        name: Microsoft Word,      category: 办公文档, framework: "UIA+COM",        versions: "2019–2021 / 365",  valuable_data: "文档正文与批注", status: candidate}
+  - {id: msexcel,       name: Microsoft Excel,     category: 办公文档, framework: "COM",            versions: "2019–2021 / 365",  valuable_data: "工作表单元格区域", status: candidate}
+  - {id: msppt,         name: Microsoft PowerPoint,category: 办公文档, framework: "UIA+COM",        versions: "2019–2021 / 365",  valuable_data: "幻灯片文本与备注", status: candidate}
+  - {id: onenote,       name: Microsoft OneNote,   category: 办公文档, framework: "UIA",            versions: "2016 / 365",       valuable_data: "笔记页正文", status: candidate}
+  - {id: outlook,       name: Microsoft Outlook,   category: 办公文档, framework: "UIA+COM",        versions: "2019–2021 / 365",  valuable_data: "邮件列表与正文", status: candidate}
+  - {id: tencentdocs,   name: 腾讯文档,            category: 办公文档, framework: "Electron/CDP",   versions: "3.x",              valuable_data: "在线文档/表格内容", status: candidate}
+  - {id: youdaonote,    name: 有道云笔记,          category: 办公文档, framework: "Electron/CDP",   versions: "7.x",              valuable_data: "笔记正文", status: candidate}
+  - {id: yinxiang,      name: 印象笔记,            category: 办公文档, framework: "Electron/CDP",   versions: "10.x",             valuable_data: "笔记列表与正文", status: candidate}
+  - {id: wiznote,       name: 为知笔记,            category: 办公文档, framework: "Qt",             versions: "4.x",              valuable_data: "笔记正文", status: candidate}
+  - {id: xmind,         name: XMind,               category: 办公文档, framework: "Java/Electron",  versions: "2023–2025",        valuable_data: "思维导图节点树", status: candidate}
+  - {id: edraw,         name: 亿图图示 Edraw,      category: 办公文档, framework: "自绘",            versions: "12.x",             valuable_data: "图形/形状文本", status: candidate}
+  - {id: foxit,         name: 福昕阅读器,          category: 办公文档, framework: "自绘",            versions: "12.x–2025",        valuable_data: "PDF 页面文本", status: candidate}
+  - {id: wpspdf,        name: WPS PDF,             category: 办公文档, framework: "自绘",            versions: "12.x",             valuable_data: "PDF 页面文本", status: candidate}
+  - {id: mubu,          name: 幕布,                category: 办公文档, framework: "Electron/CDP",   versions: "1.x",              valuable_data: "大纲节点", status: candidate}
+
+  # ── 通讯社交 / Comms & Social ─────────────────────────────
+  - {id: wechat,        name: 微信 WeChat,         category: 通讯社交, framework: "Duilib/自绘",     versions: "3.9.x – 4.0.x",    valuable_data: "会话消息 / 联系人 / 聊天记录检索", status: candidate}
+  - {id: qq,            name: QQ,                  category: 通讯社交, framework: "Electron(NT)",   versions: "9.x (NT)",         valuable_data: "会话消息与联系人", status: candidate}
+  - {id: tim,           name: TIM,                 category: 通讯社交, framework: "自绘",            versions: "3.x",              valuable_data: "会话消息", status: candidate}
+  - {id: wecom,         name: 企业微信 WeCom,      category: 通讯社交, framework: "自绘",            versions: "4.x",              valuable_data: "会话/客户/审批", status: candidate}
+  - {id: dingtalk,      name: 钉钉 DingTalk,       category: 通讯社交, framework: "Electron/CDP",   versions: "7.x",              valuable_data: "会话/日程/审批", status: candidate}
+  - {id: feishu,        name: 飞书 Feishu,         category: 通讯社交, framework: "Electron/CDP",   versions: "7.x",              valuable_data: "会话/文档/多维表格", status: candidate}
+  - {id: tmeeting,      name: 腾讯会议,            category: 通讯社交, framework: "自绘",            versions: "3.x",              valuable_data: "会议成员/聊天/纪要", status: candidate}
+  - {id: qianniu,       name: 千牛 (淘宝卖家),     category: 通讯社交, framework: "Electron/CDP",   versions: "9.x",              valuable_data: "订单/客服会话", status: candidate}
+  - {id: pddmerchant,   name: 拼多多商家版,        category: 通讯社交, framework: "Electron/CDP",   versions: "6.x",              valuable_data: "订单列表/客服会话", status: candidate}
+  - {id: mailmaster,    name: 网易邮箱大师,        category: 通讯社交, framework: "自绘",            versions: "5.x",              valuable_data: "邮件列表与正文", status: candidate}
+  - {id: foxmail,       name: Foxmail,             category: 通讯社交, framework: "自绘",            versions: "7.x",              valuable_data: "邮件列表与正文", status: candidate}
+  - {id: yy,            name: YY 语音,             category: 通讯社交, framework: "自绘",            versions: "8.x",              valuable_data: "频道成员/聊天", status: candidate}
+  - {id: kexqq,         name: 腾讯课堂,            category: 通讯社交, framework: "Electron/CDP",   versions: "3.x",              valuable_data: "课程列表/直播间", status: candidate}
+
+  # ── 浏览器 / Browsers ─────────────────────────────────────
+  - {id: browser360se,  name: 360安全浏览器,       category: 浏览器,   framework: "Chromium/CDP",   versions: "14.x",             valuable_data: "渲染后网页内容", status: candidate}
+  - {id: browser360ex,  name: 360极速浏览器,       category: 浏览器,   framework: "Chromium/CDP",   versions: "22.x",             valuable_data: "渲染后网页内容", status: candidate}
+  - {id: qqbrowser,     name: QQ浏览器,            category: 浏览器,   framework: "Chromium/CDP",   versions: "12.x",             valuable_data: "渲染后网页内容", status: candidate}
+  - {id: sogoubrowser,  name: 搜狗高速浏览器,      category: 浏览器,   framework: "Chromium/CDP",   versions: "12.x",             valuable_data: "渲染后网页内容", status: candidate}
+  - {id: ucbrowser,     name: UC浏览器 PC,         category: 浏览器,   framework: "Chromium/CDP",   versions: "7.x",              valuable_data: "渲染后网页内容", status: candidate}
+  - {id: quark,         name: 夸克浏览器 PC,       category: 浏览器,   framework: "Chromium/CDP",   versions: "1.x",              valuable_data: "渲染后网页内容/网盘", status: candidate}
+  - {id: maxthon,       name: 傲游 Maxthon,        category: 浏览器,   framework: "Chromium/CDP",   versions: "7.x",              valuable_data: "渲染后网页内容", status: candidate}
+  - {id: browser2345,   name: 2345加速浏览器,      category: 浏览器,   framework: "Chromium/CDP",   versions: "12.x",             valuable_data: "渲染后网页内容", status: candidate}
+  - {id: edge,          name: Microsoft Edge,      category: 浏览器,   framework: "Chromium/CDP",   versions: "120–140",          valuable_data: "渲染后网页内容", status: candidate}
+  - {id: chrome,        name: Google Chrome,       category: 浏览器,   framework: "Chromium/CDP",   versions: "120–140",          valuable_data: "渲染后网页内容", status: candidate}
+
+  # ── 影音娱乐 / Media ──────────────────────────────────────
+  - {id: neteasemusic,  name: 网易云音乐,          category: 影音娱乐, framework: "CEF/自绘",        versions: "3.x",              valuable_data: "歌单/榜单 曲目列表", status: candidate}
+  - {id: qqmusic,       name: QQ音乐,              category: 影音娱乐, framework: "CEF/自绘",        versions: "20xx",             valuable_data: "歌单/榜单 曲目列表", status: candidate}
+  - {id: kugou,         name: 酷狗音乐,            category: 影音娱乐, framework: "自绘",            versions: "11.x",             valuable_data: "歌单/榜单 曲目列表", status: candidate}
+  - {id: kuwo,          name: 酷我音乐,            category: 影音娱乐, framework: "自绘",            versions: "9.x",              valuable_data: "歌单/榜单 曲目列表", status: candidate}
+  - {id: migu,          name: 咪咕音乐,            category: 影音娱乐, framework: "自绘",            versions: "5.x",              valuable_data: "歌单曲目列表", status: candidate}
+  - {id: iqiyi,         name: 爱奇艺,              category: 影音娱乐, framework: "CEF/自绘",        versions: "10.x",             valuable_data: "剧集/片单信息", status: candidate}
+  - {id: txvideo,       name: 腾讯视频,            category: 影音娱乐, framework: "CEF/自绘",        versions: "11.x",             valuable_data: "剧集/片单信息", status: candidate}
+  - {id: youku,         name: 优酷,                category: 影音娱乐, framework: "CEF/自绘",        versions: "9.x",              valuable_data: "剧集/片单信息", status: candidate}
+  - {id: mangotv,       name: 芒果TV,              category: 影音娱乐, framework: "CEF/自绘",        versions: "6.x",              valuable_data: "剧集/片单信息", status: candidate}
+  - {id: bilibili,      name: 哔哩哔哩,            category: 影音娱乐, framework: "Electron/CDP",   versions: "1.x",              valuable_data: "视频列表/信息", status: candidate}
+  - {id: potplayer,     name: PotPlayer,           category: 影音娱乐, framework: "自绘",            versions: "1.7.x",            valuable_data: "播放列表/媒体信息", status: candidate}
+  - {id: xunleiplayer,  name: 迅雷影音,            category: 影音娱乐, framework: "自绘",            versions: "5.x",              valuable_data: "播放列表", status: candidate}
+  - {id: qqplayer,      name: QQ影音,              category: 影音娱乐, framework: "自绘",            versions: "4.x",              valuable_data: "播放列表", status: candidate}
+  - {id: baofeng,       name: 暴风影音,            category: 影音娱乐, framework: "自绘",            versions: "5.x",              valuable_data: "播放列表", status: candidate}
+  - {id: formatfactory, name: 格式工厂,            category: 影音娱乐, framework: "自绘",            versions: "5.x",              valuable_data: "转换任务列表", status: candidate}
+
+  # ── 下载云盘 / Download & Cloud ──────────────────────────
+  - {id: xunlei,        name: 迅雷,                category: 下载云盘, framework: "自绘",            versions: "12.x",             valuable_data: "下载任务列表(名/进度/大小)", status: candidate}
+  - {id: baidunetdisk,  name: 百度网盘,            category: 下载云盘, framework: "CEF/自绘",        versions: "7.x",              valuable_data: "云端文件列表", status: candidate}
+  - {id: aliyundrive,   name: 阿里云盘,            category: 下载云盘, framework: "Electron/CDP",   versions: "4.x",              valuable_data: "云端文件列表", status: candidate}
+  - {id: tianyicloud,   name: 天翼云盘,            category: 下载云盘, framework: "自绘",            versions: "10.x",             valuable_data: "云端文件列表", status: candidate}
+  - {id: weiyun,        name: 腾讯微云,            category: 下载云盘, framework: "自绘",            versions: "3.x",              valuable_data: "云端文件列表", status: candidate}
+  - {id: pan115,        name: 115网盘,             category: 下载云盘, framework: "CEF/自绘",        versions: "27.x",             valuable_data: "云端文件列表", status: candidate}
+  - {id: quarkpan,      name: 夸克网盘 PC,         category: 下载云盘, framework: "Electron/CDP",   versions: "1.x",              valuable_data: "云端文件列表", status: candidate}
+
+  # ── 系统工具/安全 / System & Security ────────────────────
+  - {id: safe360,       name: 360安全卫士,         category: 系统安全, framework: "自绘",            versions: "14.x",             valuable_data: "体检结果/垃圾项列表", status: candidate}
+  - {id: qqpcmgr,       name: 腾讯电脑管家,        category: 系统安全, framework: "Qt 5.15 (QMUI, class Qt51514QWindowIcon)", versions: "18.2.30833.214 (validated)", valuable_data: "软件市场(搜索/热门榜) + 安装/卸载软件操作", status: in-progress, order: 1, notes: "App#1 LIFECYCLE PROVEN end-to-end in headless console: drove its Qt UI to search+install 7-Zip, auto-handled the Setup wizard, then used+uninstalled it (see id sevenzip). Method: process ELEVATED -> PostMessage(WM_MOUSEMOVE/LBUTTONDOWN/UP + WM_CHAR) to the Qt HWND with client coords (bypasses dead console input stack + UIPI); standard dialogs via UIA Invoke. Targets located by vision/screenshot. Remaining for full G5/G6: build naturo Qt provider (inject -> deterministic QWidget tree + repeatable script) instead of vision-coord clicks. See evidence/qqpcmgr/FINDINGS.md + 15-25.png. [[project_naturo_qt_postmessage_operate]]"}
+  - {id: huorong,       name: 火绒安全,            category: 系统安全, framework: "自绘",            versions: "5.x",              valuable_data: "扫描结果/日志", status: candidate}
+  - {id: ludashi,       name: 鲁大师,              category: 系统安全, framework: "自绘",            versions: "6.x",              valuable_data: "硬件信息/跑分", status: candidate}
+  - {id: drivergenius,  name: 驱动精灵,            category: 系统安全, framework: "自绘",            versions: "9.x",              valuable_data: "驱动列表/状态", status: candidate}
+  - {id: ccleaner,      name: CCleaner,            category: 系统安全, framework: "MFC/UIA",        versions: "6.x",              valuable_data: "可清理项列表", status: candidate}
+  - {id: sevenzip,      name: 7-Zip,               category: 系统安全, framework: "Win32/UIA",      versions: "26.02 (validated)", valuable_data: "压缩包文件列表(名/大小/CRC/时间)", status: supported, notes: "Full lifecycle via 电脑管家: installed (auto-handled 7-Zip Setup wizard: default dir + Install/Close via UIA Invoke), used (7zFM opened archive -> deterministic UIA file list, matched 7z CLI), uninstalled via 电脑管家卸载 (dir+registry removed). Evidence: evidence/qqpcmgr/19-25.png."}
+  - {id: winrar,        name: WinRAR,              category: 系统安全, framework: "Win32/UIA",      versions: "6–7",              valuable_data: "压缩包文件列表", status: candidate}
+  - {id: haozip,        name: 2345好压,            category: 系统安全, framework: "自绘",            versions: "6.x",              valuable_data: "压缩包文件列表", status: candidate}
+  - {id: everything,    name: Everything,          category: 系统安全, framework: "Win32/UIA",      versions: "1.4–1.5",          valuable_data: "文件搜索结果列表", status: candidate}
+  - {id: snipaste,      name: Snipaste,            category: 系统安全, framework: "Qt",             versions: "2.x",              valuable_data: "贴图/取色信息", status: candidate}
+
+  # ── 输入法 / IME ─────────────────────────────────────────
+  - {id: sogoupinyin,   name: 搜狗输入法,          category: 输入法,   framework: "自绘",            versions: "13.x",             valuable_data: "候选词/属性设置", status: candidate}
+  - {id: qqpinyin,      name: QQ输入法,            category: 输入法,   framework: "自绘",            versions: "6.x",              valuable_data: "候选词/属性设置", status: candidate}
+  - {id: baidupinyin,   name: 百度输入法,          category: 输入法,   framework: "自绘",            versions: "5.x",              valuable_data: "候选词/属性设置", status: candidate}
+
+  # ── 开发工具 / Dev Tools ─────────────────────────────────
+  - {id: vscode,        name: Visual Studio Code,  category: 开发工具, framework: "Electron/CDP",   versions: "1.8x–1.9x",        valuable_data: "编辑器文本/资源管理器树", status: candidate}
+  - {id: wxdevtools,    name: 微信开发者工具,      category: 开发工具, framework: "Electron/CDP",   versions: "1.06.x",           valuable_data: "编辑器/模拟器/调试器", status: candidate}
+  - {id: hbuilderx,     name: HBuilderX,           category: 开发工具, framework: "自绘",            versions: "4.x",              valuable_data: "编辑器文本/项目树", status: candidate}
+  - {id: navicat,       name: Navicat,             category: 开发工具, framework: "Qt",             versions: "16–17",            valuable_data: "数据库表数据/结构", status: candidate}
+  - {id: notepadpp,     name: Notepad++,           category: 开发工具, framework: "Scintilla",      versions: "8.x",              valuable_data: "编辑器文本", status: candidate}
+  - {id: sublime,       name: Sublime Text,        category: 开发工具, framework: "自绘",            versions: "4.x",              valuable_data: "编辑器文本", status: candidate}
+  - {id: finalshell,    name: FinalShell,          category: 开发工具, framework: "Java/Swing(JAB)",versions: "4.x",              valuable_data: "终端输出/连接列表", status: candidate}
+  - {id: xshell,        name: Xshell,              category: 开发工具, framework: "自绘",            versions: "7–8",              valuable_data: "终端输出/会话列表", status: candidate}
+  - {id: mobaxterm,     name: MobaXterm,           category: 开发工具, framework: "Win32/自绘",      versions: "23–24",            valuable_data: "终端输出/会话列表", status: candidate}
+  - {id: pycharm,       name: PyCharm,             category: 开发工具, framework: "Java/Swing(JAB)",versions: "2024–2025",        valuable_data: "编辑器文本/项目树", status: candidate}
+
+  # ── 图形设计/创作 / Creative ─────────────────────────────
+  - {id: photoshop,     name: Adobe Photoshop,     category: 图形创作, framework: "自绘",            versions: "2023–2025",        valuable_data: "图层列表/属性", status: candidate}
+  - {id: meitu,         name: 美图秀秀,            category: 图形创作, framework: "自绘",            versions: "7.x",              valuable_data: "编辑工具/图层", status: candidate}
+  - {id: neoimaging,    name: 光影魔术手,          category: 图形创作, framework: "自绘",            versions: "4.x",              valuable_data: "调整参数/预览", status: candidate}
+  - {id: jianying,      name: 剪映专业版,          category: 图形创作, framework: "自绘/CEF",        versions: "5.x–6.x",          valuable_data: "时间轴片段/素材库", status: candidate}
+  - {id: videostudio,   name: 会声会影,            category: 图形创作, framework: "自绘",            versions: "2023–2025",        valuable_data: "时间轴片段", status: candidate}
+  - {id: inkscape,      name: Inkscape,            category: 图形创作, framework: "GTK",            versions: "1.1–1.3",          valuable_data: "对象/图层树", status: candidate}
+  - {id: gimp,          name: GIMP,                category: 图形创作, framework: "GTK",            versions: "2.10 / 3.0",       valuable_data: "图层列表/工具选项", status: candidate}
+
+  # ── 金融证券 / Finance ───────────────────────────────────
+  - {id: ths,           name: 同花顺,              category: 金融证券, framework: "自绘",            versions: "9.x",              valuable_data: "行情/自选股/持仓", status: candidate}
+  - {id: eastmoney,     name: 东方财富,            category: 金融证券, framework: "自绘",            versions: "10.x",             valuable_data: "行情/自选股", status: candidate}
+  - {id: tdx,           name: 通达信,              category: 金融证券, framework: "自绘",            versions: "V7.x",             valuable_data: "行情/自选股", status: candidate}
+  - {id: dzh,           name: 大智慧,              category: 金融证券, framework: "自绘",            versions: "8.x",              valuable_data: "行情/自选股", status: candidate}
+  - {id: futu,          name: 富途牛牛,            category: 金融证券, framework: "Qt/CEF",          versions: "13.x",             valuable_data: "行情/持仓/自选", status: candidate}
+
+  # ── 教育翻译/生活 / Edu & Life ───────────────────────────
+  - {id: youdaodict,    name: 网易有道词典,        category: 教育生活, framework: "CEF/自绘",        versions: "9.x",              valuable_data: "词条释义/例句", status: candidate}
+  - {id: iciba,         name: 金山词霸,            category: 教育生活, framework: "自绘",            versions: "3.x",              valuable_data: "词条释义/例句", status: candidate}
+  - {id: baidufanyi,    name: 百度翻译 PC,         category: 教育生活, framework: "Electron/CDP",   versions: "3.x",              valuable_data: "翻译结果", status: candidate}
+  - {id: uubooster,     name: 网易UU加速器,        category: 教育生活, framework: "Electron/CDP",   versions: "5.x",              valuable_data: "游戏列表/延迟数据", status: candidate}

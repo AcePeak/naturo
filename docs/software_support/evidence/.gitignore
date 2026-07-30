@@ -1,0 +1,3 @@
+# One-time screenshots kept locally as working evidence; not versioned (would bloat repo).
+# The reproducible artifacts are the scripts + the text records (FINDINGS.md, LIFECYCLE.md, catalog.yaml).
+*.png
