@@ -40,4 +40,35 @@ WPS = `OpusApp` (Word-compat) native shell + embedded **CEF** (login/start page)
     with `naturo see --cascade`, **while WPS was not the foreground window** (terminal was). Restored
     the sheet to its canonical values afterward. Numeric strings coerce to int/float; leading-zero
     strings (IDs/zips) stay text.
-- S3–S6: pending.
+- **S3 (read a document) — ✅ PASSED (2026-07-31), no naturo fix needed.**
+  - WPS registers itself as the **`Word.Application`** COM server (compat), reporting
+    `Name == "Microsoft Word"` — exactly the trick 表格 uses for Excel. So naturo's existing
+    **file-based** `word_read(path)` (a dedicated `DispatchEx("Word.Application")` instance) drives
+    WPS 文字 with no change. Verified: wrote `wps_test.docx` then read it back — text identical (69
+    chars, `季度销售报告 …`).
+- **S4 (write a document) — ✅ PASSED (2026-07-31), no naturo fix.** Same `Word.Application` path:
+  `word_write(path, text)` created and populated `wps_test.docx`; the S3 read-back confirms it
+  persisted. `append=True` also supported.
+- **S5 (new document) — ✅ PASSED (2026-07-31), no naturo fix.** `word_write` with a non-existent
+  path does `Documents.Add()` + `SaveAs` — the programmatic equivalent of "new doc from the start
+  page", GUI-independent. (The CEF start-page tile itself has no ref → coord-only; the COM `.Add`
+  path is the clean, deterministic way and needs no start page.)
+- **S6 (save / save-as) — ✅ PASSED (2026-07-31), needed a naturo fix for 表格.** File-COM writers
+  persist via `Save`/`SaveAs`: `word_write` saves the .docx; `excel_write` saves the .xlsx. Fixing
+  a WPS-surfaced bug was required for the spreadsheet path — `excel_write` read `ws.Name` **after**
+  `wb.Close()`, and WPS releases the worksheet proxy on close (OLE `0x800a01a8`); MS Excel tolerated
+  it, hiding the bug. Fixed in `c9d070b4` (capture the name before closing). Verified: `excel_write`
+  → `excel_read` round-trips on WPS (A1/B1, then cleaned up the temp file).
+
+### WPS COM support summary (App#2)
+| Path | Surface | naturo interface | Status |
+|------|---------|------------------|--------|
+| Live spreadsheet (open window) | 表格 EXCEL7 grid | `see --cascade` (read), `set <ref>` (write) | ✅ fixed `7dd71f8a`/`d5b99e54` |
+| File spreadsheet | any .xlsx | `excel_read` / `excel_write` (Excel.Application→WPS) | ✅ fixed `c9d070b4` |
+| File document | any .docx | `word_read` / `word_write` (Word.Application→WPS) | ✅ works as-is |
+| Native shell (menus/tabs/新建) | OpusApp UIA | `see` → `click <ref>` | ✅ works as-is |
+| CEF surfaces (login, start page) | KxCefWebView | coord-only (no CDP port) | ⚠️ coord fallback |
+
+**Conclusion:** WPS 表格 + 文字 are fully supported (read + write + save) through naturo COM —
+deterministic, easy (ref/path only, no aux params), GUI/z-order-independent. Only the CEF web
+surfaces remain coord-only (no debug port to attach). WPS = **SUPPORTED**.

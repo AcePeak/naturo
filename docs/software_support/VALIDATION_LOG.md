@@ -25,6 +25,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 7 | Chrome + web page (CDP, hwnd 657248) | Chromium/CDP | 2026-07-31 | ✅ 216 (UIA+CDP) | ✅ click via CDP, read_web_text | det | fully see-able + operable |
 | 8 | WPS Office main window (OpusApp, hwnd 920682) | OpusApp (Word-compat) + CEF | 2026-07-31 | ⚠️ native yes / CEF no | ✅ native by ref; CEF by coord | mixed | see-able for native UI; CEF parts not |
 | 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ **read + write** by ref (COM) | **det (COM)** | **SUPPORTED** — read `7dd71f8a`, write (S2) `d5b99e54` |
+| 10 | **WPS 文字 / file COM** (`.docx` / `.xlsx` by path) | Word/Excel-compat COM servers | 2026-07-31 | ✅ full text / cells | ✅ **read + write + save** | **det (COM)** | **SUPPORTED** — `word_*` as-is; `excel_*` fixed `c9d070b4` |
 
 ---
 
@@ -72,6 +73,25 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 - **see:** `naturo see --cascade` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
 - **operate:** `naturo click e50 --method cdp` dispatched via the debug protocol (bypasses input stack). 
 - **Status:** **fully see-able + operable** via CDP. This is naturo's clean path for all Chromium/web content.
+
+### 10. WPS 文字 (Writer) + file-based Office COM — `.docx` / `.xlsx` by path
+- **Framework:** WPS registers the standard Office COM ProgIDs as compat servers —
+  `Word.Application` (→ WPS 文字, `Name == "Microsoft Word"`) and `Excel.Application` (→ WPS 表格,
+  `Name == "Microsoft Excel"`, Version 16.0). The WPS-native ProgIDs (`KWPS.Application`,
+  `KET.Application`) fail to Dispatch (invalid class string / bitness), but the compat ones work, so
+  naturo's file-based COM tools drive WPS unchanged.
+- **see/operate (Word):** `word_read(path)` / `word_write(path, text)` (dedicated
+  `DispatchEx("Word.Application")` instance). Verified: wrote `wps_test.docx` (季度销售报告 …, 69
+  chars) and read the identical text back. `word_write` on a new path does `Documents.Add` + `SaveAs`
+  (= "new document"); `append=True` supported. Covers S3/S4/S5/S6 for documents. No fix needed.
+- **see/operate (Excel by path):** `excel_read` / `excel_write` (`DispatchEx("Excel.Application")`).
+  Needed a **naturo fix**: `excel_write` read `ws.Name` **after** `wb.Close()`, and WPS releases the
+  worksheet proxy on close → OLE `0x800a01a8`; MS Excel tolerated the stale read, masking the bug.
+  Fixed `c9d070b4` (capture the sheet name before closing). Verified: `excel_write` A1/B1 →
+  `excel_read` round-trip on a fresh file, then removed the temp file.
+- **Status:** **SUPPORTED — read + write + save, deterministic (COM), easy (path only).** This is the
+  file-path counterpart to the live-window grid (#9): use #9 (`see --cascade` / `set <ref>`) when a
+  workbook is already open and you don't know the path; use these when you have the file path.
 
 ### 9. WPS 表格 spreadsheet grid — EXCEL7 child under the OpusApp window
 - **Framework:** Excel-compatible object model. WPS mirrors Excel's window hierarchy (an `EXCEL7`
