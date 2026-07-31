@@ -807,8 +807,12 @@ def run_cascade(
     # ── Shallow tree detection (issue #275) ────────────────────────────────
     # When the UIA tree is too shallow (few elements, mostly invalid bounds),
     # automatically enable AI vision fallback even without --fill-gaps.
+    # BUT when the caller explicitly asked for OCR (run_ocr), that IS the
+    # pixel-recovery path they chose — a local, fast provider — so don't also
+    # auto-fire the (slow, network/credential-dependent) AI-vision fallback on top
+    # of it. Explicit --fill-gaps still opts into AI regardless.
     shallow_fallback = False
-    if root_tree is not None and not fill_gaps_ai:
+    if root_tree is not None and not fill_gaps_ai and not run_ocr:
         flat_all = _flatten(root_tree)
         is_shallow, total_count, invalid_count = _is_shallow_tree(flat_all)
         if is_shallow and screenshot_path:

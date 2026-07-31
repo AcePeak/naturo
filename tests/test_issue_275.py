@@ -205,6 +205,25 @@ class TestCascadeShallowFallback:
         assert vision_stat.elements == 2
         assert vision_stat.status == "ok"
 
+    @patch("naturo.cascade._fetch_ocr_elements", return_value=[])
+    @patch("naturo.cascade._fetch_ai_elements")
+    def test_shallow_tree_with_ocr_skips_ai_vision(self, mock_ai, mock_ocr):
+        """When --ocr is requested, the shallow-tree AI-vision auto-fallback must
+        NOT also fire — OCR is the chosen (local, fast) pixel-recovery path, and
+        AI vision is slow/credential-dependent. Explicit --fill-gaps still opts in.
+        """
+        backend = _make_mock_backend(_make_shallow_tree())
+        result = run_cascade(
+            backend,
+            fill_gaps_ai=False,
+            run_ocr=True,
+            screenshot_path="/tmp/test_screenshot.png",
+        )
+
+        mock_ai.assert_not_called()
+        provider_names = [p.name for p in result.stats.providers]
+        assert "vision" not in provider_names
+
     @patch("naturo.cascade._fetch_ai_elements")
     def test_shallow_tree_no_screenshot_no_fallback(self, mock_ai):
         """Without screenshot_path, AI vision should not trigger."""
