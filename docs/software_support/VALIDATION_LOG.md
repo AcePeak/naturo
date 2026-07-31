@@ -1,0 +1,89 @@
+# Naturo Software-Support Validation Log
+
+Complete record of **every software window** we validate — success **and** failure.
+See the acceptance gate in [`README.md`](README.md). Iron laws (do not violate):
+
+1. **All operations go through naturo** (`naturo see`/`click`/`type`, `mcp__naturo__*`). Never
+   raw PowerShell PostMessage/SendInput, never winget (install via the app's own store, driven by
+   naturo). **Vision (screenshots) is verify-only** — confirm naturo's action was correct / dev-test
+   reference — never the operating mechanism.
+2. **Log every window here, completely**: when validated, framework, what `naturo see` returned,
+   what `naturo click`/operation did, status, and — if unsolved — why/when/effect/blocker. A new
+   agent continues this log or fixes previously-unsolved entries.
+
+Columns: **see** = does `naturo see` expose the real content? · **operate** = can naturo act on it?
+· **det.** = deterministic (a11y/CDP tree, repeatable) vs coord (vision-located coordinates).
+
+| # | Window | Framework | Date | see | operate | det.? | Status |
+|---|--------|-----------|------|-----|---------|-------|--------|
+| 1 | 电脑管家 新功能提示 (promo popup, hwnd 1051478) | Qt 5.15 | 2026-07-31 | ❌ empty | ✅ dismissed | coord | operable-by-coord, NOT see-able |
+| 2 | 电脑管家 软件市场 QMUI (hwnd 1378572) | Qt 5.15 | 2026-07-31 | ⚠️ nav only | ✅ nav by ref; content by coord | mixed | chrome see-able; content not |
+| 3 | 电脑管家 AI欢迎窗 QQPCDownload (hwnd 3803148) | TXMiniSkin (Tencent DirectUI) | 2026-07-31 | ❌ empty (OCR partial) | ✅ minimized | coord | operable-by-coord, NOT see-able |
+| 4 | 7-Zip 26.02 Setup wizard | Win32 standard | 2026-07-31 | ✅ full | ✅ Install/Close via UIA-Invoke | det | fully see-able + operable |
+| 5 | 7-Zip File Manager (7zFM, hwnd 2493192) | Win32/UIA | 2026-07-31 | ✅ 111 nodes | ✅ read archive list | det | fully see-able |
+| 6 | Windows Notepad (hwnd 7932338) | WinUI/UIA | 2026-07-31 | ✅ 45 nodes | ✅ new-tab via UIA-Invoke | det | fully see-able + operable |
+| 7 | Chrome + web page (CDP, hwnd 657248) | Chromium/CDP | 2026-07-31 | ✅ 216 (UIA+CDP) | ✅ click via CDP, read_web_text | det | fully see-able + operable |
+| 8 | WPS Office main window (OpusApp, hwnd 920682) | OpusApp (Word-compat) + CEF | 2026-07-31 | ⚠️ native yes / CEF no | ✅ native by ref; CEF by coord | mixed | see-able for native UI; CEF parts not |
+| 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ cells have refs+coords | **det (COM)** | **SUPPORTED** after naturo fix `7dd71f8a` |
+
+---
+
+## Details
+
+### 1. 电脑管家「新功能提示」promo popup — hwnd 1051478 (QQPCTray.exe)
+- **Framework:** Qt 5.15 (window class `Qt51514QWindowIcon`), WS_EX_LAYERED|TOPMOST, 0 child HWNDs, elevated.
+- **see:** `naturo see --cascade` → **1 node, empty Pane** (`e1 Pane "腾讯电脑管家"`). No content. Qt widgets custom-painted, no `QAccessible`.
+- **operate:** multi-page onboarding (广告拦截 → AI助手). Dismissed by clicking「暂不开启」via `naturo click --coords` (client-relative, auto-fallback PostMessage after elevation). Both pages advanced/closed. ✅
+- **Status:** operable-by-coordinate only; **NOT see-able**.
+- **Blocker to deterministic see:** Qt has no a11y here; the deterministic fix (inject a Qt introspector) is **blocked — 电脑管家 self-protection** strips `PROCESS_CREATE_THREAD` from handles to its processes (`CreateRemoteThread` → err 5). Legitimate security-suite defense; we do not bypass it.
+
+### 2. 电脑管家 软件市场 QMUI — hwnd 1378572 (Qt64/QMUI.exe, pid 99728)
+- **Framework:** Qt 5.15, elevated. (10 QMUI.exe processes, one per module/window.)
+- **see:** early in session returned empty/frame-only (degraded session / a11y not activated); **later `naturo see` returned 71 deterministic UIA nodes** exposing the **chrome**: nav (`首页 e48 / 分类 e50 / 更新 e52 / 卸载 e55`), left rail (电脑+/安全AI/AI专区/下软件/玩游戏), search `Edit e57`. **The app-grid content (app tiles, 安装/一键安装 buttons) is NOT in the tree** (`match "WPS 安装"` → 0).
+- **operate:** nav is clickable **by ref** — verified `naturo click e50` (分类) navigated to the Categories page (vision-confirmed). Content (install buttons) has no ref → only reachable by `naturo click --coords`.
+- **Status:** chrome **see-able + operable by ref**; content **not see-able** (coord-only), can't be made see-able (self-protection blocks injection).
+
+### 3. 电脑管家「AI电脑管家」欢迎窗 — hwnd 3803148 (QQPCDownload_home_310056.exe)
+- **Framework:** **TXMiniSkin** (Tencent's own DirectUI skin), WS_EX_LAYERED, 0 child HWNDs, elevated. Different framework from the Qt main UI.
+- **see:** `naturo see --cascade` → **1 empty Pane**. `naturo see --ocr` → **3 uncertain OCR text nodes** (标题栏「腾讯电脑管家」/「AI电脑管家」/副标题) with estimated bounds; **missed the「立即体验」button and window controls**.
+- **operate:** minimized via `naturo click --coords` on the minimize button (auto-fallback PostMessage). Verified `IsWindow=True, IsIconic=True` (reversible). ✅
+- **Status:** operable-by-coordinate; **NOT see-able** (OCR partial/uncertain, no buttons).
+
+### 4. 7-Zip 26.02 (x64) Setup wizard — standard installer (launched by 电脑管家)
+- **Framework:** standard Win32 dialog (has full UIA).
+- **see:** `naturo see --window Setup --match install` → `e5 Button "Install"`; later `e7 Button "Close"`. Fully see-able.
+- **operate:** `naturo click e5 --method uia` (Install, kept default dir `C:\Program Files\7-Zip\`), then `e7` (Close). Installed successfully. ✅
+- **Status:** **fully see-able + operable, deterministic.** This is the "auto-handle install dialog" case working the right way (by ref).
+
+### 5. 7-Zip File Manager (7zFM.exe) — hwnd 2493192
+- **Framework:** Win32/UIA.
+- **see:** `naturo see --cascade` → **111 deterministic UIA nodes**: archive file list (name/size/compressed/date/CRC/algo), toolbar (添加/解压/…), menus. Matched `7z l` CLI exactly.
+- **operate:** read valuable data (the archive contents) — G2 satisfied deterministically.
+- **Status:** **fully see-able**, deterministic.
+
+### 6. Windows Notepad — hwnd 7932338
+- **Framework:** Win11 Notepad (WinUI/XAML, UIA).
+- **see:** `naturo see` → **45 UIA nodes** (tabs, formatting buttons, menus, document text). Fully see-able.
+- **operate:** `QAccessible/UIA InvokePattern` on「添加新标签页」created a new tab (verified via `see`: 2 TabItems) — worked **even in the dead-input console** because UIA-Invoke bypasses the OS input stack. Typing via PostMessage went to the wrong focus during the dead-input phase (a foreground/focus issue, not a see issue).
+- **Status:** **fully see-able + operable** (UIA-Invoke).
+
+### 7. Chrome + web page (CDP) — hwnd 657248 (launch_browser)
+- **Framework:** Chromium; naturo attaches via CDP (remote-debugging port).
+- **see:** `naturo see --cascade` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
+- **operate:** `naturo click e50 --method cdp` dispatched via the debug protocol (bypasses input stack). 
+- **Status:** **fully see-able + operable** via CDP. This is naturo's clean path for all Chromium/web content.
+
+### 8. WPS Office 12.1.0.28043 — main window hwnd 920682 (D:\...\Kingsoft\WPSOffice\...\wps.exe)
+- **Install:** via 电脑管家 software market, **driven by naturo** — `naturo click --coords` on the WPS「安装」tile (coord found by vision, action via naturo). 电脑管家 downloaded+installed silently; completion detected by the WPS processes/window appearing (the right naturo-native signal is `wait_for_window`, **not** reading 电脑管家's custom-painted "39%" progress, which isn't in any see tree).
+- **Framework:** main window class **`OpusApp`** (WPS deliberately reuses MS Word's class for compat) — **NOT Qt.** So the Qt-injection moat does **not** apply to WPS. Mixed UI: native `OpusApp` chrome + embedded **CEF** web views (`KxCefWebViewPrivateBrowser`) for the login dialog and start page.
+- **see:** `naturo see --cascade` → **54 UIA nodes** for the native shell (新建 button, tabs, documents). **CEF content is NOT exposed** (login form / start-page 演示·表格·文字·PDF tiles → `match` = 0). WPS's CEF has **no CDP debug port** (no `--remote-debugging-port`, no listening port) → can't attach CDP either.
+- **operate:** the **native** WPS confirm dialog「未登录仅支持部分功能」→「暂不登录」was in the tree (`e12 Button`) and **clicked by ref** ✅ (proper see→click). The **CEF** login form's × had no ref → closed via `naturo click --coords` (fallback). So: **native UI = see-able + click-by-ref; CEF UI = coord-only.**
+- **Status:** installed + login-skipped, WPS usable. Native shell adaptable via naturo UIA see→click. **Document/sheet content** (the real valuable data) best via **WPS COM automation** (WPS/KWPS/Ket.Application, like naturo's Excel/Word COM) — deterministic, GUI-independent — TODO. CEF surfaces need coords (no CDP).
+- **Moat note:** WPS is **not** a valid target to validate the *Qt* injection introspector (it isn't Qt). Use an actual Qt app (Navicat / 为知 / 富途) for that.
+
+---
+
+## Open items / for the next agent
+- **电脑管家 (App#1):** content (software grid, install/uninstall buttons) is not see-able and injection is self-protection-blocked → operations there are coordinate-based, which violates iron-law #1's spirit. Acceptable only as a fallback; a fully clean 电脑管家 adaptation is **not currently achievable** (its self-protection is legitimate; we don't bypass it).
+- **Qt introspector (moat):** `C:\Users\Naturobot\.naturo-qt\{nq_probe.cpp, qt_introspect.ps1}` compiles and injects; **works on normal Qt apps** (no self-protection). To validate: run it against a plain Qt app (e.g. WPS if Qt) and feed the deterministic QWidget tree into `naturo see`. Injection is a user-run, security-gated step.
+- **Not yet validated this session:** calc (Windows Calculator) — record when tested.
