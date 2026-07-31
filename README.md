@@ -235,7 +235,7 @@ native DevTools  screenshot
 
 ```bash
 # Progressive multi-source recognition
-naturo see --app feishu --cascade --fill-gaps --stats
+naturo see --app feishu --deep --stats
 
 # Result: UIA finds 700+ elements, AI Vision adds 130+ that UIA missed
 #   uia      705 elements    6s   [ok]
