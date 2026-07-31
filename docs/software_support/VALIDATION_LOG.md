@@ -29,6 +29,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 11 | 钉钉安装 DingTalk installer (`*-Release.*.exe`) | custom GPU-composited | 2026-07-31 | ❌ no a11y / ✅ capturable after fix | ⚠️ coord (vision-located) | — | a11y-blind but now **capturable**; found+fixed a naturo capture defect (`af3fe63f`) |
 | 12 | PotPlayer (免登录, hwnd 4328738) | Win32 custom skin | 2026-08-01 | ⚠️ frame+playlist yes / controls no | ⚠️ playlist List by ref; transport coord | partial | installed via 电脑管家 (naturo-driven); UIA exposes window + playlist List + search Edit; skinned transport controls have no a11y |
 | 13 | VLC media player 3.0.23 (免登录, hwnd 1707074) | Qt (QAccessible) | 2026-08-01 | ✅ full menu + controls | ✅ menus/sliders/transport by ref | det (UIA) | **SUPPORTED** — full menu bar (媒体/播放/…/帮助), seek+volume Sliders, transport Buttons all UIA by ref; first-run privacy dialog also see-able (Button 继续) |
+| 14 | WinRAR 7.23 (免登录, hwnd 724354) | Win32/UIA | 2026-08-01 | ✅ menus/toolbar/list (`--depth`) | ✅ by ref | det (UIA) | **SUPPORTED** — `see --depth 2` instant: MenuBar 应用程序, toolbar Pane, file List, StatusBar. ⚠️ **naturo perf finding**: default unlimited `see` took ~200s walking the huge D:-drive file List — see "Open items" (node-count safety backstop) |
 
 ---
 
@@ -152,6 +153,13 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 ---
 
 ## Open items / for the next agent
+
+- **naturo `see` node-count safety backstop (perf).** Default `see` is unlimited depth
+  (`--depth 0`, by design #1289). On a file-manager-style window with a huge virtualized
+  list (WinRAR showing the D: drive, #14) the native UIA walk took ~200s — reads as a
+  hang. Workaround today: `--depth N`. Proper fix: a *pure safety backstop* on total node
+  count in the native tree walk (allowed by #1289 — a very high cap that only prevents
+  runaway traversal, not a functional clamp). Native `naturo_core.dll` change (MSVC present).
 - **电脑管家 (App#1):** content (software grid, install/uninstall buttons) is not see-able and injection is self-protection-blocked → operations there are coordinate-based, which violates iron-law #1's spirit. Acceptable only as a fallback; a fully clean 电脑管家 adaptation is **not currently achievable** (its self-protection is legitimate; we don't bypass it).
 - **Qt introspector (moat):** `C:\Users\Naturobot\.naturo-qt\{nq_probe.cpp, qt_introspect.ps1}` compiles and injects; **works on normal Qt apps** (no self-protection). To validate: run it against a plain Qt app (e.g. WPS if Qt) and feed the deterministic QWidget tree into `naturo see`. Injection is a user-run, security-gated step.
 - **Not yet validated this session:** calc (Windows Calculator) — record when tested.
