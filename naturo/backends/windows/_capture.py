@@ -147,6 +147,105 @@ class CaptureMixin:
 
         return width, height, ext
 
+    @staticmethod
+    def _image_is_blank(path: str, tolerance: int = 6) -> bool:
+        """True if the image is a near-uniform single colour (a blank frame).
+
+        A GPU-composited window that PrintWindow failed to capture comes back as
+        one flat colour (usually white). Downsample and check that every channel's
+        spread is within *tolerance*, so a real (varied) screenshot is never
+        mistaken for blank.
+        """
+        try:
+            from PIL import Image
+
+            img = Image.open(path).convert("RGB")
+            w, h = img.size
+            if w == 0 or h == 0:
+                return True
+            small = img.resize((min(48, w), min(48, h)))
+            extrema = small.getextrema()  # ((rmin,rmax),(gmin,gmax),(bmin,bmax))
+            return all((mx - mn) <= tolerance for mn, mx in extrema)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("blank-image check failed for %s: %s", path, exc)
+            return False
+
+    @staticmethod
+    def _window_is_minimized(hwnd: int) -> bool:
+        try:
+            import ctypes
+
+            return bool(ctypes.windll.user32.IsIconic(hwnd))
+        except Exception:  # pragma: no cover - platform guard
+            return False
+
+    @staticmethod
+    def _heal_window_repaint(hwnd: int) -> None:
+        """Force a GPU-composited window blanked by PrintWindow to re-present.
+
+        A minimize→restore cycle makes the compositor (Chromium/DirectComposition)
+        push a fresh frame, undoing the blank that PrintWindow left on screen.
+        """
+        try:
+            import ctypes
+            import time
+
+            user32 = ctypes.windll.user32
+            _SW_MINIMIZE, _SW_RESTORE = 6, 9
+            user32.ShowWindow(hwnd, _SW_MINIMIZE)
+            time.sleep(0.05)
+            user32.ShowWindow(hwnd, _SW_RESTORE)
+            time.sleep(0.1)
+        except Exception as exc:  # pragma: no cover - platform guard
+            logger.debug("window repaint heal failed for %s: %s", hwnd, exc)
+
+    def _capture_window_via_screen(self, hwnd: int,
+                                   output_path: str) -> tuple[int, int, str]:
+        """Non-destructive window capture: BitBlt the screen, crop to the window.
+
+        Reads the real composited pixels of a visible window (works for GPU/
+        DirectComposition windows that PrintWindow blanks). Only sees the on-screen
+        (unoccluded) content, which is the honest "what's visible" screenshot.
+        """
+        import ctypes
+        import ctypes.wintypes as wt
+        import os
+        import tempfile
+
+        from PIL import Image
+
+        rect = wt.RECT()
+        if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            raise RuntimeError("GetWindowRect failed")
+
+        monitor = self.find_monitor_for_point(rect.left, rect.top)
+        mon_x = monitor.x if monitor else 0
+        mon_y = monitor.y if monitor else 0
+        mon_index = monitor.index if monitor else 0
+
+        fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+        os.close(fd)
+        try:
+            self.capture_screen(screen_index=mon_index, output_path=tmp_bmp)
+            img = Image.open(tmp_bmp).convert("RGB")
+            left = max(0, rect.left - mon_x)
+            top = max(0, rect.top - mon_y)
+            right = min(img.width, rect.right - mon_x)
+            bottom = min(img.height, rect.bottom - mon_y)
+            if right <= left or bottom <= top:
+                raise RuntimeError("empty crop rectangle")
+            crop = img.crop((left, top, right, bottom))
+            ext = output_path.rsplit(".", 1)[-1].lower() if "." in output_path else "png"
+            fmt = {"jpg": "JPEG", "jpeg": "JPEG", "bmp": "BMP"}.get(ext, "PNG")
+            crop.save(output_path, fmt)
+            return crop.width, crop.height, ext
+        finally:
+            if os.path.exists(tmp_bmp):
+                try:
+                    os.remove(tmp_bmp)
+                except OSError:
+                    pass
+
     # ── Monitor Enumeration ────────────────────────
 
     def list_monitors(self) -> list[MonitorInfo]:
@@ -343,6 +442,35 @@ class CaptureMixin:
             except OSError:
                 pass
             raise
+
+        # (#PrintWindow-blanks-GPU) The native capture uses PrintWindow (WM_PRINT),
+        # which fails destructively on GPU-composited windows (Chromium/Electron,
+        # custom DirectComposition skins): the returned bitmap is blank AND the
+        # live on-screen window stops presenting until it repaints. Detect the
+        # blank result, heal the window (a minimize/restore forces it to
+        # re-present), and re-capture non-destructively from the screen (BitBlt),
+        # which reads the real composited pixels. Only triggers when PrintWindow
+        # actually produced a blank frame, so normal captures are unaffected.
+        check_hwnd = handle
+        if not check_hwnd:
+            try:
+                import ctypes
+                check_hwnd = ctypes.windll.user32.GetForegroundWindow()
+            except Exception:
+                check_hwnd = 0
+        if check_hwnd and self._image_is_blank(output_path) \
+                and not self._window_is_minimized(check_hwnd):
+            logger.info(
+                "capture_window: PrintWindow returned a blank frame for hwnd %s "
+                "(GPU-composited window); healing and re-capturing from screen.",
+                check_hwnd,
+            )
+            self._heal_window_repaint(check_hwnd)
+            try:
+                width, height, fmt = self._capture_window_via_screen(
+                    check_hwnd, output_path)
+            except Exception as exc:
+                logger.debug("Screen-region capture fallback failed: %s", exc)
 
         # Determine DPI from the window's monitor position
         scale_factor = 1.0
