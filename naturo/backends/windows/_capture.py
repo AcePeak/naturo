@@ -170,6 +170,71 @@ class CaptureMixin:
             logger.debug("blank-image check failed for %s: %s", path, exc)
             return False
 
+    def _window_is_unoccluded_onscreen(self, hwnd: int) -> bool:
+        """True if *hwnd* is visible, on a monitor, and unoccluded — i.e. a plain
+        screen BitBlt cropped to its rect would read the window's own pixels.
+
+        Deterministic (documented Win32 APIs only): not minimized, visible, its
+        centre lies on a monitor, and every point of an inset grid over its rect
+        resolves (via ``WindowFromPoint`` → ``GA_ROOT``) back to this top-level
+        window — so nothing is painted on top of it. Conservative: any ambiguity
+        (a probe hitting another window, a click-through/layered pass-through,
+        off-screen) returns ``False`` so capture falls back to PrintWindow.
+        """
+        try:
+            import ctypes
+            import ctypes.wintypes as wt
+
+            user32 = ctypes.windll.user32
+            if user32.IsIconic(hwnd) or not user32.IsWindowVisible(hwnd):
+                return False
+            rect = wt.RECT()
+            if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                return False
+            w = rect.right - rect.left
+            h = rect.bottom - rect.top
+            if w <= 0 or h <= 0:
+                return False
+            cx = (rect.left + rect.right) // 2
+            cy = (rect.top + rect.bottom) // 2
+            if self.find_monitor_for_point(cx, cy) is None:
+                return False
+
+            class _POINT(ctypes.Structure):
+                _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+            # Locally-prototyped so the HWND return isn't truncated to 32-bit on
+            # x64 and POINT is passed by value — without mutating the shared
+            # user32 function attributes (other callers rely on the defaults).
+            _window_from_point = ctypes.WINFUNCTYPE(
+                ctypes.c_void_p, _POINT)(("WindowFromPoint", user32))
+            _get_ancestor = ctypes.WINFUNCTYPE(
+                ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)(
+                    ("GetAncestor", user32))
+
+            def _norm(handle_val: int) -> int:
+                # Window handles fit in 32 bits; normalize so a sign-extended
+                # value and an unsigned one compare equal.
+                return (handle_val or 0) & 0xFFFFFFFF
+
+            target = _norm(hwnd)
+            _GA_ROOT = 2
+            inset_x = max(2, w // 10)
+            inset_y = max(2, h // 10)
+            xs = (rect.left + inset_x, cx, rect.right - inset_x)
+            ys = (rect.top + inset_y, cy, rect.bottom - inset_y)
+            for py in ys:
+                for px in xs:
+                    top = _window_from_point(_POINT(px, py))
+                    if not top:
+                        return False
+                    if _norm(_get_ancestor(top, _GA_ROOT)) != target:
+                        return False
+            return True
+        except Exception as exc:  # pragma: no cover - platform guard
+            logger.debug("occlusion check failed for %s: %s", hwnd, exc)
+            return False
+
     @staticmethod
     def _window_is_minimized(hwnd: int) -> bool:
         try:
@@ -428,29 +493,8 @@ class CaptureMixin:
         core = self._ensure_core()
         handle = hwnd if hwnd else 0
 
-        # DLL writes BMP to the system temp dir (always ASCII-safe on
-        # Windows) then Pillow converts to the final output_path (#728).
-        fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
-        os.close(fd)
-
-        try:
-            core.capture_window(handle, tmp_bmp)
-            width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
-        except Exception:
-            try:
-                os.remove(tmp_bmp)
-            except OSError:
-                pass
-            raise
-
-        # (#PrintWindow-blanks-GPU) The native capture uses PrintWindow (WM_PRINT),
-        # which fails destructively on GPU-composited windows (Chromium/Electron,
-        # custom DirectComposition skins): the returned bitmap is blank AND the
-        # live on-screen window stops presenting until it repaints. Detect the
-        # blank result, heal the window (a minimize/restore forces it to
-        # re-present), and re-capture non-destructively from the screen (BitBlt),
-        # which reads the real composited pixels. Only triggers when PrintWindow
-        # actually produced a blank frame, so normal captures are unaffected.
+        # Resolve the concrete window handle (foreground if unspecified) so the
+        # visibility check and monitor math below have a real target.
         check_hwnd = handle
         if not check_hwnd:
             try:
@@ -458,19 +502,66 @@ class CaptureMixin:
                 check_hwnd = ctypes.windll.user32.GetForegroundWindow()
             except Exception:
                 check_hwnd = 0
-        if check_hwnd and self._image_is_blank(output_path) \
-                and not self._window_is_minimized(check_hwnd):
-            logger.info(
-                "capture_window: PrintWindow returned a blank frame for hwnd %s "
-                "(GPU-composited window); healing and re-capturing from screen.",
-                check_hwnd,
-            )
-            self._heal_window_repaint(check_hwnd)
+
+        width = height = 0
+        fmt = "png"
+        captured = False
+
+        # Visibility-first (avoids the destructive PrintWindow path proactively).
+        # PrintWindow (WM_PRINT) is destructive on GPU-composited windows
+        # (Chromium/Electron, custom DirectComposition skins): it blanks both the
+        # returned bitmap AND the live on-screen window until it repaints. When the
+        # target is fully visible and unoccluded, a plain screen BitBlt cropped to
+        # the window reads the real composited pixels non-destructively and works
+        # for EVERY window type — so prefer it and never issue PrintWindow. There is
+        # no reliable a-priori "is this GPU-composited?" test (custom skins evade
+        # class-name/module/DWM heuristics), but "is it visible and unoccluded?" is
+        # deterministic — and that is exactly the condition under which BitBlt is
+        # both safe and sufficient. PrintWindow is kept below for the cases only it
+        # can serve: occluded, background-without-raising, minimized, or off-screen.
+        if check_hwnd and self._window_is_unoccluded_onscreen(check_hwnd):
             try:
                 width, height, fmt = self._capture_window_via_screen(
                     check_hwnd, output_path)
+                captured = True
             except Exception as exc:
-                logger.debug("Screen-region capture fallback failed: %s", exc)
+                logger.debug(
+                    "Visibility-first screen capture failed, using PrintWindow: %s",
+                    exc)
+
+        if not captured:
+            # DLL writes BMP to the system temp dir (always ASCII-safe on
+            # Windows) then Pillow converts to the final output_path (#728).
+            fd, tmp_bmp = tempfile.mkstemp(suffix=".bmp")
+            os.close(fd)
+            try:
+                core.capture_window(handle, tmp_bmp)
+                width, height, fmt = self._convert_bmp(tmp_bmp, output_path)
+            except Exception:
+                try:
+                    os.remove(tmp_bmp)
+                except OSError:
+                    pass
+                raise
+
+            # Last-resort safety net: if PrintWindow still returned a blank frame
+            # (a GPU window that was occluded/background, so the visibility-first
+            # path above was skipped), heal it (minimize/restore forces a
+            # re-present) and re-capture from screen. Only triggers on an actual
+            # blank frame, so normal captures are unaffected.
+            if check_hwnd and self._image_is_blank(output_path) \
+                    and not self._window_is_minimized(check_hwnd):
+                logger.info(
+                    "capture_window: PrintWindow returned a blank frame for hwnd %s "
+                    "(GPU-composited window); healing and re-capturing from screen.",
+                    check_hwnd,
+                )
+                self._heal_window_repaint(check_hwnd)
+                try:
+                    width, height, fmt = self._capture_window_via_screen(
+                        check_hwnd, output_path)
+                except Exception as exc:
+                    logger.debug("Screen-region capture fallback failed: %s", exc)
 
         # Determine DPI from the window's monitor position
         scale_factor = 1.0
