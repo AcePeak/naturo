@@ -209,10 +209,27 @@ class TestPostMessageStrategy:
 class TestGetInputStrategy:
     """get_input_strategy returns the correct strategy for each mode."""
 
-    def test_normal_returns_sendinput(self):
+    _PROBE = "naturo.backends.windows._strategies._input_stack_alive"
+
+    def test_normal_returns_sendinput_when_input_alive(self):
         core = _make_core()
-        s = get_input_strategy(core, "normal")
+        with patch(self._PROBE, return_value=True):
+            s = get_input_strategy(core, "normal")
         assert isinstance(s, SendInputStrategy)
+
+    def test_normal_falls_back_to_postmessage_when_input_dead(self):
+        """Default mode auto-switches to PostMessage in a dead-input session."""
+        core = _make_core()
+        with patch(self._PROBE, return_value=False):
+            s = get_input_strategy(core, "normal")
+        assert isinstance(s, PostMessageStrategy)
+
+    def test_auto_alias_behaves_like_normal(self):
+        core = _make_core()
+        with patch(self._PROBE, return_value=False):
+            assert isinstance(get_input_strategy(core, "auto"), PostMessageStrategy)
+        with patch(self._PROBE, return_value=True):
+            assert isinstance(get_input_strategy(core, "auto"), SendInputStrategy)
 
     def test_hardware_returns_phys32(self):
         core = _make_core()
@@ -224,9 +241,10 @@ class TestGetInputStrategy:
         s = get_input_strategy(core, "postmessage")
         assert isinstance(s, PostMessageStrategy)
 
-    def test_default_is_normal(self):
+    def test_default_probes_and_returns_sendinput_when_alive(self):
         core = _make_core()
-        s = get_input_strategy(core)
+        with patch(self._PROBE, return_value=True):
+            s = get_input_strategy(core)
         assert isinstance(s, SendInputStrategy)
 
     def test_unknown_mode_raises(self):

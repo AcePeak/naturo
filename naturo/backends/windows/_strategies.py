@@ -281,6 +281,60 @@ _VK_MAP = {
 }
 
 
+#: Process-cached result of the input-stack liveness probe (None = not probed).
+_INPUT_STACK_ALIVE: bool | None = None
+
+
+def _input_stack_alive() -> bool:
+    """Return whether synthetic mouse input actually moves the cursor.
+
+    In a **headless/disconnected session** (an RDP session whose client is
+    detached or not rendering, or a ``tscon``-redirected console with no
+    input device) ``SetCursorPos``/``SendInput`` succeed but the cursor does
+    not move and nothing is actuated — so the default ``SendInput`` path
+    silently no-ops.  This probes the ground truth by nudging the cursor a
+    few pixels and reading it back, restoring the original position.
+
+    The result is cached for the process (the session's input state is
+    stable across a normal run; short-lived CLI invocations re-probe on each
+    launch).  On any error, or off-Windows, it assumes the stack is alive so
+    behaviour never regresses from the historical ``SendInput`` default.
+    """
+    global _INPUT_STACK_ALIVE
+    if _INPUT_STACK_ALIVE is not None:
+        return _INPUT_STACK_ALIVE
+    _INPUT_STACK_ALIVE = _probe_cursor_movement()
+    if not _INPUT_STACK_ALIVE:
+        logger.info(
+            "input-stack probe: synthetic cursor movement has no effect "
+            "(headless/disconnected session) -> defaulting to PostMessage input"
+        )
+    return _INPUT_STACK_ALIVE
+
+
+def _probe_cursor_movement() -> bool:
+    """Nudge the cursor and check it moved; restore it. True = input works."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        u = ctypes.windll.user32  # type: ignore[union-attr]
+        orig = wintypes.POINT()
+        if not u.GetCursorPos(ctypes.byref(orig)):
+            return True  # cannot read cursor -> don't regress
+        cur = wintypes.POINT()
+        for dx, dy in ((5, 5), (-5, -5)):
+            u.SetCursorPos(orig.x + dx, orig.y + dy)
+            u.GetCursorPos(ctypes.byref(cur))
+            if cur.x != orig.x or cur.y != orig.y:
+                u.SetCursorPos(orig.x, orig.y)  # restore
+                return True
+        u.SetCursorPos(orig.x, orig.y)  # restore
+        return False
+    except Exception:
+        return True  # off-Windows or probe failure -> assume alive
+
+
 def get_input_strategy(
     core: NaturoCore,
     input_mode: str = "normal",
@@ -289,11 +343,16 @@ def get_input_strategy(
 
     Args:
         core: Loaded ``NaturoCore`` instance.
-        input_mode: ``"normal"`` for SendInput, ``"hardware"`` for Phys32,
-            ``"postmessage"`` for ``PostMessage`` window-message delivery
-            (works in headless/disconnected sessions where the OS input
-            stack is dead; requires elevation to drive higher-integrity
-            windows).
+        input_mode: One of
+
+            * ``"normal"`` / ``"auto"`` (default) — prefer ``SendInput``, but
+              **transparently fall back to PostMessage** when a one-time probe
+              finds the session's input stack is dead (headless/disconnected).
+              Callers get headless support with no extra flags.
+            * ``"hardware"`` — Phys32 scan-code driver (keyboard).
+            * ``"postmessage"`` — always ``PostMessage`` window-message
+              delivery (works headless; needs elevation for higher-integrity
+              windows).
 
     Returns:
         An ``InputStrategy`` implementation.
@@ -305,9 +364,11 @@ def get_input_strategy(
         return Phys32Strategy(core)
     if input_mode == "postmessage":
         return PostMessageStrategy(core)
-    if input_mode == "normal":
-        return SendInputStrategy(core)
+    if input_mode in ("normal", "auto"):
+        if _input_stack_alive():
+            return SendInputStrategy(core)
+        return PostMessageStrategy(core)
     raise ValueError(
         f"Unknown input_mode {input_mode!r}. "
-        f"Supported modes: 'normal', 'hardware', 'postmessage'."
+        f"Supported modes: 'normal'/'auto', 'hardware', 'postmessage'."
     )

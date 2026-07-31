@@ -116,9 +116,9 @@ def _window_pid(hwnd: int):
 @click.option("--wait-for", type=float, help="Wait for element (seconds)", hidden=True)
 @click.option(
     "--input-mode",
-    type=click.Choice(["normal", "hardware", "hook", "postmessage"]),
+    type=click.Choice(["auto", "normal", "hardware", "hook", "postmessage"]),
     default="normal",
-    help="Input method: normal (SendInput), hardware (Phys32 driver), hook (MinHook injection), postmessage (WM_* window messages; works in headless/disconnected sessions, needs elevation for higher-integrity windows)",
+    help="Input method: normal/auto (default; SendInput, auto-falls back to PostMessage when a headless/disconnected session has no working input stack), hardware (Phys32 driver), hook (MinHook injection), postmessage (force WM_* window messages; needs elevation for higher-integrity windows)",
 )
 @_common._method_option
 @_common._selector_option

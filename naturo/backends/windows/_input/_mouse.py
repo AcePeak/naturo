@@ -28,7 +28,10 @@ class MouseMixin:
             element_id: Automation element ID to find and click.
             button: Mouse button — "left", "right", or "middle".
             double: True for double-click.
-            input_mode: Ignored for now (Phase 3 will add hardware/hook modes).
+            input_mode: Input delivery — ``"normal"``/``"auto"`` (default;
+                SendInput, auto-falling back to PostMessage in headless/
+                disconnected sessions), ``"hardware"`` (Phys32), or
+                ``"postmessage"`` (force window-message delivery).
             hwnd: Target window handle for element search.  When provided,
                 searches within this window instead of the foreground
                 window (#525).
