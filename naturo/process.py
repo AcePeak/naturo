@@ -409,6 +409,16 @@ def launch_app(
 
     cmd_args = args or []
     system = platform.system()
+    # Launched apps must NOT inherit our stdio. A persistent GUI child that keeps
+    # the parent's stdout/stderr open makes any caller capturing our output via a
+    # pipe (every agent/harness, `... | tail`, subprocess.run(capture_output=True))
+    # block until the app is closed — the launch looks like a hang. Detach the
+    # child's stdio so it can't hold the caller's pipe open.
+    _detached_stdio = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
     # Set when launching via cmd /c start — triggers PID resolution (#785)
     _resolve_real_pid: str | None = None
     _resolve_real_alias: str | None = None
@@ -419,7 +429,7 @@ def launch_app(
                 # Verify path exists before launching
                 if not os.path.isfile(path):
                     raise AppNotFoundError(launch_target, suggested_action="File does not exist")
-                proc = subprocess.Popen([path] + cmd_args)
+                proc = subprocess.Popen([path] + cmd_args, **_detached_stdio)
             else:
                 # Resolve the launch name: try the original name first,
                 # then fall back to alias-resolved executable names.
@@ -441,7 +451,7 @@ def launch_app(
                     # hunt for the full path themselves.
                     app_path = _resolve_via_app_paths(resolved_name)
                     if app_path is not None:
-                        proc = subprocess.Popen([app_path] + cmd_args)
+                        proc = subprocess.Popen([app_path] + cmd_args, **_detached_stdio)
                     else:
                         # Also check if it's a known app via start — run synchronously to check
                         try:
@@ -466,7 +476,10 @@ def launch_app(
                         # Launched but already exited — report success with a dummy PID
                         return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
                 else:
-                    proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
+                    proc = subprocess.Popen(
+                        ["cmd", "/c", "start", "", resolved_name] + cmd_args,
+                        **_detached_stdio,
+                    )
                     # cmd.exe exits quickly after launching the target app.
                     # Mark for real PID resolution below — proc.pid is cmd.exe,
                     # not the actual application (#785).
@@ -474,7 +487,7 @@ def launch_app(
                     _resolve_real_alias = name
         elif system == "Darwin":
             if path:
-                proc = subprocess.Popen([path] + cmd_args)
+                proc = subprocess.Popen([path] + cmd_args, **_detached_stdio)
             else:
                 open_args = ["open", "-a", name or ""]
                 if no_focus:
@@ -482,7 +495,7 @@ def launch_app(
                 if cmd_args:
                     open_args.append("--args")
                     open_args.extend(cmd_args)
-                proc = subprocess.Popen(open_args)
+                proc = subprocess.Popen(open_args, **_detached_stdio)
                 # 'open -a' exits quickly; check its return code
                 try:
                     retcode = proc.wait(timeout=10)
@@ -493,7 +506,7 @@ def launch_app(
         else:
             # Linux
             target = path or name or ""
-            proc = subprocess.Popen([target] + cmd_args)
+            proc = subprocess.Popen([target] + cmd_args, **_detached_stdio)
             # Check if the process exits immediately with an error
             try:
                 retcode = proc.wait(timeout=2)
