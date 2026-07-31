@@ -59,6 +59,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 41 | Windows 文件资源管理器 (File Explorer, hwnd 1183248) | Win32 shell / UIA List (CabinetWClass + DirectUIHWND) | 2026-08-01 | ✅ file/folder List with **real directory data** by ref | ✅ list items by ref | det (UIA) | **SUPPORTED — the most-used desktop app, data-extraction gate.** Opened to `C:\Program Files`; the "项目视图" List (Header + ListItems) exposes the **actual directory contents** by ref — Application Verifier, BitComet, CMake, CPUID, CrystalDiskInfo, Everything, Greenshot, HandBrake, HWiNFO64, IrfanView, Microsoft Office… (also a cross-check that the sweep's installs are on disk). Items are `[rae]` (actionable+expandable) so naturo can navigate the filesystem via the shell. Closed via `WM_CLOSE` to the specific hwnd (Explorer windows share the shell `explorer.exe` — must close by window, not process; `app quit --pid` of the launcher stub failed as expected). Already-present; market-download stall. **Note:** ~10 stray "SoftMgr" download-folder Explorer windows accumulated from 电脑管家 market interactions — left untouched (uncertain provenance). |
 | 42 | Windows 服务 (services.msc / MMC, hwnd 529372) | MMC host (MMCMainFrame) + UIA List/Tree | 2026-08-01 | ✅ scope Tree + service List with **real service data** by ref | ✅ services by ref | det (UIA) | **SUPPORTED — MMC coverage (host for many admin snap-ins).** `--depth 6` exposes the MMC console: scope **Tree** (服务(本地)), the 标准/扩展 tabs, and the **"Console Embedded Window Results" List** with Header + ListItems reading the **actual Windows services** by ref — ActiveX Installer (AxInstSV), Application Identity, AppX Deployment Service, Background Intelligent Transfer Service, Base Filtering Engine, BitComet Disk Boost Service, Clash Verge Service, Client License Service… (98 nodes). Confirms naturo drives **MMC** — the shared host for services/devmgmt/diskmgmt/gpedit/etc. (status/startup-type columns are per-row sub-cells; readable via column extraction). Read-only, no service changes. Already-present; market-download stall. |
 | 43 | WinSCP 5.17.10 (免登录, hwnd 332578/790836) | Delphi/VCL (TLoginDialog/TScpCommanderForm) | 2026-08-01 | ✅ login/site-manager fully exposed | ✅ all connection fields by ref | det (UIA) | **SUPPORTED — real 电脑管家 store install; covers the Delphi/VCL toolkit.** UIA exposes the whole TLoginDialog: 站点 Tree (新建站点), 工具/管理/登录/关闭/帮助 Buttons, and the **connection fields by ref** — 文件协议 ComboBox, 主机名/端口/用户名/密码 Edits — so naturo can fill and drive a session. App is 免登录 (the site-manager + main TScpCommanderForm open and are fully browsable without connecting to any server). **Market breakthrough:** WinSCP's full 10.6MB package **did** download via 电脑管家 — the earlier "stall" was slow-but-alive throughput + my 45–75s waits being too short; installer driven by naturo (mode-select 为所有用户安装 + wizard). |
+| 44 | qBittorrent v4.3.7 (免登录, hwnd 596082) | Qt5 (Qt5152QWindowIcon) | 2026-08-01 | ✅ full menu/toolbar + live status | ✅ toolbar/menus by ref | det (UIA) | **SUPPORTED — 电脑管家-acquired install; clean Qt5 coverage.** UIA exposes the whole shell: MenuBar (文件/编辑/视图/工具/帮助), ToolBar (打开 URL/打开/删除/继续/暂停/选项/锁定 + search Edit), transfer-list Group, and **StatusBar live data** by ref — "DHT：79 结点", up/down speed "0 B/s (0 B)". Two first-run 法律声明 dialogs accepted by ref (同意 e8). 免登录 (BT client, no account for core use). **Efficient install path discovered:** ran the 电脑管家-downloaded package directly from `C:\QMDownload\SoftMgr\qbittorrent_4.3.7_x64_setup.exe` (the store downloads here but doesn't always auto-run the installer); driver handled the NSIS "Installer Language" dialog was matched separately, then license→Next→Install→Finish. |
 
 ---
 
@@ -183,7 +184,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 29 apps (#12–31, #33, #36–43; #34 Greenshot &
+**Installed + evaluated this run: 30 apps (#12–31, #33, #36–44; #34 Greenshot &
 #35 HWiNFO64 PARTIAL; +#32 DB Browser installed but its stale 2015 build crashes
 on launch — a failure).** #43 WinSCP is a fresh 电脑管家 store install (Delphi/VCL);
 #36–42 (Notepad++, Calculator, Task Manager, Registry Editor, Paint, File Explorer,
@@ -221,6 +222,17 @@ clear-X ≈ (1007,50).
 
 ## Open items / for the next agent
 
+- **🔑 KEY: 电脑管家 downloads land in `C:\QMDownload\SoftMgr\` — install from there.**
+  Every store download (whether or not 电脑管家 auto-ran its installer) is kept as the
+  raw package in `C:\QMDownload\SoftMgr\`. When the market downloads a package but
+  doesn't auto-launch the installer (happens when the download completes while you're
+  not actively on its card), just `naturo app launch --path C:\QMDownload\SoftMgr\<pkg>`
+  and drive it — no re-download. This is the **fastest path**: the folder already holds
+  ~35 packages (qBittorrent/Bandizip/EmEditor/EditPlus/KMPlayer/QQ影音/Inkscape/DiskGenius
+  .zip/PuTTY .rar/…). Note formats: some are `.zip`/`.rar` (DiskGenius `DG*.zip`, PuTTY
+  `putty*.rar`, JPEGView/Snipaste `.zip`) → extract, not run; `.msi` (cmake/emed64/
+  inkscape) → drive as MSI; `.exe` → NSIS/Inno, drive normally. (Get the path from the
+  download flyout's 打开下载目录, or Shell.Application LocationURL.)
 - **✅ RESOLVED (was mis-read as "dead"): 电脑管家 downloads are SLOW-but-alive, not stalled.**
   The download flyout later showed WinSCP's full **10.6MB 已完成** and HD Tune (2.1MB)
   **正在安装** — the full-package downloads *do* complete; my earlier 45–75s waits were
