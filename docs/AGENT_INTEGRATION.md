@@ -55,7 +55,7 @@ wiring for OpenAI, Anthropic, and LangChain — including the dispatcher — is 
 
 ## The moat: one fused, correctness-tagged tree
 
-The `see_ui_tree` tool takes `cascade: true` to return the **Unified Auto Element
+The `see_ui_tree` tool takes `techniques=[...]` (or `cascade: true`) to return the **Unified Auto Element
 Tree** — one fused tree per window where every node is tagged with which
 techniques recognized it and how much to trust them:
 

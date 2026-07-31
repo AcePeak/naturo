@@ -101,6 +101,20 @@ def app_id_option(func):
     )(func)
 
 
+def target_options(func):
+    """The canonical window-targeting group, uniform across every command.
+
+    Applies ``--app`` · ``--window`` (title substring; ``--title``/
+    ``--window-title`` hidden aliases) · ``--hwnd`` (``--window-id`` alias) ·
+    ``--pid`` · ``--app-id``. Handlers receive params ``app``, ``window``,
+    ``hwnd``, ``pid``, ``app_id``. Use this instead of re-declaring the selector
+    flags per command so they can't drift (see docs/design/cli-consistency-review).
+    """
+    for opt in (app_id_option, pid_option, hwnd_option, window_option, app_option):
+        func = opt(func)
+    return func
+
+
 def resolve_app_id_to_hwnd(
     app_id: str | None,
     hwnd: int | None,

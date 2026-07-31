@@ -51,12 +51,13 @@ Three surfaces that all "recognize UI", three vocabularies:
 **Canonical:** `find` and `highlight` adopt the `see` technique flags + presets,
 and the same `--ai-provider/--ai-model/--ai-api-key` names.
 
-**Status (done):** a shared `naturo/cli/_techniques.py` now holds the one resolver
-(`resolve_techniques`) + `technique_options` decorator. `see` and `highlight` both
-use it (identical flags/semantics); `find` gained `--ai-provider/--ai-model/
---ai-api-key` (old `--provider/--model/--api-key` kept as aliases). **Remaining:**
-`find` could adopt the full structured technique flags, and MCP `see_ui_tree` needs
-a `techniques` param (the "MCP 同构" task).
+**Status: ✅ DONE.** Shared `naturo/cli/_techniques.py` holds the one resolver
+(`resolve_techniques`) + `technique_options` decorator. `see` and `highlight` use
+it (identical flags/semantics); `find` gained `--ai-provider/--ai-model/
+--ai-api-key` (old names aliased); **MCP `see_ui_tree` gained a `techniques=[...]`
+param** routed through the same resolver (`cascade` kept as a back-compat alias).
+The recognition vocabulary is now uniform across CLI + MCP. (Nice-to-have left:
+`find` adopting the full structured technique flags.)
 
 ## 🟠 4. Element-target flag is overloaded: `--on` / `--ref` / `--id` / `--aid`
 

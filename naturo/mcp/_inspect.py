@@ -23,6 +23,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         depth: int = 0,
         accessibility_backend: str = "uia",
         cascade: bool = False,
+        techniques: Optional[list] = None,
         format: str = "compact",
         match: Optional[str] = None,
         full_text: bool = False,
@@ -69,13 +70,18 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             accessibility_backend: "uia" (default), "msaa" (for legacy apps like
                 MFC, VB6, Delphi), "ia2" (for Firefox, Thunderbird, LibreOffice),
                 "jab" (for Java/Swing/AWT), or "auto" (try UIA → IA2 → JAB → MSAA).
-            cascade: When True, run the unified multi-framework cascade (UIA plus
-                the CDP/JAB/COM additive providers) and tag every node with
-                ``techniques[]`` + ``correctness`` (deterministic vs uncertain) +
-                ``confidence``; deterministic sources are preferred. Also returns
-                a top-level ``recognition_summary``. This is the moat: it recovers
-                web (CDP), Java (JAB) and Excel-cell (COM) content that UIA
-                collapses, so the agent sees one fused, correctness-tagged tree.
+            cascade: Back-compat alias for the full fused structured tree (same as
+                ``techniques=["fast"]``). When True, fuses UIA + CDP/JAB/COM and
+                tags every node with ``techniques[]`` + ``correctness`` +
+                ``confidence``, plus a top-level ``recognition_summary``.
+            techniques: The canonical recognition selector — the SAME vocabulary as
+                the `see`/`highlight`/`find` CLI, resolved by one shared resolver.
+                A list of technique names whose UNION is used:
+                ``"uia"``/``"msaa"``/``"ia2"``/``"jab"``/``"cdp"``/``"com"`` (fast,
+                structured), ``"ocr"``/``"ai"`` (pixel, uncertain), and the presets
+                ``"fast"`` (all structured) / ``"deep"`` (structured + ocr + ai).
+                e.g. ``["uia","cdp"]`` (only those), ``["ocr"]``, ``["deep"]``.
+                Overrides ``cascade``/``accessibility_backend`` when given.
 
         Returns:
             Dict with the element tree structure.
@@ -86,29 +92,70 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"accessibility_backend must be uia, msaa, ia2, jab, or auto, got {accessibility_backend}"}}
         backend = _get_backend()
 
+        # `techniques` is the canonical recognition selector — the same vocabulary
+        # as the `see`/`highlight`/`find` CLI, resolved by the one shared resolver.
+        # e.g. techniques=["uia","cdp"] or ["ocr"] or ["deep"]. `cascade=true`
+        # remains a back-compat alias for the full fused structured tree.
+        _tech = None
+        if techniques is not None:
+            from naturo.cli._techniques import resolve_techniques
+            _tset = {str(x).lower() for x in techniques}
+            _tech = resolve_techniques(
+                fast="fast" in _tset, deep="deep" in _tset, uia="uia" in _tset,
+                msaa="msaa" in _tset, ia2="ia2" in _tset, jab="jab" in _tset,
+                cdp="cdp" in _tset, com="com" in _tset, ocr="ocr" in _tset,
+                ai="ai" in _tset,
+            )
+
         cascade_result = None
-        if cascade:
-            # (M3) Expose the unified see --cascade fused tree over MCP: run the
-            # multi-framework cascade so every node carries techniques[] +
-            # correctness + confidence and the caller gets a recognition_summary.
+        if cascade or _tech is not None:
+            # (M3) Unified multi-framework cascade over MCP: every node carries
+            # techniques[] + correctness + confidence, plus a recognition_summary.
             from naturo.cascade import run_cascade
             tree = None
-            # (calc-zombie) --app can resolve to several UWP windows (empty ghost
-            # frames + the live CoreWindow). Gather all of them, cascade each, and
-            # keep only content-bearing ones so we never return a chrome-only ghost.
-            # Shared with the `see` CLI.
+            # Screenshot only when a pixel technique (ocr/ai) is selected.
+            _shot = None
+            if _tech is not None and _tech.needs_screenshot:
+                try:
+                    import tempfile as _tf
+                    _t = _tf.NamedTemporaryFile(suffix=".png", prefix="naturo_mcp_",
+                                                delete=False)
+                    _t.close()
+                    _rh = hwnd
+                    if not _rh and hasattr(backend, "_resolve_hwnd"):
+                        try:
+                            _rh = backend._resolve_hwnd(
+                                app=app, window_title=window_title, pid=pid)
+                        except Exception:
+                            _rh = None
+                    if _rh:
+                        _shot = backend.capture_window(hwnd=_rh, output_path=_t.name).path
+                    else:
+                        _shot = backend.capture_screen(output_path=_t.name).path
+                except Exception:
+                    _shot = None
+            # (calc-zombie) --app without hwnd can resolve to several UWP windows
+            # (ghost frames + the live CoreWindow); keep only content-bearing ones.
             if app and hwnd is None and not window_title and pid is None:
                 from naturo.cascade._appwindows import app_content_tree
                 tree, _ = app_content_tree(
                     backend, app, depth=depth, backend_name="auto",
                 )
             if tree is None:
+                _gates = {} if _tech is None else dict(
+                    enable_uia=_tech.enable_uia, enable_msaa=_tech.enable_msaa,
+                    enable_ia2=_tech.enable_ia2, enable_jab=_tech.enable_jab,
+                    enable_cdp=_tech.enable_cdp, enable_com=_tech.enable_com,
+                    fill_gaps_ai=_tech.fill_gaps_ai, run_ocr=_tech.run_ocr,
+                    screenshot_path=_shot,
+                )
                 cascade_result = run_cascade(
                     backend, app=app, window_title=window_title,
                     hwnd=hwnd, pid=pid, depth=depth, backend_name="auto",
                     excel_max_cells=excel_max_cells,
                     excel_max_rows=excel_max_rows,
                     excel_max_cols=excel_max_cols,
+                    **_gates,
                 )
                 tree = cascade_result.tree
         # (#737) When --app is used without --hwnd, enumerate ALL windows

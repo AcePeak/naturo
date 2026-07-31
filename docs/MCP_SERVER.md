@@ -101,7 +101,7 @@ capture_screen(output_path="desktop.png")
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `see_ui_tree` | `window_title`, `app`, `hwnd`, `pid`, `depth=7`, `accessibility_backend="uia"` | Inspect the accessibility tree |
+| `see_ui_tree` | `window_title`, `app`, `hwnd`, `pid`, `depth`, `techniques=[...]` (uia/msaa/ia2/jab/cdp/com/ocr/ai/fast/deep), `cascade` | Inspect the accessibility tree |
 | `find_element` | `selector`, `window_title` | Find element by selector |
 | `get_element_value` | `ref`, `automation_id`, `role`, `name`, `window_title`, `hwnd` | Read element text/value |
 | `set_element_value` | `value`, `ref`, `automation_id`, `role`, `name`, `window_title`, `hwnd` | Set element value via UIA |

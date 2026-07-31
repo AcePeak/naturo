@@ -133,6 +133,26 @@ class TestSeeUiTreeCascade:
         assert data["recognition_summary"]["by_technique"].get("cdp") == 1
         assert data["recognition_summary"]["has_uncertain"] is False
 
+    def test_techniques_param_gates_run_cascade(self, server):
+        # techniques=["uia"] must thread the same enable_* gates as `see --uia`.
+        from naturo.backends.base import ElementInfo
+        from naturo.cascade._types import CascadeResult, CascadeStats
+
+        root = ElementInfo(id="w", role="Window", name="App", value=None,
+                           x=0, y=0, width=10, height=10, children=[],
+                           properties={"source": "uia"})
+        result = CascadeResult(tree=root, stats=CascadeStats(), primary_provider="uia")
+        with patch("naturo.cascade.run_cascade", return_value=result) as mock_cascade:
+            _call_tool(server, "see_ui_tree",
+                       {"techniques": ["uia"], "hwnd": 123, "format": "json"})
+        mock_cascade.assert_called_once()
+        kw = mock_cascade.call_args.kwargs
+        assert kw["enable_uia"] is True
+        assert kw["enable_jab"] is False
+        assert kw["enable_cdp"] is False
+        assert kw["enable_com"] is False
+        assert kw["run_ocr"] is False and kw["fill_gaps_ai"] is False
+
     def test_cascade_with_app_routes_through_app_content_tree(self, server, mock_backend):
         # (calc-zombie) cascade + --app + no hwnd must gather ALL of the app's
         # windows via app_content_tree (dropping empty UWP ghost frames), mirroring
