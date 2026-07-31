@@ -333,7 +333,7 @@ def _do_set_com_cell(hwnd, address, ref, value, json_output) -> None:
             + (f" ({ref})" if ref else ""),
             json_output,
             suggested_action="Confirm the window hosts an Excel/WPS 表格 grid "
-            "(naturo see --cascade should list com_* cells) and that the cell "
+            "(naturo see should list com_* cells) and that the cell "
             "address is valid.",
         )
 

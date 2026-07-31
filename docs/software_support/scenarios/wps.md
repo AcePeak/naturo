@@ -25,7 +25,7 @@ WPS = `OpusApp` (Word-compat) native shell + embedded **CEF** (login/start page)
 - **S1 (read a spreadsheet) — ✅ PASSED (2026-07-31), required a naturo fix.**
   - First attempt: `naturo see --hwnd <wps> --cascade` returned only 259 UIA chrome nodes, **0 cells** — the COM provider never fired (it gated on top-level class `XLMAIN`; WPS is `OpusApp`), and WPS's Application isn't reachable via `Excel.Application` moniker or the ROT.
   - Root cause found: WPS mirrors Excel's window tree — an **`EXCEL7`** grid nested under `OpusApp` — and exposes the standard Excel OM there (`Application.Name == "Microsoft Excel"`).
-  - **Fixed naturo** (commit `7dd71f8a`): `is_excel_window()` now matches a window *containing* an EXCEL7 grid, and a new `AccessibleObjectFromWindow(OBJID_NATIVEOM)` connection binds the Window OM cross-bitness. Now `naturo see --cascade` emits all 16 cells as deterministic `com` DataItems with coords — **no extra flags (easy)**. Verified against the known test sheet (产品/数量/单价/总价 + 苹果/香蕉/橙子).
+  - **Fixed naturo** (commit `7dd71f8a`): `is_excel_window()` now matches a window *containing* an EXCEL7 grid, and a new `AccessibleObjectFromWindow(OBJID_NATIVEOM)` connection binds the Window OM cross-bitness. Now `naturo see` emits all 16 cells as deterministic `com` DataItems with coords — **no extra flags (easy)**. Verified against the known test sheet (产品/数量/单价/总价 + 苹果/香蕉/橙子).
 - **S2 (edit a spreadsheet) — ✅ PASSED (2026-07-31), required a naturo fix.**
   - First (rejected) attempt: coordinate click + type. Fragile — clicking a cell's top-left hit the
     A1/A2 boundary (edited the wrong cell), and a later edit did nothing because the WPS window was
@@ -37,7 +37,7 @@ WPS = `OpusApp` (Word-compat) native shell + embedded **CEF** (login/start page)
     **no** coords/method/backend flags (easy): just `naturo set <ref> <value>`.
   - Verified live: `naturo set e260 产品` (A1 999→产品, string), `naturo set e264 红苹果` (A2, string),
     `naturo set e265 12` (B2 10→12, coerced to a **number**) — each confirmed by re-reading the grid
-    with `naturo see --cascade`, **while WPS was not the foreground window** (terminal was). Restored
+    with `naturo see`, **while WPS was not the foreground window** (terminal was). Restored
     the sheet to its canonical values afterward. Numeric strings coerce to int/float; leading-zero
     strings (IDs/zips) stay text.
 - **S3 (read a document) — ✅ PASSED (2026-07-31), no naturo fix needed.**
@@ -63,7 +63,7 @@ WPS = `OpusApp` (Word-compat) native shell + embedded **CEF** (login/start page)
 ### WPS COM support summary (App#2)
 | Path | Surface | naturo interface | Status |
 |------|---------|------------------|--------|
-| Live spreadsheet (open window) | 表格 EXCEL7 grid | `see --cascade` (read), `set <ref>` (write) | ✅ fixed `7dd71f8a`/`d5b99e54` |
+| Live spreadsheet (open window) | 表格 EXCEL7 grid | `see` (read), `set <ref>` (write) | ✅ fixed `7dd71f8a`/`d5b99e54` |
 | File spreadsheet | any .xlsx | `excel_read` / `excel_write` (Excel.Application→WPS) | ✅ fixed `c9d070b4` |
 | File document | any .docx | `word_read` / `word_write` (Word.Application→WPS) | ✅ works as-is |
 | Native shell (menus/tabs/新建) | OpusApp UIA | `see` → `click <ref>` | ✅ works as-is |

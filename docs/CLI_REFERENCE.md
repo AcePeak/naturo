@@ -381,8 +381,11 @@ Capture screenshot and analyze UI elements.
 | `--annotate` | boolean | Annotate screenshot with element labels |
 | `--snapshot`, `--no-snapshot` | boolean | Store result in snapshot (default: on) |
 | `--session` | text | Snapshot session name for isolation (default: NATURO_SESSION env or 'default') |
-| `--cascade` | boolean | Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision |
-| `--fill-gaps` | boolean | Use AI vision to fill uncovered UI regions (requires AI provider) |
+| `--fast` | boolean | Preset: all fast structured techniques (uia+msaa+ia2+jab+cdp+com), auto-triggered where applicable. **This is the default** when no technique is given. |
+| `--deep` | boolean | Preset: the full stack — every structured technique **plus** `--ocr` and `--ai`. |
+| `--uia`/`--msaa`/`--ia2`/`--jab`/`--cdp`/`--com` | boolean | Recognition techniques. Composable — the active set is the **union** of every flag given. |
+| `--ocr` | boolean | Technique: local OCR (rapidocr) — recover on-screen/canvas text (uncertain, tagged `ocr`). |
+| `--ai` | boolean | Technique: AI vision (needs a provider; slower). Recovers structure from pixels for windows with no accessibility. |
 | `--stats` | boolean | Show per-provider recognition statistics after output |
 | `--coverage` | float | Coverage target (0.0–1.0) before trying next provider (default: 0 = UIA only) |
 | `--visible-only` | boolean | Hide offscreen/zero-bounds elements |
@@ -394,9 +397,9 @@ Capture screenshot and analyze UI elements.
 **Examples:**
 
 ```bash
-naturo see --app feishu --cascade      # UIA + CDP for Electron content
-naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
-naturo see --app feishu --cascade --stats      # Show provider breakdown
+naturo see --app feishu                # default = --fast: fused structured tree
+naturo see --app feishu --deep         # add OCR + AI vision
+naturo see --app feishu --stats        # Show provider breakdown
 naturo see --app feishu --backend auto         # Try all A11y backends
 naturo see --app feishu --backend hybrid       # Per-node backend selection
 ```

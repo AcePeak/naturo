@@ -85,15 +85,16 @@ from naturo.value_preview import bounded_value
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
-    default="auto",
-    help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content via DevTools), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
+    default="auto", hidden=True,
+    help="Superseded by the composable technique flags (--uia/--msaa/--ia2/--jab/"
+         "--cdp). Low-level single-backend override; kept for scripts.",
 )
 @click.option("--app-id", "app_id", default=None,
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--ai-provider", "ai_provider",
               type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
               default="auto",
-              help="AI vision provider for --cascade/--fill-gaps (default: auto)")
+              help="AI vision provider for --ai/--deep (default: auto)")
 @click.option("--ai-model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
               help="AI model override (e.g. claude-opus-4-6, gpt-4o)")
 @click.option("--ai-api-key", "ai_api_key", default=None,
@@ -114,32 +115,25 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     names, and bounding rectangles.  Results are stored in a snapshot so
     subsequent commands can reference elements by ID.
 
-    Use --backend msaa for legacy applications (MFC, VB6, Delphi) that
-    don't expose UIAutomation elements. Use --backend ia2 for IA2-enabled
-    applications (Firefox, Thunderbird, LibreOffice). Use --backend auto to
-    try UIA first, then IA2, then MSAA automatically.
+    Recognition techniques are composable flags; the active set is the UNION of
+    every one given. Structured techniques \u2014 --uia --msaa --ia2 --jab --cdp --com
+    \u2014 auto-trigger only where the window exposes them (cheap when they don't).
+    --ocr and --ai are the pixel-recovery layers (uncertain; --ai needs a provider).
 
-    Use --backend cdp for Chrome/Electron apps with DevTools Protocol enabled.
-    The browser must be started with --remote-debugging-port=9222.
-
-    Use --backend hybrid for per-node backend selection \u2014 each node in the
-    tree picks the optimal backend based on its Win32 class (Electron\u2192CDP,
-    Java\u2192JAB, Mozilla\u2192IA2, default\u2192UIA).
-
-    With the default --backend auto, `see` already returns the FUSED tree from every
-    structural technique (UIA + MSAA + JAB/IA2 + CDP web content + Excel COM), each
-    node tagged with the technique that found it \u2014 no flag needed. --cascade only ADDS
-    a screenshot-based AI-vision fallback for regions no structural technique reached.
-    Pass an explicit --backend (uia/msaa/jab/\u2026) to use a single technique with no fusion.
+    Presets: --fast = all structured techniques (the DEFAULT when nothing is
+    given); --deep = the full stack (structured + ocr + ai). Give nothing and you
+    get the fused structured tree, each node tagged with the technique that found
+    it. When a window exposes no accessibility, `see` prints a hint to try --ocr/--ai.
 
     \b
     Examples:
-        naturo see --app feishu                # fused tree (UIA + CDP + \u2026) \u2014 auto is default
-        naturo see --app feishu --cascade      # also add the AI-vision fallback
-        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # force vision + model
+        naturo see --app feishu                # default = --fast: fused structured tree
+        naturo see --app feishu --ocr          # add local OCR (on-screen text)
+        naturo see --app feishu --ai           # add AI vision (needs a provider)
+        naturo see --app feishu --deep         # everything (structured + ocr + ai)
+        naturo see --hwnd 12345 --uia          # only UIA (no fusion)
+        naturo see --hwnd 12345 --uia --cdp    # only UIA + CDP web content
         naturo see --app feishu --stats        # show which technique found each region
-        naturo see --app feishu --backend uia  # single technique only (no fusion)
-        naturo see --app feishu --backend hybrid       # per-node backend selection
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id

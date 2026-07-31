@@ -223,7 +223,7 @@ naturo see --app dbeaver --backend auto --stats
 ### Vision fallback
 
 When a window is too shallow for any accessibility provider, the cascade can
-fall back to an AI vision provider (`--fill-gaps`) to recover interactive
+fall back to an AI vision provider (`--ai`) to recover interactive
 elements from a screenshot. See the main README's AI configuration section.
 
 ### SAP GUI (planned)

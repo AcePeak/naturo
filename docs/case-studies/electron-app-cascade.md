@@ -23,7 +23,7 @@ No existing tool combines multiple recognition sources into a unified element tr
 ## naturo's Cascade Solution
 
 ```
-naturo see --app feishu --cascade --fill-gaps
+naturo see --app feishu --deep
 ```
 
 naturo runs three recognition providers in sequence and **merges their results into one tree**:
@@ -100,13 +100,13 @@ This ensures:
 naturo see --app "ElectronApp" --backend uia
 
 # UIA + CDP (what Selenium could see separately)
-naturo see --app "ElectronApp" --cascade
+naturo see --app "ElectronApp"
 
 # UIA + CDP + AI Vision (what only naturo can do)
-naturo see --app "ElectronApp" --cascade --fill-gaps
+naturo see --app "ElectronApp" --deep
 
 # Visual verification
-naturo highlight --app "ElectronApp" --cascade --fill-gaps
+naturo highlight --app "ElectronApp" --cascade --fill-gaps  # (highlight: technique-flag redesign pending)
 ```
 
 ## Messaging Angles
@@ -118,7 +118,7 @@ naturo highlight --app "ElectronApp" --cascade --fill-gaps
 > "Automate Electron-based enterprise apps (Slack, Teams, Feishu, VS Code) with the same reliability as Win32 apps. naturo's cascade recognition fills the gaps that UIA leaves in web-rendered content."
 
 ### For Developer Onboarding
-> "Run `naturo see --app myapp --cascade --fill-gaps --stats` to see exactly how naturo discovers UI elements. The stats breakdown shows how many elements each provider found and how they were merged."
+> "Run `naturo see --app myapp --deep --stats` to see exactly how naturo discovers UI elements. The stats breakdown shows how many elements each provider found and how they were merged."
 
 ### For Competitive Positioning
 > "pywinauto sees 627 elements. naturo sees 650+. The difference? 30+ navigation items, document links, and sidebar controls that only AI Vision can detect — elements your automation script needs to interact with."

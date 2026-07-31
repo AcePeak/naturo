@@ -747,7 +747,7 @@ def run_cascade(
                 ))
 
     # Provider 2c: COM/Excel (spreadsheet cells UIA collapses into one node).
-    # Excel exposes its grid only via COM, so ``see --cascade`` on an Excel
+    # Excel exposes its grid only via COM, so ``see`` on an Excel
     # window otherwise shows just the ribbon/chrome.  Bind the running Excel
     # instance and graft its cells onto the root, mirroring the additive
     # CDP/JAB providers above, so ``see --backend auto`` delivers spreadsheet

@@ -35,8 +35,8 @@ honest coarse class, never a false-precision score:
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 | Chrome (local web app) | Electron/CDP (`cdp`) | 51 | 88 | **+37** | deterministic | `full-tree` | `run_benchmark` (ChromiumFixtureApp) |
 | Owned Java Swing app | Java Access Bridge (`jab`) | 6 | 46 | **+40** | deterministic | `full-tree` | `run_benchmark` (JavaSwingFixtureApp) |
-| Microsoft Excel workbook | Excel COM (`com`) | 596 | 604 | **+8** | deterministic | `full-tree` | `naturo see --cascade --json` on a running Excel window † |
-| Text baked into an image | Local OCR (`ocr`) | 20 | 25 | **+5** | uncertain (warned) | `vision-only` | `naturo see --cascade --ocr --json` ‡ |
+| Microsoft Excel workbook | Excel COM (`com`) | 596 | 604 | **+8** | deterministic | `full-tree` | `naturo see --json` on a running Excel window † |
+| Text baked into an image | Local OCR (`ocr`) | 20 | 25 | **+5** | uncertain (warned) | `vision-only` | `naturo see --ocr --json` ‡ |
 
 - **cdp** contributes +34 web-content elements (New/Open/Save/Inbox/… inside the
   Chromium content layer UIA collapses to one node).

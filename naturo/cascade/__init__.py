@@ -15,7 +15,7 @@ Design goals
   is unavailable, we degrade gracefully to UIA only.
 * **Cheap default** — UIA-only path adds no latency.  CDP is only attempted
   when Electron is detected.  AI is only attempted when explicitly enabled
-  via ``--fill-gaps`` or when coverage is below the target.
+  via ``--ai`` (or shallow-tree/coverage fallback) is below the target.
 * **Source tagging** — each element gets a ``source`` attribute so callers
   can see which provider found it.
 * **No numpy** — coverage calculation uses simple rectangle intersection

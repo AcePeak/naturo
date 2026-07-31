@@ -34,7 +34,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ### 1. 电脑管家「新功能提示」promo popup — hwnd 1051478 (QQPCTray.exe)
 - **Framework:** Qt 5.15 (window class `Qt51514QWindowIcon`), WS_EX_LAYERED|TOPMOST, 0 child HWNDs, elevated.
-- **see:** `naturo see --cascade` → **1 node, empty Pane** (`e1 Pane "腾讯电脑管家"`). No content. Qt widgets custom-painted, no `QAccessible`.
+- **see:** `naturo see` → **1 node, empty Pane** (`e1 Pane "腾讯电脑管家"`). No content. Qt widgets custom-painted, no `QAccessible`.
 - **operate:** multi-page onboarding (广告拦截 → AI助手). Dismissed by clicking「暂不开启」via `naturo click --coords` (client-relative, auto-fallback PostMessage after elevation). Both pages advanced/closed. ✅
 - **Status:** operable-by-coordinate only; **NOT see-able**.
 - **Blocker to deterministic see:** Qt has no a11y here; the deterministic fix (inject a Qt introspector) is **blocked — 电脑管家 self-protection** strips `PROCESS_CREATE_THREAD` from handles to its processes (`CreateRemoteThread` → err 5). Legitimate security-suite defense; we do not bypass it.
@@ -47,7 +47,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ### 3. 电脑管家「AI电脑管家」欢迎窗 — hwnd 3803148 (QQPCDownload_home_310056.exe)
 - **Framework:** **TXMiniSkin** (Tencent's own DirectUI skin), WS_EX_LAYERED, 0 child HWNDs, elevated. Different framework from the Qt main UI.
-- **see:** `naturo see --cascade` → **1 empty Pane**. `naturo see --ocr` → **3 uncertain OCR text nodes** (标题栏「腾讯电脑管家」/「AI电脑管家」/副标题) with estimated bounds; **missed the「立即体验」button and window controls**.
+- **see:** `naturo see` → **1 empty Pane**. `naturo see --ocr` → **3 uncertain OCR text nodes** (标题栏「腾讯电脑管家」/「AI电脑管家」/副标题) with estimated bounds; **missed the「立即体验」button and window controls**.
 - **operate:** minimized via `naturo click --coords` on the minimize button (auto-fallback PostMessage). Verified `IsWindow=True, IsIconic=True` (reversible). ✅
 - **Status:** operable-by-coordinate; **NOT see-able** (OCR partial/uncertain, no buttons).
 
@@ -59,7 +59,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ### 5. 7-Zip File Manager (7zFM.exe) — hwnd 2493192
 - **Framework:** Win32/UIA.
-- **see:** `naturo see --cascade` → **111 deterministic UIA nodes**: archive file list (name/size/compressed/date/CRC/algo), toolbar (添加/解压/…), menus. Matched `7z l` CLI exactly.
+- **see:** `naturo see` → **111 deterministic UIA nodes**: archive file list (name/size/compressed/date/CRC/algo), toolbar (添加/解压/…), menus. Matched `7z l` CLI exactly.
 - **operate:** read valuable data (the archive contents) — G2 satisfied deterministically.
 - **Status:** **fully see-able**, deterministic.
 
@@ -71,7 +71,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ### 7. Chrome + web page (CDP) — hwnd 657248 (launch_browser)
 - **Framework:** Chromium; naturo attaches via CDP (remote-debugging port).
-- **see:** `naturo see --cascade` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
+- **see:** `naturo see` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
 - **operate:** `naturo click e50 --method cdp` dispatched via the debug protocol (bypasses input stack). 
 - **Status:** **fully see-able + operable** via CDP. This is naturo's clean path for all Chromium/web content.
 
@@ -82,7 +82,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
   472 MB installer `8.3.45-Release.260720005.exe` and opened the 「钉钉安装」window. **This part worked
   cleanly** (no winget, no coord).
 - **Installer window — a11y-blind, and it exposed a real naturo capture bug (now fixed):**
-  1. **Not see-able (a11y):** `see --cascade` → a single bare `[Client] [msaa]` node, no buttons/text
+  1. **Not see-able (a11y):** `see` → a single bare `[Client] [msaa]` node, no buttons/text
      (custom GPU-composited UI, no UIA/MSAA content — like 电脑管家's DirectUI). This part is inherent.
   2. **Capture was blanking it — root-caused + fixed.** User observed the window had text+buttons, then
      went **blank white** "after naturo ran / after a screenshot." Isolation experiment (fresh window,
@@ -119,7 +119,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
   Fixed `c9d070b4` (capture the sheet name before closing). Verified: `excel_write` A1/B1 →
   `excel_read` round-trip on a fresh file, then removed the temp file.
 - **Status:** **SUPPORTED — read + write + save, deterministic (COM), easy (path only).** This is the
-  file-path counterpart to the live-window grid (#9): use #9 (`see --cascade` / `set <ref>`) when a
+  file-path counterpart to the live-window grid (#9): use #9 (`see` / `set <ref>`) when a
   workbook is already open and you don't know the path; use these when you have the file path.
 
 ### 9. WPS 表格 spreadsheet grid — EXCEL7 child under the OpusApp window
@@ -127,7 +127,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
   grid nested under the top-level `OpusApp`) and exposes the standard Excel OM on that grid window
   (`Application.Name == "Microsoft Excel"`), even though its `Application` registers in neither the
   ROT nor the `Excel.Application` class moniker (different ProgID + bitness).
-- **see (read):** `naturo see --cascade` → **every non-empty cell** as a deterministic `com` DataItem
+- **see (read):** `naturo see` → **every non-empty cell** as a deterministic `com` DataItem
   with value + screen coords + ref (e.g. `e260 [com]` = A1). Requires **no** extra flags. Fixed in
   `7dd71f8a` (`is_excel_window` matches an EXCEL7-containing window; `AccessibleObjectFromWindow(
   OBJID_NATIVEOM)` binds the Window OM cross-bitness). Verified vs the known test sheet.
@@ -142,7 +142,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 ### 8. WPS Office 12.1.0.28043 — main window hwnd 920682 (D:\...\Kingsoft\WPSOffice\...\wps.exe)
 - **Install:** via 电脑管家 software market, **driven by naturo** — `naturo click --coords` on the WPS「安装」tile (coord found by vision, action via naturo). 电脑管家 downloaded+installed silently; completion detected by the WPS processes/window appearing (the right naturo-native signal is `wait_for_window`, **not** reading 电脑管家's custom-painted "39%" progress, which isn't in any see tree).
 - **Framework:** main window class **`OpusApp`** (WPS deliberately reuses MS Word's class for compat) — **NOT Qt.** So the Qt-injection moat does **not** apply to WPS. Mixed UI: native `OpusApp` chrome + embedded **CEF** web views (`KxCefWebViewPrivateBrowser`) for the login dialog and start page.
-- **see:** `naturo see --cascade` → **54 UIA nodes** for the native shell (新建 button, tabs, documents). **CEF content is NOT exposed** (login form / start-page 演示·表格·文字·PDF tiles → `match` = 0). WPS's CEF has **no CDP debug port** (no `--remote-debugging-port`, no listening port) → can't attach CDP either.
+- **see:** `naturo see` → **54 UIA nodes** for the native shell (新建 button, tabs, documents). **CEF content is NOT exposed** (login form / start-page 演示·表格·文字·PDF tiles → `match` = 0). WPS's CEF has **no CDP debug port** (no `--remote-debugging-port`, no listening port) → can't attach CDP either.
 - **operate:** the **native** WPS confirm dialog「未登录仅支持部分功能」→「暂不登录」was in the tree (`e12 Button`) and **clicked by ref** ✅ (proper see→click). The **CEF** login form's × had no ref → closed via `naturo click --coords` (fallback). So: **native UI = see-able + click-by-ref; CEF UI = coord-only.**
 - **Status:** installed + login-skipped, WPS usable. Native shell adaptable via naturo UIA see→click. **Document/sheet content** (the real valuable data) best via **WPS COM automation** (WPS/KWPS/Ket.Application, like naturo's Excel/Word COM) — deterministic, GUI-independent — TODO. CEF surfaces need coords (no CDP).
 - **Moat note:** WPS is **not** a valid target to validate the *Qt* injection introspector (it isn't Qt). Use an actual Qt app (Navicat / 为知 / 富途) for that.

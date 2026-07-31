@@ -95,7 +95,7 @@ Recorded from live probes; re-derive per host. Only ✓ rows count toward covera
   `CoverageResult` from `recognition_summary`; TDD, Linux-collectable. Unblocked.
 - **C · Broaden a reproducible framework** — the two tractable-here candidates are
   **COM/Excel** (installed) and **MSAA-additive** (native, like the JAB/CDP additive
-  path). Deliver ≥2 non-UIA/CDP frameworks that fuse+tag in `see --cascade --json`
+  path). Deliver ≥2 non-UIA/CDP frameworks that fuse+tag in `see --json`
   **reproducibly on this host**, deterministic-preferred. If a candidate proves
   non-reproducible on measurement, it is recorded `blocked: needs env`, and the
   criterion's "≥2" is met only by frameworks that genuinely fire here.

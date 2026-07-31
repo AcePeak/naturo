@@ -409,15 +409,22 @@ class TestSeeCascadeCLI:
             result = runner.invoke(main, ["see"] + args)
         return result
 
-    def test_cascade_flag_exists(self):
-        runner = CliRunner()
-        result = runner.invoke(main, ["see", "--help"])
-        assert "--cascade" in result.output
+    def test_cascade_and_fill_gaps_remain_accepted_aliases(self):
+        # --cascade / --fill-gaps are now hidden, deprecated aliases for --ai:
+        # not shown in help, but still parsed so old scripts keep working.
+        from naturo.cli.core import see as see_cmd
+        names = {p.name for p in see_cmd.params}
+        assert "cascade" in names
+        assert "fill_gaps" in names
+        result = CliRunner().invoke(main, ["see", "--help"])
+        assert "--cascade" not in result.output  # hidden
+        assert "--fill-gaps" not in result.output
 
-    def test_fill_gaps_flag_exists(self):
-        runner = CliRunner()
-        result = runner.invoke(main, ["see", "--help"])
-        assert "--fill-gaps" in result.output
+    def test_ai_technique_flag_in_help(self):
+        result = CliRunner().invoke(main, ["see", "--help"])
+        assert "--ai" in result.output
+        assert "--fast" in result.output
+        assert "--deep" in result.output
 
     def test_stats_flag_exists(self):
         runner = CliRunner()
