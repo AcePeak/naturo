@@ -41,9 +41,45 @@ def _win32_class_name(hwnd: int) -> Optional[str]:
         return None
 
 
+def _iter_descendant_hwnds(hwnd: int) -> List[int]:
+    """All descendant window handles of ``hwnd`` (empty on any failure)."""
+    try:
+        import win32gui
+
+        found: List[int] = []
+        win32gui.EnumChildWindows(hwnd, lambda h, _: found.append(h) or True, None)
+        return found
+    except Exception as exc:  # pragma: no cover - platform/dep guard
+        logger.debug("COM/Excel: EnumChildWindows(%s) failed: %s", hwnd, exc)
+        return []
+
+
+def _find_excel_grid_hwnd(hwnd: int) -> Optional[int]:
+    """Return the ``EXCEL7`` spreadsheet-grid window (``hwnd`` itself or a
+    descendant), else ``None``.
+
+    Covers MS Excel (top-level ``XLMAIN`` → ``EXCEL7`` child) *and*
+    Excel-compatible suites such as WPS 表格, whose top-level window is
+    ``OpusApp`` but which wrap the very same ``XLMAIN``/``EXCEL7`` grid hierarchy.
+    """
+    if _win32_class_name(hwnd) == "EXCEL7":
+        return hwnd
+    for child in _iter_descendant_hwnds(hwnd):
+        if _win32_class_name(child) == "EXCEL7":
+            return child
+    return None
+
+
 def is_excel_window(hwnd: int) -> bool:
-    """True if ``hwnd`` is an Excel top-level workbook window (class ``XLMAIN``)."""
-    return _win32_class_name(hwnd) == "XLMAIN"
+    """True if ``hwnd`` is (or contains) an Excel spreadsheet grid.
+
+    Matches MS Excel (top-level class ``XLMAIN``) and Excel-compatible suites
+    such as WPS 表格 (top-level ``OpusApp`` wrapping an ``EXCEL7`` grid), so the
+    COM cell provider fires for both without the caller passing any extra flags.
+    """
+    if _win32_class_name(hwnd) == "XLMAIN":
+        return True
+    return _find_excel_grid_hwnd(hwnd) is not None
 
 
 #: Workbook file extensions whose ROT document monikers identify an open Excel.
@@ -104,6 +140,52 @@ def _get_running_excel():
     on a licensing-degraded host.
     """
     return _get_excel_via_class_moniker() or _get_excel_from_rot()
+
+
+#: OBJID_NATIVEOM — asks a window to hand back its native automation (OM) object.
+_OBJID_NATIVEOM = 0xFFFFFFF0
+
+
+def _get_window_via_native_om(hwnd: int):
+    """Bind the Excel ``Window`` OM straight from the ``EXCEL7`` grid window via
+    ``AccessibleObjectFromWindow(OBJID_NATIVEOM)``.
+
+    This is the connection path for Excel-compatible suites (e.g. **WPS 表格**)
+    whose ``Application`` neither registers in the Running Object Table nor is
+    reachable through the ``Excel.Application`` class moniker (different ProgID +
+    bitness) — yet which expose the standard Excel object model on their grid
+    window (WPS even reports ``Application.Name == 'Microsoft Excel'``). It is
+    also a robust last resort for real Excel when the moniker/ROT are transiently
+    unavailable. Returns a ``Window`` (with ``.ActiveSheet`` and
+    ``.PointsToScreenPixelsX/Y``), or ``None``.
+    """
+    grid = _find_excel_grid_hwnd(hwnd)
+    if grid is None:
+        return None
+    try:
+        import ctypes
+
+        import pythoncom
+        import win32com.client
+
+        # IID_IDispatch = {00020400-0000-0000-C000-000000000046}
+        class _GUID(ctypes.Structure):
+            _fields_ = [
+                ("D1", ctypes.c_uint32), ("D2", ctypes.c_uint16),
+                ("D3", ctypes.c_uint16), ("D4", ctypes.c_uint8 * 8),
+            ]
+
+        iid = _GUID(0x00020400, 0, 0, (ctypes.c_uint8 * 8)(0xC0, 0, 0, 0, 0, 0, 0, 0x46))
+        ptr = ctypes.c_void_p()
+        hr = ctypes.windll.oleacc.AccessibleObjectFromWindow(
+            grid, _OBJID_NATIVEOM, ctypes.byref(iid), ctypes.byref(ptr))
+        if hr != 0 or not ptr.value:
+            return None
+        disp = pythoncom.ObjectFromAddress(ptr.value, pythoncom.IID_IDispatch)
+        return win32com.client.Dispatch(disp)
+    except Exception as exc:
+        logger.debug("COM/Excel: native-OM bind for hwnd %s failed: %s", hwnd, exc)
+        return None
 
 
 def _window_for_hwnd(xl, hwnd: int):
@@ -178,9 +260,13 @@ def fetch_excel_cells(
         max_cols = _DEFAULT_MAX_SCAN_COLS
 
     xl = _get_running_excel()
-    if xl is None:
-        return []
-    win = _window_for_hwnd(xl, hwnd)
+    win = _window_for_hwnd(xl, hwnd) if xl is not None else None
+    if win is None:
+        # Excel-compatible suites (e.g. WPS 表格) don't register in the ROT and
+        # aren't the Excel.Application class moniker — bind the Window OM directly
+        # from the EXCEL7 grid window. (Also a last resort for real Excel when the
+        # moniker/ROT are transiently unavailable.)
+        win = _get_window_via_native_om(hwnd)
     if win is None:
         return []
     try:

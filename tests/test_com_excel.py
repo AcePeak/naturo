@@ -142,6 +142,26 @@ def test_is_excel_window_uses_class_name():
         assert is_excel_window(123) is False
 
 
+def test_is_excel_window_detects_wps_excel7_descendant():
+    """Excel-compatible suites (WPS 表格) wrap an EXCEL7 grid under a non-XLMAIN
+    top-level (OpusApp); is_excel_window must recognize them via the descendant."""
+    import naturo.cascade._com_excel as ce
+
+    def fake_class(h):
+        return {100: "OpusApp", 200: "EXCEL7"}.get(h, "Static")
+
+    with patch.object(ce, "_win32_class_name", side_effect=fake_class), \
+         patch.object(ce, "_iter_descendant_hwnds", return_value=[150, 200]):
+        assert ce._find_excel_grid_hwnd(100) == 200
+        assert ce.is_excel_window(100) is True
+
+    # No EXCEL7 grid anywhere -> not an excel window.
+    with patch.object(ce, "_win32_class_name", return_value="OpusApp"), \
+         patch.object(ce, "_iter_descendant_hwnds", return_value=[150, 160]):
+        assert ce._find_excel_grid_hwnd(100) is None
+        assert ce.is_excel_window(100) is False
+
+
 # ── cascade graft: com cells reach the fused tree, tagged deterministic ────
 
 class _FakeBackend:
