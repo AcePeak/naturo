@@ -183,38 +183,21 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     try:
         be = _common._get_backend(json_output)
 
-        # ── Recognition-technique selection (composable union; default --fast) ──
-        # Each technique is a plain flag; the active set is the union of every one
-        # given, plus any preset expansion. Nothing given → --fast. Deterministic
-        # bases (uia/msaa/ia2) still need at least one for the window frame that
-        # additive providers hang off, so fall back to UIA if the user gated them
-        # all away.
-        _FAST_SET = {"uia", "msaa", "ia2", "jab", "cdp", "com"}
-        _flag_techs = {
-            "uia": want_uia, "msaa": want_msaa, "ia2": want_ia2,
-            "jab": want_jab, "cdp": want_cdp, "com": want_com,
-            "ocr": run_ocr,
-            # --fill-gaps / --cascade are deprecated aliases for --ai
-            "ai": want_ai or fill_gaps or cascade,
-        }
-        _selected: set[str] = {t for t, on in _flag_techs.items() if on}
-        if want_fast:
-            _selected |= _FAST_SET
-        if want_deep:
-            _selected |= (_FAST_SET | {"ocr", "ai"})
-        if not _selected:
-            _selected = set(_FAST_SET)  # default
-        _bases = _selected & {"uia", "msaa", "ia2"}
-        if not _bases:
-            _bases = {"uia"}  # need a base tree for bounds
-        enable_uia = "uia" in _bases
-        enable_msaa = "msaa" in _bases
-        enable_ia2 = "ia2" in _bases
-        enable_jab = "jab" in _selected
-        enable_cdp = "cdp" in _selected
-        enable_com = "com" in _selected
-        _want_ai = "ai" in _selected
-        _want_ocr = "ocr" in _selected
+        # ── Recognition-technique selection (shared resolver; default --fast) ──
+        from naturo.cli._techniques import resolve_techniques
+        _tech = resolve_techniques(
+            fast=want_fast, deep=want_deep, uia=want_uia, msaa=want_msaa,
+            ia2=want_ia2, jab=want_jab, cdp=want_cdp, com=want_com,
+            ocr=run_ocr, ai=want_ai, cascade=cascade, fill_gaps=fill_gaps,
+        )
+        enable_uia = _tech.enable_uia
+        enable_msaa = _tech.enable_msaa
+        enable_ia2 = _tech.enable_ia2
+        enable_jab = _tech.enable_jab
+        enable_cdp = _tech.enable_cdp
+        enable_com = _tech.enable_com
+        _want_ai = _tech.fill_gaps_ai
+        _want_ocr = _tech.run_ocr
 
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None

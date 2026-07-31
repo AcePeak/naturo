@@ -7,6 +7,7 @@ import logging
 import click
 
 import naturo.cli.core._common as _common
+from naturo.cli import _techniques
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,9 @@ logger = logging.getLogger(__name__)
 @click.option(
     "--backend", "-b",
     type=click.Choice(["uia", "win32", "win32hybrid", "msaa", "ia2", "jab", "auto", "hybrid"]),
-    default="uia",
-    help="Accessibility backend (same as 'naturo see --backend')",
+    default="uia", hidden=True,
+    help="Low-level rendering/backend override (e.g. win32 for VB6/ActiveX). "
+         "Recognition is selected with the technique flags (--uia/--cdp/…).",
 )
 @click.option("--all", "show_all", is_flag=True, help="Show all elements, not just actionable ones")
 @click.option("--annotate", "-A", "annotate_path", type=click.Path(), default=None,
@@ -37,14 +39,14 @@ logger = logging.getLogger(__name__)
               help="Filter elements by role (e.g. --filter Button)")
 @click.option("--visible-only", is_flag=True,
               help="Only highlight visible (non-zero-bounds) elements")
-@click.option("--cascade", is_flag=True,
-              help="Progressive recognition: UIA → CDP → AI vision (same as 'naturo see --cascade')")
-@click.option("--fill-gaps", "fill_gaps", is_flag=True,
-              help="Use AI vision to fill uncovered regions (requires --cascade)")
+@_techniques.technique_options
 @click.option("--pid", type=int, default=None, help="Process ID")
 def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_id,
               depth, duration, json_output, backend, show_all, annotate_path,
-              role_filter, visible_only, cascade, fill_gaps, pid) -> None:
+              role_filter, visible_only, pid,
+              want_fast, want_deep, want_uia, want_msaa, want_ia2, want_jab,
+              want_cdp, want_com, run_ocr, want_ai, cascade, fill_gaps,
+              ai_provider, ai_model, ai_api_key) -> None:
     """Highlight UI elements on screen with colored borders and labels.
 
     By default highlights only actionable elements (Button, Edit, ComboBox,
@@ -54,11 +56,11 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
     Elements at the same tree depth share a color for visual grouping.
     Labels are positioned to avoid overlapping each other.
 
-    Uses the same element discovery as 'naturo see', supporting --depth,
-    --backend, --cascade, --visible-only, and --fill-gaps.
+    Uses the same recognition techniques as 'naturo see' — the composable flags
+    --uia/--msaa/--ia2/--jab/--cdp/--com/--ocr/--ai and the --fast/--deep presets
+    (default --fast). --visible-only and --filter refine what's drawn.
 
     Use --annotate to save an annotated screenshot instead of live overlay.
-    Use --backend win32 for VB6/ActiveX apps where UIA fails.
 
     \b
     Examples:
@@ -68,11 +70,11 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
       naturo highlight --id e11 --app notepad    # --id is an alias for the eN ref
       naturo highlight --app notepad --filter Button
       naturo highlight --app notepad --visible-only
-      naturo highlight --app feishu --cascade -d 10
+      naturo highlight --app feishu --deep -d 10
       naturo highlight --app notepad -A out.png  # Annotated screenshot
       naturo highlight --hwnd 10697004 -r e69 -r e77
       naturo highlight --app notepad --duration 10
-      naturo highlight --app legacy --backend win32
+      naturo highlight --app feishu --cdp        # web content only
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -107,24 +109,43 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
         all_refs.append(on_ref)
     refs_list = all_refs if all_refs else None
 
+    # Recognition uses the same technique vocabulary as `see` (shared resolver).
+    _tech = _techniques.resolve_techniques(
+        fast=want_fast, deep=want_deep, uia=want_uia, msaa=want_msaa,
+        ia2=want_ia2, jab=want_jab, cdp=want_cdp, com=want_com,
+        ocr=run_ocr, ai=want_ai, cascade=cascade, fill_gaps=fill_gaps,
+    )
     try:
-        # (#662) Fetch element tree via backend — same path as `see`,
-        # guaranteeing DPI-correct coordinates for all highlight modes.
-        # Supports --cascade for progressive recognition (UIA → CDP → AI).
+        # (#662) Fetch the element tree so highlight has DPI-correct coordinates.
         element_tree = None
         try:
-            if cascade:
-                from naturo.cascade import run_cascade
-                cascade_result = run_cascade(
-                    be, app=app, hwnd=handle, depth=depth,
-                    backend_name=backend,
-                    fill_gaps_ai=fill_gaps,
-                )
-                element_tree = cascade_result.tree
-            else:
+            if backend in ("win32", "win32hybrid"):
+                # Legacy Win32/VB6 rendering path — its own tree source.
                 element_tree = be.get_element_tree(
                     hwnd=handle, depth=depth, backend=backend,
                 )
+            else:
+                from naturo.cascade import run_cascade
+                _shot = None
+                if _tech.needs_screenshot:
+                    import tempfile as _tf
+                    _t = _tf.NamedTemporaryFile(suffix=".png", prefix="naturo_hl_",
+                                                delete=False)
+                    _t.close()
+                    try:
+                        _shot = be.capture_window(hwnd=handle, output_path=_t.name).path
+                    except Exception:
+                        _shot = None
+                cascade_result = run_cascade(
+                    be, app=app, hwnd=handle, depth=depth, backend_name="auto",
+                    fill_gaps_ai=_tech.fill_gaps_ai, ai_provider=ai_provider,
+                    ai_model=ai_model, ai_api_key=ai_api_key,
+                    screenshot_path=_shot, run_ocr=_tech.run_ocr,
+                    enable_uia=_tech.enable_uia, enable_msaa=_tech.enable_msaa,
+                    enable_ia2=_tech.enable_ia2, enable_jab=_tech.enable_jab,
+                    enable_cdp=_tech.enable_cdp, enable_com=_tech.enable_com,
+                )
+                element_tree = cascade_result.tree
         except Exception:
             logger.debug("Pre-fetch element tree failed, highlight will fallback", exc_info=True)
 

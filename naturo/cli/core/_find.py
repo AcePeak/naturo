@@ -94,13 +94,14 @@ def _detect_query_strategy(query: str) -> str | None:
     default="auto",
     help="Accessibility backend / interaction method: auto (default: tries all), uia, msaa (legacy apps), ia2 (Firefox/Thunderbird), jab (Java/Swing), cdp (Chrome/Electron web content), win32 (VB6/ActiveX), hybrid (per-node backend selection)",
 )
-@click.option("--provider", "ai_provider",
+@click.option("--ai-provider", "--provider", "ai_provider",
               type=click.Choice(["auto", "anthropic", "openai", "ollama"]),
-              default="auto", help="AI provider for --ai mode (auto, anthropic, openai, ollama)")
-@click.option("--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
-              help="AI model name override (e.g. claude-sonnet-4-20250514, gpt-4o)")
-@click.option("--api-key", "ai_api_key", default=None,
-              help="AI provider API key (overrides env var)")
+              default="auto", help="AI vision provider for --ai (default: auto). "
+                                   "(--provider is a legacy alias.)")
+@click.option("--ai-model", "--model", "ai_model", default=None, envvar="NATURO_AI_MODEL",
+              help="AI model override (e.g. claude-opus-4-6, gpt-4o). (--model is a legacy alias.)")
+@click.option("--ai-api-key", "--api-key", "ai_api_key", default=None,
+              help="AI provider API key (overrides env var). (--api-key is a legacy alias.)")
 def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str | None,
              actionable: bool, depth: int, limit: int, ai: bool,
              image_template: str | None, threshold: float, selector: str | None,
