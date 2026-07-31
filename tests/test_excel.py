@@ -8,8 +8,7 @@ tests use Click's CliRunner.
 import json
 import os
 import platform
-import sys
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -118,6 +117,41 @@ class TestExcelBackend:
         assert result["cell"] == "A1"
         assert result["sheet"] == "Sheet1"
         mock_ws.Range("A1").Value = "Hello"
+
+    @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
+    @patch("naturo.excel._get_excel")
+    def test_excel_write_reads_sheet_name_before_close(self, mock_get_excel):
+        """The sheet name must be read BEFORE wb.Close().
+
+        Regression: WPS 表格 (Excel-compatible COM) releases the worksheet proxy
+        on Close, so reading ``ws.Name`` afterwards raises OLE 0x800a01a8. MS
+        Excel tolerated the stale read, masking the bug. Model a worksheet whose
+        ``.Name`` fails once the workbook has been closed.
+        """
+        from naturo.excel import excel_write
+
+        closed = {"v": False}
+
+        class _WS:
+            @property
+            def Name(self):
+                if closed["v"]:
+                    raise RuntimeError("0x800a01a8: worksheet released after Close")
+                return "Sheet1"
+
+            def Range(self, _cell):
+                return MagicMock()
+
+        mock_wb = MagicMock()
+        mock_wb.ActiveSheet = _WS()
+        mock_wb.Close.side_effect = lambda *a, **k: closed.__setitem__("v", True)
+        mock_excel = MagicMock()
+        mock_excel.Workbooks.Open.return_value = mock_wb
+        mock_get_excel.return_value = mock_excel
+
+        result = excel_write(self.test_path, "A1", "Hello")
+        assert result["sheet"] == "Sheet1"
+        assert result["cell"] == "A1"
 
     @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
     @patch("naturo.excel._get_excel")
@@ -380,7 +414,8 @@ class TestExcelComRobustness:
         assert not fake.Dispatch.called, "must NOT plain-Dispatch (attaches to start-screen instance)"
 
     def test_com_apartment_brackets_body_with_coinit(self):
-        import sys, types
+        import sys
+        import types
         from unittest.mock import patch
         import naturo.excel as ex
         calls = []

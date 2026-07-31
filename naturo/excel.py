@@ -426,6 +426,12 @@ def excel_write(
             ws.Range(cell).Value = value
             written = {"type": "cell", "value": value}
 
+        # Capture the sheet name BEFORE closing: after wb.Close() the worksheet
+        # COM proxy is released and reading any member raises OLE 0x800a01a8.
+        # MS Excel tolerated the stale read; WPS 表格 (Excel-compatible COM)
+        # invalidates it immediately, so grab it while the workbook is open.
+        sheet_name = ws.Name
+
         # Save
         if os.path.isfile(abs_path):
             wb.Save()
@@ -436,7 +442,7 @@ def excel_write(
 
         return {
             "cell": cell,
-            "sheet": ws.Name,
+            "sheet": sheet_name,
             "path": abs_path,
             **written,
         }
