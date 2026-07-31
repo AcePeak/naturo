@@ -236,6 +236,39 @@ class CaptureMixin:
             return False
 
     @staticmethod
+    def _force_foreground(hwnd: int) -> None:
+        """Raise *hwnd* above other windows and give it the foreground.
+
+        A background process can't normally steal the foreground (Win32 foreground
+        lock), so this attaches to the current foreground thread's input queue
+        (``AttachThreadInput``) for the duration — the reliable way to bring an
+        occluded window to the top so a plain screen BitBlt can capture it
+        non-destructively (instead of the destructive PrintWindow). Best-effort:
+        any failure leaves the caller to fall back to PrintWindow.
+        """
+        try:
+            import ctypes
+
+            user32 = ctypes.windll.user32
+            fg = user32.GetForegroundWindow()
+            if fg == hwnd:
+                return
+            t_target = user32.GetWindowThreadProcessId(hwnd, None)
+            t_fg = user32.GetWindowThreadProcessId(fg, None) if fg else 0
+            attached = False
+            if t_fg and t_target and t_fg != t_target:
+                attached = bool(user32.AttachThreadInput(t_target, t_fg, True))
+            try:
+                user32.BringWindowToTop(hwnd)
+                user32.ShowWindow(hwnd, 5)  # SW_SHOW (no size/state change)
+                user32.SetForegroundWindow(hwnd)
+            finally:
+                if attached:
+                    user32.AttachThreadInput(t_target, t_fg, False)
+        except Exception as exc:  # pragma: no cover - platform guard
+            logger.debug("force-foreground failed for %s: %s", hwnd, exc)
+
+    @staticmethod
     def _window_is_minimized(hwnd: int) -> bool:
         try:
             import ctypes
@@ -473,17 +506,26 @@ class CaptureMixin:
         )
 
     def capture_window(self, window_title: Optional[str] = None, hwnd: Optional[int] = None,
-                       output_path: str = "capture.png") -> CaptureResult:
+                       output_path: str = "capture.png",
+                       raise_if_occluded: bool = True) -> CaptureResult:
         """Capture a screenshot of a specific window.
 
-        Uses PrintWindow for accurate off-screen capture. If neither
-        window_title nor hwnd is provided, captures the foreground window.
-        Output is PNG by default (matching Peekaboo).
+        Prefers a non-destructive screen BitBlt (which reads real composited
+        pixels and never blanks GPU/self-drawn windows) whenever the window is
+        visible. When the window is occluded and ``raise_if_occluded`` is set, it
+        is first brought to the foreground so the BitBlt can see it; only a window
+        that still cannot be made visible (or a minimized one) falls back to the
+        legacy PrintWindow path.
 
         Args:
             window_title: Window title to search for (not yet implemented — use hwnd).
             hwnd: Window handle. 0 or None for the foreground window.
             output_path: File path for the output image.
+            raise_if_occluded: When True (default), bring an occluded target to the
+                foreground so it can be captured non-destructively via BitBlt
+                instead of the destructive PrintWindow. Pass False for quiet
+                background capture that must not change window Z-order/focus (e.g.
+                multi-window compositing).
 
         Returns:
             CaptureResult with the output path and dimensions.
@@ -528,6 +570,28 @@ class CaptureMixin:
                 logger.debug(
                     "Visibility-first screen capture failed, using PrintWindow: %s",
                     exc)
+
+        # Occluded target: rather than PrintWindow it (which blanks self-drawn/GPU
+        # windows), raise it to the foreground so a non-destructive BitBlt can see
+        # it. Bringing a background window to the front reliably requires defeating
+        # the Win32 foreground lock (AttachThreadInput). Costs a focus change —
+        # acceptable when capturing a specific window, and far better than leaving
+        # it blanked. Skipped when raise_if_occluded=False (quiet compositing) or
+        # for minimized windows (nothing on screen to BitBlt).
+        if (not captured and raise_if_occluded and check_hwnd
+                and not self._window_is_minimized(check_hwnd)):
+            import time as _time
+            self._force_foreground(check_hwnd)
+            _time.sleep(0.2)
+            if self._window_is_unoccluded_onscreen(check_hwnd):
+                try:
+                    width, height, fmt = self._capture_window_via_screen(
+                        check_hwnd, output_path)
+                    captured = True
+                except Exception as exc:
+                    logger.debug(
+                        "Post-foreground screen capture failed, using PrintWindow: %s",
+                        exc)
 
         if not captured:
             # DLL writes BMP to the system temp dir (always ASCII-safe on
