@@ -24,7 +24,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 6 | Windows Notepad (hwnd 7932338) | WinUI/UIA | 2026-07-31 | ✅ 45 nodes | ✅ new-tab via UIA-Invoke | det | fully see-able + operable |
 | 7 | Chrome + web page (CDP, hwnd 657248) | Chromium/CDP | 2026-07-31 | ✅ 216 (UIA+CDP) | ✅ click via CDP, read_web_text | det | fully see-able + operable |
 | 8 | WPS Office main window (OpusApp, hwnd 920682) | OpusApp (Word-compat) + CEF | 2026-07-31 | ⚠️ native yes / CEF no | ✅ native by ref; CEF by coord | mixed | see-able for native UI; CEF parts not |
-| 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ cells have refs+coords | **det (COM)** | **SUPPORTED** after naturo fix `7dd71f8a` |
+| 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ **read + write** by ref (COM) | **det (COM)** | **SUPPORTED** — read `7dd71f8a`, write (S2) `d5b99e54` |
 
 ---
 
@@ -72,6 +72,23 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 - **see:** `naturo see --cascade` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
 - **operate:** `naturo click e50 --method cdp` dispatched via the debug protocol (bypasses input stack). 
 - **Status:** **fully see-able + operable** via CDP. This is naturo's clean path for all Chromium/web content.
+
+### 9. WPS 表格 spreadsheet grid — EXCEL7 child under the OpusApp window
+- **Framework:** Excel-compatible object model. WPS mirrors Excel's window hierarchy (an `EXCEL7`
+  grid nested under the top-level `OpusApp`) and exposes the standard Excel OM on that grid window
+  (`Application.Name == "Microsoft Excel"`), even though its `Application` registers in neither the
+  ROT nor the `Excel.Application` class moniker (different ProgID + bitness).
+- **see (read):** `naturo see --cascade` → **every non-empty cell** as a deterministic `com` DataItem
+  with value + screen coords + ref (e.g. `e260 [com]` = A1). Requires **no** extra flags. Fixed in
+  `7dd71f8a` (`is_excel_window` matches an EXCEL7-containing window; `AccessibleObjectFromWindow(
+  OBJID_NATIVEOM)` binds the Window OM cross-bitness). Verified vs the known test sheet.
+- **operate (write):** `naturo set <ref> <value>` on a `com_*` cell routes to `write_excel_cell`
+  (`ActiveSheet.Range(addr).Value = …`) — **deterministic, GUI/z-order-independent** (no coordinate
+  click, works with WPS in the background). Verified live: A1 `999`→`产品`, A2 `苹果`→`红苹果`,
+  B2 `10`→`12` (numeric), each round-tripped through `naturo see`. Numeric strings coerce to number;
+  leading-zero strings stay text. Fixed in `d5b99e54` (S2). The old coord-click path was rejected
+  (imprecise + hijacked by the foreground terminal).
+- **Status:** **SUPPORTED — read + write, deterministic (COM), easy (ref only, no aux params).**
 
 ### 8. WPS Office 12.1.0.28043 — main window hwnd 920682 (D:\...\Kingsoft\WPSOffice\...\wps.exe)
 - **Install:** via 电脑管家 software market, **driven by naturo** — `naturo click --coords` on the WPS「安装」tile (coord found by vision, action via naturo). 电脑管家 downloaded+installed silently; completion detected by the WPS processes/window appearing (the right naturo-native signal is `wait_for_window`, **not** reading 电脑管家's custom-painted "39%" progress, which isn't in any see tree).
