@@ -40,6 +40,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 22 | BitComet 2.18 (免登录, hwnd 2559864) | Win32/UIA | 2026-08-01 | ✅ full toolbar | ✅ by ref | det (UIA) | **SUPPORTED** — full toolbar (添加存档/Search/开始/停止/预览/目录/属性/删除/选项/退出) + 登录/注册 all by ref; login OPTIONAL (basic BT download 免登录, login only for faster speed). NSIS installer driven by naturo (OK→下一步→我接受×2→安装→完成). |
 | 23 | IrfanView 4.62 (免登录, hwnd 397930) | Win32/UIA | 2026-08-01 | ✅ full toolbar | ✅ by ref | det (UIA) | **SUPPORTED** — classic Win32; ToolBar Open/Slideshow/Save as/Print/Delete/Cut/Copy/Paste/Undo all named by ref. Installer driven by naturo (added "下一页(N)" to the driver's advance keywords). |
 | 24 | SumatraPDF 3.3.3 (免登录, hwnd 790664) | Win32 custom-drawn | 2026-08-01 | ⚠️ tabs/page-nav yes / icons no | ⚠️ page Edit + tabs by ref; icon buttons coord | partial | tabs (Tab e4), page-number Edit (e11) + toolbar structure see-able; owner-drawn icon toolbar buttons unnamed, PDF content not a11y-text (like PotPlayer). Installer driven by naturo (安装 button). |
+| 25 | PicPick (免登录, hwnd 1577086) | Win32 ribbon/UIA | 2026-08-01 | ✅ ribbon backstage | ✅ by ref | det (UIA) | **SUPPORTED** — ribbon image editor; Backstage view + 主页 pane + Back button by ref via UIA; first-run default dialog (是/否) also see-able. Installed silently via 电脑管家. (有道翻译 skipped — custom installer's agreement radios don't take synthetic clicks, like Bandizip.) |
 
 ---
 
