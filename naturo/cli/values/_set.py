@@ -266,6 +266,12 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
                                 resolved_role, resolved_name, ref,
                                 json_output, expanding=False,
                                 coords=resolved_coords)
+        elif resolved_aid and resolved_aid.startswith("com_"):
+            # Spreadsheet cell (WPS 表格 / Excel) grafted by the COM provider:
+            # UIA has no ValuePattern for it. Write deterministically via the
+            # Excel object model — GUI/z-order-independent (#S2).
+            _do_set_com_cell(target_hwnd, resolved_aid[len("com_"):],
+                             ref, value, json_output)
         else:
             _do_set_value(backend, target_hwnd, resolved_aid, resolved_role,
                           resolved_name, ref, value, json_output,
@@ -301,6 +307,47 @@ def _resolve_hwnd(backend, app, window_title):
         WindowNotFoundError: When the supplied selector matches no window.
     """
     return backend._resolve_hwnd(app=app, window_title=window_title)
+
+
+def _do_set_com_cell(hwnd, address, ref, value, json_output) -> None:
+    """Write a spreadsheet cell value via the Excel COM object model.
+
+    For ``com_*`` cells (WPS 表格 / Excel grid grafted by the COM provider),
+    which have no UIA ValuePattern. Deterministic and GUI-independent — no
+    coordinate click, no dependence on the window being foreground.
+
+    Args:
+        hwnd: Window handle whose EXCEL7 grid to bind (the snapshot's source).
+        address: Cell address (e.g. ``"A2"``).
+        ref: Original ref string (for display).
+        value: Value to write.
+        json_output: Whether to output JSON.
+    """
+    from naturo.cascade._com_excel import write_excel_cell
+
+    success = write_excel_cell(hwnd, address, value)
+    if not success:
+        emit_error(
+            "SET_VALUE_FAILED",
+            f"Failed to write spreadsheet cell {address}"
+            + (f" ({ref})" if ref else ""),
+            json_output,
+            suggested_action="Confirm the window hosts an Excel/WPS 表格 grid "
+            "(naturo see --cascade should list com_* cells) and that the cell "
+            "address is valid.",
+        )
+
+    if json_output:
+        click.echo(json_dumps({
+            "success": True,
+            "action": "set_value",
+            "ref": ref,
+            "cell": address,
+            "value": value,
+            "pattern": "COM",
+        }))
+    else:
+        click.echo(f"Set cell {address}: {value!r}")
 
 
 def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,

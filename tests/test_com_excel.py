@@ -55,9 +55,29 @@ class _FakeUsedRange:
         return self._grid.get((r, c), _FakeCell("", 0, 0, addr=f"r{r}c{c}"))
 
 
+class _FakeRange:
+    """A cell reference whose ``.Value`` setter records the write."""
+
+    def __init__(self, sheet, addr):
+        self._sheet = sheet
+        self._addr = addr
+
+    @property
+    def Value(self):
+        return self._sheet.writes.get(self._addr)
+
+    @Value.setter
+    def Value(self, v):
+        self._sheet.writes[self._addr] = v
+
+
 class _FakeSheet:
     def __init__(self, used):
         self.UsedRange = used
+        self.writes = {}
+
+    def Range(self, addr):
+        return _FakeRange(self, addr)
 
 
 class _FakeWindow:
@@ -160,6 +180,47 @@ def test_is_excel_window_detects_wps_excel7_descendant():
          patch.object(ce, "_iter_descendant_hwnds", return_value=[150, 160]):
         assert ce._find_excel_grid_hwnd(100) is None
         assert ce.is_excel_window(100) is False
+
+
+# ── write_excel_cell: deterministic COM write (S2) ────────────────────────
+
+def test_write_excel_cell_sets_value_via_com():
+    from naturo.cascade._com_excel import write_excel_cell
+    xl = _excel_with({(1, 1): _FakeCell("old", 0, 0, addr="A1")}, hwnd=123)
+    with patch("naturo.cascade._com_excel._get_running_excel", return_value=xl):
+        ok = write_excel_cell(123, "A2", "苹果")
+    assert ok is True
+    assert xl.ActiveWindow.ActiveSheet.writes["A2"] == "苹果"
+
+
+def test_write_excel_cell_coerces_numeric_strings():
+    from naturo.cascade._com_excel import write_excel_cell
+    xl = _excel_with({(1, 1): _FakeCell("x", 0, 0, addr="A1")}, hwnd=123)
+    with patch("naturo.cascade._com_excel._get_running_excel", return_value=xl):
+        assert write_excel_cell(123, "B1", "888") is True
+        assert write_excel_cell(123, "B2", "3.5") is True
+    sheet = xl.ActiveWindow.ActiveSheet
+    assert sheet.writes["B1"] == 888 and isinstance(sheet.writes["B1"], int)
+    assert sheet.writes["B2"] == 3.5 and isinstance(sheet.writes["B2"], float)
+
+
+def test_write_excel_cell_false_when_no_excel():
+    import naturo.cascade._com_excel as ce
+    from naturo.cascade._com_excel import write_excel_cell
+    with patch.object(ce, "_get_running_excel", return_value=None), \
+         patch.object(ce, "_get_window_via_native_om", return_value=None):
+        assert write_excel_cell(123, "A2", "x") is False
+
+
+def test_coerce_cell_value_types():
+    from naturo.cascade._com_excel import _coerce_cell_value
+    assert _coerce_cell_value("888") == 888
+    assert isinstance(_coerce_cell_value("888"), int)
+    assert _coerce_cell_value("-5") == -5
+    assert _coerce_cell_value("3.5") == 3.5
+    assert _coerce_cell_value("007") == "007"        # leading zero stays text
+    assert _coerce_cell_value("hello") == "hello"
+    assert _coerce_cell_value(42) == 42              # non-str passthrough
 
 
 # ── cascade graft: com cells reach the fused tree, tagged deterministic ────

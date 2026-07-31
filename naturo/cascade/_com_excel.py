@@ -188,6 +188,27 @@ def _get_window_via_native_om(hwnd: int):
         return None
 
 
+def _resolve_excel_window(hwnd: int):
+    """Return the Excel ``Window`` OM for ``hwnd`` (real Excel or an
+    Excel-compatible suite like WPS 表格), or ``None``.
+
+    Tries the running ``Excel.Application`` (class moniker / ROT) first, then
+    binds the ``Window`` straight off the ``EXCEL7`` grid via ``OBJID_NATIVEOM``
+    — the path that works for WPS, whose ``Application`` registers in neither.
+    Shared by the cell reader (:func:`fetch_excel_cells`) and writer
+    (:func:`write_excel_cell`) so both resolve the target window identically.
+    """
+    xl = _get_running_excel()
+    win = _window_for_hwnd(xl, hwnd) if xl is not None else None
+    if win is None:
+        # Excel-compatible suites (e.g. WPS 表格) don't register in the ROT and
+        # aren't the Excel.Application class moniker — bind the Window OM directly
+        # from the EXCEL7 grid window. (Also a last resort for real Excel when the
+        # moniker/ROT are transiently unavailable.)
+        win = _get_window_via_native_om(hwnd)
+    return win
+
+
 def _window_for_hwnd(xl, hwnd: int):
     """Find the Excel ``Window`` whose ``.Hwnd`` matches ``hwnd`` (else active)."""
     try:
@@ -259,14 +280,7 @@ def fetch_excel_cells(
     if max_cols is None:
         max_cols = _DEFAULT_MAX_SCAN_COLS
 
-    xl = _get_running_excel()
-    win = _window_for_hwnd(xl, hwnd) if xl is not None else None
-    if win is None:
-        # Excel-compatible suites (e.g. WPS 表格) don't register in the ROT and
-        # aren't the Excel.Application class moniker — bind the Window OM directly
-        # from the EXCEL7 grid window. (Also a last resort for real Excel when the
-        # moniker/ROT are transiently unavailable.)
-        win = _get_window_via_native_om(hwnd)
+    win = _resolve_excel_window(hwnd)
     if win is None:
         return []
     try:
@@ -302,3 +316,55 @@ def fetch_excel_cells(
             max_cells, max_rows, max_cols,
         )
     return elements
+
+
+def _coerce_cell_value(value):
+    """Coerce a text value to the natural Excel cell type.
+
+    ``naturo set`` hands us a string; writing ``"888"`` verbatim would store
+    text (left-aligned) where the user means the number 888. Parse ints and
+    floats so they land as numbers; leave everything else (including
+    number-like strings with leading zeros / plus signs that ``int`` rejects)
+    as text — matching what a user typing into the cell would get.
+    """
+    if not isinstance(value, str):
+        return value
+    s = value.strip()
+    if s.lstrip("-").isdigit():
+        # Coerce to int only when it round-trips — keeps leading-zero / plus
+        # strings (IDs, zip codes, "007") as text, like typing into the cell.
+        try:
+            n = int(s)
+            if str(n) == s:
+                return n
+        except ValueError:
+            pass
+        return value  # all-digit but not int-round-trippable (leading zero) → text
+    if any(ch in s for ch in ".eE"):
+        try:
+            return float(s)
+        except (ValueError, TypeError):
+            pass
+    return value
+
+
+def write_excel_cell(hwnd: int, address: str, value) -> bool:
+    """Write ``value`` into cell ``address`` (e.g. ``"A2"``) of the active sheet.
+
+    Deterministic COM write — the counterpart to :func:`fetch_excel_cells`'s
+    read. Resolves the same ``Window`` OM (real Excel *or* an Excel-compatible
+    suite such as WPS 表格 via ``OBJID_NATIVEOM``) and assigns
+    ``ActiveSheet.Range(address).Value``. GUI/z-order-independent, so it does not
+    depend on the window being foreground or on a coordinate hit-test. Returns
+    ``True`` on success, ``False`` on any failure (no Excel bound, bad address,
+    COM error) — the caller reports the failure.
+    """
+    win = _resolve_excel_window(hwnd)
+    if win is None:
+        return False
+    try:
+        win.ActiveSheet.Range(address).Value = _coerce_cell_value(value)
+        return True
+    except Exception as exc:
+        logger.debug("COM/Excel: write %s = %r failed: %s", address, value, exc)
+        return False
