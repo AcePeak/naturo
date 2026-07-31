@@ -70,6 +70,7 @@ def find_installer_dialog(substr, pid=None, tries=4, wait=1.5):
     for _ in range(tries):
         by_pid = []
         by_title = []
+        by_class = []  # localized-title fallback: match installer-specific classes
 
         @ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)
         def cb(h, _):
@@ -87,9 +88,16 @@ def find_installer_dialog(substr, pid=None, tries=4, wait=1.5):
                 by_pid.append((h, b.value, wp.value, w * ht))
             if substr in b.value:
                 by_title.append((h, b.value, wp.value, w * ht))
+            # A localized language/setup form (e.g. Inno's "选择安装语言") may not
+            # contain the caller's substring; match its distinctive class so the
+            # first resolve still works without the caller guessing the CJK title.
+            # Deliberately excludes the generic #32770 (too many dialogs share it).
+            if cls.value in ("TSelectLanguageForm", "TSelectSetupLanguageForm",
+                             "TWizardForm", "MsiDialogCloseClass"):
+                by_class.append((h, b.value, wp.value, w * ht))
             return True
         u.EnumWindows(cb, 0)
-        pool = by_pid or by_title
+        pool = by_pid or by_title or by_class
         if pool:
             pool.sort(key=lambda c: c[3])  # largest wins (the main wizard page)
             h, title, wp, _ = pool[-1]
