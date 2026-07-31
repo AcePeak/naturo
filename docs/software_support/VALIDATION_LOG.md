@@ -163,6 +163,32 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ---
 
+## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
+
+**Installed + evaluated this run: 14 apps (#12–25).** Wide tech coverage, mostly
+SUPPORTED via UIA: Qt (VLC), Win32 (WinRAR/Everything/MPC-HC/IrfanView/BitComet),
+Electron (VS Code/Typora), Win32-ribbon (Foxit/PicPick), custom-skin (PotPlayer/
+Format Factory/SumatraPDF — partial), Gecko/UIA (Firefox chrome). Real naturo
+findings: capture fix enables driving the **elevated** 电脑管家 market by
+vision-located coords; node-count `see` backstop (huge lists); Firefox lazy-a11y /
+`--ia2` gap.
+
+**Installer-resistance pattern (finding).** ~40% of the harder apps have installers
+that resist generic naturo automation and were **skipped**:
+- **Custom agreement-gated cards** (synthetic clicks don't fire / a required
+  agreement checkbox stays unchecked, disabling the install button): Bandizip &
+  HoneyView (Bandisoft CEF card), 有道翻译, QQ影音. 
+- **MSI wizards** that pop an error/warning dialog or hang: Inkscape, KMPlayer.
+- **Non-standard button text / finicky pages**: EditPlus, EmEditor (driver gained
+  keyword + a position fallback; still app-specific).
+- **Tray-only** (no main window to evaluate): Snipaste, Ditto.
+
+Reliable path: standard NSIS/Inno/silent installers driven by
+`tools/drive_installer.py` (naturo see→click by ref) + top-left search-result at a
+fixed coord. The next agent continues from #26; prefer standard-installer apps and
+verify the search's top result matches before clicking (columns are at screen
+x≈700/998/1298).
+
 ## Open items / for the next agent
 
 - **naturo `see` node-count safety backstop (perf).** Default `see` is unlimited depth
