@@ -31,16 +31,33 @@ from naturo.value_preview import bounded_value
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session name for isolation (default: NATURO_SESSION env or 'default')")
-@click.option("--cascade", is_flag=True,
-              help="Add an AI-vision fallback (captures a screenshot) for regions no "
-                   "structural technique reached. NOTE: the fused multi-technique tree "
-                   "— UIA + MSAA + JAB/IA2 + CDP web content + Excel COM — is ALREADY "
-                   "the default under --backend auto; this flag only adds the vision layer.")
-@click.option("--fill-gaps", "fill_gaps", is_flag=True,
-              help="Use AI vision to fill uncovered UI regions (requires AI provider)")
+@click.option("--cascade", is_flag=True, hidden=True,
+              help="Deprecated alias for --ai (adds the AI-vision layer).")
+@click.option("--fill-gaps", "fill_gaps", is_flag=True, hidden=True,
+              help="Deprecated alias for --ai.")
 @click.option("--ocr", "run_ocr", is_flag=True,
-              help="Run local OCR (rapidocr) to recover text baked into images/canvas; "
-                   "nodes are tagged 'ocr' (uncertain) and warned")
+              help="Recognition technique: local OCR (rapidocr) — recover text baked "
+                   "into images/canvas; nodes tagged 'ocr' (uncertain).")
+# ── Recognition techniques (composable; the active set is the UNION of every one
+# given). Presets --fast/--deep expand to a set and join the union. If NONE is
+# given, defaults to --fast. UIA/MSAA/IA2/JAB/CDP/COM are deterministic/structured
+# and only run when the window actually exposes them (cheap when they don't); OCR
+# and AI are the uncertain pixel layers. ──
+@click.option("--fast", "want_fast", is_flag=True,
+              help="Preset: all fast structured techniques (uia+msaa+ia2+jab+cdp+com), "
+                   "each auto-triggered only where applicable. This is the DEFAULT "
+                   "when no technique is given.")
+@click.option("--deep", "want_deep", is_flag=True,
+              help="Preset: the full stack — every structured technique PLUS ocr + ai.")
+@click.option("--uia", "want_uia", is_flag=True, help="Technique: UIAutomation (modern Windows apps).")
+@click.option("--msaa", "want_msaa", is_flag=True, help="Technique: MSAA (legacy MFC/VB6/Delphi).")
+@click.option("--ia2", "want_ia2", is_flag=True, help="Technique: IAccessible2 (Firefox/Thunderbird/LibreOffice).")
+@click.option("--jab", "want_jab", is_flag=True, help="Technique: Java Access Bridge (Swing/AWT).")
+@click.option("--cdp", "want_cdp", is_flag=True, help="Technique: Chrome DevTools Protocol web/DOM (Chromium/Electron).")
+@click.option("--com", "want_com", is_flag=True, help="Technique: COM object model (Excel/WPS spreadsheet cells).")
+@click.option("--ai", "want_ai", is_flag=True,
+              help="Technique: AI vision (needs a provider; slower). Recovers structure "
+                   "from pixels for windows that expose no accessibility.")
 @click.option("--excel-max-cells", "excel_max_cells", type=int, default=None,
               help="Cascade Excel: max non-empty cells to emit (default 500). "
                    "Raise for large sheets; per-invocation, so concurrent runs "
@@ -84,6 +101,8 @@ from naturo.value_preview import bounded_value
 def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | None,
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
+        want_fast: bool, want_deep: bool, want_uia: bool, want_msaa: bool,
+        want_ia2: bool, want_jab: bool, want_cdp: bool, want_com: bool, want_ai: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
         excel_max_cells: int | None, excel_max_rows: int | None, excel_max_cols: int | None,
         json_output: bool, compact: bool, full_text: bool, backend: str, app_id: str | None,
@@ -170,17 +189,50 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     try:
         be = _common._get_backend(json_output)
 
+        # ── Recognition-technique selection (composable union; default --fast) ──
+        # Each technique is a plain flag; the active set is the union of every one
+        # given, plus any preset expansion. Nothing given → --fast. Deterministic
+        # bases (uia/msaa/ia2) still need at least one for the window frame that
+        # additive providers hang off, so fall back to UIA if the user gated them
+        # all away.
+        _FAST_SET = {"uia", "msaa", "ia2", "jab", "cdp", "com"}
+        _flag_techs = {
+            "uia": want_uia, "msaa": want_msaa, "ia2": want_ia2,
+            "jab": want_jab, "cdp": want_cdp, "com": want_com,
+            "ocr": run_ocr,
+            # --fill-gaps / --cascade are deprecated aliases for --ai
+            "ai": want_ai or fill_gaps or cascade,
+        }
+        _selected: set[str] = {t for t, on in _flag_techs.items() if on}
+        if want_fast:
+            _selected |= _FAST_SET
+        if want_deep:
+            _selected |= (_FAST_SET | {"ocr", "ai"})
+        if not _selected:
+            _selected = set(_FAST_SET)  # default
+        _bases = _selected & {"uia", "msaa", "ia2"}
+        if not _bases:
+            _bases = {"uia"}  # need a base tree for bounds
+        enable_uia = "uia" in _bases
+        enable_msaa = "msaa" in _bases
+        enable_ia2 = "ia2" in _bases
+        enable_jab = "jab" in _selected
+        enable_cdp = "cdp" in _selected
+        enable_com = "com" in _selected
+        _want_ai = "ai" in _selected
+        _want_ocr = "ocr" in _selected
+
         # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
         cascade_stats = None
-        if cascade or backend in ("auto", "hybrid", "cdp"):
-            # (#275) Auto-capture screenshot for cascade mode so AI vision
-            # fallback can trigger when UIA tree is too shallow.
+        if cascade or _want_ai or _want_ocr or backend in ("auto", "hybrid", "cdp"):
+            # Auto-capture a screenshot when a pixel technique (AI/OCR) is active
+            # so those providers have an image to read (#275).
             # (#694) Use capture_window with resolved hwnd so the screenshot
             # captures the target app, not the foreground terminal window.
             cascade_screenshot = path
             _cascade_tmp_screenshot = None
             cascade_capture_result = None
-            if not cascade_screenshot and cascade:
+            if not cascade_screenshot and (cascade or _want_ai or _want_ocr):
                 import tempfile as _tmpfile
                 _cascade_tmp_screenshot = _tmpfile.NamedTemporaryFile(
                     suffix=".png", prefix="naturo_cascade_", delete=False,
@@ -235,7 +287,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     depth=depth,
                     backend_name=backend,
                     coverage_target=coverage_target,
-                    fill_gaps_ai=fill_gaps,
+                    fill_gaps_ai=_want_ai,
                     ai_provider=ai_provider,
                     ai_model=ai_model,
                     ai_api_key=ai_api_key,
@@ -244,10 +296,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                         cascade_capture_result.scale_factor
                         if cascade_capture_result else 1.0
                     ),
-                    run_ocr=run_ocr,
+                    run_ocr=_want_ocr,
                     excel_max_cells=excel_max_cells,
                     excel_max_rows=excel_max_rows,
                     excel_max_cols=excel_max_cols,
+                    enable_uia=enable_uia,
+                    enable_msaa=enable_msaa,
+                    enable_ia2=enable_ia2,
+                    enable_jab=enable_jab,
+                    enable_cdp=enable_cdp,
+                    enable_com=enable_com,
                 )
                 tree = cascade_result.tree
                 cascade_stats = cascade_result.stats
@@ -641,6 +699,21 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     click.echo("Tip: use 'naturo click --selector \"<selector>\"' for stable targeting across sessions.")
                 else:
                     click.echo("Tip: use 'naturo click e<N>' to click an element by its ref.")
+
+            # Empty/shallow structured tree + no pixel technique chosen → nudge
+            # toward --ocr / --ai (some windows expose no accessibility at all;
+            # those are the pixel-recovery paths).
+            if not (_want_ocr or _want_ai) and tree is not None:
+                try:
+                    from naturo.cascade._run import _flatten as _flat
+                    from naturo.cascade._run import _is_shallow_tree
+                    if _is_shallow_tree(_flat(tree))[0]:
+                        click.echo(
+                            "Note: this window exposed little/no structured "
+                            "content. Try '--ocr' (read on-screen text) or "
+                            "'--ai' (AI vision) to recover it.", err=True)
+                except Exception:
+                    pass
 
             # Print cascade stats when --stats is requested
             if show_stats and cascade_stats:

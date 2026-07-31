@@ -371,6 +371,12 @@ def run_cascade(
     excel_max_cells: Optional[int] = None,
     excel_max_rows: Optional[int] = None,
     excel_max_cols: Optional[int] = None,
+    enable_uia: bool = True,
+    enable_msaa: bool = True,
+    enable_ia2: bool = True,
+    enable_jab: bool = True,
+    enable_cdp: bool = True,
+    enable_com: bool = True,
 ) -> CascadeResult:
     """Run progressive recognition and return a merged element tree.
 
@@ -491,9 +497,22 @@ def run_cascade(
     # "jab ok" stat that suppresses the 2b fallback merge (losing JAB entirely
     # when class detection misses).
     if backend_name == "auto":
-        providers_to_try = ["uia", "msaa"]
-        if _class_pref:
+        providers_to_try = []
+        if enable_uia:
+            providers_to_try.append("uia")
+        if enable_msaa:
+            providers_to_try.append("msaa")
+        if _class_pref == "jab" and enable_jab:
+            providers_to_try.append("jab")
+        elif _class_pref == "ia2" and enable_ia2:
+            providers_to_try.append("ia2")
+        elif _class_pref and _class_pref not in ("jab", "ia2"):
             providers_to_try.append(_class_pref)
+        # A base tree is needed for the window frame/bounds that additive
+        # (CDP/COM/AI/OCR) providers hang off — keep UIA if the caller gated
+        # every structured base away.
+        if not providers_to_try:
+            providers_to_try = ["uia"]
     else:
         providers_to_try = [backend_name]
 
@@ -581,7 +600,7 @@ def run_cascade(
         merged_elements.extend(_best_flat[1:])  # skip root (merged below)
 
     # ── Provider 2: CDP (Electron/CEF apps) ─────────────────────────────────
-    should_try_cdp = (
+    should_try_cdp = enable_cdp and (
         coverage_target > 0
         or backend_name == "auto"
         or backend_name in ("cdp",)
@@ -682,7 +701,7 @@ def run_cascade(
     already_have_jab = any(
         p.name == "jab" and p.status == "ok" for p in stats.providers
     )
-    if backend_name == "auto" and root_tree is not None and not already_have_jab:
+    if enable_jab and backend_name == "auto" and root_tree is not None and not already_have_jab:
         resolved_hwnd = hwnd
         if resolved_hwnd is None:
             try:
@@ -736,7 +755,7 @@ def run_cascade(
     already_have_com = any(
         p.name == "com" and p.status == "ok" for p in stats.providers
     )
-    if backend_name == "auto" and root_tree is not None and not already_have_com:
+    if enable_com and backend_name == "auto" and root_tree is not None and not already_have_com:
         com_hwnd = hwnd
         if com_hwnd is None:
             try:
