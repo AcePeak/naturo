@@ -26,6 +26,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 8 | WPS Office main window (OpusApp, hwnd 920682) | OpusApp (Word-compat) + CEF | 2026-07-31 | ⚠️ native yes / CEF no | ✅ native by ref; CEF by coord | mixed | see-able for native UI; CEF parts not |
 | 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ **read + write** by ref (COM) | **det (COM)** | **SUPPORTED** — read `7dd71f8a`, write (S2) `d5b99e54` |
 | 10 | **WPS 文字 / file COM** (`.docx` / `.xlsx` by path) | Word/Excel-compat COM servers | 2026-07-31 | ✅ full text / cells | ✅ **read + write + save** | **det (COM)** | **SUPPORTED** — `word_*` as-is; `excel_*` fixed `c9d070b4` |
+| 11 | 钉钉安装 DingTalk installer (`*-Release.*.exe`, hwnd 1377744) | custom GPU-composited | 2026-07-31 | ❌ empty (bare MSAA Client) | ❌ can't locate button | — | **install UI not automatable here** — see below (needs user or another install channel) |
 
 ---
 
@@ -73,6 +74,28 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 - **see:** `naturo see --cascade` → **216 nodes** (UIA 38 chrome + **CDP 178 DOM**), deterministic, token-lean. `read_web_text` returned the rendered 百度热搜 ranking (valuable data).
 - **operate:** `naturo click e50 --method cdp` dispatched via the debug protocol (bypasses input stack). 
 - **Status:** **fully see-able + operable** via CDP. This is naturo's clean path for all Chromium/web content.
+
+### 11. 钉钉 (DingTalk) installer — 「钉钉安装」window (App#3, install step)
+- **Install channel (naturo-driven):** used naturo's **CDP browser** to open `dingtalk.com/download`,
+  extracted the Windows client link deterministically (`browser eval`), and downloaded the official
+  bootstrapper `dingtalk_downloader.exe` (2.8 MB). Ran it via `naturo app launch`; it fetched the full
+  472 MB installer `8.3.45-Release.260720005.exe` and opened the 「钉钉安装」window. **This part worked
+  cleanly** (no winget, no coord).
+- **Installer window — NOT automatable on this host (three compounding blockers):**
+  1. **Not see-able:** `see --cascade` → a single bare `[Client] [msaa]` node, no buttons/text (custom
+     GPU-composited UI, no UIA/MSAA content — like 电脑管家's DirectUI).
+  2. **Not capturable:** both window-capture (`PrintWindow`) and full-screen capture render the window
+     region **blank white** — it draws to a DirectComposition/hardware overlay the capture APIs miss.
+     So vision can't locate its buttons either (there is nothing to see).
+  3. **Behind the foreground + no silent flag:** the window sits below the terminal in z-order (a blind
+     `click --coords` at the likely button spot hit the terminal, hwnd 199508, not the installer), and
+     `--args /S` (NSIS silent) is ignored — it just re-shows the GUI.
+- **Status:** **install UI not automatable here.** Not a naturo see/operate gap we can close by code —
+  the surface emits no a11y and no pixels. Options for the next step: (a) the **user clicks 开始安装**
+  in the installer (visible to them, ~2 s) — preferred, then naturo resumes for the actual app; (b) a
+  correct silent-install switch if one exists for this build; (c) install via 电脑管家 market (also
+  coord-blind). **The real target is the DingTalk *app*** (Electron → CDP DOM read, the moat test) +
+  **QR login (needs the user)** — both come after install.
 
 ### 10. WPS 文字 (Writer) + file-based Office COM — `.docx` / `.xlsx` by path
 - **Framework:** WPS registers the standard Office COM ProgIDs as compat servers —
