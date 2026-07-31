@@ -47,7 +47,12 @@ def _iter_descendant_hwnds(hwnd: int) -> List[int]:
         import win32gui
 
         found: List[int] = []
-        win32gui.EnumChildWindows(hwnd, lambda h, _: found.append(h) or True, None)
+
+        def _collect(child_hwnd: int, _lparam: int) -> bool:
+            found.append(child_hwnd)
+            return True  # keep enumerating
+
+        win32gui.EnumChildWindows(hwnd, _collect, None)
         return found
     except Exception as exc:  # pragma: no cover - platform/dep guard
         logger.debug("COM/Excel: EnumChildWindows(%s) failed: %s", hwnd, exc)

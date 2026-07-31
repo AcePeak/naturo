@@ -413,7 +413,7 @@ class TestDesktopMCP:
 
     def test_mcp_tools_exist(self):
         """Virtual desktop MCP tools are registered."""
-        pytest.importorskip("mcp")
+        pytest.importorskip("mcp.server.fastmcp")
         from naturo.mcp_server import create_server
 
         with patch("naturo.mcp_server.get_backend") as mock_get:
