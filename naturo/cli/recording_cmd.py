@@ -275,7 +275,7 @@ def record_show(recording_id: str, json_output: bool):
 
 @click.command("delete")
 @click.argument("recording_id")
-@click.option("--force", is_flag=True, help="Skip confirmation.")
+@click.option("--yes", "-y", "--force", "force", is_flag=True, help="Skip the confirmation prompt (--force is a legacy alias).")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def record_delete(recording_id: str, force: bool, json_output: bool):
     """Delete a saved recording.
@@ -283,7 +283,7 @@ def record_delete(recording_id: str, force: bool, json_output: bool):
     \b
     Examples:
         naturo record delete rec_20260401_120000
-        naturo record delete rec_20260401_120000 --force
+        naturo record delete rec_20260401_120000 --yes
     """
     try:
         rec = load_recording(recording_id)

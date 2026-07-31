@@ -365,7 +365,7 @@ def selector_show(app_name: str, json_output: bool):
 @click.command("delete")
 @click.argument("app_name")
 @click.argument("name")
-@click.option("--force", is_flag=True, help="Skip confirmation.")
+@click.option("--yes", "-y", "--force", "force", is_flag=True, help="Skip the confirmation prompt (--force is a legacy alias).")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def selector_delete(app_name: str, name: str, force: bool, json_output: bool):
     """Delete a saved selector.
@@ -403,7 +403,7 @@ def selector_delete(app_name: str, name: str, force: bool, json_output: bool):
 
 @click.command("clear")
 @click.argument("app_name")
-@click.option("--force", is_flag=True, help="Skip confirmation.")
+@click.option("--yes", "-y", "--force", "force", is_flag=True, help="Skip the confirmation prompt (--force is a legacy alias).")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def selector_clear(app_name: str, force: bool, json_output: bool):
     """Delete all user selectors for an app.

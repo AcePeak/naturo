@@ -82,7 +82,7 @@ def window() -> None:
 @window.command()
 @click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -136,7 +136,7 @@ def focus(ctx, name, app, title, hwnd, app_id, json_output) -> None:
 @window.command()
 @click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @click.option("--force", is_flag=True, help="Force terminate the process")
 @app_id_option
@@ -192,7 +192,7 @@ def close(ctx, name, app, title, hwnd, force, app_id, json_output) -> None:
 @window.command()
 @click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -244,7 +244,7 @@ def minimize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
 @window.command()
 @click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -296,7 +296,7 @@ def maximize(ctx, name, app, title, hwnd, app_id, json_output) -> None:
 @window.command()
 @click.argument("name", required=False, default=None)
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
@@ -347,7 +347,7 @@ def restore(ctx, name, app, title, hwnd, app_id, json_output) -> None:
 
 @window.command(name="move")
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--x", type=int, default=None, help="Target X position")
@@ -407,7 +407,7 @@ def window_move(ctx, app, title, hwnd, app_id, x, y, json_output) -> None:
 
 @window.command()
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--width", type=int, default=None, help="New width in pixels")
@@ -476,7 +476,7 @@ def resize(ctx, app, title, hwnd, app_id, width, height, json_output) -> None:
 
 @window.command(name="set-bounds")
 @click.option("--app", help="Application/process name (partial match)")
-@click.option("--title", help="Window title pattern (partial match)")
+@click.option("--title", "--window", "title", help="Window title pattern (substring match)")
 @click.option("--hwnd", type=int, help="Window handle")
 @app_id_option
 @click.option("--x", type=int, default=None, help="X position")

@@ -217,7 +217,7 @@ def visual_list(json_output: bool):
 
 @click.command("delete")
 @click.argument("name")
-@click.option("--force", is_flag=True, help="Skip confirmation.")
+@click.option("--yes", "-y", "--force", "force", is_flag=True, help="Skip the confirmation prompt (--force is a legacy alias).")
 @click.option("-j", "--json", "json_output", is_flag=True, help="Output JSON.")
 def visual_delete(name: str, force: bool, json_output: bool):
     """Delete a saved baseline.
