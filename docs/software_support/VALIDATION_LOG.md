@@ -30,6 +30,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 12 | PotPlayer (免登录, hwnd 4328738) | Win32 custom skin | 2026-08-01 | ⚠️ frame+playlist yes / controls no | ⚠️ playlist List by ref; transport coord | partial | installed via 电脑管家 (naturo-driven); UIA exposes window + playlist List + search Edit; skinned transport controls have no a11y |
 | 13 | VLC media player 3.0.23 (免登录, hwnd 1707074) | Qt (QAccessible) | 2026-08-01 | ✅ full menu + controls | ✅ menus/sliders/transport by ref | det (UIA) | **SUPPORTED** — full menu bar (媒体/播放/…/帮助), seek+volume Sliders, transport Buttons all UIA by ref; first-run privacy dialog also see-able (Button 继续) |
 | 14 | WinRAR 7.23 (免登录, hwnd 724354) | Win32/UIA | 2026-08-01 | ✅ menus/toolbar/list (`--depth`) | ✅ by ref | det (UIA) | **SUPPORTED** — `see --depth 2` instant: MenuBar 应用程序, toolbar Pane, file List, StatusBar. ⚠️ **naturo perf finding**: default unlimited `see` took ~200s walking the huge D:-drive file List — see "Open items" (node-count safety backstop) |
+| 15 | Visual Studio Code 1.131 (免登录, hwnd 10291472) | Electron (Chromium→UIA) | 2026-08-01 | ✅ menu + structure (`--depth`) | ✅ menus by ref | det (UIA) | **SUPPORTED** — Electron; `see --depth 4` exposes Web-content Document + MenuBar (File/Edit/Selection/View/Go/Run) by ref. Deeper (sidebar/editor/terminal) via more depth or CDP. Same big-tree perf caveat as #14. Inno installer driven by naturo (license radio + wizard). |
 
 ---
 
