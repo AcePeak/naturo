@@ -16,8 +16,8 @@ import time
 TITLE = sys.argv[1] if len(sys.argv) > 1 else "安装"
 MAX = int(sys.argv[2]) if len(sys.argv) > 2 else 10
 
-ADVANCE = ["OK", "确定", "下一页", "我接受", "同意", "下一步", "安装(", "安装 ", "开始安装", "立即安装",
-           "完成", "结束", "关闭(", "Install", "Next", "I Agree", "Agree", "Finish", "Done", "Close"]
+ADVANCE = ["OK", "确定", "下一页", "Start Copy", "Start", "开始", "我接受", "同意", "下一步", "安装(", "安装 ", "开始安装", "立即安装",
+           "完成", "结束", "关闭(", "Install", "Next", "I Agree", "Agree", "Accept", "Finish", "Done", "Close"]
 AVOID = ["取消", "Cancel", "上一步", "Back", "跳过", "浏览", "Browse", "最小化",
          "最大化", "打开", "显示细节", "Details"]
 u = ctypes.windll.user32
@@ -59,9 +59,9 @@ def see(h):
     btns = []
     radios = []
     for line in out.splitlines():
-        m = re.search(r'\[Button\]\s+"([^"]*)".*?(e\d+)', line)
+        m = re.search(r'\[Button\]\s+"([^"]*)"\s+\((\d+),(\d+)\s+(\d+)x(\d+)\).*?(e\d+)', line)
         if m:
-            btns.append((m.group(1), m.group(2)))
+            btns.append((m.group(1), m.group(6), int(m.group(2)), int(m.group(3)), int(m.group(4))))
         r = re.search(r'\[(?:RadioButton|CheckBox)\]\s+"([^"]*)".*?(e\d+)', line)
         if r:
             nm = r.group(1)
@@ -86,15 +86,25 @@ for step in range(1, MAX + 1):
         print(f"[{step}] accepted license radio {rref} '{rname}'"); time.sleep(0.6)
     # pick advance button not in AVOID
     target = None
-    for name, ref in btns:
+    for name, ref, bx, by, bw in btns:
         if any(a in name for a in AVOID):
             continue
         if any(a in name for a in ADVANCE):
             target = (name, ref)
             break
     if not target:
-        print(f"[{step}] '{title}': no advance button among {[b[0] for b in btns]}")
-        break
+        # Position fallback: click the bottom-most, reasonably-wide button that
+        # isn't a Cancel/nav/window control (usually the primary advance action).
+        cands = [(n, rf, bx, by, bw) for (n, rf, bx, by, bw) in btns
+                 if not any(a in n for a in AVOID) and bw >= 40]
+        if cands:
+            cands.sort(key=lambda c: (c[3], c[2]))  # bottom-most, then right
+            n, rf = cands[-1][0], cands[-1][1]
+            target = (n, rf)
+            print(f"[{step}] '{title}': position-fallback -> '{n}'")
+        else:
+            print(f"[{step}] '{title}': no advance button among {[b[0] for b in btns]}")
+            break
     name, ref = target
     r = subprocess.run(["python", "-m", "naturo", "click", ref],
                        capture_output=True, text=True, encoding="utf-8", errors="ignore")
