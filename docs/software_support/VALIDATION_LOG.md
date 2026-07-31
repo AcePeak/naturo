@@ -58,6 +58,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 40 | Windows 画图 (Paint, hwnd 268682) | Win11 WinUI XAML (MSPaintApp) | 2026-08-01 | ✅ full WinUI toolbar/tools by ref (124 nodes) | ✅ tools by ref | det (UIA) | **SUPPORTED — deep modern-WinUI coverage.** `--depth 9` exposes the whole ribbon/tool surface by ref: toolbar 保存/共享/撤消/重做/打开设置; 工具 group 铅笔/填充/文本/橡皮擦/颜色选取器/放大镜; 图像 group 选择/裁剪/删除背景/旋转/翻转/重设大小; 画笔 + 形状 (形状轮廓/形状填充) — 124 nodes total. Core features 免登录 (optional MS sign-in button present but not required). ⚠️ **naturo finding — FIXED this session (fd inheritance on launch):** `naturo app launch` of a *persistent* GUI app made the launched child **inherit the CLI's stdout/stderr fds**, so when the CLI's output is captured through a pipe (as every agent/harness does), the pipe never sees EOF and the caller **appears to hang until the app is closed** (verified: same launch redirected to a *file* returns in ~1s; through `| tail` it blocked for minutes). Root cause was mis-diagnosed at first as `start /wait` — it is **not** (the on-PATH branch already uses non-blocking `start`). Real fix: launch children detached from the parent's stdio (`stdout/stderr/stdin=DEVNULL`) so they can't hold the caller's pipe open — see Open items / commit. (Also note: on this Win11 there is **no** `C:\Windows\System32\mspaint.exe`; Paint is the Store app, launched by name.) Already-present system app; market-download stall. |
 | 41 | Windows 文件资源管理器 (File Explorer, hwnd 1183248) | Win32 shell / UIA List (CabinetWClass + DirectUIHWND) | 2026-08-01 | ✅ file/folder List with **real directory data** by ref | ✅ list items by ref | det (UIA) | **SUPPORTED — the most-used desktop app, data-extraction gate.** Opened to `C:\Program Files`; the "项目视图" List (Header + ListItems) exposes the **actual directory contents** by ref — Application Verifier, BitComet, CMake, CPUID, CrystalDiskInfo, Everything, Greenshot, HandBrake, HWiNFO64, IrfanView, Microsoft Office… (also a cross-check that the sweep's installs are on disk). Items are `[rae]` (actionable+expandable) so naturo can navigate the filesystem via the shell. Closed via `WM_CLOSE` to the specific hwnd (Explorer windows share the shell `explorer.exe` — must close by window, not process; `app quit --pid` of the launcher stub failed as expected). Already-present; market-download stall. **Note:** ~10 stray "SoftMgr" download-folder Explorer windows accumulated from 电脑管家 market interactions — left untouched (uncertain provenance). |
 | 42 | Windows 服务 (services.msc / MMC, hwnd 529372) | MMC host (MMCMainFrame) + UIA List/Tree | 2026-08-01 | ✅ scope Tree + service List with **real service data** by ref | ✅ services by ref | det (UIA) | **SUPPORTED — MMC coverage (host for many admin snap-ins).** `--depth 6` exposes the MMC console: scope **Tree** (服务(本地)), the 标准/扩展 tabs, and the **"Console Embedded Window Results" List** with Header + ListItems reading the **actual Windows services** by ref — ActiveX Installer (AxInstSV), Application Identity, AppX Deployment Service, Background Intelligent Transfer Service, Base Filtering Engine, BitComet Disk Boost Service, Clash Verge Service, Client License Service… (98 nodes). Confirms naturo drives **MMC** — the shared host for services/devmgmt/diskmgmt/gpedit/etc. (status/startup-type columns are per-row sub-cells; readable via column extraction). Read-only, no service changes. Already-present; market-download stall. |
+| 43 | WinSCP 5.17.10 (免登录, hwnd 332578/790836) | Delphi/VCL (TLoginDialog/TScpCommanderForm) | 2026-08-01 | ✅ login/site-manager fully exposed | ✅ all connection fields by ref | det (UIA) | **SUPPORTED — real 电脑管家 store install; covers the Delphi/VCL toolkit.** UIA exposes the whole TLoginDialog: 站点 Tree (新建站点), 工具/管理/登录/关闭/帮助 Buttons, and the **connection fields by ref** — 文件协议 ComboBox, 主机名/端口/用户名/密码 Edits — so naturo can fill and drive a session. App is 免登录 (the site-manager + main TScpCommanderForm open and are fully browsable without connecting to any server). **Market breakthrough:** WinSCP's full 10.6MB package **did** download via 电脑管家 — the earlier "stall" was slow-but-alive throughput + my 45–75s waits being too short; installer driven by naturo (mode-select 为所有用户安装 + wizard). |
 
 ---
 
@@ -182,11 +183,12 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 28 apps (#12–31, #33, #36–42; #34 Greenshot &
+**Installed + evaluated this run: 29 apps (#12–31, #33, #36–43; #34 Greenshot &
 #35 HWiNFO64 PARTIAL; +#32 DB Browser installed but its stale 2015 build crashes
-on launch — a failure).** #36–42 (Notepad++, Calculator, Task Manager, Registry Editor,
-Paint, File Explorer, Services/MMC) were evaluated from already-present installs during a
-电脑管家 download stall (see Open items). Wide tech coverage, mostly
+on launch — a failure).** #43 WinSCP is a fresh 电脑管家 store install (Delphi/VCL);
+#36–42 (Notepad++, Calculator, Task Manager, Registry Editor, Paint, File Explorer,
+Services/MMC) were evaluated from already-present installs during the (now understood
+as *slow-not-dead*) 电脑管家 download period. Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32/MFC (WinRAR/Everything/MPC-HC/IrfanView/
 BitComet/WinMerge), Electron (VS Code/Typora), WPF/.NET (HandBrake), Win32-ribbon
 (Foxit/PicPick), wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/
@@ -219,7 +221,15 @@ clear-X ≈ (1007,50).
 
 ## Open items / for the next agent
 
-- **⚠️ 电脑管家 second-stage download stall (environmental, intermittent).** The store
+- **✅ RESOLVED (was mis-read as "dead"): 电脑管家 downloads are SLOW-but-alive, not stalled.**
+  The download flyout later showed WinSCP's full **10.6MB 已完成** and HD Tune (2.1MB)
+  **正在安装** — the full-package downloads *do* complete; my earlier 45–75s waits were
+  simply too short for the throttled throughput, so it *looked* dead. **Lesson: give
+  market downloads minutes, not seconds** (or watch the flyout's per-item progress).
+  Caveat below (stub packages) still holds. Original (now-corrected) note kept for context:
+- **⚠️ 电脑管家 "stub" packages (e.g. PuTTY 228.9 KB) still don't install** — those download
+  a tiny stub then need a *second* fetch at install time, which is what actually failed;
+  prefer full-package apps (most are). Original stall note:
   downloads a small **stub** first (e.g. PuTTY listed as 228.9 KB "已完成" in 下载列表),
   then fetches the real installer at install time. During this stretch that second
   fetch stalled/near-zero-throughput for **DiskGenius (~80MB)** and **PuTTY**, so the
