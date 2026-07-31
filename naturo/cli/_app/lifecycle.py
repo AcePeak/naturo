@@ -78,7 +78,16 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
         if json_output:
             click.echo(json_dumps(exc.to_json_response(), indent=2))
         else:
-            _safe_echo(f"Error: {exc.message}", err=True)
+            # Include suggested_action so a crash-on-launch ("Process exited
+            # immediately after launch") reads differently from a genuinely
+            # missing app — both otherwise surface as bare "Application not
+            # found", which QA flagged as misleading. JSON mode already carries
+            # suggested_action via to_json_response().
+            text = f"Error: {exc.message}"
+            suggested = getattr(exc, "suggested_action", None)
+            if suggested:
+                text += f" ({suggested})"
+            _safe_echo(text, err=True)
         sys.exit(1)
 
 
