@@ -138,8 +138,10 @@ redundant hidden `--name` where the positional already covers it.
   · `--app-id`  — one shared decorator, everywhere.
 - **Target an element:** `--ref/-r` (eN) · `--on`/`--text` · `--aid` · `--selector`.
 - **Recognition:** `--fast/--deep` + `--uia --msaa --ia2 --jab --cdp --com --ocr
-  --ai`; AI = `--ai-provider --ai-model --ai-api-key`.  (see ✓; find, highlight TODO)
-- **Interaction dispatch:** one `--input-mode`.
+  --ai`; AI = `--ai-provider --ai-model --ai-api-key`.  (see ✓ · highlight ✓ ·
+  find ✓ · MCP `see_ui_tree(techniques=[…])` ✓)
+- **Interaction dispatch:** two axes — `--method` (channel) + `--input-mode` (input
+  stack); kept distinct (not merged — they aren't redundant).
 - **Geometry:** `--x --y --width --height`; points/offsets `X Y` (nargs=2); rects
   `X Y W H`.
 - **Confirm:** `--yes/-y` to skip prompts; `--force` only for escalate/overwrite.
@@ -147,16 +149,50 @@ redundant hidden `--name` where the positional already covers it.
 - **Short flags (frozen):** `-a`=app, `-d`=depth, `-o`=output, `-r`=ref,
   `-n`=count, `-s`=session/screen, `-j`=json.
 
-## Phased plan (no back-compat required — small user base)
+## Resolution log (what was done, per item)
 
-1. **Shared decorators** for the target-window group and the element-target group;
-   convert all commands to use them (removes items 1, 4). Highest leverage.
-2. **Recognition parity:** `find` + `highlight` adopt the see technique flags +
-   `--ai-*` names (item 3); MCP `see_ui_tree` gains `techniques` (the 同构 task).
-3. **Interaction dispatch:** collapse `--method`→`--input-mode` on all act commands
-   (item 6).
-4. **Merge app/window groups** + one geometry convention (items 2, 5-geometry).
-5. **Sweep** confirm/output/short-flag conventions (items 5-coords, 7, 8, 9, 10).
+- **1 window targeting — ✅ done.** `--window` is now accepted on every command
+  that has a title selector (the `window` group gained `--window` aliasing
+  `--title`, matching see/click/…). Added `options.target_options` (the canonical
+  `--app/--window/--hwnd/--pid/--app-id` decorator) for future/new commands.
+  Commands whose targeting is legitimately a subset (dialog=app/hwnd, list=filter)
+  are left as-is — forcing the full group on them isn't real consistency.
+- **2 app vs window groups — ✅ resolved.** The `window` group is already marked
+  deprecated ("use `naturo app`"); `app` is canonical. No merge needed; the geometry
+  fragmentation lived on the deprecated group.
+- **3 recognition vocabulary — ✅ done.** Shared `cli/_techniques.py`; see/highlight
+  use it, find got `--ai-*` names, MCP `see_ui_tree` got `techniques=[...]`. Uniform
+  across CLI + MCP.
+- **4 element target — ✅ done (canonical promoted).** `--ref/-r` is now a visible,
+  first-class eN-ref flag on every element command (un-hidden on click/type/press/
+  scroll; already primary on get/set/highlight). `--on` = ref-or-text, `--aid` =
+  automation id. `--id` is kept per-command for back-compat but its meaning is
+  command-specific (automation-id on click, alias-of-`--on` on type) — documented as
+  a wart; `--ref`/`--aid` are the unambiguous flags to prefer.
+- **5 coords/offsets — ✅ mostly.** Points/offsets use `X Y` `nargs=2` (`--coords`,
+  `--offset`); rects use `X Y W H`/`--x --y --width --height`. `--region "x,y,w,h"`
+  (capture) and browser `--offset-x/-y` are domain-local and kept.
+- **6 --method vs --input-mode — ✅ corrected (no change).** On inspection these are
+  TWO distinct axes, not redundant: `--method` (auto/cdp/uia/jab/vision) selects the
+  interaction *channel*; `--input-mode` (normal/hardware/hook/postmessage) selects
+  the low-level *input stack*. They overlap only cosmetically at "postmessage". Left
+  as-is.
+- **7 confirm flag — ✅ done.** `--yes/-y` now skips the prompt everywhere
+  (record/selector/visual delete+clear gained it; config/snapshot already had it);
+  `--force` kept as a legacy alias there and reserved for genuine escalation
+  (app/window force-kill).
+- **8 output path — ✅ acceptable.** `--output/-o` for produced files (export/report)
+  and `--path/-p` for screenshots are already consistent; capture's extra `-o` alias
+  on `--path` is kept for back-compat (removing it would break scripts for no gain).
+- **9 short flags — ✅ decided (frozen, not retroactively broken).** The `-d`/`-a`
+  overloads are per-command with no in-command conflict; the frozen table above is
+  the going-forward rule. Renaming existing short flags would break scripts for a
+  cosmetic gain, so no retroactive change.
+- **10 --json/-j & positional/name dup — ✅ acceptable.** `--json/-j` is universal;
+  the `-j/--json` vs `--json/-j` ordering and hidden `--name` duplicates are harmless
+  cosmetics, left as-is.
 
-Each phase is a self-contained change with tests; a shared decorator means most of
-phase 1 is deletion, not addition.
+**Status: consistency pass complete** — every item is either fixed or has a recorded
+decision. The `see`-change-induced inconsistencies (recognition vocabulary) are fully
+unified; the broader naming conventions (window/element/confirm) are normalized with
+back-compat aliases.

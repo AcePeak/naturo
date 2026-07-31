@@ -105,7 +105,7 @@ def _normalize_modifier(key_str: str) -> str:
 @click.option("--delay", type=float, default=50.0, help="Delay between presses (ms)", show_default=True)
 @click.option("--hold-duration", type=float, default=None, help="Hold duration for combos (ms)")
 @click.option("--on", "--id", "on_element", help="Target element (eN ref or text label) — click to focus before pressing")
-@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
+@click.option("--ref", "-r", "ref_alias", help="Element ref (eN) from the latest snapshot (same target as passing eN to --on).")
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")

@@ -96,7 +96,7 @@ def _window_pid(hwnd: int):
 @click.command("click")
 @click.argument("query", required=False)
 @click.option("--on", "on_text", help="Target element (eN ref or text label)")
-@click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
+@click.option("--ref", "-r", "ref_alias", help="Element ref (eN) from the latest snapshot (same target as passing eN to --on).")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
 @click.option("--offset", nargs=2, type=int, metavar="DX DY", default=None,
