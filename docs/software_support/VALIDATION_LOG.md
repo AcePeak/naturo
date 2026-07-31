@@ -26,7 +26,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 8 | WPS Office main window (OpusApp, hwnd 920682) | OpusApp (Word-compat) + CEF | 2026-07-31 | ⚠️ native yes / CEF no | ✅ native by ref; CEF by coord | mixed | see-able for native UI; CEF parts not |
 | 9 | **WPS 表格 spreadsheet grid** (EXCEL7 child) | Excel-compatible OM | 2026-07-31 | ✅ **all cells** | ✅ **read + write** by ref (COM) | **det (COM)** | **SUPPORTED** — read `7dd71f8a`, write (S2) `d5b99e54` |
 | 10 | **WPS 文字 / file COM** (`.docx` / `.xlsx` by path) | Word/Excel-compat COM servers | 2026-07-31 | ✅ full text / cells | ✅ **read + write + save** | **det (COM)** | **SUPPORTED** — `word_*` as-is; `excel_*` fixed `c9d070b4` |
-| 11 | 钉钉安装 DingTalk installer (`*-Release.*.exe`, hwnd 1377744) | custom GPU-composited | 2026-07-31 | ❌ empty (bare MSAA Client) | ❌ can't locate button | — | **install UI not automatable here** — see below (needs user or another install channel) |
+| 11 | 钉钉安装 DingTalk installer (`*-Release.*.exe`) | custom GPU-composited | 2026-07-31 | ❌ no a11y / ✅ capturable after fix | ⚠️ coord (vision-located) | — | a11y-blind but now **capturable**; found+fixed a naturo capture defect (`af3fe63f`) |
 
 ---
 
@@ -81,21 +81,27 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
   bootstrapper `dingtalk_downloader.exe` (2.8 MB). Ran it via `naturo app launch`; it fetched the full
   472 MB installer `8.3.45-Release.260720005.exe` and opened the 「钉钉安装」window. **This part worked
   cleanly** (no winget, no coord).
-- **Installer window — NOT automatable on this host (three compounding blockers):**
-  1. **Not see-able:** `see --cascade` → a single bare `[Client] [msaa]` node, no buttons/text (custom
-     GPU-composited UI, no UIA/MSAA content — like 电脑管家's DirectUI).
-  2. **Not capturable:** both window-capture (`PrintWindow`) and full-screen capture render the window
-     region **blank white** — it draws to a DirectComposition/hardware overlay the capture APIs miss.
-     So vision can't locate its buttons either (there is nothing to see).
-  3. **Behind the foreground + no silent flag:** the window sits below the terminal in z-order (a blind
-     `click --coords` at the likely button spot hit the terminal, hwnd 199508, not the installer), and
-     `--args /S` (NSIS silent) is ignored — it just re-shows the GUI.
-- **Status:** **install UI not automatable here.** Not a naturo see/operate gap we can close by code —
-  the surface emits no a11y and no pixels. Options for the next step: (a) the **user clicks 开始安装**
-  in the installer (visible to them, ~2 s) — preferred, then naturo resumes for the actual app; (b) a
-  correct silent-install switch if one exists for this build; (c) install via 电脑管家 market (also
-  coord-blind). **The real target is the DingTalk *app*** (Electron → CDP DOM read, the moat test) +
-  **QR login (needs the user)** — both come after install.
+- **Installer window — a11y-blind, and it exposed a real naturo capture bug (now fixed):**
+  1. **Not see-able (a11y):** `see --cascade` → a single bare `[Client] [msaa]` node, no buttons/text
+     (custom GPU-composited UI, no UIA/MSAA content — like 电脑管家's DirectUI). This part is inherent.
+  2. **Capture was blanking it — root-caused + fixed.** User observed the window had text+buttons, then
+     went **blank white** "after naturo ran / after a screenshot." Isolation experiment (fresh window,
+     passive `capture --screen` BitBlt only → renders fine; then `capture --hwnd` PrintWindow → window
+     goes white on screen): **`capture --hwnd` (PrintWindow / `WM_PRINT`) is destructive on
+     GPU-composited windows** — the returned bitmap is blank AND the live window stops presenting. `see`
+     hits the same path (it captures internally for its snapshot/vision step). The blank is **recoverable**
+     (minimize/restore forces a re-present). **Fixed `af3fe63f`:** `capture_window` detects the blank
+     frame, heals the window, and re-captures non-destructively via screen BitBlt cropped to the window
+     rect. Verified live: `capture --hwnd` now returns the true content (logo / 立即安装 / 我已阅读并同意 /
+     自定义安装) and leaves the window intact. So the installer **is capturable now** — vision (verify-only)
+     can locate its buttons for a coord-click.
+  3. **Behind the foreground + no silent flag:** the window sat below the terminal in z-order (a blind
+     `click --coords` hit the terminal, hwnd 199508), and `--args /S` (NSIS silent) is ignored.
+- **Status:** installer is **a11y-blind but capturable**; install is reachable by vision-located
+  coord-click (foreground it first) — the sanctioned fallback. Bigger win: **found+fixed the naturo
+  capture defect (`af3fe63f`)** that blanks all GPU/Electron windows. **The real target is the DingTalk
+  *app*** (Electron → CDP DOM read, the moat test) + **QR login (needs the user)** — both come after
+  install.
 
 ### 10. WPS 文字 (Writer) + file-based Office COM — `.docx` / `.xlsx` by path
 - **Framework:** WPS registers the standard Office COM ProgIDs as compat servers —
