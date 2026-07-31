@@ -39,6 +39,65 @@ def find_win(substr):
     return found[0] if found else None
 
 
+def find_win_retry(substr, tries=4, wait=1.5):
+    """Resolve the installer window, tolerating brief same-title page
+    transitions (MSI wizards momentarily have no matching top-level while a
+    page swaps). Only concludes "gone" after `tries` misses in a row."""
+    for _ in range(tries):
+        w = find_win(substr)
+        if w:
+            return w
+        time.sleep(wait)
+    return None
+
+
+# Wizard/dialog window classes that make up an installer UI. MSI wizards change
+# the window *title* per page ("CMake Setup" -> "Install Options" -> "Ready to
+# Install" -> "Installing"), so title-substring matching loses the window mid-
+# install. Once we've resolved the installer by title, we pin its PID and follow
+# any dialog window of that PID instead.
+WIZ_CLASSES = ("MsiDialogCloseClass", "#32770", "TWizardForm", "TSelectLanguageForm",
+               "TSelectSetupLanguageForm", "MsiDialogNoCloseClass")
+
+
+def find_installer_dialog(substr, pid=None, tries=4, wait=1.5):
+    """Return (hwnd, title, pid) of the installer's current dialog.
+
+    If `pid` is known, follow the largest visible wizard-class window of that
+    PID (survives per-page title changes). Otherwise resolve by title substring
+    and adopt whatever PID owns it. Retries a few times so brief page swaps
+    don't read as "installer finished"."""
+    for _ in range(tries):
+        by_pid = []
+        by_title = []
+
+        @ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)
+        def cb(h, _):
+            if not u.IsWindowVisible(h):
+                return True
+            r = wt.RECT(); u.GetWindowRect(h, ctypes.byref(r))
+            w, ht = r.right - r.left, r.bottom - r.top
+            if w < 120 or ht < 80:
+                return True
+            wp = wt.DWORD(); u.GetWindowThreadProcessId(h, ctypes.byref(wp))
+            cls = ctypes.create_unicode_buffer(128); u.GetClassNameW(h, cls, 128)
+            n = u.GetWindowTextLengthW(h); b = ctypes.create_unicode_buffer(n + 1)
+            u.GetWindowTextW(h, b, n + 1)
+            if pid is not None and wp.value == pid and cls.value in WIZ_CLASSES:
+                by_pid.append((h, b.value, wp.value, w * ht))
+            if substr in b.value:
+                by_title.append((h, b.value, wp.value, w * ht))
+            return True
+        u.EnumWindows(cb, 0)
+        pool = by_pid or by_title
+        if pool:
+            pool.sort(key=lambda c: c[3])  # largest wins (the main wizard page)
+            h, title, wp, _ = pool[-1]
+            return h, title, wp
+        time.sleep(wait)
+    return None
+
+
 def foreground(h):
     fg = u.GetForegroundWindow()
     t1 = u.GetWindowThreadProcessId(fg, None)
@@ -72,12 +131,13 @@ def see(h):
     return btns, radios
 
 
+pinned_pid = None
 for step in range(1, MAX + 1):
-    w = find_win(TITLE)
+    w = find_installer_dialog(TITLE, pid=pinned_pid)
     if not w:
-        print(f"[{step}] window '{TITLE}' gone -> installer finished")
+        print(f"[{step}] installer (title~'{TITLE}' pid={pinned_pid}) gone -> finished")
         break
-    h, title = w
+    h, title, pinned_pid = w  # pin PID after first resolve; follow it thereafter
     foreground(h)
     btns, radios = see(h)
     if radios:

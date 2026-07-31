@@ -44,6 +44,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 26 | Audacity 2.4.2 (免登录, hwnd 3018654) | wxWidgets/UIA | 2026-08-01 | ✅ full menu + track view | ✅ menus by ref | det (UIA) | **SUPPORTED** — wxWidgets audio editor; UIA exposes the whole shell: 11-item MenuBar (文件/编辑/选择/视图/播录/轨道/生成/效果/分析/工具/帮助) all actionable by ref, Top Panel transport toolbars, 轨道视图 Table, StatusBar (version + 已停止). First-run 欢迎 dialog dismissed by ref (确定). Inno installer driven end-to-end by naturo: TSelectLanguageForm 确定 by ref → wizard 下一步×4 → 安装 → 完成. **naturo finding**: the Inno owner window is a 0×0 `TApplication`; the real UI is a separate `TSelectLanguageForm`/`TWizardForm` top-level — the driver's EnumWindows title-substring resolution handles this correctly (don't target the owner). |
 | 27 | WinMerge 2.16 (免登录, hwnd 12847882) | MFC/Win32 UIA | 2026-08-01 | ✅ full menu + toolbar/status | ✅ menus by ref | det (UIA) | **SUPPORTED** — MFC diff/merge tool; UIA exposes 7-item MenuBar (文件/编辑/视图/工具/插件/窗口/帮助) all by ref, ToolBar Pane, 工作区 Pane, multi-field StatusBar (NUM etc.). Installed **silently** by 电脑管家 (no wizard window at all) → launched via `naturo app launch --path`, evaluated, then `naturo app quit`. (Notepad++ NOT in the 电脑管家 store — search returns Microsoft XML Notepad + other editors; skipped rather than install a wrong-app substitute.) |
 | 28 | HandBrake 1.0.7 (免登录, hwnd 5115630) | WPF/.NET (HwndWrapper) UIA | 2026-08-01 | ✅ menu + named toolbar + labeled controls | ✅ toolbar buttons & combos by ref | det (UIA) | **SUPPORTED** — WPF video transcoder; UIA fully exposes it: Menu (File/Tools/Presets/Queue/Help), ToolBar with **named** Buttons (Choose Source/Start Encode/Add to Queue/Show Queue/Preview Encode/Activity Window), Source panel with labeled ComboBoxes (Title/Angle/chapter-range) + Edit fields + spinner Buttons — all by ref. Confirms naturo's **WPF path** with deep control coverage. NSIS installer driven by naturo (Next→I Agree→Install→Finish). |
+| 29 | CMake (cmake-gui) 3.15.5 (免登录, hwnd 3543146) | Qt 5 (a11y-less build) | 2026-08-01 | ⚠️ tree empty; ✅ OCR recovers UI | ⚠️ coord via OCR text | OCR (structure det-empty) | **PARTIAL — naturo finding: build-dependent Qt a11y.** Unlike VLC/PotPlayer/Format Factory (Qt builds that expose full UIA trees), this cmake-gui Qt5 build exposes **only the top window/TitleBar** to *both* `--uia --depth 10` (7 chrome nodes) *and* `--msaa` (1 bare Client) — the widget tree is absent. **`--ocr` fully recovers it**: File/Tools/Options/Help menu, "Where is the source code" + Browse Source, "Where to build the binaries" + Browse Build, Search — so naturo still operates it via OCR-text + coords. Parallel to the Firefox lazy-a11y gap (#21): the moat's OCR fallback is what keeps such windows drivable. **MSI installer FIX validated here** → see Open items (driver now follows the wizard by PID across per-page title changes). |
 
 ---
 
@@ -168,11 +169,12 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 17 apps (#12–28).** Wide tech coverage, mostly
+**Installed + evaluated this run: 18 apps (#12–29).** Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32/MFC (WinRAR/Everything/MPC-HC/IrfanView/
 BitComet/WinMerge), Electron (VS Code/Typora), WPF/.NET (HandBrake), Win32-ribbon
 (Foxit/PicPick), wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/
-SumatraPDF — partial), Gecko/UIA (Firefox chrome). Real naturo
+SumatraPDF — partial), Gecko/UIA (Firefox chrome), a11y-less Qt (cmake-gui —
+OCR fallback). Real naturo
 findings: capture fix enables driving the **elevated** 电脑管家 market by
 vision-located coords; node-count `see` backstop (huge lists); Firefox lazy-a11y /
 `--ia2` gap.
@@ -182,23 +184,36 @@ that resist generic naturo automation and were **skipped**:
 - **Custom agreement-gated cards** (synthetic clicks don't fire / a required
   agreement checkbox stays unchecked, disabling the install button): Bandizip &
   HoneyView (Bandisoft CEF card), 有道翻译, QQ影音. 
-- **MSI wizards** that pop an error/warning dialog, hang, or race the generic
-  driver into a premature close: Inkscape, KMPlayer, CMake (CMake's `MsiDialogCloseClass`
-  wizard advanced Welcome→License-accept→Next then the driver lost the window on a
-  transient title miss and it aborted — MSI pages transition through same-titled
-  windows faster than the see→click→re-see loop; NSIS/Inno are stable, MSI is not).
+- **MSI wizards** that pop an error/warning dialog or hang: Inkscape, KMPlayer.
+  (CMake's MSI is **now handled** — see the driver fix below; #29 installed cleanly.)
 - **Non-standard button text / finicky pages**: EditPlus, EmEditor (driver gained
   keyword + a position fallback; still app-specific).
 - **Tray-only** (no main window to evaluate): Snipaste, Ditto.
 
-Reliable path: standard NSIS/Inno/silent installers driven by
+Reliable path: standard NSIS/Inno/silent/**MSI** installers driven by
 `tools/drive_installer.py` (naturo see→click by ref) + top-left search-result at a
-fixed coord. The next agent continues from #26; prefer standard-installer apps and
+fixed coord. The next agent continues from #30; prefer standard-installer apps and
 verify the search's top result matches before clicking (columns are at screen
-x≈700/998/1298).
+x≈700/998/1298). The 电脑管家 store carries mostly Chinese/OEM titles — some
+Western apps (e.g. Notepad++) aren't present; don't substitute a same-keyword
+different app. Market window client origin is screen (330,0): image px (ix,iy) →
+screen (330+ix, iy); nav 下软件 ≈ screen (385,460), store search field ≈ (920,50),
+clear-X ≈ (1007,50).
 
 ## Open items / for the next agent
 
+- **MSI installer driving — FIXED in `drive_installer.py` (this session, #29 CMake).**
+  MSI wizards (`MsiDialogCloseClass`) change the *window title* per page
+  ("CMake Setup" → "Install Options" → "Ready to Install" → "Installing"…), so the
+  old title-substring resolution lost the window after the first page and reported
+  "installer finished" while it was still on page 2 (also spawned duplicate wizards
+  on retry). Fix: `find_installer_dialog(substr, pid)` resolves once by title, then
+  **pins the PID and follows any wizard-class window of that PID** (largest = main
+  page) across title changes, with a short retry so brief page-swaps don't read as
+  gone. NSIS/Inno already worked (stable titles); this unblocks the whole MSI class.
+  *Productization note:* this belongs in naturo proper as an `naturo install --wizard`
+  / installer-driver helper (the logic is generic: foreground → see → click advance/
+  accept by ref → follow-by-PID). Currently a support-tools script, not shipped.
 - **naturo `see` node-count safety backstop (perf).** Default `see` is unlimited depth
   (`--depth 0`, by design #1289). On a file-manager-style window with a huge virtualized
   list (WinRAR showing the D: drive, #14) the native UIA walk took ~200s — reads as a
