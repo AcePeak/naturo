@@ -41,6 +41,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 23 | IrfanView 4.62 (免登录, hwnd 397930) | Win32/UIA | 2026-08-01 | ✅ full toolbar | ✅ by ref | det (UIA) | **SUPPORTED** — classic Win32; ToolBar Open/Slideshow/Save as/Print/Delete/Cut/Copy/Paste/Undo all named by ref. Installer driven by naturo (added "下一页(N)" to the driver's advance keywords). |
 | 24 | SumatraPDF 3.3.3 (免登录, hwnd 790664) | Win32 custom-drawn | 2026-08-01 | ⚠️ tabs/page-nav yes / icons no | ⚠️ page Edit + tabs by ref; icon buttons coord | partial | tabs (Tab e4), page-number Edit (e11) + toolbar structure see-able; owner-drawn icon toolbar buttons unnamed, PDF content not a11y-text (like PotPlayer). Installer driven by naturo (安装 button). |
 | 25 | PicPick (免登录, hwnd 1577086) | Win32 ribbon/UIA | 2026-08-01 | ✅ ribbon backstage | ✅ by ref | det (UIA) | **SUPPORTED** — ribbon image editor; Backstage view + 主页 pane + Back button by ref via UIA; first-run default dialog (是/否) also see-able. Installed silently via 电脑管家. (有道翻译 skipped — custom installer's agreement radios don't take synthetic clicks, like Bandizip.) |
+| 26 | Audacity 2.4.2 (免登录, hwnd 3018654) | wxWidgets/UIA | 2026-08-01 | ✅ full menu + track view | ✅ menus by ref | det (UIA) | **SUPPORTED** — wxWidgets audio editor; UIA exposes the whole shell: 11-item MenuBar (文件/编辑/选择/视图/播录/轨道/生成/效果/分析/工具/帮助) all actionable by ref, Top Panel transport toolbars, 轨道视图 Table, StatusBar (version + 已停止). First-run 欢迎 dialog dismissed by ref (确定). Inno installer driven end-to-end by naturo: TSelectLanguageForm 确定 by ref → wizard 下一步×4 → 安装 → 完成. **naturo finding**: the Inno owner window is a 0×0 `TApplication`; the real UI is a separate `TSelectLanguageForm`/`TWizardForm` top-level — the driver's EnumWindows title-substring resolution handles this correctly (don't target the owner). |
 
 ---
 
@@ -165,10 +166,11 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 14 apps (#12–25).** Wide tech coverage, mostly
+**Installed + evaluated this run: 15 apps (#12–26).** Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32 (WinRAR/Everything/MPC-HC/IrfanView/BitComet),
-Electron (VS Code/Typora), Win32-ribbon (Foxit/PicPick), custom-skin (PotPlayer/
-Format Factory/SumatraPDF — partial), Gecko/UIA (Firefox chrome). Real naturo
+Electron (VS Code/Typora), Win32-ribbon (Foxit/PicPick), wxWidgets (Audacity),
+custom-skin (PotPlayer/Format Factory/SumatraPDF — partial), Gecko/UIA (Firefox
+chrome). Real naturo
 findings: capture fix enables driving the **elevated** 电脑管家 market by
 vision-located coords; node-count `see` backstop (huge lists); Firefox lazy-a11y /
 `--ia2` gap.
