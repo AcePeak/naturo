@@ -60,6 +60,24 @@ class TestCoordinateClick:
         assert result.exit_code == 0
         mock_backend.click.assert_called_once_with(x=500, y=300, button="left", double=False, input_mode="normal")
 
+    def test_offset_shifts_coords(self, runner, mock_backend):
+        # --offset shifts the resolved click point (here a --coords target).
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                click_cmd, ["--coords", "500", "300", "--offset", "20", "-10"],
+                catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.click.assert_called_once_with(x=520, y=290, button="left", double=False, input_mode="normal")
+
+    def test_offset_requires_coordinate_target(self, runner, mock_backend):
+        # --offset with an identity/text click (no point to shift) is rejected.
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                click_cmd, ["--on", "Save", "--offset", "5", "5"],
+                catch_exceptions=False)
+        assert result.exit_code != 0
+        mock_backend.click.assert_not_called()
+
     def test_right_click_by_coords(self, runner, mock_backend):
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(click_cmd, ["--coords", "100", "200", "--right"], catch_exceptions=False)

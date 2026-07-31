@@ -99,6 +99,13 @@ def _window_pid(hwnd: int):
 @click.option("--ref", "ref_alias", hidden=True, help="Deprecated alias for --on")
 @click.option("--id", "element_id", help="Automation element ID")
 @click.option("--coords", nargs=2, type=int, metavar="X Y", help="X Y coordinates")
+@click.option("--offset", nargs=2, type=int, metavar="DX DY", default=None,
+              help="Shift the resolved click point by DX DY pixels, relative to the "
+                   "target's center. Ideal for clicking a graphical control next to "
+                   "a text/ref that OCR/a11y did see — e.g. 'click e6 --offset -20 0' "
+                   "clicks 20px left of e6's centre (the checkbox beside its label). "
+                   "Resolves live from the ref, so it tracks window movement. Also "
+                   "composes with --coords/--selector.")
 @click.option("--image", "image_template", type=click.Path(), default=None,
               help="Locate a template image (PNG/JPG) on the target window or "
                    "screen and click the center of the best match "
@@ -133,6 +140,7 @@ def _window_pid(hwnd: int):
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
               element_id: str | None, coords: tuple[int, int] | None,
+              offset: tuple[int, int] | None,
               image_template: str | None, threshold: float, double: bool,
               right: bool, app: str | None, pid: int | None,
               window_title: str | None, hwnd: int | None, wait_for: float | None,
@@ -330,6 +338,31 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                     context={"ref": target_id},
                 )
                 return
+
+    # Apply --offset to the resolved click point (ref centre, --coords, or
+    # --selector). Lets the user aim a graphical control OCR/a11y couldn't see by
+    # anchoring off a nearby ref (e.g. the checkbox to the left of its label),
+    # resolved live so it tracks the window. Only meaningful for a coordinate
+    # target; an identity/text click (x,y is None) has no point to shift.
+    if offset and (offset[0] or offset[1]):
+        if x is None or y is None:
+            _common._json_err(
+                "--offset needs a coordinate target: use it with a ref (e6), "
+                "--coords, or --selector — not with --id/--on identity clicks.",
+                json_output, code="INVALID_INPUT",
+            )
+            return
+        x, y = x + offset[0], y + offset[1]
+        _max_coord = _get_screen_bound()
+        if x < 0 or y < 0 or x > _max_coord or y > _max_coord:
+            _common._json_err(
+                f"Offset click point ({x}, {y}) is outside the screen bounds "
+                f"(0–{_max_coord}).",
+                json_output, code="COORDS_OUT_OF_BOUNDS",
+            )
+            return
+        if not json_output:
+            click.echo(f"Applied offset {offset[0]:+d},{offset[1]:+d} -> ({x}, {y})")
 
     # (#533) Validate --app filter even when eN ref resolved from cache.
     # Without this check, `click --app doesnotexist e1` silently clicks
