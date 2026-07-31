@@ -43,6 +43,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 25 | PicPick (免登录, hwnd 1577086) | Win32 ribbon/UIA | 2026-08-01 | ✅ ribbon backstage | ✅ by ref | det (UIA) | **SUPPORTED** — ribbon image editor; Backstage view + 主页 pane + Back button by ref via UIA; first-run default dialog (是/否) also see-able. Installed silently via 电脑管家. (有道翻译 skipped — custom installer's agreement radios don't take synthetic clicks, like Bandizip.) |
 | 26 | Audacity 2.4.2 (免登录, hwnd 3018654) | wxWidgets/UIA | 2026-08-01 | ✅ full menu + track view | ✅ menus by ref | det (UIA) | **SUPPORTED** — wxWidgets audio editor; UIA exposes the whole shell: 11-item MenuBar (文件/编辑/选择/视图/播录/轨道/生成/效果/分析/工具/帮助) all actionable by ref, Top Panel transport toolbars, 轨道视图 Table, StatusBar (version + 已停止). First-run 欢迎 dialog dismissed by ref (确定). Inno installer driven end-to-end by naturo: TSelectLanguageForm 确定 by ref → wizard 下一步×4 → 安装 → 完成. **naturo finding**: the Inno owner window is a 0×0 `TApplication`; the real UI is a separate `TSelectLanguageForm`/`TWizardForm` top-level — the driver's EnumWindows title-substring resolution handles this correctly (don't target the owner). |
 | 27 | WinMerge 2.16 (免登录, hwnd 12847882) | MFC/Win32 UIA | 2026-08-01 | ✅ full menu + toolbar/status | ✅ menus by ref | det (UIA) | **SUPPORTED** — MFC diff/merge tool; UIA exposes 7-item MenuBar (文件/编辑/视图/工具/插件/窗口/帮助) all by ref, ToolBar Pane, 工作区 Pane, multi-field StatusBar (NUM etc.). Installed **silently** by 电脑管家 (no wizard window at all) → launched via `naturo app launch --path`, evaluated, then `naturo app quit`. (Notepad++ NOT in the 电脑管家 store — search returns Microsoft XML Notepad + other editors; skipped rather than install a wrong-app substitute.) |
+| 28 | HandBrake 1.0.7 (免登录, hwnd 5115630) | WPF/.NET (HwndWrapper) UIA | 2026-08-01 | ✅ menu + named toolbar + labeled controls | ✅ toolbar buttons & combos by ref | det (UIA) | **SUPPORTED** — WPF video transcoder; UIA fully exposes it: Menu (File/Tools/Presets/Queue/Help), ToolBar with **named** Buttons (Choose Source/Start Encode/Add to Queue/Show Queue/Preview Encode/Activity Window), Source panel with labeled ComboBoxes (Title/Angle/chapter-range) + Edit fields + spinner Buttons — all by ref. Confirms naturo's **WPF path** with deep control coverage. NSIS installer driven by naturo (Next→I Agree→Install→Finish). |
 
 ---
 
@@ -167,11 +168,11 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 16 apps (#12–27).** Wide tech coverage, mostly
+**Installed + evaluated this run: 17 apps (#12–28).** Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32/MFC (WinRAR/Everything/MPC-HC/IrfanView/
-BitComet/WinMerge), Electron (VS Code/Typora), Win32-ribbon (Foxit/PicPick),
-wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/SumatraPDF — partial),
-Gecko/UIA (Firefox chrome). Real naturo
+BitComet/WinMerge), Electron (VS Code/Typora), WPF/.NET (HandBrake), Win32-ribbon
+(Foxit/PicPick), wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/
+SumatraPDF — partial), Gecko/UIA (Firefox chrome). Real naturo
 findings: capture fix enables driving the **elevated** 电脑管家 market by
 vision-located coords; node-count `see` backstop (huge lists); Firefox lazy-a11y /
 `--ia2` gap.
@@ -181,7 +182,11 @@ that resist generic naturo automation and were **skipped**:
 - **Custom agreement-gated cards** (synthetic clicks don't fire / a required
   agreement checkbox stays unchecked, disabling the install button): Bandizip &
   HoneyView (Bandisoft CEF card), 有道翻译, QQ影音. 
-- **MSI wizards** that pop an error/warning dialog or hang: Inkscape, KMPlayer.
+- **MSI wizards** that pop an error/warning dialog, hang, or race the generic
+  driver into a premature close: Inkscape, KMPlayer, CMake (CMake's `MsiDialogCloseClass`
+  wizard advanced Welcome→License-accept→Next then the driver lost the window on a
+  transient title miss and it aborted — MSI pages transition through same-titled
+  windows faster than the see→click→re-see loop; NSIS/Inno are stable, MSI is not).
 - **Non-standard button text / finicky pages**: EditPlus, EmEditor (driver gained
   keyword + a position fallback; still app-specific).
 - **Tray-only** (no main window to evaluate): Snipaste, Ditto.
