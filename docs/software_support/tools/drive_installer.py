@@ -16,7 +16,7 @@ import time
 TITLE = sys.argv[1] if len(sys.argv) > 1 else "安装"
 MAX = int(sys.argv[2]) if len(sys.argv) > 2 else 10
 
-ADVANCE = ["OK", "确定", "我接受", "同意", "下一步", "安装(", "安装 ", "开始安装", "立即安装",
+ADVANCE = ["OK", "确定", "下一页", "我接受", "同意", "下一步", "安装(", "安装 ", "开始安装", "立即安装",
            "完成", "结束", "关闭(", "Install", "Next", "I Agree", "Agree", "Finish", "Done", "Close"]
 AVOID = ["取消", "Cancel", "上一步", "Back", "跳过", "浏览", "Browse", "最小化",
          "最大化", "打开", "显示细节", "Details"]

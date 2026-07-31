@@ -38,6 +38,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 20 | 格式工厂 (Format Factory) X64 5.16 (免登录, hwnd 11668280) | Win32 custom skin | 2026-08-01 | ✅ menu + panes/tabs | ✅ menu by ref | det (UIA) | **SUPPORTED** — Menu Bar (任务/皮肤/语言/选项/帮助) + 视频 pane w/ format-category Tab by ref; update-check dialog fully see-able (下载 Button, ProgressBar, CheckBox). qqpc installer clean (no PUP); unchecked shortcut boxes + 一键安装 via naturo coord. |
 | 21 | Firefox 标准版 (免登录, hwnd 2100526) | Gecko (UIA/IA2) | 2026-08-01 | ✅ chrome (`--uia --depth 8`) | ✅ tabs/address bar by ref | det (UIA) | **SUPPORTED (chrome)** — `--uia --depth 8`: 浏览器标签页 tabs, 打开新标签页, address bar ComboBox (e78) by ref. ⚠️ **findings**: page-content Document is offscreen/empty (Firefox **lazy a11y** — not activated until an AT is detected); **`--ia2` returns empty** (naturo IA2 gap on Firefox / lazy a11y). To read page content, a11y must be force-activated. |
 | 22 | BitComet 2.18 (免登录, hwnd 2559864) | Win32/UIA | 2026-08-01 | ✅ full toolbar | ✅ by ref | det (UIA) | **SUPPORTED** — full toolbar (添加存档/Search/开始/停止/预览/目录/属性/删除/选项/退出) + 登录/注册 all by ref; login OPTIONAL (basic BT download 免登录, login only for faster speed). NSIS installer driven by naturo (OK→下一步→我接受×2→安装→完成). |
+| 23 | IrfanView 4.62 (免登录, hwnd 397930) | Win32/UIA | 2026-08-01 | ✅ full toolbar | ✅ by ref | det (UIA) | **SUPPORTED** — classic Win32; ToolBar Open/Slideshow/Save as/Print/Delete/Cut/Copy/Paste/Undo all named by ref. Installer driven by naturo (added "下一页(N)" to the driver's advance keywords). |
 
 ---
 
