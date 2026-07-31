@@ -51,6 +51,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 33 | ScreenToGif 2.34.1 (免登录, hwnd 4198550) | WPF/.NET (HwndWrapper) | 2026-08-01 | ✅ structure + 4 mode buttons clickable; OCR labels them | ✅ buttons by ref, labels via OCR | UIA(structure)+OCR(labels) | **SUPPORTED — clean cascade-fusion (moat) example.** WPF launcher exposes TitleBar, "新版本可用" hyperlink, and the 4 primary mode Buttons (e12–e15) **clickable by ref** — but they carry **no AutomationProperties.Name** (WPF icon cards), so the tree can't say which is which. `--ocr` supplies the labels (录像机/摄像头/画板/编辑器 + 选项), fused onto the UIA buttons → fully operable. Exactly the UIA-structure + OCR-labels fusion the moat is built on. Custom **WinForms installer** driven by naturo coords+capture (unchecked FFmpeg 24.6MB to skip a slow download; 我接受→下一步→安装→完成); .NET 4.8 already present. Minor: `naturo app quit --app ScreenToGif` graceful path hung (>120s) → force-kill; worth a look but not blocking. |
 | 34 | Greenshot 1.2.10 (免登录) | .NET WinForms (tray-first) | 2026-08-01 | ⚠️ dialogs see-able; main editor tray-invoked only | ✅ dialog buttons by ref | det (UIA) on dialogs | **PARTIAL — tray-first app.** Inno install driven by naturo (the driver gained a real capability here: the Chinese-localized `TSelectLanguageForm` title is "选择安装语言" — no "Setup" substring — so I drove with "安装", which matches both it and "安装 - Greenshot"; PID-follow then carried 确定→accept→下一步×6→安装→完成). Greenshot runs **in the tray**; its editor only appears on an interactive capture, which isn't triggerable headlessly (`/openfile <png>` just forwarded to the tray instance without opening a window). naturo **cleanly read the WinForms hotkey-conflict Warning dialog** it raised (full body text about "Alt + PrintScreen" + 中止/重试/忽略 Buttons all by ref → dismissed via 忽略 e4), confirming its WinForms UI is fully see-able — but no persistent main window was reachable in this flow, so it doesn't clear the "reach main window + extract data" gate. Comparable to Snipaste (#tray-only skip) but with WinForms UI confirmed. |
 | 35 | HWiNFO64 v5.54 (免登录) | Win32 (#32770) — kernel-driver-gated | 2026-08-01 | ⚠️ dialogs see-able; main summary unreachable (driver blocked) | ✅ dialog buttons by ref | det (UIA) on dialogs | **PARTIAL — environment driver-gating (not naturo, not app quality).** Inno install driven by naturo (Next×3→Install→Finish). On launch HWiNFO needs to install its **kernel sensor driver**; that's blocked here ("Cannot install the HWiNFO driver! Check user rights and possible antivirus filters" — 电脑管家 self-protection / session context), so the process **exits** and no System-Summary/Sensors window ever appears. naturo **cleanly read every dialog it did show**: the startup Welcome (Run/Settings Buttons + Sensors-only/Summary-only CheckBoxes + version text, all by ref) and the Error dialog (full body text + 确定 by ref, dismissed). Contrast #30/#31 (CrystalDiskInfo/CPU-Z) which read HW data fine without a driver install — HWiNFO specifically requires a ring-0 driver. Doesn't clear the main-window/extract-data gate in this env. |
+| 36 | Notepad++ (免登录, hwnd 594604) | Scintilla + Win32/UIA | 2026-08-01 | ✅ full menu + tabs + StatusBar + **Scintilla document** | ✅ menus/tabs by ref | det (UIA + scintilla) | **SUPPORTED — shows naturo's dedicated Scintilla source.** 13-item MenuBar (文件/编辑/搜索/视图/编码/语言/设置/工具/宏/运行/插件/窗口/?) all by ref, Tab + TabItem by ref, ToolBar, StatusBar with live data (Normal text file, length/lines, Ln/Col/Pos, Windows CR-LF, UTF-8, INS), and crucially `[Document] "Scintilla editor" [scintilla]` — naturo has a **dedicated Scintilla recognizer** exposing the editor content ("writable again"), a moat capability (Scintilla underlies many editors). **Note on provenance:** Notepad++ is **not in the 电脑管家 store** (see #27) and was already present on this host; evaluated here because the market's second-stage installer downloads stalled this stretch (see Open items) — logged transparently. User's unsaved file was open, so left running (no teardown). |
 
 ---
 
@@ -175,8 +176,9 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 21 apps (#12–31, #33; #34 Greenshot PARTIAL/tray;
-+#32 DB Browser installed but its stale 2015 build crashes on launch — a failure).** Wide tech coverage, mostly
+**Installed + evaluated this run: 22 apps (#12–31, #33, #36; #34 Greenshot &
+#35 HWiNFO64 PARTIAL; +#32 DB Browser installed but its stale 2015 build crashes
+on launch — a failure).** Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32/MFC (WinRAR/Everything/MPC-HC/IrfanView/
 BitComet/WinMerge), Electron (VS Code/Typora), WPF/.NET (HandBrake), Win32-ribbon
 (Foxit/PicPick), wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/
@@ -209,6 +211,17 @@ clear-X ≈ (1007,50).
 
 ## Open items / for the next agent
 
+- **⚠️ 电脑管家 second-stage download stall (environmental, intermittent).** The store
+  downloads a small **stub** first (e.g. PuTTY listed as 228.9 KB "已完成" in 下载列表),
+  then fetches the real installer at install time. During this stretch that second
+  fetch stalled/near-zero-throughput for **DiskGenius (~80MB)** and **PuTTY**, so the
+  installer window never appeared even though the queue showed 已完成 — nothing landed
+  on disk. Earlier apps (#12–#35) downloaded fine, so it's transient network
+  degradation, not a broken flow. The download flyout (右上 download icon → separate
+  Qt popup hwnd, ~404×645 @ screen 986,58) lists items but clicking a completed item
+  did not re-trigger install. Mitigations for the next agent: retry later; prefer
+  small (<20MB) packages; if a big download blocks the queue, cancel it. #36 Notepad++
+  was evaluated from an already-present install to keep making progress during the stall.
 - **MSI installer driving — FIXED in `drive_installer.py` (this session, #29 CMake).**
   MSI wizards (`MsiDialogCloseClass`) change the *window title* per page
   ("CMake Setup" → "Install Options" → "Ready to Install" → "Installing"…), so the
