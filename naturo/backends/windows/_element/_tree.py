@@ -12,6 +12,7 @@ module for maintainability (#720).
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Optional
 
 from naturo.backends.base import ElementInfo as BaseElementInfo
@@ -179,6 +180,170 @@ def _traverse_via_backend(backend_self, core, backend, handle, depth):
     result = core.get_element_tree(hwnd=handle, depth=depth)
     return _try_uwp_children(backend_self, handle, depth, result,
                              lambda h, d: core.get_element_tree(hwnd=h, depth=d))
+
+
+# ── get_element_value building blocks ────────────────────────────────────────
+# Extracted from the former 242-line get_element_value so its ref-metadata
+# resolution and the several documented value fallbacks are each named and
+# testable. Module-level (backend/core passed explicitly) for the same reason as
+# the get_element_tree helpers above.
+
+
+@dataclass
+class _RefMeta:
+    """Metadata resolved from a snapshot ref (e47), threaded back into
+    get_element_value. *early* carries a value dict to return immediately (a live
+    Scintilla re-read); when set, the other fields are unused."""
+    aid: Optional[str]
+    role: Optional[str]
+    name: Optional[str]
+    coords: Optional[tuple]
+    snap_hwnd: Optional[int]
+    target_hwnd: int
+    early: Optional[dict] = None
+
+
+def _resolve_ref_metadata(backend, ref: str, aid: Optional[str], role: Optional[str],
+                          name: Optional[str], target_hwnd: int) -> _RefMeta:
+    """Resolve a snapshot *ref* to element metadata + its source window.
+
+    Prefers the element's AutomationId, then role+title/label, then a cached
+    centre point (#1208). Synthetic Scintilla nodes are re-read live and returned
+    via :attr:`_RefMeta.early` (#Notepad++). Raises StaleSnapshotCacheError for an
+    unknown ref, NaturoError when the element has no usable identifier/location.
+    """
+    from naturo.snapshot import get_snapshot_manager
+    mgr = get_snapshot_manager()
+    result = mgr.resolve_ref_element(ref)
+    if not result:
+        raise StaleSnapshotCacheError(ref)
+    elem, _snap_id = result
+    coords = None
+    snap_hwnd = None
+
+    # Scintilla nodes (Notepad++/SciTE) are synthetic — no live UIA element. A
+    # normal lookup would return the value captured at ``see`` time (stale on the
+    # next edit); re-read live from the Scintilla child HWND in the node id.
+    _sci = backend._read_scintilla_ref_live(elem)
+    if _sci is not None:
+        return _RefMeta(aid, role, name, coords, snap_hwnd, target_hwnd, early=_sci)
+
+    # Cache the element's own centre as a disambiguation hint (several role+name
+    # peers can match; the point picks the exact one the snapshot meant).
+    _hint_frame = getattr(elem, "frame", None)
+    if _hint_frame and (_hint_frame[2] > 0 or _hint_frame[3] > 0):
+        coords = (_hint_frame[0] + _hint_frame[2] // 2,
+                  _hint_frame[1] + _hint_frame[3] // 2)
+
+    if elem.identifier:
+        aid = elem.identifier
+    elif elem.role and elem.title:
+        role, name = elem.role, elem.title
+    elif elem.role and elem.label:
+        role, name = elem.role, elem.label
+    else:
+        # (#1208) No identifier/name: keep the cached point + source window so the
+        # value can be read live from the element's own window, instead of
+        # refusing for an element naturo already found.
+        frame = getattr(elem, "frame", None)
+        if frame and (frame[2] > 0 or frame[3] > 0):
+            coords = (frame[0] + frame[2] // 2, frame[1] + frame[3] // 2)
+        try:
+            snap_hwnd = getattr(mgr.get_snapshot(_snap_id), "window_handle", None)
+        except Exception:
+            snap_hwnd = None
+        if coords is None:
+            raise NaturoError(
+                f"Element {ref} has no AutomationId, name, or location for value lookup")
+
+    # Target the ref's OWN window: `get eN` must read from the window the snapshot
+    # came from, not whatever is foreground now (#964).
+    if not target_hwnd:
+        try:
+            _wh = getattr(mgr.get_snapshot(_snap_id), "window_handle", None)
+            if _wh:
+                target_hwnd = _wh
+        except Exception:
+            pass
+    return _RefMeta(aid, role, name, coords, snap_hwnd, target_hwnd)
+
+
+def _probe_editable_roles(core, target_hwnd: int) -> dict:
+    """(#242) When no identifiers were given, probe common editable roles
+    (Edit/Document/RichEdit20W) in the target window so ``type --app X --verify``
+    can read back. Returns the first hit (with ``probe_role`` set); raises if none
+    match."""
+    for probe_role in ("Edit", "Document", "RichEdit20W"):
+        r = core.get_element_value(
+            hwnd=target_hwnd, automation_id=None, role=probe_role, name=None)
+        if r is not None:
+            r["probe_role"] = probe_role
+            return r
+    raise NaturoError(
+        "No editable element found in target window. "
+        "Tried probing roles: Edit, Document, RichEdit20W. "
+        "Use --on eN to specify the target element explicitly.")
+
+
+def _role_alias_retry(core, *, target_hwnd: int, resolved_aid: Optional[str],
+                      resolved_role: str, resolved_name: Optional[str],
+                      coords: Optional[tuple]) -> Optional[dict]:
+    """(#352) Retry the value read against common role aliases (Edit↔Document↔
+    RichEdit20W, Text↔StaticText) when the exact role found nothing — Win11 Notepad
+    exposes its editor as Document but users type Edit. First hit, or None."""
+    _ROLE_ALIASES = {
+        "Edit": ["Document", "RichEdit20W"],
+        "Document": ["Edit", "RichEdit20W"],
+        "RichEdit20W": ["Edit", "Document"],
+        "Text": ["StaticText"],
+        "StaticText": ["Text"],
+    }
+    for alias_role in _ROLE_ALIASES.get(resolved_role, []):
+        result = core.get_element_value(
+            hwnd=target_hwnd, automation_id=resolved_aid, role=alias_role,
+            name=resolved_name,
+            hint_x=coords[0] if coords else None,
+            hint_y=coords[1] if coords else None)
+        if result is not None:
+            return result
+    return None
+
+
+def _finalize_value(result: Optional[dict], ref: Optional[str]) -> Optional[dict]:
+    """Apply the value read's tail fallbacks: NameProperty (#521), snapshot
+    metadata (#229), and lone-CR normalization (#Win11 Notepad)."""
+    # (#521) NameProperty: core found the element but no pattern gave a value
+    # (e.g. Calculator's display embeds the value in the UIA Name).
+    if isinstance(result, dict) and result.get("value") is None:
+        elem_name = result.get("name")
+        if elem_name:
+            result["value"] = elem_name
+            result["pattern"] = "NameProperty"
+
+    # (#229) UIA found nothing but the ref carries snapshot data — return
+    # role/name/bounds instead of ELEMENT_NOT_FOUND.
+    if result is None and ref:
+        from naturo.snapshot import get_snapshot_manager
+        _el_result = get_snapshot_manager().resolve_ref_element(ref)
+        if _el_result:
+            _elem, _snap = _el_result
+            ex, ey, ew, eh = _elem.frame
+            result = {
+                "role": _elem.role,
+                "name": _elem.title or _elem.label,
+                "value": _elem.value,
+                "pattern": None,
+                "automation_id": _elem.identifier,
+                "x": ex, "y": ey, "width": ew, "height": eh,
+                "source": "snapshot",
+            }
+
+    # Normalize document line endings — a text control's TextPattern can return
+    # lone \r (Win11 Notepad's line break), which renders as one mangled line.
+    if isinstance(result, dict) and isinstance(result.get("value"), str) \
+            and "\r" in result["value"]:
+        result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
+    return result
 
 
 class ElementTreeMixin:
@@ -416,7 +581,6 @@ class ElementTreeMixin:
         """
         core = self._ensure_core()
 
-        # Resolve ref to element metadata via snapshot cache
         resolved_aid = automation_id
         resolved_role = role
         resolved_name = name
@@ -424,203 +588,48 @@ class ElementTreeMixin:
         coords = None
         snap_hwnd = None
 
+        # Resolve a snapshot ref (e47) to element metadata + its source window.
         if ref and not resolved_aid:
-            from naturo.snapshot import get_snapshot_manager
-            mgr = get_snapshot_manager()
-            result = mgr.resolve_ref_element(ref)
-            if result:
-                elem, _snap_id = result
-                # Scintilla nodes (Notepad++/SciTE) are synthetic — grafted by
-                # the cascade, with no live UIA element behind them. A normal ref
-                # lookup would fail the UIA probe and fall back to the value
-                # captured at ``see`` time, which goes stale the moment the user
-                # edits the document. Re-read the control live from the Scintilla
-                # child HWND embedded in the node's id (``scintilla_<hwnd>``).
-                _sci = self._read_scintilla_ref_live(elem)
-                if _sci is not None:
-                    return _sci
-                # Cache the element's own screen point as a disambiguation hint.
-                # A role+name lookup can match several elements (e.g. Windows
-                # Terminal exposes two "命令提示符" Text peers — a label and the
-                # full buffer); the point picks the exact one the snapshot meant.
-                # Harmless when the match is unique, and it does NOT trigger the
-                # coordinate-read path below (that stays gated on no role+name).
-                _hint_frame = getattr(elem, "frame", None)
-                if _hint_frame and (_hint_frame[2] > 0 or _hint_frame[3] > 0):
-                    coords = (_hint_frame[0] + _hint_frame[2] // 2,
-                              _hint_frame[1] + _hint_frame[3] // 2)
-                # Use the element's identifier (AutomationId) if available
-                if elem.identifier:
-                    resolved_aid = elem.identifier
-                elif elem.role and elem.title:
-                    resolved_role = elem.role
-                    resolved_name = elem.title
-                elif elem.role and elem.label:
-                    resolved_role = elem.role
-                    resolved_name = elem.label
-                else:
-                    # (#1208) No identifier/name: capture the cached point and
-                    # source window so the value can be read live from the
-                    # element inside its own window's UIA tree (handled below),
-                    # instead of refusing for an element naturo already found.
-                    frame = getattr(elem, "frame", None)
-                    if frame and (frame[2] > 0 or frame[3] > 0):
-                        coords = (frame[0] + frame[2] // 2,
-                                  frame[1] + frame[3] // 2)
-                    try:
-                        _snap = mgr.get_snapshot(_snap_id)
-                        snap_hwnd = getattr(_snap, "window_handle", None)
-                    except Exception:
-                        snap_hwnd = None
-                    if coords is None:
-                        raise NaturoError(
-                            f"Element {ref} has no AutomationId, name, or "
-                            f"location for value lookup"
-                        )
-                # Target the ref's OWN window: `get eN` must read from the window
-                # the snapshot came from, not whatever is foreground now (else a
-                # role/name lookup runs against HWND 0 = the caller's terminal and
-                # finds nothing, or a different app's empty control).
-                if not target_hwnd:
-                    try:
-                        _snap = mgr.get_snapshot(_snap_id)
-                        _wh = getattr(_snap, "window_handle", None)
-                        if _wh:
-                            target_hwnd = _wh
-                    except Exception:
-                        pass
-            else:
-                raise StaleSnapshotCacheError(ref)
+            meta = _resolve_ref_metadata(
+                self, ref, resolved_aid, resolved_role, resolved_name, target_hwnd)
+            if meta.early is not None:
+                return meta.early  # live Scintilla re-read
+            resolved_aid, resolved_role, resolved_name = meta.aid, meta.role, meta.name
+            coords, snap_hwnd, target_hwnd = meta.coords, meta.snap_hwnd, meta.target_hwnd
 
-        # Resolve app/window_title to HWND for targeted lookup. A selector that
-        # is supplied but matches nothing must fail loudly: ``_resolve_hwnd``
-        # raises WindowNotFoundError and we let it propagate, rather than
-        # swallowing it and degrading to the foreground window (HWND 0). The old
-        # ``except`` + manual title scan only ever reproduced ``_resolve_hwnd``'s
-        # own substring matching, so a raise meant no window matched anywhere —
-        # falling back to the focused window was the silent-failure bug #964
-        # (the CLI analog of the MCP #957 ``require_hwnd`` contract).
+        # Resolve app/window_title to HWND. A supplied selector that matches
+        # nothing must fail loudly — _resolve_hwnd raises WindowNotFoundError and
+        # we let it propagate rather than degrade to the foreground window (#964).
         if (app or window_title) and not target_hwnd:
             target_hwnd = self._resolve_hwnd(app=app, window_title=window_title)
 
-        # (#1208) Cached-point value read for an element with no AutomationId
-        # and no name: resolve it live inside its source window's UIA tree and
-        # read the value via ValuePattern/TextPattern. Mirrors the set-value
-        # resolution so naturo can READ anything it already located.
-        # NOTE: this is a Python/comtypes fallback layered on top of the C++
-        # core reader below; consolidating the two onto one layer is tracked
-        # as tech debt.
+        # (#1208) Cached-point live read for an element with no AutomationId and
+        # no name: read the value from the element inside its own window's UIA
+        # tree (a Python/comtypes fallback layered on the C++ core reader below).
         if coords is not None and not resolved_aid and not (
                 resolved_role and resolved_name):
             if not target_hwnd and snap_hwnd:
                 target_hwnd = snap_hwnd
             if hasattr(self, "get_element_value_uia"):
                 _uia_val = self.get_element_value_uia(
-                    hwnd=target_hwnd or 0, x=coords[0], y=coords[1],
-                )
+                    hwnd=target_hwnd or 0, x=coords[0], y=coords[1])
                 if _uia_val is not None:
                     return _uia_val
 
         if not resolved_aid and not resolved_role and not resolved_name:
-            # (#242) Fallback: when no element identifiers are provided but
-            # we have a target HWND (e.g., from --app notepad), auto-probe
-            # common editable element roles in the window. This enables
-            # verification for the common `type --app X --verify` pattern.
             if target_hwnd:
-                _editable_roles = ("Edit", "Document", "RichEdit20W")
-                for _probe_role in _editable_roles:
-                    _probe_result = core.get_element_value(
-                        hwnd=target_hwnd,
-                        automation_id=None,
-                        role=_probe_role,
-                        name=None,
-                    )
-                    if _probe_result is not None:
-                        _probe_result["probe_role"] = _probe_role
-                        return _probe_result
-                # All probes failed — still no identifiers available
-                raise NaturoError(
-                    "No editable element found in target window. "
-                    "Tried probing roles: Edit, Document, RichEdit20W. "
-                    "Use --on eN to specify the target element explicitly."
-                )
-            raise NaturoError(
-                "Must specify ref, automation_id, or role/name to get value"
-            )
+                return _probe_editable_roles(core, target_hwnd)  # (#242)
+            raise NaturoError("Must specify ref, automation_id, or role/name to get value")
 
         result = core.get_element_value(
-            hwnd=target_hwnd,
-            automation_id=resolved_aid,
-            role=resolved_role,
+            hwnd=target_hwnd, automation_id=resolved_aid, role=resolved_role,
             name=resolved_name,
             hint_x=coords[0] if coords else None,
-            hint_y=coords[1] if coords else None,
-        )
+            hint_y=coords[1] if coords else None)
 
-        # (#352) Role alias fallback: when an explicit role search fails,
-        # try common aliases.  Win11 Notepad uses "Document" for its text
-        # editor, but users naturally try "Edit".  This maps between roles
-        # that serve similar purposes in different app frameworks.
         if result is None and resolved_role and not resolved_aid:
-            _ROLE_ALIASES: dict[str, list[str]] = {
-                "Edit": ["Document", "RichEdit20W"],
-                "Document": ["Edit", "RichEdit20W"],
-                "RichEdit20W": ["Edit", "Document"],
-                "Text": ["StaticText"],
-                "StaticText": ["Text"],
-            }
-            aliases = _ROLE_ALIASES.get(resolved_role, [])
-            for alias_role in aliases:
-                result = core.get_element_value(
-                    hwnd=target_hwnd,
-                    automation_id=resolved_aid,
-                    role=alias_role,
-                    name=resolved_name,
-                    hint_x=coords[0] if coords else None,
-                    hint_y=coords[1] if coords else None,
-                )
-                if result is not None:
-                    break
+            result = _role_alias_retry(
+                core, target_hwnd=target_hwnd, resolved_aid=resolved_aid,
+                resolved_role=resolved_role, resolved_name=resolved_name, coords=coords)
 
-        # (#521) NameProperty fallback: if the C++ core found the element but
-        # no UIA pattern returned a value, use the element's Name property.
-        # This handles Text/Static elements (e.g. Calculator display) where
-        # the value is embedded in the UIA Name (e.g. "显示为 579").
-        if isinstance(result, dict) and result.get("value") is None:
-            elem_name = result.get("name")
-            if elem_name:
-                result["value"] = elem_name
-                result["pattern"] = "NameProperty"
-
-        # (#229) Fallback: if UIA lookup returned None but we have snapshot
-        # data from the ref, return the snapshot metadata so the caller gets
-        # at least role/name/bounds instead of ELEMENT_NOT_FOUND.
-        if result is None and ref:
-            from naturo.snapshot import get_snapshot_manager as _gsm
-            _mgr = _gsm()
-            _el_result = _mgr.resolve_ref_element(ref)
-            if _el_result:
-                _elem, _snap = _el_result
-                ex, ey, ew, eh = _elem.frame
-                result = {
-                    "role": _elem.role,
-                    "name": _elem.title or _elem.label,
-                    "value": _elem.value,
-                    "pattern": None,
-                    "automation_id": _elem.identifier,
-                    "x": ex,
-                    "y": ey,
-                    "width": ew,
-                    "height": eh,
-                    "source": "snapshot",
-                }
-
-        # Normalize document line endings: a text control's TextPattern can return
-        # lone carriage returns (Win11 Notepad uses \r as its line break), which
-        # render as a mangled single line in a terminal. Convert \r\n and \r to \n
-        # so multi-line content reads/splits as standard text.
-        if isinstance(result, dict) and isinstance(result.get("value"), str) \
-                and "\r" in result["value"]:
-            result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
-
-        return result
+        return _finalize_value(result, ref)
