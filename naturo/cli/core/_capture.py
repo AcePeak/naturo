@@ -67,22 +67,14 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
         entry = id_map.resolve(app_id)
         if entry is None:
             msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            if json_output:
-                click.echo(_common._json_error_str("APP_ID_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
         # (#573) Use hwnd for precise targeting.  Do NOT set app
         # to process_name — it may be a full path that breaks fuzzy matching.
         hwnd = entry.handle
 
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Screen capture")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "PLATFORM_ERROR", msg)
 
     # Resolve output path: use --path if given, else timestamped name
     if path is None:
@@ -119,20 +111,12 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
             # Validate screen index against available monitors
             if screen < 0:
                 msg = f"--screen must be >= 0, got {screen}"
-                if json_output:
-                    click.echo(_common._json_error_str("INVALID_INPUT", msg))
-                else:
-                    click.echo(f"Error: {msg}", err=True)
-                raise SystemExit(1)
+                _common._fail(json_output, "INVALID_INPUT", msg)
             try:
                 monitors = backend.list_monitors()
                 if monitors and screen >= len(monitors):
                     msg = f"Screen index {screen} out of range (0-{len(monitors) - 1}). Use 'naturo list screens' to see available monitors."
-                    if json_output:
-                        click.echo(_common._json_error_str("INVALID_INPUT", msg))
-                    else:
-                        click.echo(f"Error: {msg}", err=True)
-                    raise SystemExit(1)
+                    _common._fail(json_output, "INVALID_INPUT", msg)
             except NotImplementedError:
                 pass  # Non-Windows: skip validation, let backend handle it
             result = backend.capture_screen(screen_index=screen, output_path=path)
@@ -188,11 +172,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                         f"has zero-size bounds ({ew}x{eh}) at ({ex},{ey}) and cannot be cropped. "
                         "This element may be off-screen, hidden, or in a virtualized container."
                     )
-                    if json_output:
-                        click.echo(_common._json_error_str("ZERO_SIZE_ELEMENT", msg))
-                    else:
-                        click.echo(f"Error: {msg}", err=True)
-                    raise SystemExit(1)
+                    _common._fail(json_output, "ZERO_SIZE_ELEMENT", msg)
 
                 # When capturing a specific window (--app/--hwnd), the
                 # screenshot is window-relative (origin 0,0) but element
@@ -247,11 +227,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 )
             except (ValueError, TypeError) as exc:
                 msg = f"--region must be X,Y,W,H (e.g. 100,50,400,300): {exc}"
-                if json_output:
-                    click.echo(_common._json_error_str("INVALID_INPUT", msg))
-                else:
-                    click.echo(f"Error: {msg}", err=True)
-                raise SystemExit(1)
+                _common._fail(json_output, "INVALID_INPUT", msg)
 
         # Apply crop if requested
         if crop_box is not None:
@@ -314,11 +290,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 result = _dc_replace(result, width=right - left, height=bottom - top)
             except ImportError:
                 msg = "Pillow required for --element/--region crop. Install: pip install naturo[annotate]"
-                if json_output:
-                    click.echo(_common._json_error_str("MISSING_DEPENDENCY", msg))
-                else:
-                    click.echo(f"Error: {msg}", err=True)
-                raise SystemExit(1)
+                _common._fail(json_output, "MISSING_DEPENDENCY", msg)
 
         snapshot_id = None
         if store_snapshot:
@@ -374,14 +346,6 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
                 )
         raise
     except _common.WindowNotFoundError as e:
-        if json_output:
-            click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "WINDOW_NOT_FOUND", str(e))
     except Exception as e:
-        if json_output:
-            click.echo(_common._json_error_str("CAPTURE_ERROR", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "CAPTURE_ERROR", str(e))

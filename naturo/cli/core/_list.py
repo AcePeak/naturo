@@ -97,11 +97,7 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
     """
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Window listing")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "PLATFORM_ERROR", msg)
 
     # Resolve --app-id to its window handle up front so an unresolvable ID fails
     # loudly (INVALID_INPUT) instead of silently listing every window. This
@@ -115,11 +111,7 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
                 f'App ID "{app_id}" not found or expired. '
                 'Run "naturo list windows" or "naturo app list" to refresh.'
             )
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         app_id_handle = entry.handle
 
     try:
@@ -287,17 +279,9 @@ def screens(json_output) -> None:
             )
     except NotImplementedError:
         msg = f"Monitor listing is not supported on {platform.system()} yet."
-        if json_output:
-            click.echo(_common._json_error_str("NOT_IMPLEMENTED", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "NOT_IMPLEMENTED", msg)
     except Exception as e:
-        if json_output:
-            click.echo(_common._json_error_str("UNKNOWN_ERROR", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "UNKNOWN_ERROR", str(e))
 
 
 @list_cmd.command(hidden=True)
@@ -305,8 +289,4 @@ def screens(json_output) -> None:
 def permissions(json_output) -> None:
     """List automation permissions status (UIAccess, admin, etc.)."""
     msg = "Permission listing is not implemented yet — coming in a future release."
-    if json_output:
-        click.echo(_common._json_error_str("NOT_IMPLEMENTED", msg))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    raise SystemExit(1)
+    _common._fail(json_output, "NOT_IMPLEMENTED", msg)

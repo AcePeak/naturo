@@ -87,11 +87,7 @@ def highlight(positional_refs, on_ref, ref_option, app, window_title, hwnd, app_
         entry = id_map.resolve(app_id)
         if entry is None:
             msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            if json_output:
-                click.echo(_common._json_error_str("APP_ID_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
         hwnd = entry.handle
 
     be = _common._get_backend(json_output)

@@ -46,20 +46,12 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
         entry = id_map.resolve(app_id)
         if entry is None:
             msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            if json_output:
-                click.echo(_common._json_error_str("APP_ID_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
         hwnd = entry.handle
 
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Menu inspection")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "PLATFORM_ERROR", msg)
 
     try:
         backend = _common._get_backend(json_output)
@@ -71,11 +63,7 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
                 app_info = find_process(app)
                 if not app_info:
                     msg = f"Application not found: {app}"
-                    if json_output:
-                        click.echo(_common._json_error_str("APP_NOT_FOUND", msg))
-                    else:
-                        click.echo(f"Error: {msg}", err=True)
-                    raise SystemExit(1)
+                    _common._fail(json_output, "APP_NOT_FOUND", msg)
             except ImportError:
                 pass  # find_process not available, fall through to get_menu_items
             except SystemExit:
@@ -93,21 +81,13 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
                 app=app, window_title=window_title, hwnd=hwnd, pid=pid,
             )
         except WindowNotFoundError as exc:
-            if json_output:
-                click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(exc)))
-            else:
-                click.echo(f"Error: {exc}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "WINDOW_NOT_FOUND", str(exc))
 
         items = backend.get_menu_items(hwnd=handle)
 
         if not items:
             msg = "No menu items found."
-            if json_output:
-                click.echo(_common._json_error_str("NO_MENU_ITEMS", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "NO_MENU_ITEMS", msg)
 
         if json_output:
             if flat:
@@ -150,14 +130,6 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
 
     except NotImplementedError:
         msg = "Menu inspection not supported on this platform."
-        if json_output:
-            click.echo(_common._json_error_str("NOT_SUPPORTED", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "NOT_SUPPORTED", msg)
     except Exception as e:
-        if json_output:
-            click.echo(_common._json_error_str("UNKNOWN_ERROR", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "UNKNOWN_ERROR", str(e))

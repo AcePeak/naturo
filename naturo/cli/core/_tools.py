@@ -14,8 +14,4 @@ def tools(json_output) -> None:
     Shows which native backends are available (UIA, MSAA, Java Bridge, etc.).
     """
     msg = "Tools listing is not implemented yet \u2014 coming in a future release."
-    if json_output:
-        click.echo(_common._json_error_str("NOT_IMPLEMENTED", msg))
-    else:
-        click.echo(f"Error: {msg}", err=True)
-    raise SystemExit(1)
+    _common._fail(json_output, "NOT_IMPLEMENTED", msg)
