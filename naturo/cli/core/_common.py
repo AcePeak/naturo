@@ -106,14 +106,10 @@ def _enforce_desktop_session(json_output: bool) -> None:
     try:
         _check_desktop_session()
     except Exception as exc:
-        if json_output:
-            click.echo(_json_error_str("NO_DESKTOP_SESSION", str(exc)))
-        else:
-            # A missing desktop is a runtime/environment failure, not a usage
-            # error: emit a clean message and exit 1, never Click's exit-2
-            # ``Usage:`` banner (#866).
-            click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
+        # A missing desktop is a runtime/environment failure, not a usage error:
+        # _fail emits a clean message and exits 1, never Click's exit-2 ``Usage:``
+        # banner (#866).
+        _fail(json_output, "NO_DESKTOP_SESSION", str(exc))
 
 
 def _get_backend(json_output: bool = False):
@@ -284,8 +280,4 @@ def _ensure_output_dir(path: str, json_output: bool) -> None:
             f"Cannot create output directory '{parent}': {reason}. "
             "Choose a writable --path or create the directory first."
         )
-        if json_output:
-            click.echo(_json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _fail(json_output, "INVALID_INPUT", msg)
