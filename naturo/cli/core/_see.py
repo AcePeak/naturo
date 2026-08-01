@@ -11,6 +11,114 @@ import naturo.cli.core._common as _common
 from naturo.value_preview import bounded_value
 
 
+# ── see recognition helpers ──────────────────────────────────────────────────
+# Extracted from the former monolithic `see` so its recognition phases read as
+# named steps. Behaviour-identical lifts; each returns the element tree the
+# renderer below consumes.
+
+
+def _recognize_via_cascade(be, *, app, window_title, hwnd, pid, depth, backend,
+                           coverage_target, path, tech, cascade,
+                           ai_provider, ai_model, ai_api_key,
+                           excel_max_cells, excel_max_rows, excel_max_cols):
+    """Progressive multi-provider recognition (#140): auto-capture a screenshot
+    when a pixel technique (AI/OCR) is active, then fuse the structured + pixel
+    providers via ``run_cascade`` (or ``app_content_tree`` for a bare --app that
+    resolves to several UWP windows). Returns ``(tree, cascade_stats)``.
+    """
+    # Auto-capture a screenshot when a pixel technique is active so AI/OCR have an
+    # image to read (#275); capture the TARGET window, not the foreground terminal
+    # (#694). The temp file is block-local — only its path feeds the cascade.
+    cascade_screenshot = path
+    cascade_capture_result = None
+    if not cascade_screenshot and (cascade or tech.fill_gaps_ai or tech.run_ocr):
+        import tempfile as _tmpfile
+        _tmp = _tmpfile.NamedTemporaryFile(
+            suffix=".png", prefix="naturo_cascade_", delete=False)
+        _tmp.close()
+        try:
+            _cascade_hwnd = hwnd
+            if not _cascade_hwnd and hasattr(be, "_resolve_hwnd"):
+                try:
+                    _cascade_hwnd = be._resolve_hwnd(
+                        app=app, window_title=window_title, pid=pid)
+                except Exception:
+                    _cascade_hwnd = None
+            if _cascade_hwnd:
+                cascade_capture_result = be.capture_window(
+                    hwnd=_cascade_hwnd, output_path=_tmp.name)
+            else:
+                cascade_capture_result = be.capture_screen(output_path=_tmp.name)
+            cascade_screenshot = cascade_capture_result.path
+        except Exception:
+            cascade_screenshot = None
+
+    from naturo.cascade import run_cascade
+    tree = None
+    cascade_stats = None
+
+    # (calc-zombie) A bare --app can resolve to several UWP windows at once —
+    # empty ApplicationFrameWindow ghosts + the live CoreWindow — and a single
+    # _resolve_hwnd may pick a ghost. Gather all the app's windows, cascade each,
+    # keep only the content-bearing ones. Shared with MCP see_ui_tree.
+    if app and hwnd is None and not window_title and pid is None:
+        from naturo.cascade._appwindows import app_content_tree
+        tree, cascade_stats = app_content_tree(
+            be, app, depth=depth, backend_name=backend,
+            coverage_target=coverage_target)
+
+    if tree is None:
+        cascade_result = run_cascade(
+            be, app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            depth=depth, backend_name=backend, coverage_target=coverage_target,
+            fill_gaps_ai=tech.fill_gaps_ai, ai_provider=ai_provider,
+            ai_model=ai_model, ai_api_key=ai_api_key,
+            screenshot_path=cascade_screenshot,
+            screenshot_scale_factor=(
+                cascade_capture_result.scale_factor if cascade_capture_result else 1.0),
+            run_ocr=tech.run_ocr, excel_max_cells=excel_max_cells,
+            excel_max_rows=excel_max_rows, excel_max_cols=excel_max_cols,
+            enable_uia=tech.enable_uia, enable_msaa=tech.enable_msaa,
+            enable_ia2=tech.enable_ia2, enable_jab=tech.enable_jab,
+            enable_cdp=tech.enable_cdp, enable_com=tech.enable_com)
+        tree = cascade_result.tree
+        cascade_stats = cascade_result.stats
+    return tree, cascade_stats
+
+
+def _merge_app_windows(be, app, depth, backend, json_output):
+    """(#304) Enumerate ALL windows of an application and merge their UI trees
+    under one virtual ``app_root`` node (used for ``see --app`` without --hwnd on
+    the non-cascade path). :func:`_common._fail` if nothing matches / all empty."""
+    from naturo.backends.base import ElementInfo as BaseElementInfo
+    hwnds = be._resolve_hwnds(app=app)
+    if not hwnds:
+        _common._fail(json_output, "WINDOW_NOT_FOUND", f"No windows found for app '{app}'.")
+
+    window_trees = []
+    for h in hwnds:
+        subtree = be.get_element_tree(hwnd=h, depth=depth, backend=backend)
+        # Keep every window with a real tree; ghost-frame dropping is the cascade
+        # path's job (content_score can't tell a childless window from a ghost).
+        if subtree:
+            window_trees.append((h, subtree))
+
+    if not window_trees:
+        _common._fail(json_output, "WINDOW_NOT_FOUND", "All windows have empty UI trees.")
+
+    tree = BaseElementInfo(
+        id="app_root", role="Application", name=app, value=None,
+        x=0, y=0, width=0, height=0, children=[], properties={})
+    for h, subtree in window_trees:
+        # Wrap each window tree in a "Window" group node to preserve identity.
+        tree.children.append(BaseElementInfo(
+            id=f"window_{h}", role="WindowGroup",
+            name=f"{subtree.name} (HWND:{h})", value=None,
+            x=subtree.x, y=subtree.y, width=subtree.width, height=subtree.height,
+            children=[subtree], properties={}))
+    return tree
+
+
 @click.command()
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
@@ -171,166 +279,32 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             ia2=want_ia2, jab=want_jab, cdp=want_cdp, com=want_com,
             ocr=run_ocr, ai=want_ai, cascade=cascade, fill_gaps=fill_gaps,
         )
-        enable_uia = _tech.enable_uia
-        enable_msaa = _tech.enable_msaa
-        enable_ia2 = _tech.enable_ia2
-        enable_jab = _tech.enable_jab
-        enable_cdp = _tech.enable_cdp
-        enable_com = _tech.enable_com
+        # _recognize_via_cascade reads the enable_* flags off _tech directly; only
+        # the pixel-technique flags are needed here to pick the recognition path.
         _want_ai = _tech.fill_gaps_ai
         _want_ocr = _tech.run_ocr
 
-        # ── Cascade mode: progressive multi-provider recognition (issue #140) ──
+        # ── Recognition: cascade fusion, multi-window merge, or single fetch ──
         cascade_stats = None
         if cascade or _want_ai or _want_ocr or backend in ("auto", "hybrid", "cdp"):
-            # Auto-capture a screenshot when a pixel technique (AI/OCR) is active
-            # so those providers have an image to read (#275).
-            # (#694) Use capture_window with resolved hwnd so the screenshot
-            # captures the target app, not the foreground terminal window.
-            cascade_screenshot = path
-            _cascade_tmp_screenshot = None
-            cascade_capture_result = None
-            if not cascade_screenshot and (cascade or _want_ai or _want_ocr):
-                import tempfile as _tmpfile
-                _cascade_tmp_screenshot = _tmpfile.NamedTemporaryFile(
-                    suffix=".png", prefix="naturo_cascade_", delete=False,
-                )
-                _cascade_tmp_screenshot.close()
-                try:
-                    # (#694) Capture the TARGET window, not the foreground
-                    # window (which is often the terminal running naturo).
-                    _cascade_hwnd = hwnd
-                    if not _cascade_hwnd and hasattr(be, "_resolve_hwnd"):
-                        try:
-                            _cascade_hwnd = be._resolve_hwnd(
-                                app=app, window_title=window_title, pid=pid,
-                            )
-                        except Exception:
-                            _cascade_hwnd = None
-                    if _cascade_hwnd:
-                        cascade_capture_result = be.capture_window(
-                            hwnd=_cascade_hwnd,
-                            output_path=_cascade_tmp_screenshot.name,
-                        )
-                    else:
-                        cascade_capture_result = be.capture_screen(
-                            output_path=_cascade_tmp_screenshot.name,
-                        )
-                    cascade_screenshot = cascade_capture_result.path
-                except Exception:
-                    cascade_screenshot = None
-
-            from naturo.cascade import run_cascade
-            tree = None
-
-            # (calc-zombie) --app can resolve to several UWP windows at once —
-            # empty ApplicationFrameWindow ghosts + the live CoreWindow that holds
-            # the buttons — and a single _resolve_hwnd can pick a ghost, emitting
-            # chrome-only garbage. Gather all the app's windows, cascade each, keep
-            # only the content-bearing ones. Shared with MCP see_ui_tree.
-            if app and hwnd is None and not window_title and pid is None:
-                from naturo.cascade._appwindows import app_content_tree
-                tree, cascade_stats = app_content_tree(
-                    be, app, depth=depth, backend_name=backend,
-                    coverage_target=coverage_target,
-                )
-
-            if tree is None:
-                cascade_result = run_cascade(
-                    be,
-                    app=app,
-                    window_title=window_title,
-                    hwnd=hwnd,
-                    pid=pid,
-                    depth=depth,
-                    backend_name=backend,
-                    coverage_target=coverage_target,
-                    fill_gaps_ai=_want_ai,
-                    ai_provider=ai_provider,
-                    ai_model=ai_model,
-                    ai_api_key=ai_api_key,
-                    screenshot_path=cascade_screenshot,
-                    screenshot_scale_factor=(
-                        cascade_capture_result.scale_factor
-                        if cascade_capture_result else 1.0
-                    ),
-                    run_ocr=_want_ocr,
-                    excel_max_cells=excel_max_cells,
-                    excel_max_rows=excel_max_rows,
-                    excel_max_cols=excel_max_cols,
-                    enable_uia=enable_uia,
-                    enable_msaa=enable_msaa,
-                    enable_ia2=enable_ia2,
-                    enable_jab=enable_jab,
-                    enable_cdp=enable_cdp,
-                    enable_com=enable_com,
-                )
-                tree = cascade_result.tree
-                cascade_stats = cascade_result.stats
+            tree, cascade_stats = _recognize_via_cascade(
+                be, app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=depth, backend=backend, coverage_target=coverage_target,
+                path=path, tech=_tech, cascade=cascade, ai_provider=ai_provider,
+                ai_model=ai_model, ai_api_key=ai_api_key,
+                excel_max_cells=excel_max_cells, excel_max_rows=excel_max_rows,
+                excel_max_cols=excel_max_cols)
+        elif app and not hwnd and hasattr(be, "_resolve_hwnds"):
+            # (#304) --app without --hwnd on the non-cascade path: merge all windows.
+            tree = _merge_app_windows(be, app, depth, backend, json_output)
         else:
-            # (#304) When --app is used without --hwnd, enumerate ALL windows
-            # of the application and merge their UI trees.
-            if app and not hwnd and hasattr(be, "_resolve_hwnds"):
-                hwnds = be._resolve_hwnds(app=app)
-                if not hwnds:
-                    msg = f"No windows found for app '{app}'."
-                    _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
-
-                # Get element tree for each window
-                from naturo.backends.base import ElementInfo as BaseElementInfo
-                window_trees = []
-                for h in hwnds:
-                    subtree = be.get_element_tree(
-                        hwnd=h, depth=depth, backend=backend,
-                    )
-                    # Keep every window with a real tree; ghost-frame dropping
-                    # is the job of the cascade path (app_content_tree via
-                    # content_score), not this explicit --backend override, and
-                    # content_score can't tell a legit childless window from a
-                    # ghost anyway (both score 0).
-                    if subtree:
-                        window_trees.append((h, subtree))
-
-                if not window_trees:
-                    msg = "All windows have empty UI trees."
-                    _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
-
-                # Merge into a single root: create a virtual root node
-                # with each window's tree as a child
-                tree = BaseElementInfo(
-                    id="app_root",
-                    role="Application",
-                    name=app,
-                    value=None,
-                    x=0, y=0, width=0, height=0,
-                    children=[],
-                    properties={},
-                )
-                for h, subtree in window_trees:
-                    # Wrap each window tree with a "Window" group node
-                    # to preserve window identity in output
-                    window_node = BaseElementInfo(
-                        id=f"window_{h}",
-                        role="WindowGroup",
-                        name=f"{subtree.name} (HWND:{h})",
-                        value=None,
-                        x=subtree.x,
-                        y=subtree.y,
-                        width=subtree.width,
-                        height=subtree.height,
-                        children=[subtree],
-                        properties={},
-                    )
-                    tree.children.append(window_node)
-            else:
-                tree = be.get_element_tree(
-                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-                    depth=depth, backend=backend,
-                )
+            tree = be.get_element_tree(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                depth=depth, backend=backend)
 
         if tree is None:
-            msg = "No window found or UI tree is empty."
-            _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
+            _common._fail(json_output, "WINDOW_NOT_FOUND",
+                          "No window found or UI tree is empty.")
 
         snapshot_id = None
         ref_map: dict[str, str] = {}  # Maps "eN" → backend element id
