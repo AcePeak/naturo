@@ -674,12 +674,16 @@ class TestQuitApp:
         with pytest.raises(InteractionFailedError):
             quit_app(name="notepad", timeout=0.1)
 
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
     @patch("naturo.process.find_process")
-    def test_verify_quit_app_still_running_by_name(self, mock_find):
+    def test_verify_quit_app_still_running_by_name(self, mock_find, mock_windows):
         """#496: _verify_quit must check by name, not just PID.
 
-        After force-killing PID 100, if 'notepad' is still running under
-        PID 200 (respawned), verification must fail.
+        After force-killing PID 100, if 'notepad' is still running under PID 200
+        (respawned) AND still shows a window, verification must fail. The visible-
+        window gate is #620 — a windowless ghost is treated as closed (covered by
+        ``test_verify_quit_ghost_process_no_windows``), so it must be mocked True
+        here to exercise the real-respawn failure path deterministically.
         """
         # First call: PID lookup returns None (target PID is dead)
         # Second call: name lookup returns a new process (respawned)
