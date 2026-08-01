@@ -13,6 +13,7 @@ import signal
 import subprocess
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from naturo.errors import AppNotFoundError, TimeoutError
 
@@ -414,7 +415,9 @@ def launch_app(
     # pipe (every agent/harness, `... | tail`, subprocess.run(capture_output=True))
     # block until the app is closed — the launch looks like a hang. Detach the
     # child's stdio so it can't hold the caller's pipe open.
-    _detached_stdio = {
+    # dict[str, Any] (not the inferred dict[str, int]) so the **-unpack matches
+    # Popen's overloads — DEVNULL is an int but the params accept IO|int|None.
+    _detached_stdio: dict[str, Any] = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
