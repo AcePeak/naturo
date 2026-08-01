@@ -22,6 +22,165 @@ from naturo.errors import NaturoError, StaleSnapshotCacheError
 logger = logging.getLogger(__name__)
 
 
+# Roles whose text value is worth previewing inline in the tree (#372).
+_PREVIEW_ROLES = frozenset({"Document", "Edit", "Text"})
+
+
+# ── get_element_tree building blocks ─────────────────────────────────────────
+# Extracted from the former 250-line get_element_tree so the per-backend dispatch,
+# the UWP child-window fallback, and the bridge→backend conversion are each named
+# and independently readable. Module-level (not methods), taking the backend
+# explicitly, so MagicMock(spec=Backend) doubles that bind only get_element_tree
+# are unaffected — the same reason _resolve_hwnd's helpers are module-level.
+
+
+def _convert_bridge_element(el) -> BaseElementInfo:
+    """Convert a bridge ElementInfo (and its children, recursively) to a backend
+    ElementInfo.
+
+    Carries parent_id/keyboard_shortcut and — via getattr, so backends that don't
+    emit them (image/OCR/UWP fallback, fixtures) simply omit them — the #1200
+    accessibility states and the true per-node capability flags
+    (readable/actionable/editable). Adds a truncated value preview for
+    Document/Edit/Text nodes (#372).
+    """
+    from naturo.value_preview import PREVIEW_LEN as _PREVIEW_LEN
+    props = {
+        k: v for k, v in {
+            "parent_id": el.parent_id,
+            "keyboard_shortcut": el.keyboard_shortcut,
+            "states": getattr(el, "states", None),
+            "readable": getattr(el, "readable", None),
+            "actionable": getattr(el, "actionable", None),
+            "editable": getattr(el, "editable", None),
+        }.items() if v is not None
+    }
+    if el.role in _PREVIEW_ROLES and el.value:
+        full_text = el.value
+        preview = full_text[:_PREVIEW_LEN]
+        if len(full_text) > _PREVIEW_LEN:
+            preview += "…"
+        props["value_preview"] = preview
+        props["value_length"] = len(full_text)
+    return BaseElementInfo(
+        id=el.id, role=el.role, name=el.name, value=el.value,
+        x=el.x, y=el.y, width=el.width, height=el.height,
+        children=[_convert_bridge_element(c) for c in el.children],
+        properties=props,
+    )
+
+
+def _try_uwp_children(backend_self, handle, depth, current_result, get_tree_fn):
+    """If *handle* is an AFH window with an empty tree, retry via its child HWNDs.
+
+    Classic UWP buries content in a ``Windows.UI.Core.CoreWindow`` child of the
+    ApplicationFrameHost window; WinUI 3 uses other child classes. Enumerate the
+    AFH children and return the first non-empty tree, retrying deeper for WinUI
+    (#394). Returns *current_result* unchanged when not applicable.
+    """
+    if not (current_result is not None and not current_result.children
+            and handle and backend_self._is_afh_window(handle)):
+        return current_result
+    child_hwnds = backend_self._find_uwp_content_hwnd(handle)
+    for child_hwnd in child_hwnds:
+        logger.debug("UWP fallback: trying child HWND %s (parent AFH %s)",
+                     child_hwnd, handle)
+        child_result = get_tree_fn(child_hwnd, depth)
+        if child_result is not None and child_result.children:
+            logger.info("UWP fallback: found %d children via child HWND %s",
+                        len(child_result.children), child_hwnd)
+            return child_result
+    # (#394) WinUI 3 apps may need deeper traversal. depth <= 0 is already
+    # unlimited (the first pass went as deep as possible), so only retry when an
+    # explicit low depth yielded nothing.
+    if 0 < depth < 15:
+        deeper = min(depth * 2, 20)
+        logger.debug("UWP fallback: retrying children with depth=%d (was %d)",
+                     deeper, depth)
+        for child_hwnd in child_hwnds:
+            child_result = get_tree_fn(child_hwnd, deeper)
+            if child_result is not None and child_result.children:
+                logger.info("UWP fallback (depth=%d): found %d children via child HWND %s",
+                            deeper, len(child_result.children), child_hwnd)
+                return child_result
+    return current_result
+
+
+def _traverse_auto(backend_self, core, handle, depth):
+    """The ``auto`` cascade: UIA → UWP child fallback → Win32 hybrid (when UIA is
+    shallow, for VB6/ActiveX #308/#312) → IA2/JAB/MSAA/hybrid last resorts.
+    Extracted verbatim from get_element_tree.
+    """
+    result = core.get_element_tree(hwnd=handle, depth=depth)
+    result = _try_uwp_children(backend_self, handle, depth, result,
+                               lambda h, d: core.get_element_tree(hwnd=h, depth=d))
+
+    # Win32+UIA hybrid fallback: when UIA returns a shallow tree (only Pane
+    # containers), Win32 HWND enumeration with UIA drill-down sees more.
+    if result is not None and backend_self._is_shallow_tree(result):
+        logger.info("UIA returned shallow tree (%d children), trying Win32+UIA "
+                    "hybrid enumeration (VB6/ActiveX)", len(result.children))
+        from naturo.bridge import enumerate_hybrid_tree
+        hybrid_result = enumerate_hybrid_tree(hwnd=handle, depth=depth, core=core)
+        if hybrid_result is not None and len(hybrid_result.children) > len(result.children):
+            logger.info("Hybrid fallback found %d children (vs %d from UIA), using it",
+                        len(hybrid_result.children), len(result.children))
+            result = hybrid_result
+
+    if result is None or (not result.children and not result.name):
+        # Try IA2 (Firefox/Thunderbird/LibreOffice), then JAB, then MSAA, then hybrid.
+        ia2_result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
+        if ia2_result is not None:
+            return ia2_result
+        jab_result = core.jab_get_element_tree(hwnd=handle, depth=depth)
+        if jab_result is not None:
+            return jab_result
+        msaa_result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
+        if msaa_result is not None:
+            return msaa_result
+        from naturo.bridge import enumerate_hybrid_tree
+        hybrid_result = enumerate_hybrid_tree(hwnd=handle, depth=depth, core=core)
+        if hybrid_result is not None:
+            logger.info("Auto mode: all backends failed, using Win32+UIA hybrid fallback")
+            return hybrid_result
+    return result
+
+
+def _traverse_via_backend(backend_self, core, backend, handle, depth):
+    """Run the requested accessibility backend (plus its UWP/hybrid fallbacks) and
+    return the raw bridge tree. Extracted verbatim from get_element_tree's dispatch
+    chain; ``auto`` delegates to :func:`_traverse_auto`.
+    """
+    if backend == "jab":
+        # Depth is honored as-is (no per-backend offset); the unlimited default
+        # (depth <= 0) is what reaches deeply-buried Swing content, not a magic +N.
+        result = core.jab_get_element_tree(hwnd=handle, depth=depth)
+        return _try_uwp_children(backend_self, handle, depth, result,
+                                 lambda h, d: core.jab_get_element_tree(hwnd=h, depth=d))
+    if backend == "ia2":
+        result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
+        return _try_uwp_children(backend_self, handle, depth, result,
+                                 lambda h, d: core.ia2_get_element_tree(hwnd=h, depth=d))
+    if backend == "msaa":
+        result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
+        return _try_uwp_children(backend_self, handle, depth, result,
+                                 lambda h, d: core.msaa_get_element_tree(hwnd=h, depth=d))
+    if backend == "win32":
+        # Pure Win32 HWND enumeration (VB6/ActiveX fallback).
+        from naturo.bridge import enumerate_child_windows
+        return enumerate_child_windows(hwnd=handle, depth=depth)
+    if backend == "win32hybrid":
+        # Win32 HWND tree + UIA drill-down for complex controls (#312).
+        from naturo.bridge import enumerate_hybrid_tree
+        return enumerate_hybrid_tree(hwnd=handle, depth=depth, core=core)
+    if backend == "auto":
+        return _traverse_auto(backend_self, core, handle, depth)
+    # Explicit "uia" (and any unrecognized value) → UIA + UWP child fallback.
+    result = core.get_element_tree(hwnd=handle, depth=depth)
+    return _try_uwp_children(backend_self, handle, depth, result,
+                             lambda h, d: core.get_element_tree(hwnd=h, depth=d))
+
+
 class ElementTreeMixin:
     """Find elements, retrieve element trees, and read element values."""
 
@@ -169,215 +328,19 @@ class ElementTreeMixin:
         core = self._ensure_core()
         handle = self._resolve_hwnd(app=app, window_title=window_title, hwnd=hwnd, pid=pid)
 
-        def _try_uwp_children(current_result, get_tree_fn):
-            """If handle is an AFH window with empty tree, try child windows.
-
-            Enumerates all child HWNDs of the ApplicationFrameHost window
-            and returns the first one that yields a non-empty element tree.
-
-            Args:
-                current_result: The element tree from the AFH window itself.
-                get_tree_fn: Callable(hwnd, depth) -> element tree result.
-
-            Returns:
-                A non-empty element tree from a child HWND, or current_result
-                if no child yields a better result.
-            """
-            if (current_result is not None
-                    and not current_result.children
-                    and handle
-                    and self._is_afh_window(handle)):
-                child_hwnds = self._find_uwp_content_hwnd(handle)
-                for child_hwnd in child_hwnds:
-                    logger.debug(
-                        "UWP fallback: trying child HWND %s "
-                        "(parent AFH %s)", child_hwnd, handle,
-                    )
-                    child_result = get_tree_fn(child_hwnd, depth)
-                    if child_result is not None and child_result.children:
-                        logger.info(
-                            "UWP fallback: found %d children via child "
-                            "HWND %s", len(child_result.children), child_hwnd,
-                        )
-                        return child_result
-
-                # (#394) WinUI 3 apps may need deeper traversal.
-                # Retry child HWNDs with increased depth if the original depth was
-                # an explicit low value that yielded nothing. depth <= 0 already
-                # means unlimited (the first pass went as deep as possible), so
-                # there is nothing deeper to retry — skip it.
-                if 0 < depth < 15:
-                    deeper = min(depth * 2, 20)
-                    logger.debug(
-                        "UWP fallback: retrying children with depth=%d "
-                        "(was %d)", deeper, depth,
-                    )
-                    for child_hwnd in child_hwnds:
-                        child_result = get_tree_fn(child_hwnd, deeper)
-                        if child_result is not None and child_result.children:
-                            logger.info(
-                                "UWP fallback (depth=%d): found %d children "
-                                "via child HWND %s",
-                                deeper, len(child_result.children), child_hwnd,
-                            )
-                            return child_result
-            return current_result
-
-        if backend == "jab":
-            # Depth is honored as-is, with no per-backend offset. Java/Swing does
-            # bury content under many structural panes (JConsole's MBean tree and
-            # attribute-table rows sit ~24 levels deep), but the fix for that is
-            # the unlimited default (depth <= 0 walks the whole tree) rather than a
-            # magic "+N" that every deeper control forces us to keep raising. A
-            # positive --depth therefore means raw tree levels here, consistent
-            # with UIA/MSAA/IA2; the native layer treats <= 0 as unlimited.
-            result = core.jab_get_element_tree(hwnd=handle, depth=depth)
-            result = _try_uwp_children(
-                result,
-                lambda h, d: core.jab_get_element_tree(hwnd=h, depth=d),
-            )
-        elif backend == "ia2":
-            result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
-            result = _try_uwp_children(
-                result,
-                lambda h, d: core.ia2_get_element_tree(hwnd=h, depth=d),
-            )
-        elif backend == "msaa":
-            result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
-            result = _try_uwp_children(
-                result,
-                lambda h, d: core.msaa_get_element_tree(hwnd=h, depth=d),
-            )
-        elif backend == "win32":
-            # Pure Win32 HWND enumeration (VB6/ActiveX fallback)
-            from naturo.bridge import enumerate_child_windows
-            result = enumerate_child_windows(hwnd=handle, depth=depth)
-        elif backend == "win32hybrid":
-            # Win32 HWND tree + UIA drill-down for complex controls (#312)
-            from naturo.bridge import enumerate_hybrid_tree
-            result = enumerate_hybrid_tree(
-                hwnd=handle, depth=depth, core=core,
-            )
-        elif backend == "auto":
-            result = core.get_element_tree(hwnd=handle, depth=depth)
-            # UWP/WinUI fallback: try child windows of AFH
-            result = _try_uwp_children(
-                result,
-                lambda h, d: core.get_element_tree(hwnd=h, depth=d),
-            )
-            
-            # Win32+UIA hybrid fallback for VB6/ActiveX apps (#308, #312)
-            # When UIA returns shallow trees (only Pane containers),
-            # use hybrid enumeration: Win32 HWND tree as base with UIA
-            # drill-down for complex controls (grids, list views, tree views).
-            if result is not None and self._is_shallow_tree(result):
-                logger.info(
-                    "UIA returned shallow tree (%d children), "
-                    "trying Win32+UIA hybrid enumeration (VB6/ActiveX)",
-                    len(result.children)
-                )
-                from naturo.bridge import enumerate_hybrid_tree
-                hybrid_result = enumerate_hybrid_tree(
-                    hwnd=handle, depth=depth, core=core,
-                )
-                if hybrid_result is not None and len(hybrid_result.children) > len(result.children):
-                    logger.info(
-                        "Hybrid fallback found %d children (vs %d from UIA), using it",
-                        len(hybrid_result.children), len(result.children)
-                    )
-                    result = hybrid_result
-            
-            if result is None or (not result.children and not result.name):
-                # Try IA2 first (Firefox/Thunderbird/LibreOffice), then MSAA
-                ia2_result = core.ia2_get_element_tree(hwnd=handle, depth=depth)
-                if ia2_result is not None:
-                    result = ia2_result
-                else:
-                    # Try JAB for Java applications
-                    jab_result = core.jab_get_element_tree(hwnd=handle, depth=depth)
-                    if jab_result is not None:
-                        result = jab_result
-                    else:
-                        msaa_result = core.msaa_get_element_tree(hwnd=handle, depth=depth)
-                        if msaa_result is not None:
-                            result = msaa_result
-                        else:
-                            # Final fallback: hybrid Win32+UIA enumeration
-                            from naturo.bridge import enumerate_hybrid_tree
-                            hybrid_result = enumerate_hybrid_tree(
-                                hwnd=handle, depth=depth, core=core,
-                            )
-                            if hybrid_result is not None:
-                                logger.info("Auto mode: all backends failed, using Win32+UIA hybrid fallback")
-                                result = hybrid_result
-        else:
-            result = core.get_element_tree(hwnd=handle, depth=depth)
-            # UWP/WinUI fallback for explicit "uia" backend too
-            result = _try_uwp_children(
-                result,
-                lambda h, d: core.get_element_tree(hwnd=h, depth=d),
-            )
-
+        result = _traverse_via_backend(self, core, backend, handle, depth)
         if result is None:
             return None
 
-        # (#613) Fix coordinate mismatch on UWP/high-DPI: UIA may return
-        # large negative coords for UWP apps when DPI contexts conflict.
+        # (#613) Fix coordinate mismatch on UWP/high-DPI: UIA may return large
+        # negative coords for UWP apps when DPI contexts conflict.
         if handle:
             result = self._fixup_element_coords(result, handle)
 
-        # Post-process: assign sequential IDs and fill parent_id
+        # Post-process: assign sequential IDs + parent_id, then convert the bridge
+        # tree to backend ElementInfo (states, capabilities, value previews).
         populate_hierarchy(result)
-
-        # (#372) Roles that should include a text value preview
-        from naturo.value_preview import PREVIEW_LEN as _PREVIEW_LEN
-        _PREVIEW_ROLES = {"Document", "Edit", "Text"}
-
-        def convert(el) -> BaseElementInfo:
-            """Convert bridge ElementInfo to backend ElementInfo."""
-            props = {
-                k: v for k, v in {
-                    "parent_id": el.parent_id,
-                    "keyboard_shortcut": el.keyboard_shortcut,
-                    # (#1200) Accessibility states (e.g. a JAB checkbox's
-                    # checked/unchecked) are emitted by the native layer and must
-                    # survive the bridge→backend conversion to reach consumers.
-                    # getattr: backends that don't emit states (image/OCR/UWP
-                    # fallback, test fixtures) leave the attribute absent → None,
-                    # matching the dataclass default rather than crashing.
-                    "states": getattr(el, "states", None),
-                    # True per-node capabilities (readable/actionable/editable)
-                    # reported by the backend, surfaced so agents target the real
-                    # interactive node instead of guessing from role.
-                    "readable": getattr(el, "readable", None),
-                    "actionable": getattr(el, "actionable", None),
-                    "editable": getattr(el, "editable", None),
-                }.items() if v is not None
-            }
-
-            # (#372) Add value preview for Document/Edit/Text elements
-            if el.role in _PREVIEW_ROLES and el.value:
-                full_text = el.value
-                preview = full_text[:_PREVIEW_LEN]
-                if len(full_text) > _PREVIEW_LEN:
-                    preview += "…"
-                props["value_preview"] = preview
-                props["value_length"] = len(full_text)
-
-            return BaseElementInfo(
-                id=el.id,
-                role=el.role,
-                name=el.name,
-                value=el.value,
-                x=el.x,
-                y=el.y,
-                width=el.width,
-                height=el.height,
-                children=[convert(c) for c in el.children],
-                properties=props,
-            )
-
-        return convert(result)
+        return _convert_bridge_element(result)
     @staticmethod
     def _read_scintilla_ref_live(elem) -> Optional[dict]:
         """Live-read a Scintilla node's text, or ``None`` if not a Scintilla ref.
