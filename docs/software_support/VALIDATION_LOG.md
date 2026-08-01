@@ -67,6 +67,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 | 49 | QQ影音 (QQPlayer) 4.6.3 (免登录, hwnd 2365722) | TXGuiFoundation (Tencent DirectUI) | 2026-08-01 | ⚠️ window only; controls custom-drawn | ⚠️ coord/OCR | partial | **PARTIAL — Tencent DirectUI (same family as 电脑管家 #1–3).** 电脑管家-acquired install (`QQPlayerSetup4.6.3.1104.exe`, driven by naturo: 快速安装). Player class `TXGuiFoundation`; UIA returns 25 nodes but the skinned buttons are unnamed/offscreen (0,0) — Tencent's custom DirectUI doesn't expose real controls (matches 电脑管家's TXMiniSkin/QMUI). naturo sees the window; operation is coord/OCR. Consistent finding: **Tencent's own GUI toolkits are a11y-blind** — an area where the moat's OCR/vision fallback is essential. |
 | 50 | Snipaste 2.11.3 (免登录, portable) | Qt (tray-first) | 2026-08-01 | ⚠️ tray-only, no persistent window | ⚠️ hotkey/coord | partial | **PARTIAL — tray-first (like Greenshot #34).** Portable ZIP from 电脑管家 (`Snipaste-2.11.3-x64.zip` → extracted, ran `Snipaste.exe`). Runs in the system tray with **no persistent window** (naturo confirms the process; its snip/paste UI appears only on hotkey/tray-menu invocation, which isn't triggerable headlessly). Preferences is a full Qt window (would be see-able) but is tray-menu-gated. Consistent with the tray-app class (Snipaste/Greenshot/Ditto): naturo sees them when a window is shown; the challenge is invoking the window, not reading it. |
 | 51 | 网易有道翻译 11.3.6.0 (免登录, hwnd 32180636) | CEF/custom (YodaoMainWndClass) | 2026-08-01 | ⚠️ window only; content CEF | ⚠️ coord/OCR | partial | **PARTIAL — CEF/custom-rendered (like WPS-CEF #8 / DingTalk #11).** 电脑管家-acquired install (`YoudaoDict_dict_web_banner_11.3.6.0.exe`, driven by naturo: **checked the required agreement checkboxes e4+e9 by ref** then 快速安装 → 立即体验). Dictionary/translation app; window class `YodaoMainWndClass` exposes only 9 nodes (nested Panes) — the search box + dictionary content are CEF/custom, not in UIA → OCR/coords. 免登录 (word lookup works without account; login only for sync). **Installer finding:** its two agreement checkboxes (服务条款/隐私政策 + 未成年人规则) gate the install button and **DID take ref-clicks** — corrects my earlier "有道 agreement radios don't take synthetic clicks" note (#25): they're checkboxes, click by ref works. |
+| 52 | EmEditor 20.6 (64-bit) (免登录 trial, hwnd 3020638) | MFC (EmEditorMainFrame3) UIA | 2026-08-01 | ✅ tabs + toolbars + statusbar | ✅ tabs/toolbars by ref | det (UIA) | **SUPPORTED — 电脑管家-acquired install; unblocked the MSI class.** MFC editor; UIA exposes document Tabs (无标题-1/-2 TabItems), multiple ToolBars, StatusBar by ref. Professional editor, 免登录 trial. **KEY installer fix — MSI needs ELEVATED launch:** `emed64_20.6.0.msi` never installed via `naturo app launch msiexec` (naturo's Popen msiexec isn't elevated → per-machine MSI silently no-ops, no wizard). Launching the installer **elevated** (`Start-Process msiexec -Verb RunAs`) surfaced the `MsiDialogCloseClass` wizard, then naturo drove it (Setup-Type "Typical" icon by ref → Install → Finish). This unblocks the whole MSI class (also CMake #29 which had to be hand-driven, and Inkscape). See Open items. |
 
 ---
 
@@ -191,7 +192,7 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 37 apps (#12–31, #33, #36–51; #34 Greenshot &
+**Installed + evaluated this run: 38 apps (#12–31, #33, #36–52; #34 Greenshot &
 #35 HWiNFO64 PARTIAL; +#32 DB Browser installed but its stale 2015 build crashes
 on launch — a failure).** #43 WinSCP is a fresh 电脑管家 store install (Delphi/VCL);
 #36–42 (Notepad++, Calculator, Task Manager, Registry Editor, Paint, File Explorer,
@@ -229,6 +230,13 @@ clear-X ≈ (1007,50).
 
 ## Open items / for the next agent
 
+- **🔑 KEY: MSI installers need an ELEVATED launch** (found via #52 EmEditor). A per-machine
+  `.msi` launched through `naturo app launch msiexec /i …` silently no-ops (naturo's Popen
+  msiexec is NOT elevated → no wizard, nothing installs). Launch the installer elevated —
+  `Start-Process msiexec -ArgumentList '/i','<pkg.msi>' -Verb RunAs` (installer launch only;
+  the wizard is still **driven by naturo** by ref) — then the `MsiDialogCloseClass` wizard
+  appears. Note the MSI **Setup-Type page** (Typical/Custom/Complete icons) advances on an
+  **icon click**, not Next. This unblocks EmEditor/CMake/Inkscape-class MSIs.
 - **🔑 KEY: 电脑管家 downloads land in `C:\QMDownload\SoftMgr\` — install from there.**
   Every store download (whether or not 电脑管家 auto-ran its installer) is kept as the
   raw package in `C:\QMDownload\SoftMgr\`. When the market downloads a package but
