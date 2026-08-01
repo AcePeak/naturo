@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from naturo.cli._jsonio import json_dumps
 import re as _re_mod
+from dataclasses import dataclass
 from typing import Any
 
 import click
@@ -117,6 +118,104 @@ def _merge_app_windows(be, app, depth, backend, json_output):
             x=subtree.x, y=subtree.y, width=subtree.width, height=subtree.height,
             children=[subtree], properties={}))
     return tree
+
+
+def _el_to_selector_dict(el: Any) -> dict[str, str]:
+    """Convert an ElementInfo to a dict suitable for SelectorBuilder (#102)."""
+    raw_id = str(el.id) if el.id else ""
+    aid = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+    return {"role": el.role or "*", "name": el.name or "", "automationid": aid}
+
+
+def _build_selector(el: Any, ancestors_dicts: list, sel_builder: Any,
+                    selector_app: str) -> str:
+    """Build a URI selector for *el* given its ancestor dicts (#102)."""
+    return sel_builder.build_uri(
+        _el_to_selector_dict(el), ancestors_dicts, app=selector_app)
+
+
+@dataclass
+class _JsonRenderCtx:
+    """Immutable config + mutable accumulators for :func:`_tree_to_json`."""
+    store_snapshot: bool
+    element_obj_to_ref: dict          # id(el) -> stable ref (#502)
+    display_ref_map: dict             # display "eN" -> stable ref (mutated)
+    visible_only: bool
+    full_text: bool
+    selector_app: str
+    sel_builder: Any
+    fusion_annotate: Any              # cascade._correctness.annotate
+    seq: list                         # DFS display-id counter [0] (mutated)
+
+
+def _tree_to_json(el: Any, ctx: _JsonRenderCtx, parent_ref: str | None = None,
+                  ancestors_dicts: list | None = None) -> dict | None:
+    """Serialize an ElementInfo tree to the ``see --json`` node dict (recursive).
+
+    Assigns sequential display refs (e1, e2, … in DFS order, #237), maps them to
+    stable refs for click resolution (#502), exposes AutomationId (#295), unified
+    selectors (#102), value previews (#372), and correctness-tagged fusion (M1).
+    Returns ``None`` for an offscreen node under ``--visible-only`` (#365).
+    """
+    if ancestors_dicts is None:
+        ancestors_dicts = []
+
+    ctx.seq[0] += 1
+    display_id = f"e{ctx.seq[0]}"
+
+    if ctx.store_snapshot:
+        stable_ref = ctx.element_obj_to_ref.get(id(el))
+        if stable_ref:
+            ctx.display_ref_map[display_id] = stable_ref
+
+    # (#295) Expose AutomationId separately; filter tree-assigned "eN" placeholders.
+    raw_id = str(el.id) if el.id else ""
+    automation_id = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
+
+    _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
+    if ctx.visible_only and _is_offscreen:  # (#365)
+        return None
+
+    el_dict = _el_to_selector_dict(el)
+    selector_uri = _build_selector(el, ancestors_dicts, ctx.sel_builder, ctx.selector_app)
+    child_ancestors = ancestors_dicts + [el_dict]
+
+    children_raw = [_tree_to_json(c, ctx, parent_ref=display_id,
+                                  ancestors_dicts=child_ancestors)
+                    for c in el.children]
+    children = [c for c in children_raw if c is not None]
+
+    d = {
+        "id": display_id, "automation_id": automation_id,
+        "role": el.role, "name": el.name, "value": el.value,
+        "selector": selector_uri, "x": el.x, "y": el.y,
+        "width": el.width, "height": el.height, "children": children,
+    }
+    if _is_offscreen:
+        d["offscreen"] = True
+
+    # (#372) Value preview for Document/Edit/Text (full value already in d["value"]).
+    if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+        _pv, _ = bounded_value(el.value, full=ctx.full_text)
+        d["value_preview"] = _pv
+        d["value_length"] = len(el.value)
+
+    # (#295) Always use the naturo ref for parent, never raw AutomationId.
+    if parent_ref:
+        d["parent_ref"] = parent_ref
+        d["parent_id"] = parent_ref  # deprecated alias, kept for back-compat
+    props = getattr(el, "properties", {})
+    if props.get("keyboard_shortcut"):
+        d["keyboard_shortcut"] = props["keyboard_shortcut"]
+    if props.get("source"):
+        d["source"] = props["source"]
+    # (M1) Correctness-tagged fusion: techniques[]/correctness/confidence.
+    _fusion = ctx.fusion_annotate(props)
+    if _fusion is not None:
+        d["techniques"] = _fusion["techniques"]
+        d["correctness"] = _fusion["correctness"]
+        d["confidence"] = _fusion["confidence"]
+    return d
 
 
 @click.command()
@@ -366,21 +465,6 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         _sel_builder = SelectorBuilder()
         _selector_app = app or "*"
 
-        def _el_to_selector_dict(el: Any) -> dict[str, str]:
-            """Convert an ElementInfo to a dict suitable for SelectorBuilder."""
-            raw_id = str(el.id) if el.id else ""
-            aid = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
-            return {
-                "role": el.role or "*",
-                "name": el.name or "",
-                "automationid": aid,
-            }
-
-        def _build_selector(el: Any, ancestors_dicts: list[dict[str, str]]) -> str:
-            """Build a URI selector for an element given its ancestor dicts."""
-            el_dict = _el_to_selector_dict(el)
-            return _sel_builder.build_uri(el_dict, ancestors_dicts, app=_selector_app)
-
         # (M1) Unified Auto Element Tree: fusion tags + AI/image warning.
         # recognition_summary only counts cascade-tagged nodes, so a plain
         # (non-cascade) tree yields an empty summary and no false warning.
@@ -393,106 +477,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         _recognition_warning = _fusion_warning(_recognition)
 
         if json_output:
-            # (#237) Use a sequential counter matching _flatten() DFS order
-            # to assign unique display IDs.  The previous reverse-map approach
-            # was lossy: when multiple elements share the same backend
-            # AutomationId, the dict comprehension kept only the last ref,
-            # causing duplicate display IDs in JSON output.
-            _json_ref_seq = [0]
-
-            def to_dict(el: Any, parent_ref: str | None = None, ancestors_dicts: list[dict[str, str]] | None = None) -> dict[str, Any] | None:
-                """Convert ElementInfo tree to a JSON-serializable dict.
-
-                Args:
-                    el: Backend ElementInfo node.
-                    parent_ref: The naturo ref (eN) of the parent element,
-                        ensuring parent references are always in the same
-                        ID space as element refs (#295).
-                    ancestors_dicts: List of ancestor selector dicts (root-first)
-                        for building unified selectors (#102).
-                """
-                if ancestors_dicts is None:
-                    ancestors_dicts = []
-
-                _json_ref_seq[0] += 1
-                display_id = f"e{_json_ref_seq[0]}"
-
-                # (#502) Map display ref → stable ref for click resolution
-                if store_snapshot:
-                    stable_ref = _element_obj_to_ref.get(id(el))
-                    if stable_ref:
-                        _display_ref_map[display_id] = stable_ref
-
-                # (#295) Expose AutomationId separately.  The raw
-                # el.id from the bridge may be an AutomationId or a
-                # tree-assigned "eN" placeholder.  Filter placeholders.
-                raw_id = str(el.id) if el.id else ""
-                automation_id = raw_id if raw_id and not _re_mod.fullmatch(r"e\d+", raw_id) else ""
-
-                # (#365) Zero-bounds elements are offscreen
-                _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
-
-                # (#365) --visible-only: skip offscreen elements entirely
-                if visible_only and _is_offscreen:
-                    return None
-
-                # (#102) Build selector and track ancestors for children
-                el_dict = _el_to_selector_dict(el)
-                selector_uri = _build_selector(el, ancestors_dicts)
-                child_ancestors = ancestors_dicts + [el_dict]
-
-                children_raw = [to_dict(c, parent_ref=display_id,
-                                        ancestors_dicts=child_ancestors)
-                                for c in el.children]
-                children = [c for c in children_raw if c is not None]
-
-                d = {
-                    "id": display_id,
-                    "automation_id": automation_id,
-                    "role": el.role,
-                    "name": el.name,
-                    "value": el.value,
-                    "selector": selector_uri,
-                    "x": el.x,
-                    "y": el.y,
-                    "width": el.width,
-                    "height": el.height,
-                    "children": children,
-                }
-
-                # (#365) Mark offscreen elements
-                if _is_offscreen:
-                    d["offscreen"] = True
-
-                # (#372) Value preview for Document/Edit/Text elements. The full
-                # value is already in d["value"]; preview + length let a consumer
-                # decide whether to read more without re-fetching.
-                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    _pv, _ = bounded_value(el.value, full=full_text)
-                    d["value_preview"] = _pv
-                    d["value_length"] = len(el.value)
-
-                # (#295) Always use naturo ref for parent, never raw
-                # AutomationId — keeps a single consistent ID space.
-                if parent_ref:
-                    d["parent_ref"] = parent_ref
-                # Keep deprecated "parent_id" as alias for backward compat
-                if parent_ref:
-                    d["parent_id"] = parent_ref
-                props = getattr(el, "properties", {})
-                if props.get("keyboard_shortcut"):
-                    d["keyboard_shortcut"] = props["keyboard_shortcut"]
-                if props.get("source"):
-                    d["source"] = props["source"]
-                # (M1) Correctness-tagged fusion: every cascade node carries
-                # techniques[] + correctness + confidence; deterministic first.
-                _fusion = _fusion_annotate(props)
-                if _fusion is not None:
-                    d["techniques"] = _fusion["techniques"]
-                    d["correctness"] = _fusion["correctness"]
-                    d["confidence"] = _fusion["confidence"]
-                return d
-            out = to_dict(tree)
+            # (#237) _tree_to_json assigns display ids from a DFS counter so refs
+            # match _flatten() order and stay unique even when elements share a
+            # backend AutomationId.
+            _json_ctx = _JsonRenderCtx(
+                store_snapshot=store_snapshot,
+                element_obj_to_ref=_element_obj_to_ref if store_snapshot else {},
+                display_ref_map=_display_ref_map, visible_only=visible_only,
+                full_text=full_text, selector_app=_selector_app,
+                sel_builder=_sel_builder, fusion_annotate=_fusion_annotate, seq=[0])
+            out = _tree_to_json(tree, _json_ctx)
             assert out is not None, "Root element should never be filtered"
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
@@ -600,7 +594,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 # (#102) Show selector when --selectors is requested
                 selector_str = ""
                 if show_selectors:
-                    selector_uri = _build_selector(el, ancestors_dicts)
+                    selector_uri = _build_selector(el, ancestors_dicts, _sel_builder, _selector_app)
                     selector_str = f"  {selector_uri}"
                 click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{_caps_str}{selector_str}")
 
