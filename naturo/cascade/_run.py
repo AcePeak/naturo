@@ -381,6 +381,26 @@ def _resolve_additive_hwnd(
         return None
 
 
+def _graft_additive_nodes(
+    name: str, source_tag: str, nodes: List[ElementInfo], elapsed_ms: float,
+    root_tree: ElementInfo, merged_elements: List[ElementInfo], stats: CascadeStats,
+) -> None:
+    """Common tail for a simple additive provider (COM cells / Scintilla text):
+    tag each node with *source_tag*, graft it under the window root, append it to
+    the flat element list, and record an ``ok``/``no_elements`` ProviderStat under
+    *name*. (JAB uses the unified merge instead, so it is not routed through here.)"""
+    if nodes:
+        for n in nodes:
+            tagged = _tag_source(n, source_tag)
+            root_tree.children.append(tagged)
+            merged_elements.append(tagged)
+        stats.providers.append(ProviderStat(
+            name=name, elements=len(nodes), elapsed_ms=elapsed_ms, status="ok"))
+    else:
+        stats.providers.append(ProviderStat(
+            name=name, elapsed_ms=elapsed_ms, status="no_elements"))
+
+
 def run_cascade(
     backend,
     *,
@@ -833,20 +853,8 @@ def run_cascade(
             except Exception as exc:
                 logger.debug("Auto cascade: COM/Excel probe failed: %s", exc)
             elapsed = (time.monotonic() - t0) * 1000
-
-            if com_cells:
-                for cell in com_cells:
-                    tagged_cell = _tag_source(cell, "com")
-                    root_tree.children.append(tagged_cell)
-                    merged_elements.append(tagged_cell)
-                stats.providers.append(ProviderStat(
-                    name="com", elements=len(com_cells),
-                    elapsed_ms=elapsed, status="ok",
-                ))
-            else:
-                stats.providers.append(ProviderStat(
-                    name="com", elapsed_ms=elapsed, status="no_elements",
-                ))
+            _graft_additive_nodes("com", "com", com_cells, elapsed,
+                                  root_tree, merged_elements, stats)
 
     # ── Provider 2d: Scintilla (Notepad++/SciTE/IDE editors) ─────────────────
     # The Scintilla editing surface is opaque to UIA — the tree shows the pane
@@ -865,20 +873,8 @@ def run_cascade(
             except Exception as exc:
                 logger.debug("Auto cascade: Scintilla probe failed: %s", exc)
             elapsed = (time.monotonic() - t0) * 1000
-
-            if sci_nodes:
-                for node in sci_nodes:
-                    tagged = _tag_source(node, "scintilla")
-                    root_tree.children.append(tagged)
-                    merged_elements.append(tagged)
-                stats.providers.append(ProviderStat(
-                    name="scintilla", elements=len(sci_nodes),
-                    elapsed_ms=elapsed, status="ok",
-                ))
-            else:
-                stats.providers.append(ProviderStat(
-                    name="scintilla", elapsed_ms=elapsed, status="no_elements",
-                ))
+            _graft_additive_nodes("scintilla", "scintilla", sci_nodes, elapsed,
+                                  root_tree, merged_elements, stats)
 
     # ── Shallow tree detection (issue #275) ────────────────────────────────
     # When the UIA tree is too shallow (few elements, mostly invalid bounds),
