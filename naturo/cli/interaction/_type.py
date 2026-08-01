@@ -13,6 +13,59 @@ import naturo.cli.interaction._common as _common
 logger = logging.getLogger(__name__)
 
 
+def _focus_on_element(on_element, app, backend, input_mode, json_output) -> bool:
+    """Resolve ``--on`` (an eN ref or a text label) to a point and click it to
+    focus the target before typing (#165).
+
+    Returns True to proceed, or False when an error envelope was already emitted
+    (stale snapshot / element-not-found / focus-click failure) so the caller
+    returns immediately.
+    """
+    import re as _re
+    if _re.fullmatch(r"e\d+", on_element):
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
+        resolved = mgr.resolve_ref(on_element, app_name=app)
+        if resolved:
+            click_x, click_y = resolved[0], resolved[1]
+            if not json_output:
+                try:
+                    _el_info = mgr.resolve_ref_element(on_element, app_name=app)
+                    if _el_info and len(_el_info) >= 2:
+                        _el = _el_info[0]
+                        _el_desc = f'{_el.role} "{_el.title}"' if _el.title else _el.role
+                        click.echo(f"Typing on {on_element} ({_el_desc}) at ({click_x}, {click_y})")
+                except Exception:
+                    pass
+        else:
+            _common._json_err(
+                f"Element ref '{on_element}' not found. Run 'naturo see' first to "
+                f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+                json_output, code="STALE_SNAPSHOT_CACHE", context={"ref": on_element})
+            return False
+    else:
+        try:
+            elem = backend.find_element(on_element)
+            if elem:
+                click_x = elem.x + elem.width // 2
+                click_y = elem.y + elem.height // 2
+            else:
+                _common._json_err(f"Element '{on_element}' not found", json_output,
+                                  code="ELEMENT_NOT_FOUND")
+                return False
+        except Exception as exc:
+            _common._json_err(str(exc), json_output, exc=exc)
+            return False
+    try:
+        backend.click(click_x, click_y, button="left", input_mode=input_mode)
+        import time
+        time.sleep(0.1)  # Brief pause for focus to settle
+    except Exception as exc:
+        _common._json_err(f"Failed to click target element: {exc}", json_output)
+        return False
+    return True
+
+
 @click.command("type")
 @click.argument("text", required=False)
 @click.option("--delay", type=float, default=5.0, help="Delay between keystrokes (ms)", show_default=True)
@@ -222,54 +275,7 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 
     # --on: resolve element ref and click to focus before typing (#165)
     if on_element:
-        import re as _re
-        if _re.fullmatch(r"e\d+", on_element):
-            from naturo.snapshot import get_snapshot_manager
-            mgr = get_snapshot_manager()
-            resolved = mgr.resolve_ref(on_element, app_name=app)
-            if resolved:
-                click_x, click_y = resolved[0], resolved[1]
-                if not json_output:
-                    try:
-                        _el_info = mgr.resolve_ref_element(on_element, app_name=app)
-                        if _el_info and len(_el_info) >= 2:
-                            _el = _el_info[0]
-                            _el_desc = f"{_el.role} \"{_el.title}\"" if _el.title else _el.role
-                            click.echo(f"Typing on {on_element} ({_el_desc}) at ({click_x}, {click_y})")
-                    except Exception:
-                        pass
-            else:
-                _common._json_err(
-                    f"Element ref '{on_element}' not found. Run 'naturo see' first to "
-                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
-                    json_output,
-                    code="STALE_SNAPSHOT_CACHE",
-                    context={"ref": on_element},
-                )
-                return
-        else:
-            # Text-based element lookup via backend
-            try:
-                elem = backend.find_element(on_element)
-                if elem:
-                    click_x = elem.x + elem.width // 2
-                    click_y = elem.y + elem.height // 2
-                else:
-                    _common._json_err(
-                        f"Element '{on_element}' not found",
-                        json_output,
-                        code="ELEMENT_NOT_FOUND",
-                    )
-                    return
-            except Exception as exc:
-                _common._json_err(str(exc), json_output, exc=exc)
-                return
-        try:
-            backend.click(click_x, click_y, button="left", input_mode=input_mode)
-            import time
-            time.sleep(0.1)  # Brief pause for focus to settle
-        except Exception as exc:
-            _common._json_err(f"Failed to click target element: {exc}", json_output)
+        if not _focus_on_element(on_element, app, backend, input_mode, json_output):
             return
 
     # (#231) Capture before-state for post-action verification
