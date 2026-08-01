@@ -241,7 +241,8 @@ def _web_render_bounds(hwnd: Optional[int]) -> Optional[tuple]:
 
         user32.EnumChildWindows(wintypes.HWND(int(hwnd)), _cb, 0)
         return best[0]
-    except Exception:
+    except Exception as exc:
+        logger.debug("web render-bounds probe failed for hwnd %s: %s", hwnd, exc)
         return None
 
 
@@ -330,7 +331,8 @@ def _webview_uia_content(backend, hwnd: Optional[int], depth: int) -> List[Eleme
         import ctypes
         from ctypes import wintypes
         user32 = ctypes.windll.user32  # AttributeError on non-Windows -> [] below
-    except Exception:
+    except Exception as exc:
+        logger.debug("webview-UIA fallback unavailable (no ctypes/user32): %s", exc)
         return []
     widgets = []
     buf = ctypes.create_unicode_buffer(128)
@@ -347,14 +349,16 @@ def _webview_uia_content(backend, hwnd: Optional[int], depth: int) -> List[Eleme
 
     try:
         user32.EnumChildWindows(wintypes.HWND(int(hwnd)), _cb, 0)
-    except Exception:
+    except Exception as exc:
+        logger.debug("EnumChildWindows failed for hwnd %s: %s", hwnd, exc)
         return []
 
     nodes = []
     for wh in widgets:
         try:
             tree = backend.get_element_tree(hwnd=wh, depth=depth, backend="uia")
-        except Exception:
+        except Exception as exc:
+            logger.debug("render-widget %s UIA read failed: %s", wh, exc)
             continue
         if tree is None:
             continue
@@ -452,7 +456,8 @@ def _stage_cdp(
                         int(hwnd), ctypes.byref(_pid)
                     )
                     cdp_pid = _pid.value or None
-                except Exception:
+                except Exception as exc:
+                    logger.debug("PID resolution from hwnd %s failed: %s", hwnd, exc)
                     cdp_pid = None
             debug_port = _get_cascade_pkg().find_cdp_port(cdp_pid)
     except Exception as exc:
