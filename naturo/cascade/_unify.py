@@ -176,16 +176,23 @@ def _shallow_copy_leaf(n: ElementInfo) -> ElementInfo:
     )
 
 
-def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo) -> ElementInfo:
-    """Merge *secondary* into *primary* (the richer skeleton) in place, returning
-    *primary*. Corresponding controls union onto the primary node; controls unique
-    to *secondary* graft under their geometric parent. Both trees must already be
-    ``_tag_source``-tagged. One node per real control — no duplicate refs.
+def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
+    """Merge *secondary* into *primary* (the richer skeleton) in place.
+
+    Corresponding controls (geometry + role-equivalence + normalized-name) union
+    onto the primary node — one operable ref, the secondary recorded as a
+    corroborating source; controls unique to *secondary* graft under their
+    geometric parent. Both trees must already be ``_tag_source``-tagged.
+
+    Returns ``(primary, grafted)`` where *grafted* is the list of newly-added
+    (secondary-unique) leaf nodes — callers use it to report how many controls
+    the secondary source contributed, and to extend a flat element list without
+    re-flattening the whole tree.
     """
     if primary is None:
-        return secondary
+        return secondary, _flatten(secondary) if secondary is not None else []
     if secondary is None:
-        return primary
+        return primary, []
 
     by_role: Dict[str, List[ElementInfo]] = defaultdict(list)
     for n in _flatten(primary):
@@ -214,8 +221,17 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo) -> ElementInf
                     best, best_d = pn, d
         return best
 
+    sec_flat = _flatten(secondary)
+    # Both trees are the SAME window (get_element_tree of one hwnd), so their
+    # ROOTS are the same window frame by construction — corroborate them
+    # directly (their names can differ across sources, e.g. UIA "frame" vs JAB
+    # "jroot", which would otherwise fail the name guard and duplicate the frame).
+    if sec_flat:
+        _union_into(primary, sec_flat[0])
+        claimed.add(id(primary))
+
     unique: List[ElementInfo] = []
-    for sn in _flatten(secondary):
+    for sn in sec_flat[1:]:  # skip the secondary root (handled above)
         if not _boxed(sn):
             continue  # unsized chrome carries nothing to merge
         m = _find_match(sn)
@@ -225,10 +241,13 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo) -> ElementInf
         elif _useful(sn):
             unique.append(sn)
 
+    grafted: List[ElementInfo] = []
     for sn in unique:
         parent = _smallest_container(primary, sn) or primary
         if parent.children is None:
             parent.children = []
-        parent.children.append(_shallow_copy_leaf(sn))
+        leaf = _shallow_copy_leaf(sn)
+        parent.children.append(leaf)
+        grafted.append(leaf)
 
-    return primary
+    return primary, grafted

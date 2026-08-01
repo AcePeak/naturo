@@ -33,7 +33,7 @@ def test_full_overlap_stays_same_size_and_unions_source():
             children=[E("Button", "OK", 10, 10, 40, 20, source="uia")])
     msaa = E("Window", "App", 0, 0, 100, 100, source="msaa",
              children=[E("Button", "OK", 10, 10, 40, 20, source="msaa")])
-    merged = merge_a11y_trees(uia, msaa)
+    merged, _added = merge_a11y_trees(uia, msaa)
     flat = _flat(merged)
     assert len(flat) == 2  # no duplicate button
     btn = next(n for n in flat if n.role == "Button")
@@ -48,7 +48,7 @@ def test_secondary_unique_control_is_grafted():
             children=[E("Pane", "", 0, 30, 200, 170, source="uia")])
     msaa = E("Window", "CharMap", 0, 0, 200, 200, source="msaa",
              children=[E("ListItem", "U+0041", 20, 40, 16, 16, source="msaa")])
-    merged = merge_a11y_trees(uia, msaa)
+    merged, _added = merge_a11y_trees(uia, msaa)
     names = [n.name for n in _flat(merged)]
     assert "U+0041" in names  # grafted
     cell = next(n for n in _flat(merged) if n.name == "U+0041")
@@ -63,7 +63,7 @@ def test_empty_offscreen_secondary_adds_nothing():
     msaa = E("Window", "自然机器人", 0, 0, 0, 0, source="msaa",
              children=[E("Button", "最小化", 0, 0, 0, 0, source="msaa"),
                        E("ScrollBar", "垂直滚动条", 0, 0, 0, 0, source="msaa")])
-    merged = merge_a11y_trees(uia, msaa)
+    merged, _added = merge_a11y_trees(uia, msaa)
     flat = _flat(merged)
     # nothing junky grafted; the real UIA controls survive
     assert len(flat) == 3

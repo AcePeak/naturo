@@ -329,7 +329,19 @@ clear-X ≈ (1007,50).
   their geometric parent**. Wired in `_run.py` after the competition; a no-op for rich-UIA windows
   (they short-circuit before MSAA — no perf cost). Verified: **charmap 27 (uia-only) → 48 unified**
   (grafted the MSAA-unique char-grid/advanced controls UIA missed). 5 new unit tests + 1038 green.
-  **Phase 3 (reuse the same `merge_a11y_trees` for JAB/IA2/CDP/COM) — remaining.**
+- **✅ DONE — Phase 3: reuse the merge for the other sources.** `merge_a11y_trees` now
+  returns `(root, grafted)` and is the shared correspondence primitive. Applied where sources
+  are **overlapping-redundant** (naive combination would duplicate): **UIA↔MSAA** (Phase 2) and
+  **UIA↔JAB** — the JAB additive path (`_run.py`) now folds JAB through the merge, so a control
+  both UIA and JAB expose (the Java frame) collapses to one ref with JAB corroborating, instead
+  of the old naive append that duplicated it. The merge auto-corresponds the two trees' ROOTS
+  (same hwnd → same window frame, even when names differ across sources — UIA "frame" vs JAB
+  "jroot"). **CDP and COM are genuinely COMPLEMENTARY, not redundant** (web page region under the
+  browser control; Excel cells onto the grid) — they already implement the unified tree by
+  **semantic host-nesting** (`_graft_web_under_control`, COM cell graft), which is the correct
+  form for non-overlapping sources and superior to a generic geometric merge, so they stay as-is.
+  **IA2** is authoritative-win for Mozilla (no additive append to dedup). 1161 tests green (only
+  the pre-existing, unrelated `test_verify_quit` #496 still red). **All 3 goal phases complete.**
 - **电脑管家 (App#1):** content (software grid, install/uninstall buttons) is not see-able and injection is self-protection-blocked → operations there are coordinate-based, which violates iron-law #1's spirit. Acceptable only as a fallback; a fully clean 电脑管家 adaptation is **not currently achievable** (its self-protection is legitimate; we don't bypass it).
 - **Qt introspector (moat):** `C:\Users\Naturobot\.naturo-qt\{nq_probe.cpp, qt_introspect.ps1}` compiles and injects; **works on normal Qt apps** (no self-protection). To validate: run it against a plain Qt app (e.g. WPS if Qt) and feed the deterministic QWidget tree into `naturo see`. Injection is a user-run, security-gated step.
 - **Windows Calculator (calc):** ✅ validated as #37 (UWP/WinUI SUPPORTED; 7+8=15 via

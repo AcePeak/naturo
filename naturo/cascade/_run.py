@@ -617,7 +617,7 @@ def run_cascade(
                      else _source_trees["uia"])
         if secondary is not root_tree:
             try:
-                root_tree = merge_a11y_trees(root_tree, secondary)
+                root_tree, _ = merge_a11y_trees(root_tree, secondary)
                 _best_flat = _flatten(root_tree)
             except Exception as exc:  # never let unification break recognition
                 logger.debug("a11y unify merge skipped: %s", exc)
@@ -751,15 +751,22 @@ def run_cascade(
                 logger.debug("Auto cascade: JAB probe failed: %s", exc)
             elapsed = (time.monotonic() - t0) * 1000
 
-            # Attach the JAB controls (the children below the JAB window root)
-            # to the UIA root so callers actually receive them, and count them
-            # the same way the primary/CDP providers are counted.
+            # Fold the JAB controls into the UIA root via the SAME unified-tree
+            # correspondence as UIA↔MSAA (Phase 3): a control both UIA and JAB
+            # expose (e.g. the Java frame UIA also sees) collapses to ONE ref with
+            # JAB recorded as a corroborating source, instead of being duplicated
+            # by a naive append; JAB-unique controls graft under their geometric
+            # parent. `jab_added` = the net-new (JAB-unique) controls, for the stat.
             jab_added: List[ElementInfo] = []
             if jab_tree is not None:
                 tagged_jab = _tag_source(jab_tree, "jab")
-                for child in tagged_jab.children:
-                    root_tree.children.append(child)
-                    jab_added.extend(_flatten(child))
+                try:
+                    root_tree, jab_added = merge_a11y_trees(root_tree, tagged_jab)
+                except Exception as exc:  # never let unification break recognition
+                    logger.debug("JAB unify merge fell back to append: %s", exc)
+                    for child in tagged_jab.children:
+                        root_tree.children.append(child)
+                        jab_added.extend(_flatten(child))
 
             if jab_added:
                 merged_elements.extend(jab_added)
