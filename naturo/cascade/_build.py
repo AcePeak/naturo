@@ -5,6 +5,7 @@ import logging
 import time
 from typing import Optional
 
+from naturo import _winproc
 from naturo.backends.base import ElementInfo
 from naturo.cascade._types import CascadeStats, ProviderStat
 from naturo.cascade._coverage import (
@@ -439,24 +440,16 @@ def find_cdp_port(pid: Optional[int] = None) -> Optional[int]:
     """
     import platform
 
-    # Phase 1: check process command line (Windows only)
+    # Phase 1: check process command line (Windows only). Uses wmic where present
+    # and falls back to PowerShell CIM on wmic-less Windows 11 (see naturo._winproc).
     if pid is not None and platform.system() == "Windows":
         try:
-            import subprocess
-
-            result = subprocess.run(
-                ["wmic", "process", "where", f"ProcessId={pid}",
-                 "get", "CommandLine", "/format:list"],
-                capture_output=True, text=True, timeout=5,
-            )
-            if result.returncode == 0:
-                for line in result.stdout.splitlines():
-                    if "--remote-debugging-port=" in line:
-                        for part in line.split():
-                            if part.startswith("--remote-debugging-port="):
-                                port_str = part.split("=", 1)[1]
-                                return int(port_str)
-        except Exception as exc:
+            cmdline = _winproc.command_line(pid) or ""
+            if "--remote-debugging-port=" in cmdline:
+                for part in cmdline.split():
+                    if part.startswith("--remote-debugging-port="):
+                        return int(part.split("=", 1)[1])
+        except (ValueError, OSError) as exc:
             logger.debug("Failed to get command line for PID %d: %s", pid, exc)
 
     # Phase 2: a CDP port OWNED by this process tree. The debug port is held by
@@ -498,22 +491,10 @@ def _process_tree_pids(pid: int) -> set:
     """``{pid}`` plus every descendant PID (browser child processes own the port)."""
     pids = {pid}
     try:
-        import subprocess
-        out = subprocess.run(
-            ["wmic", "process", "get", "ProcessId,ParentProcessId", "/format:csv"],
-            capture_output=True, encoding="utf-8", errors="ignore", timeout=6,
-        ).stdout or ""
+        # {pid: ppid} from wmic (or PowerShell CIM fallback) — invert to a
+        # parent->children adjacency map for the descent below.
         children: dict = {}
-        for line in out.splitlines():
-            parts = line.strip().split(",")
-            if len(parts) < 3:
-                continue
-            # wmic /format:csv columns are alphabetical: Node,ParentProcessId,ProcessId
-            try:
-                ppid = int(parts[-2])
-                cpid = int(parts[-1])
-            except Exception:
-                continue
+        for cpid, ppid in _winproc.parent_map().items():
             children.setdefault(ppid, []).append(cpid)
         stack = [pid]
         while stack:

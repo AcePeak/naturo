@@ -27,6 +27,7 @@ import re
 import subprocess
 from typing import Any, Dict, List, Optional
 
+from naturo import _winproc
 from naturo.errors import NaturoError
 
 
@@ -79,28 +80,7 @@ def _get_process_command_line(pid: int) -> Optional[str]:
     Returns:
         Full command line string, or None if inaccessible.
     """
-    try:
-        result = subprocess.run(
-            [
-                "wmic",
-                "process",
-                "where",
-                f"ProcessId={pid}",
-                "get",
-                "CommandLine",
-                "/format:list",
-            ],
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=5,
-        )
-        for line in (result.stdout or "").splitlines():
-            if line.startswith("CommandLine="):
-                return line[len("CommandLine=") :]
-    except (subprocess.TimeoutExpired, OSError):
-        pass
-    return None
+    return _winproc.command_line(pid)
 
 
 def _get_process_exe_path(pid: int) -> Optional[str]:
@@ -112,90 +92,20 @@ def _get_process_exe_path(pid: int) -> Optional[str]:
     Returns:
         Executable path string, or None if inaccessible.
     """
-    try:
-        result = subprocess.run(
-            [
-                "wmic",
-                "process",
-                "where",
-                f"ProcessId={pid}",
-                "get",
-                "ExecutablePath",
-                "/format:list",
-            ],
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=5,
-        )
-        for line in (result.stdout or "").splitlines():
-            if line.startswith("ExecutablePath="):
-                return line[len("ExecutablePath=") :]
-    except (subprocess.TimeoutExpired, OSError):
-        pass
-    return None
+    return _winproc.exe_path(pid)
 
 
 def _bulk_get_process_info() -> Dict[int, Dict[str, str]]:
     """Batch-fetch CommandLine and ExecutablePath for all processes.
 
-    Uses a single ``wmic`` call to retrieve info for every process at once,
-    avoiding per-PID subprocess overhead that causes ``electron list`` to hang.
+    A single query retrieves info for every process at once, avoiding the per-PID
+    subprocess overhead that used to hang ``electron list`` (BUG-007). Uses wmic
+    where present and falls back to PowerShell CIM on wmic-less Windows 11.
 
     Returns:
         Dict mapping PID to {command_line: str, exe_path: str}.
     """
-    info: Dict[int, Dict[str, str]] = {}
-    try:
-        result = subprocess.run(
-            [
-                "wmic",
-                "process",
-                "get",
-                "ProcessId,CommandLine,ExecutablePath",
-                "/format:csv",
-            ],
-            capture_output=True,
-            text=True,
-            # (#1156) Decode defensively: a process whose command line or path
-            # contains non-UTF-8 bytes (common on Windows for legacy-codepage
-            # apps) would otherwise raise UnicodeDecodeError in the reader
-            # thread, leaving ``stdout`` as ``None`` and crashing the parse.
-            errors="replace",
-            timeout=15,
-        )
-        lines = (result.stdout or "").strip().splitlines()
-        # CSV header line: Node,CommandLine,ExecutablePath,ProcessId
-        header_idx = -1
-        for i, line in enumerate(lines):
-            if "ProcessId" in line and "CommandLine" in line:
-                header_idx = i
-                break
-        if header_idx < 0:
-            return info
-        headers = [h.strip() for h in lines[header_idx].split(",")]
-        try:
-            pid_col = headers.index("ProcessId")
-            cmd_col = headers.index("CommandLine")
-            exe_col = headers.index("ExecutablePath")
-        except ValueError:
-            return info
-
-        for line in lines[header_idx + 1 :]:
-            parts = line.split(",")
-            if len(parts) <= max(pid_col, cmd_col, exe_col):
-                continue
-            try:
-                pid = int(parts[pid_col].strip())
-            except (ValueError, IndexError):
-                continue
-            info[pid] = {
-                "command_line": parts[cmd_col].strip(),
-                "exe_path": parts[exe_col].strip(),
-            }
-    except (subprocess.TimeoutExpired, OSError):
-        pass
-    return info
+    return _winproc.bulk_process_info()
 
 
 def _find_processes_by_name(name: str) -> List[Dict[str, Any]]:

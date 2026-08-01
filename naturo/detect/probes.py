@@ -15,6 +15,8 @@ import os
 import platform
 from typing import List, Optional, Set
 
+from naturo import _winproc
+
 from naturo.detect.models import (
     FrameworkInfo,
     FrameworkType,
@@ -345,22 +347,14 @@ def _find_cdp_debug_port(pid: int) -> Optional[int]:
         return None
 
     try:
-        import subprocess
-
-        # Use wmic to get command line (most reliable on Windows)
-        result = subprocess.run(
-            ["wmic", "process", "where", f"ProcessId={pid}",
-             "get", "CommandLine", "/format:list"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode == 0:
-            for line in result.stdout.splitlines():
-                if "--remote-debugging-port=" in line:
-                    for part in line.split():
-                        if part.startswith("--remote-debugging-port="):
-                            port_str = part.split("=", 1)[1]
-                            return int(port_str)
-    except Exception as exc:
+        # Read the process command line (wmic where present, PowerShell CIM
+        # fallback on wmic-less Windows 11 — see naturo._winproc).
+        cmdline = _winproc.command_line(pid) or ""
+        if "--remote-debugging-port=" in cmdline:
+            for part in cmdline.split():
+                if part.startswith("--remote-debugging-port="):
+                    return int(part.split("=", 1)[1])
+    except (ValueError, OSError) as exc:
         logger.debug("Failed to get command line for PID %d: %s", pid, exc)
 
     # Also check common debug ports by trying to connect
