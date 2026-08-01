@@ -95,9 +95,7 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
     process can be picked by title. ``--window`` narrows to the window title
     only. Filters combine with AND.
     """
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("Window listing")
-        _common._fail(json_output, "PLATFORM_ERROR", msg)
+    _common._require_gui(json_output, "Window listing")
 
     # Resolve --app-id to its window handle up front so an unresolvable ID fails
     # loudly (INVALID_INPUT) instead of silently listing every window. This

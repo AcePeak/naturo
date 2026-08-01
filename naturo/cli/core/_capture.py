@@ -65,9 +65,7 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
     if app_id is not None:
         hwnd = _common._resolve_app_id(app_id, json_output).handle
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("Screen capture")
-        _common._fail(json_output, "PLATFORM_ERROR", msg)
+    _common._require_gui(json_output, "Screen capture")
 
     # Resolve output path: use --path if given, else timestamped name
     if path is None:

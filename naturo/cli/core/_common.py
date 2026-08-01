@@ -68,6 +68,14 @@ def _resolve_app_id(app_id: str, json_output: bool):
     return entry
 
 
+def _require_gui(json_output: bool, action: str) -> None:
+    """:func:`_fail` with ``PLATFORM_ERROR`` unless the platform has a GUI
+    automation backend. *action* names the operation for the message
+    (e.g. ``"UI inspection"``). Centralizes the guard every GUI command repeated."""
+    if not _platform_supports_gui():
+        _fail(json_output, "PLATFORM_ERROR", _platform_error_msg(action))
+
+
 def require_desktop_session(json_output: bool = False) -> Callable[[_F], _F]:
     """Guard a CLI command so it refuses to run without a desktop session.
 

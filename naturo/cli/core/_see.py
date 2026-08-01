@@ -154,9 +154,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         _common._fail(json_output, "INVALID_INPUT", msg)
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("UI inspection")
-        _common._fail(json_output, "PLATFORM_ERROR", msg)
+    _common._require_gui(json_output, "UI inspection")
 
     # (#1022) Auto-create the parent directory for --path so a missing folder
     # doesn't surface as a raw [Errno 2] mislabeled as UNKNOWN_ERROR on save.

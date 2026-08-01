@@ -43,9 +43,7 @@ def menu_inspect(app, app_id, window_title, hwnd, pid, flat, json_output) -> Non
     if app_id is not None:
         hwnd = _common._resolve_app_id(app_id, json_output).handle
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("Menu inspection")
-        _common._fail(json_output, "PLATFORM_ERROR", msg)
+    _common._require_gui(json_output, "Menu inspection")
 
     try:
         backend = _common._get_backend(json_output)

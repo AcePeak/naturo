@@ -307,9 +307,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         _common._fail(json_output, "INVALID_INPUT", msg)
 
-    if not _common._platform_supports_gui():
-        msg = _common._platform_error_msg("UI inspection")
-        _common._fail(json_output, "PLATFORM_ERROR", msg)
+    _common._require_gui(json_output, "UI inspection")
 
     try:
         be = _common._get_backend(json_output)
