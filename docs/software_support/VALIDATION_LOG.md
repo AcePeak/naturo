@@ -327,8 +327,15 @@ clear-X ≈ (1007,50).
   as a **corroborating source** (`properties["corroborated_by"]`, the existing ADR-§4 fusion field,
   so technique-classification stays deterministic), and controls unique to the loser **graft under
   their geometric parent**. Wired in `_run.py` after the competition; a no-op for rich-UIA windows
-  (they short-circuit before MSAA — no perf cost). Verified: **charmap 27 (uia-only) → 48 unified**
-  (grafted the MSAA-unique char-grid/advanced controls UIA missed). 5 new unit tests + 1038 green.
+  (they short-circuit before MSAA — no perf cost). **Correspondence hardened on the real
+  charmap** (a user found duplicate MSAA nodes nested under UIA nodes): MSAA wraps every control
+  as a generic `Window`/`Client` **pair**, so the match had to (a) treat generic wrapper roles as
+  matching UIA's specific role via geometry+name, (b) let BOTH the window+client fold into the one
+  UIA node, (c) **prefer genuine role agreement** so a same-rect Document never corroborates a Pane,
+  (d) dedup unnamed containers only on a near-exact rect. The fusion is now **visible** — the text
+  tag shows `[uia+msaa]` for corroborated controls (`cli/core/_see.py`). Result on charmap (advanced
+  view): a **clean tree, 18 controls `[uia+msaa]` (confirmed by both), 22 `[uia]`, ZERO duplicates**.
+  7 unit tests + 1720 green.
 - **✅ DONE — Phase 3: reuse the merge for the other sources.** `merge_a11y_trees` now
   returns `(root, grafted)` and is the shared correspondence primitive. Applied where sources
   are **overlapping-redundant** (naive combination would duplicate): **UIA↔MSAA** (Phase 2) and

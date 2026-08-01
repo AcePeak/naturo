@@ -645,7 +645,14 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
-                source_str = f" [{props['source']}]" if props.get("source") else ""
+                # Fusion tag: show every source that saw this control, e.g.
+                # [uia+msaa], so the unified merge is visible — the primary
+                # `source` plus any `corroborated_by` sources folded in.
+                if props.get("source"):
+                    _srcs = [props["source"]] + list(props.get("corroborated_by") or [])
+                    source_str = f" [{'+'.join(dict.fromkeys(_srcs))}]"
+                else:
+                    source_str = ""
                 offscreen_str = " [offscreen]" if _is_offscreen else ""
                 # (#102) Show selector when --selectors is requested
                 selector_str = ""

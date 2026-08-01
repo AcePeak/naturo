@@ -51,6 +51,15 @@ for _grp in (
 _CONTAINER_ROLES = frozenset({"pane", "group", "grouping", "window", "custom",
                               "client", "document", "unknown", ""})
 
+# GENERIC wrapper roles that different sources use for the SAME control — MSAA in
+# particular reports almost everything as ``window``/``client`` (the HWND frame +
+# its client area), where UIA gives the specific role (Button/Text/Pane). When
+# either side wears a generic role, geometry + name carry the correspondence and
+# the role must NOT veto the match — otherwise every UIA control gets a duplicate
+# MSAA ``window``/``client`` grafted under it instead of corroborating it.
+_GENERIC_ROLES = frozenset({"window", "client", "pane", "group", "grouping",
+                            "custom", "unknown", ""})
+
 
 def _boxed(n: ElementInfo) -> bool:
     return (getattr(n, "width", 0) or 0) > 0 and (getattr(n, "height", 0) or 0) > 0
@@ -103,11 +112,23 @@ def _same_element(a: ElementInfo, b: ElementInfo) -> bool:
     aa, ba = a.width * a.height, b.width * b.height
     if aa and ba and max(aa, ba) / max(1, min(aa, ba)) > 2.5:
         return False  # too different in size — likely control-vs-container
-    if not _roles_match(a.role, b.role):
+    # Role must agree UNLESS one side wears a generic wrapper role (MSAA
+    # window/client), in which case geometry + name decide.
+    ar, br = (a.role or "").casefold(), (b.role or "").casefold()
+    if not (_roles_match(a.role, b.role)
+            or ar in _GENERIC_ROLES or br in _GENERIC_ROLES):
         return False
     na, nb = _norm_name(a.name), _norm_name(b.name)
     if na and nb and na != nb:
         return False
+    # Two UNNAMED generic wrappers matching on centre-tolerance alone would be
+    # too loose (any coincident wrappers). But an identical container (same tree
+    # seen by two sources, or a real structural pane) MUST still dedup — so allow
+    # it only on a NEAR-EXACT rect, not merely a close centre.
+    if not na and not nb and ar in _GENERIC_ROLES and br in _GENERIC_ROLES:
+        if (abs(a.x - b.x) > 2 or abs(a.y - b.y) > 2
+                or abs(a.width - b.width) > 2 or abs(a.height - b.height) > 2):
+            return False
     return True
 
 
@@ -194,31 +215,35 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
     if secondary is None:
         return primary, []
 
-    by_role: Dict[str, List[ElementInfo]] = defaultdict(list)
-    for n in _flatten(primary):
-        if _boxed(n):
-            by_role[(n.role or "").casefold()].append(n)
-
-    claimed: set = set()
+    prim_boxed = [n for n in _flatten(primary) if _boxed(n)]
 
     def _find_match(sn: ElementInfo) -> Optional[ElementInfo]:
-        role = (sn.role or "").casefold()
-        cands = list(by_role.get(role, []))
-        syn = _ROLE_SYNONYMS.get(role)
-        if syn:
-            for r in syn:
-                if r != role:
-                    cands.extend(by_role.get(r, []))
+        # A generic-role secondary node (MSAA window/client) can correspond to a
+        # primary node of ANY role, so we can't bucket by role — scan boxed
+        # primaries and let _same_element decide. MULTIPLE secondary nodes may
+        # map to one primary (MSAA's window+client pair for one control); that is
+        # fine — each simply corroborates it, none is grafted as a duplicate.
         best = None
-        best_d = None
+        best_key = None
         scx, scy = sn.x + sn.width / 2.0, sn.y + sn.height / 2.0
-        for pn in cands:
-            if id(pn) in claimed:
+        sname = _norm_name(sn.name)
+        for pn in prim_boxed:
+            if pn is primary:
+                continue  # root handled separately; never fold a control into it
+            if not _same_element(pn, sn):
                 continue
-            if _same_element(pn, sn):
-                d = abs((pn.x + pn.width / 2.0) - scx) + abs((pn.y + pn.height / 2.0) - scy)
-                if best_d is None or d < best_d:
-                    best, best_d = pn, d
+            # Rank matches so the RIGHT primary wins when several are eligible
+            # (e.g. overlapping controls, or a degenerate same-bounds tree):
+            #  1) genuine role agreement beats a generic-wrapper match — a MSAA
+            #     Document must pick the UIA Document, not a same-rect UIA Pane;
+            #  2) an actual name match beats a one-side-empty match;
+            #  3) then nearest centre.
+            role_tier = 0 if _roles_match(pn.role, sn.role) else 1
+            name_tier = 0 if (sname and _norm_name(pn.name) == sname) else 1
+            d = abs((pn.x + pn.width / 2.0) - scx) + abs((pn.y + pn.height / 2.0) - scy)
+            key = (role_tier, name_tier, d)
+            if best_key is None or key < best_key:
+                best, best_key = pn, key
         return best
 
     sec_flat = _flatten(secondary)
@@ -228,7 +253,6 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
     # "jroot", which would otherwise fail the name guard and duplicate the frame).
     if sec_flat:
         _union_into(primary, sec_flat[0])
-        claimed.add(id(primary))
 
     unique: List[ElementInfo] = []
     for sn in sec_flat[1:]:  # skip the secondary root (handled above)
@@ -236,13 +260,30 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
             continue  # unsized chrome carries nothing to merge
         m = _find_match(sn)
         if m is not None:
-            claimed.add(id(m))
-            _union_into(m, sn)
+            _union_into(m, sn)   # corroborate (window+client pair both fold in)
         elif _useful(sn):
             unique.append(sn)
 
-    grafted: List[ElementInfo] = []
+    # Collapse secondary-unique WRAPPER PAIRS before grafting: MSAA emits a
+    # window/client + the real control for one label (e.g. a Window and a Text
+    # both named "字符集"), which would otherwise graft as two duplicate nodes.
+    # Key by coarse geometry + name; keep the most specific (non-generic) role.
+    deduped: Dict[tuple, ElementInfo] = {}
+    order: List[tuple] = []
     for sn in unique:
+        key = (round(sn.x / 4.0), round(sn.y / 4.0),
+               round(sn.width / 4.0), round(sn.height / 4.0), _norm_name(sn.name))
+        prev = deduped.get(key)
+        if prev is None:
+            deduped[key] = sn
+            order.append(key)
+        elif ((prev.role or "").casefold() in _GENERIC_ROLES
+              and (sn.role or "").casefold() not in _GENERIC_ROLES):
+            deduped[key] = sn  # replace generic wrapper with the specific control
+
+    grafted: List[ElementInfo] = []
+    for key in order:
+        sn = deduped[key]
         parent = _smallest_container(primary, sn) or primary
         if parent.children is None:
             parent.children = []

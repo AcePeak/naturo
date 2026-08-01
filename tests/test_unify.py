@@ -70,6 +70,37 @@ def test_empty_offscreen_secondary_adds_nothing():
     assert {n.name for n in flat if n.role == "RadioButton"} == {"应用商店", "我的应用"}
 
 
+def test_msaa_generic_window_client_pair_folds_into_uia_control():
+    # MSAA wraps each control as a generic Window+Client pair; both must fold
+    # into the one UIA control (corroborate), not graft as two duplicates.
+    uia = E("Window", "App", 0, 0, 200, 100, source="uia",
+            children=[E("Button", "选择(S)", 40, 40, 75, 23, source="uia")])
+    msaa = E("Window", "App", 0, 0, 200, 100, source="msaa", children=[
+        E("Window", "选择(S)", 40, 40, 75, 23, source="msaa"),
+        E("Client", "选择(S)", 40, 40, 75, 23, source="msaa"),
+    ])
+    merged, grafted = merge_a11y_trees(uia, msaa)
+    assert grafted == []                       # no duplicate grafted
+    assert len(_flat(merged)) == 2             # Window + the one Button
+    btn = next(n for n in _flat(merged) if n.role == "Button")
+    assert "msaa" in btn.properties.get("corroborated_by", [])
+
+
+def test_role_tier_prevents_cross_match_on_identical_bounds():
+    # Degenerate same-bounds tree: a MSAA Document must corroborate the UIA
+    # Document, NOT a same-rect UIA Pane (which would wrongly rename the Pane).
+    uia = E("Window", "W", 10, 20, 100, 40, source="uia",
+            children=[E("Pane", "", 10, 20, 100, 40, source="uia",
+                        children=[E("Document", "editor", 10, 20, 100, 40, source="uia")])])
+    msaa = E("Window", "W", 10, 20, 100, 40, source="msaa",
+             children=[E("Pane", "", 10, 20, 100, 40, source="msaa",
+                         children=[E("Document", "editor", 10, 20, 100, 40, source="msaa")])])
+    merged, grafted = merge_a11y_trees(uia, msaa)
+    pane = next(n for n in _flat(merged) if n.role == "Pane")
+    assert pane.name == ""                     # NOT renamed by the Document
+    assert grafted == []
+
+
 def test_accelerator_and_container_guard():
     # "&File" (uia) == "File" (msaa) -> match; a small button is NOT matched to
     # its big containing pane (size-ratio guard).
