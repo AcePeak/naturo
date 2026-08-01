@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Optional
 
 import click
 
@@ -91,6 +92,92 @@ def _window_pid(hwnd: int):
     except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
         logger.debug("GetWindowThreadProcessId(%s) failed: %s", hwnd, exc)
         return None
+
+
+@dataclass
+class _RefResolution:
+    """Outcome of resolving an eN ref to a click point (#448/#137/#681).
+
+    ``failed`` means the error envelope was already emitted and the caller should
+    return; otherwise the (possibly updated) x/y/target_id plus the tracking
+    fields are threaded back into click_cmd.
+    """
+    x: Optional[int]
+    y: Optional[int]
+    target_id: Optional[str]
+    zero_bounds_element: Any = None   # (#137) Invoke fallback when bounds are 0
+    ref_resolved: bool = False        # eN resolved to live coordinates (#448)
+    snapshot_hwnd: Optional[int] = None
+    ref_element: Any = None           # (#681) cached UIElement for identity lookup
+    failed: bool = False
+
+
+def _resolve_en_ref(target_id: Optional[str], x: Optional[int], y: Optional[int],
+                    app: Optional[str], json_output: bool) -> _RefResolution:
+    """Resolve an ``eN`` *target_id* to live coordinates via the snapshot cache.
+
+    Skips non-ref targets (returns them unchanged). On a hit, caches the source
+    HWND (#448) and element identity (#681) and prints the click target (#662); a
+    zero-bounds element defers to a UIA Invoke fallback (#137). A miss emits
+    STALE_SNAPSHOT_CACHE and sets ``failed``.
+    """
+    import re as _re
+    res = _RefResolution(x=x, y=y, target_id=target_id)
+    if not (target_id and _re.fullmatch(r"e\d+", target_id)):
+        return res
+
+    from naturo.snapshot import get_snapshot_manager
+    mgr = get_snapshot_manager()
+    _original_ref = target_id
+    resolved = mgr.resolve_ref(target_id, app_name=app)
+    if resolved:
+        res.x, res.y = resolved[0], resolved[1]
+        _snap_id = resolved[2]
+        res.target_id = None  # use coordinates instead
+        res.ref_resolved = True
+        # (#448) Reuse the snapshot's stored HWND to focus the target window
+        # without re-enumerating processes.
+        try:
+            snapshot = mgr.get_snapshot(_snap_id)
+            if snapshot.window_handle:
+                res.snapshot_hwnd = snapshot.window_handle
+        except Exception as exc:
+            logger.debug("Snapshot HWND retrieval failed: %s", exc)
+        # (#681) Element metadata for identity-based UIA lookup — more reliable
+        # than ElementFromPoint for UWP where cached coords can miss.
+        try:
+            el_result = mgr.resolve_ref_element(_original_ref, app_name=app)
+            if el_result is not None:
+                res.ref_element = el_result[0]  # UIElement
+                if not json_output:  # (#662) show what we're about to click
+                    _el = res.ref_element
+                    _el_desc = f'{_el.role} "{_el.title}"' if _el.title else _el.role
+                    click.echo(f"Clicking {_original_ref} ({_el_desc}) at ({res.x}, {res.y})")
+        except Exception as exc:
+            logger.debug("Element metadata retrieval failed: %s", exc)
+        return res
+
+    # resolve_ref returns None for both "not found" and "zero-bounds"; distinguish
+    # via resolve_ref_element so a zero-bounds element can use UIA Invoke (#137/#135).
+    el_result = mgr.resolve_ref_element(target_id, app_name=app)
+    if el_result is not None:
+        element, _snap_id = el_result
+        ex, ey, ew, eh = element.frame
+        if ew == 0 and eh == 0:
+            res.zero_bounds_element = element
+            res.target_id = None  # Invoke fallback below
+        else:
+            # Valid bounds — shouldn't reach here, but fall through to a
+            # coordinate click just in case.
+            res.x, res.y = ex + ew // 2, ey + eh // 2
+            res.target_id = None
+    else:
+        _common._json_err(
+            f"Element ref '{target_id}' not found. Run 'naturo see' first to "
+            f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
+            json_output, code="STALE_SNAPSHOT_CACHE", context={"ref": target_id})
+        res.failed = True
+    return res
 
 
 @click.command("click")
@@ -272,72 +359,16 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
         _common._json_err("Specify --selector, --coords X Y, --id, or --on TEXT", json_output, code="INVALID_INPUT")
         return
 
-    # (#448) Resolve eN refs BEFORE auto-routing so we can skip the
-    # expensive framework detection chain when we already have cached
-    # coordinates from a recent snapshot.
-    import re as _re
-    _zero_bounds_element = None  # Track element for Invoke fallback (#137)
-    _ref_resolved = False  # True when eN ref resolved to coordinates
-    _snapshot_hwnd = None  # HWND from snapshot metadata for window focus
-    _ref_element = None  # (#681) Cached element metadata for UIA identity lookup
-    if target_id and _re.fullmatch(r"e\d+", target_id):
-        from naturo.snapshot import get_snapshot_manager
-        mgr = get_snapshot_manager()
-        _original_ref = target_id  # Save before target_id is cleared
-        resolved = mgr.resolve_ref(target_id, app_name=app)
-        if resolved:
-            x, y = resolved[0], resolved[1]
-            _snap_id = resolved[2]
-            target_id = None  # use coordinates instead
-            _ref_resolved = True
-            # (#448) Retrieve the snapshot's stored HWND so we can focus
-            # the target window without re-enumerating processes.
-            try:
-                snapshot = mgr.get_snapshot(_snap_id)
-                if snapshot.window_handle:
-                    _snapshot_hwnd = snapshot.window_handle
-            except Exception as exc:
-                logger.debug("Snapshot HWND retrieval failed: %s", exc)
-            # (#681) Retrieve element metadata (name, role, AutomationId)
-            # for identity-based UIA lookup — more reliable than
-            # ElementFromPoint for UWP apps where cached coordinates may
-            # resolve to the wrong element.
-            try:
-                el_result = mgr.resolve_ref_element(_original_ref, app_name=app)
-                if el_result is not None:
-                    _ref_element = el_result[0]  # UIElement
-                    # (#662) Show what we're about to click for user verification
-                    if not json_output:
-                        _el = _ref_element
-                        _el_desc = f"{_el.role} \"{_el.title}\"" if _el.title else _el.role
-                        click.echo(f"Clicking {_original_ref} ({_el_desc}) at ({x}, {y})")
-            except Exception as exc:
-                logger.debug("Element metadata retrieval failed: %s", exc)
-        else:
-            # resolve_ref returns None for both "not found" and "zero-bounds".
-            # Check resolve_ref_element to distinguish: if the element exists
-            # but has zero-bounds, try UIA Invoke pattern (#137/#135).
-            el_result = mgr.resolve_ref_element(target_id, app_name=app)
-            if el_result is not None:
-                element, _snap_id = el_result
-                ex, ey, ew, eh = element.frame
-                if ew == 0 and eh == 0:
-                    _zero_bounds_element = element
-                    target_id = None  # Will use Invoke fallback below
-                else:
-                    # Element found with valid bounds — shouldn't happen, but
-                    # fall through to coordinate click just in case.
-                    x, y = ex + ew // 2, ey + eh // 2
-                    target_id = None
-            else:
-                _common._json_err(
-                    f"Element ref '{target_id}' not found. Run 'naturo see' first to "
-                    f"capture a fresh snapshot, then use the eN ref within 10 minutes.",
-                    json_output,
-                    code="STALE_SNAPSHOT_CACHE",
-                    context={"ref": target_id},
-                )
-                return
+    # (#448) Resolve eN refs BEFORE auto-routing so we can skip the expensive
+    # framework detection chain when we already have cached coordinates.
+    _ref = _resolve_en_ref(target_id, x, y, app, json_output)
+    if _ref.failed:
+        return
+    x, y, target_id = _ref.x, _ref.y, _ref.target_id
+    _zero_bounds_element = _ref.zero_bounds_element  # (#137) Invoke fallback
+    _ref_resolved = _ref.ref_resolved               # eN resolved to coordinates
+    _snapshot_hwnd = _ref.snapshot_hwnd              # HWND for window focus
+    _ref_element = _ref.ref_element                  # (#681) UIA identity lookup
 
     # Apply --offset to the resolved click point (ref centre, --coords, or
     # --selector). Lets the user aim a graphical control OCR/a11y couldn't see by
