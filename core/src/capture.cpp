@@ -20,6 +20,14 @@
 // message panes, DirectComposition, some Electron/Qt surfaces). WGC captures the
 // window through the DWM's real composition path, so it sees that content. Used
 // only as the last-resort fallback when the GDI paths come back blank.
+//
+// C++/WinRT (winrt/base.h) pulls in <experimental/coroutine> under C++17. On
+// newer MSVC toolsets (VS 17.10+/14.4x+) that header is a HARD ERROR (STL1011)
+// unless silenced — and we don't use coroutines here (the frame is polled, no
+// co_await), so silence it before any cppwinrt include.
+#ifndef _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+#define _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+#endif
 #include <d3d11.h>
 #include <dxgi.h>
 #include <inspectable.h>

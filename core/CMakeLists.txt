@@ -23,6 +23,15 @@ target_include_directories(naturo_core PUBLIC
 
 target_compile_definitions(naturo_core PRIVATE NATURO_BUILDING)
 
+# C++/WinRT (used by capture.cpp's WGC path) includes <experimental/coroutine>
+# under C++17, which newer MSVC toolsets (14.4x+/VS 17.10+) make a HARD ERROR
+# (STL1011) unless silenced. We don't use coroutines. Define on the command line
+# so it's set before any include, regardless of translation-unit ordering.
+if(WIN32)
+    target_compile_definitions(naturo_core PRIVATE
+        _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+
 # Windows-specific link libraries
 if(WIN32)
     target_link_libraries(naturo_core PRIVATE
