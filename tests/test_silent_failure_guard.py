@@ -93,7 +93,12 @@ def test_backend_exception_reports_failure(tool, args, method):
     backend.set_focused_element_value.return_value = False  # type_text → keystroke path
     getattr(backend, method).side_effect = RuntimeError(f"{method} exploded")
     p1, p2 = _server_patches(backend)
-    with p1, p2:
+    # type_text tries clipboard-paste before the keystroke fallback; on a bare mock
+    # the paste "succeeds" (every mocked clipboard/hotkey call is truthy), so
+    # backend.type_text is never reached. Force paste off so the keystroke op under
+    # test is exercised deterministically on every platform (it otherwise passed on
+    # Linux only by accident of clipboard availability).
+    with p1, p2, patch("naturo.mcp._input._paste_text", return_value=False):
         data = _call(create_server(), tool, args)
     # Non-vacuous: the tool must actually have reached (and failed at) the op,
     # not short-circuited on validation before the backend call.
