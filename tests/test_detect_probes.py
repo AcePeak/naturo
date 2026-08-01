@@ -390,3 +390,43 @@ class TestHelperFunctionsNonWindows:
     def test_find_afh_content_children_non_windows(self):
         with patch.object(probes.platform, "system", return_value="Linux"):
             assert probes._find_afh_content_children(12345) == []
+
+
+class TestFindCdpDebugPort:
+    """_find_cdp_debug_port must only trust a debug port the TARGET process (or a
+    descendant) actually OWNS — never a blind global scan. A port-agnostic scan
+    misattributes an unrelated Chrome/Edge on 9222 to the target (the DingTalk
+    `app inspect` false-positive), which CDP's high priority then makes the
+    "recommended" backend, driving the wrong process.
+    """
+
+    @staticmethod
+    def _win():
+        return patch.object(probes.platform, "system", return_value="Windows")
+
+    def test_explicit_remote_debugging_port_in_cmdline_wins(self):
+        with self._win(), patch.object(
+            probes._winproc, "command_line",
+            return_value="chrome.exe --remote-debugging-port=9337 --x",
+        ):
+            assert probes._find_cdp_debug_port(1234) == 9337
+
+    def test_common_port_owned_by_target_tree_is_returned(self):
+        with self._win(), \
+             patch.object(probes._winproc, "command_line", return_value="app.exe"), \
+             patch("naturo.cascade._build._process_tree_pids", return_value={1234, 5678}), \
+             patch("naturo.cascade._build._listening_ports_for_pids", return_value=[9222]):
+            assert probes._find_cdp_debug_port(1234) == 9222
+
+    def test_common_port_owned_by_other_process_is_rejected(self):
+        # 9222 is listening globally but owned by an unrelated browser — the
+        # target's own tree owns no debug port → must return None, not misattribute.
+        with self._win(), \
+             patch.object(probes._winproc, "command_line", return_value="dingtalk.exe"), \
+             patch("naturo.cascade._build._process_tree_pids", return_value={1234}), \
+             patch("naturo.cascade._build._listening_ports_for_pids", return_value=[]):
+            assert probes._find_cdp_debug_port(1234) is None
+
+    def test_non_windows_returns_none(self):
+        with patch.object(probes.platform, "system", return_value="Linux"):
+            assert probes._find_cdp_debug_port(1234) is None

@@ -357,18 +357,26 @@ def _find_cdp_debug_port(pid: int) -> Optional[int]:
     except (ValueError, OSError) as exc:
         logger.debug("Failed to get command line for PID %d: %s", pid, exc)
 
-    # Also check common debug ports by trying to connect
-    import socket
-    for port in [9222, 9229, 9333]:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-            result = sock.connect_ex(("127.0.0.1", port))
-            sock.close()
-            if result == 0:
-                return port
-        except Exception as exc:
-            logger.debug("CDP port probe failed for port %s: %s", port, exc)
+    # Fallback: probe the common debug ports — but ONLY accept a port THIS
+    # process (or a descendant) actually OWNS. A blind "anything listening on
+    # 9222" check misattributes an unrelated Chrome/Edge to the target: e.g.
+    # `app inspect DingTalk` reported cdp:9222 when 9222 was owned by a stray
+    # dingtalk.com browser tab, and CDP's high method-priority then made it the
+    # "recommended" backend — pointing an agent at the WRONG process. Reuse the
+    # cascade's pid-scoped port ownership (same logic find_cdp_port uses); a lazy
+    # import avoids any import cycle.
+    try:
+        from naturo.cascade._build import (
+            _listening_ports_for_pids,
+            _process_tree_pids,
+        )
+        owned_ports = set(_listening_ports_for_pids(_process_tree_pids(pid)))
+    except Exception as exc:
+        logger.debug("CDP port-ownership check failed for PID %d: %s", pid, exc)
+        owned_ports = set()
+    for port in (9222, 9229, 9333):
+        if port in owned_ports:
+            return port
 
     return None
 
