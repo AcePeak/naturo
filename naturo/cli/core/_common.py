@@ -51,6 +51,23 @@ def _fail(json_output: bool, code: str, msg: str) -> NoReturn:
     raise SystemExit(1)
 
 
+def _resolve_app_id(app_id: str, json_output: bool):
+    """Resolve an ``--app-id`` token (``a1``, ``a2``, …) to its stored window
+    entry, or :func:`_fail` with ``APP_ID_NOT_FOUND`` (#361).
+
+    Returns the ``AppIdEntry`` so the caller reads whichever of ``.handle`` /
+    ``.pid`` it needs (#573 — never assign the entry's ``process_name`` back to
+    ``--app``: it may be a full path that breaks fuzzy matching). Centralizes the
+    block every ``core/`` command repeated inline.
+    """
+    from naturo.app_ids import get_app_id_map
+    entry = get_app_id_map().resolve(app_id)
+    if entry is None:
+        _fail(json_output, "APP_ID_NOT_FOUND",
+              f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.')
+    return entry
+
+
 def require_desktop_session(json_output: bool = False) -> Callable[[_F], _F]:
     """Guard a CLI command so it refuses to run without a desktop session.
 

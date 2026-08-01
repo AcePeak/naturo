@@ -60,17 +60,10 @@ def capture(app: str | None, pid: int | None, window_title: str | None, hwnd: in
     from naturo.cli.options import maybe_promote_app_to_app_id
     app, app_id = maybe_promote_app_to_app_id(app, app_id)
 
-    # (#361) Resolve --app-id to app/hwnd before any other logic
+    # (#361) Resolve --app-id to hwnd before any other logic (#573 — use hwnd,
+    # never process_name which may be a full path that breaks fuzzy matching).
     if app_id is not None:
-        from naturo.app_ids import get_app_id_map
-        id_map = get_app_id_map()
-        entry = id_map.resolve(app_id)
-        if entry is None:
-            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
-        # (#573) Use hwnd for precise targeting.  Do NOT set app
-        # to process_name — it may be a full path that breaks fuzzy matching.
-        hwnd = entry.handle
+        hwnd = _common._resolve_app_id(app_id, json_output).handle
 
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("Screen capture")

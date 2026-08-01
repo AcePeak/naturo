@@ -152,13 +152,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     # (#593) Resolve --app-id to hwnd before any other logic.
     # An explicit --app-id takes precedence over a raw --hwnd value.
     if app_id is not None:
-        from naturo.app_ids import get_app_id_map
-        id_map = get_app_id_map()
-        entry = id_map.resolve(app_id)
-        if entry is None:
-            msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
-        hwnd = entry.handle
+        hwnd = _common._resolve_app_id(app_id, json_output).handle
 
     # (#1173) Validate --limit up front, before any strategy dispatch and before
     # the platform/GUI gate. --limit feeds every find strategy — the tree/image
