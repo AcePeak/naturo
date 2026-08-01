@@ -139,16 +139,18 @@ def _useful(n: ElementInfo) -> bool:
     return _boxed(n) and (n.role or "").casefold() not in _CONTAINER_ROLES
 
 
-def _smallest_container(root: ElementInfo, target: ElementInfo) -> Optional[ElementInfo]:
-    """Smallest boxed node in *root* whose rect contains *target*'s rect (the
-    natural graft parent). Returns None if nothing contains it (caller uses root)."""
+def _smallest_container(
+    boxed: List[ElementInfo], target: ElementInfo
+) -> Optional[ElementInfo]:
+    """Smallest node in *boxed* whose rect contains *target*'s rect (the natural
+    graft parent). *boxed* is the primary tree's boxed nodes, flattened ONCE by
+    the caller — grafts only ever nest under original primary nodes, so this list
+    need not be recomputed per graft. Returns None if nothing contains it."""
     tx, ty = target.x, target.y
     tr, tb = target.x + target.width, target.y + target.height
     best: Optional[ElementInfo] = None
     best_area = None
-    for n in _flatten(root):
-        if not _boxed(n):
-            continue
+    for n in boxed:
         if n.x <= tx + 2 and n.y <= ty + 2 and n.x + n.width >= tr - 2 and n.y + n.height >= tb - 2:
             area = n.width * n.height
             if best_area is None or area < best_area:
@@ -267,9 +269,18 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
     # window/client + the real control for one label (e.g. a Window and a Text
     # both named "字符集"), which would otherwise graft as two duplicate nodes.
     # Key by coarse geometry + name; keep the most specific (non-generic) role.
+    # Only NAMED or GENERIC-wrapper nodes are collapsed — two DISTINCT unnamed
+    # non-container controls (e.g. adjacent unlabeled toolbar icons whose boxes
+    # quantise to the same bucket) must NOT be merged into one, so they bypass
+    # the collapse and each graft on its own.
     deduped: Dict[tuple, ElementInfo] = {}
     order: List[tuple] = []
+    passthrough: List[ElementInfo] = []
     for sn in unique:
+        collapsible = bool(_norm_name(sn.name)) or (sn.role or "").casefold() in _GENERIC_ROLES
+        if not collapsible:
+            passthrough.append(sn)
+            continue
         key = (round(sn.x / 4.0), round(sn.y / 4.0),
                round(sn.width / 4.0), round(sn.height / 4.0), _norm_name(sn.name))
         prev = deduped.get(key)
@@ -281,9 +292,8 @@ def merge_a11y_trees(primary: ElementInfo, secondary: ElementInfo):
             deduped[key] = sn  # replace generic wrapper with the specific control
 
     grafted: List[ElementInfo] = []
-    for key in order:
-        sn = deduped[key]
-        parent = _smallest_container(primary, sn) or primary
+    for sn in [deduped[k] for k in order] + passthrough:
+        parent = _smallest_container(prim_boxed, sn) or primary
         if parent.children is None:
             parent.children = []
         leaf = _shallow_copy_leaf(sn)

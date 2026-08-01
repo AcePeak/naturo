@@ -28,7 +28,7 @@ def _is_actionable_leaf(el: ElementInfo) -> bool:
     excluded because their bounding boxes inflate coverage without indicating
     that the region has been deeply inspected.
     """
-    role_lower = el.role.lower()
+    role_lower = (el.role or "").lower()
     # Leaf elements always count
     if not el.children:
         return True

@@ -155,7 +155,7 @@ def _run_cdp_only(
 # ── Main cascade entry point ──────────────────────────────────────────────────
 
 
-def _dedup_tree(root):
+def _dedup_tree(root: Optional[ElementInfo]) -> Optional[ElementInfo]:
     """Drop subtrees whose (role, name, bounds) signature repeats.
 
     Some backends — notably MSAA navigation — loop and re-emit the same window
@@ -199,7 +199,7 @@ def _dedup_tree(root):
     return root
 
 
-def _web_render_bounds(hwnd):
+def _web_render_bounds(hwnd: Optional[int]) -> Optional[tuple]:
     """Screen rect (x, y, w, h) of the embedded Chromium render surface under
     ``hwnd`` (WebView2/CEF ``Chrome_RenderWidgetHostHWND``), or None.
 
@@ -234,13 +234,13 @@ def _web_render_bounds(hwnd):
         return None
 
 
-def _graft_cdp(root_tree, cdp_elements):
+def _graft_cdp(root_tree: ElementInfo, cdp_elements: List[ElementInfo]) -> List[ElementInfo]:
     """Tag CDP web elements and nest them under the browser control's node."""
     return _graft_web_under_control(
         root_tree, [_tag_source(el, "cdp") for el in cdp_elements])
 
 
-def _graft_web_under_control(root_tree, tagged):
+def _graft_web_under_control(root_tree: ElementInfo, tagged: List[ElementInfo]) -> List[ElementInfo]:
     """Nest already-tagged web nodes UNDER the browser control's UIA node (not flat
     at the window root — the page lives inside the embedded browser). Find the
     smallest UIA node containing the web content (the WebView2/Chrome host pane),
@@ -286,7 +286,7 @@ def _graft_web_under_control(root_tree, tagged):
     return tagged
 
 
-def _web_content_roots(tree):
+def _web_content_roots(tree: ElementInfo) -> List[ElementInfo]:
     """The content subtree(s) inside a render-widget UIA tree — the Document
     node(s) (which carry the page), skipping the 'Chrome Legacy Window' wrapper.
     """
@@ -303,7 +303,7 @@ def _web_content_roots(tree):
     return found or list(getattr(tree, "children", None) or [])
 
 
-def _webview_uia_content(backend, hwnd, depth):
+def _webview_uia_content(backend, hwnd: Optional[int], depth: int) -> List[ElementInfo]:
     """No-CDP fallback for embedded browsers: read each Chromium render widget's
     OWN UIA tree and return the page content, tagged 'uia'.
 
@@ -957,8 +957,12 @@ def run_cascade(
     if window_area > 0 and merged_elements:
         stats.coverage_estimate = _estimate_coverage(merged_elements, window_area)
 
+    # Report the provider that actually produced the root, not just the first
+    # one we tried: for backend="auto" that would always be "uia" even when MSAA
+    # / a class-pref (JAB/IA2) won. The winning tree is tagged with its source.
+    _root_src = (getattr(root_tree, "properties", None) or {}).get("source") if root_tree else None
     return CascadeResult(
         tree=root_tree,
         stats=stats,
-        primary_provider=providers_to_try[0] if providers_to_try else "uia",
+        primary_provider=_root_src or (providers_to_try[0] if providers_to_try else "uia"),
     )
