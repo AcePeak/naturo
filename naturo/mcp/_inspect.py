@@ -2,12 +2,107 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 from naturo.mcp._resolve import require_hwnd
 from naturo.value_preview import bounded_value
 
 logger = logging.getLogger(__name__)
+
+
+# ── see_ui_tree serialization ────────────────────────────────────────────────
+# Extracted from the see_ui_tree tool so the JSON and token-compact tree walks
+# are named, module-level and testable. The mutable DFS counter, display-ref map
+# and (for compact) the line accumulator ride in _McpTreeCtx. This is the MCP
+# token-optimized contract — deliberately distinct from the CLI `see` renderer.
+
+#: Roles that count as actionable when the compact walk decides what to emit.
+_MCP_ACTIONABLE = frozenset({
+    "button", "hyperlink", "link", "edit", "text", "checkbox",
+    "radiobutton", "combobox", "menuitem", "listitem", "tab", "tabitem",
+    "treeitem", "slider", "spinner", "document", "datagrid", "dataitem",
+})
+
+
+@dataclass
+class _McpTreeCtx:
+    """Config + mutable accumulators for the see_ui_tree serializers."""
+    element_obj_to_ref: dict          # id(el) -> stable ref
+    display_ref_map: dict             # display "eN" -> stable ref (mutated)
+    counter: list                     # DFS ref counter [1] (mutated)
+    annotate: Any                     # cascade.annotate (correctness fusion)
+    full_text: bool
+    q: str = ""                       # compact filter query (lowercased)
+    q_tokens: tuple = ()
+    lines: list = field(default_factory=list)  # compact line accumulator
+
+
+def _mcp_serialize(el: Any, ctx: _McpTreeCtx) -> dict:
+    """Full JSON node dict (recursive): stable id, bounds, properties, and the
+    M3 correctness-fusion fields when the node carries a cascade source."""
+    stable_ref = ctx.element_obj_to_ref.get(id(el), el.id)
+    display_ref = f"e{ctx.counter[0]}"
+    ctx.counter[0] += 1
+    ctx.display_ref_map[display_ref] = stable_ref
+    d = {
+        "id": stable_ref, "role": el.role, "name": el.name, "value": el.value,
+        "bounds": {"x": el.x, "y": el.y, "width": el.width, "height": el.height},
+        "properties": el.properties,
+    }
+    _fusion = ctx.annotate(el.properties or {})
+    if _fusion is not None:
+        d["techniques"] = _fusion["techniques"]
+        d["correctness"] = _fusion["correctness"]
+        d["confidence"] = _fusion["confidence"]
+    if el.children:
+        d["children"] = [_mcp_serialize(c, ctx) for c in el.children]
+    return d
+
+
+def _mcp_match_node(name: str, role: str, q: str, q_tokens: tuple) -> bool:
+    """Compact-filter predicate: whole-query substring OR all tokens present."""
+    if not q:
+        return True
+    hay = f"{name} {role}".lower()
+    return q in hay or all(t in hay for t in q_tokens)
+
+
+def _mcp_walk_compact(el: Any, depth: int, ctx: _McpTreeCtx) -> None:
+    """Assign the SAME eN refs in the SAME DFS order as the JSON walk (so
+    click/type resolve), but emit one text line per actionable/named node —
+    dropping bounds/null/raw props the LLM doesn't need (~10x fewer tokens)."""
+    display_ref = f"e{ctx.counter[0]}"
+    ctx.counter[0] += 1
+    ctx.display_ref_map[display_ref] = ctx.element_obj_to_ref.get(id(el), el.id)
+    role = el.role or ""
+    name = (el.name or "").strip()
+    value = el.value
+    if (name or role.lower() in _MCP_ACTIONABLE or value) and \
+            _mcp_match_node(name, role, ctx.q, ctx.q_tokens):
+        # flat list when filtering to an intent; indented tree otherwise
+        indent = "" if ctx.q else "  " * min(depth, 8)
+        line = f"{indent}{display_ref} {role}"
+        if name:
+            line += f' "{name}"'
+        if value:
+            _shown, _elided = bounded_value(value, full=ctx.full_text)
+            line += f" ={_shown!r}"
+            if _elided:
+                line += f" …(+{_elided} chars)"
+        # True per-node capabilities: [r]eadable / [a]ctionable / [e]ditable so
+        # the agent targets the real interactive node, not a guess from role.
+        _p = el.properties or {}
+        _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
+                                       ("e", "editable")) if _p.get(k))
+        if _caps:
+            line += f" [{_caps}]"
+        _fusion = ctx.annotate(_p)
+        if _fusion is not None and _fusion.get("correctness") != "deterministic":
+            line += " ~"  # uncertain (vision/image) — verify before trusting
+        ctx.lines.append(line)
+    for c in (el.children or []):
+        _mcp_walk_compact(c, depth + 1, ctx)
 
 
 def register_inspect_tools(server, _get_backend, _safe_tool):
@@ -263,96 +358,29 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         # returns None and no fusion fields are added (behavior unchanged).
         from naturo.cascade import annotate as _annotate_correctness
 
-        _ACTIONABLE = {
-            "button", "hyperlink", "link", "edit", "text", "checkbox",
-            "radiobutton", "combobox", "menuitem", "listitem", "tab", "tabitem",
-            "treeitem", "slider", "spinner", "document", "datagrid", "dataitem",
-        }
-
-        def _serialize(el) -> dict:
-            stable_ref = element_obj_to_ref.get(id(el), el.id)
-            display_ref = f"e{_counter[0]}"
-            _counter[0] += 1
-            display_ref_map[display_ref] = stable_ref
-            d = {
-                "id": stable_ref,
-                "role": el.role,
-                "name": el.name,
-                "value": el.value,
-                "bounds": {"x": el.x, "y": el.y, "width": el.width, "height": el.height},
-                "properties": el.properties,
-            }
-            _fusion = _annotate_correctness(el.properties or {})
-            if _fusion is not None:
-                d["techniques"] = _fusion["techniques"]
-                d["correctness"] = _fusion["correctness"]
-                d["confidence"] = _fusion["confidence"]
-            if el.children:
-                d["children"] = [_serialize(c) for c in el.children]
-            return d
-
-        # Compact rendering: assign the SAME eN refs in the SAME DFS order (so
-        # click/type still resolve), but emit one text line per actionable/named
-        # node — dropping bounds, null fields and raw properties the LLM doesn't
-        # need to choose its next action. ~10x fewer tokens than the JSON tree.
-        _compact_lines: list[str] = []
+        # Compact rendering assigns the SAME eN refs in the SAME DFS order as the
+        # JSON walk (so click/type still resolve) but emits ~10x fewer tokens.
         _q = (match or "").strip().lower()
-        _q_tokens = _q.split()
-
-        def _match_node(name: str, role: str) -> bool:
-            if not _q:
-                return True
-            hay = f"{name} {role}".lower()
-            return _q in hay or all(t in hay for t in _q_tokens)
-
-        def _walk_compact(el, depth: int) -> None:
-            display_ref = f"e{_counter[0]}"
-            _counter[0] += 1
-            display_ref_map[display_ref] = element_obj_to_ref.get(id(el), el.id)
-            role = el.role or ""
-            name = (el.name or "").strip()
-            value = el.value
-            if (name or role.lower() in _ACTIONABLE or value) and _match_node(name, role):
-                # flat list when filtering to an intent; indented tree otherwise
-                indent = "" if _q else "  " * min(depth, 8)
-                line = f"{indent}{display_ref} {role}"
-                if name:
-                    line += f' "{name}"'
-                if value:
-                    _shown, _elided = bounded_value(value, full=full_text)
-                    line += f" ={_shown!r}"
-                    if _elided:
-                        line += f" …(+{_elided} chars)"
-                # True per-node capabilities: [r]eadable / [a]ctionable /
-                # [e]ditable, so the agent targets the real interactive node
-                # instead of guessing from role. Only present flags are shown.
-                _p = el.properties or {}
-                _caps = "".join(c for c, k in (("r", "readable"),
-                                               ("a", "actionable"),
-                                               ("e", "editable")) if _p.get(k))
-                if _caps:
-                    line += f" [{_caps}]"
-                _fusion = _annotate_correctness(_p)
-                if _fusion is not None and _fusion.get("correctness") != "deterministic":
-                    line += " ~"  # uncertain (vision/image) — verify before trusting
-                _compact_lines.append(line)
-            for c in (el.children or []):
-                _walk_compact(c, depth + 1)
+        _ctx = _McpTreeCtx(
+            element_obj_to_ref=element_obj_to_ref, display_ref_map=display_ref_map,
+            counter=_counter, annotate=_annotate_correctness, full_text=full_text,
+            q=_q, q_tokens=tuple(_q.split()))
 
         if format == "json":
-            result = {"success": True, "tree": _serialize(tree), "snapshot_id": snapshot_id}
+            result = {"success": True, "tree": _mcp_serialize(tree, _ctx),
+                      "snapshot_id": snapshot_id}
         else:
-            _walk_compact(tree, 0)
+            _mcp_walk_compact(tree, 0, _ctx)
             result = {
                 "success": True,
-                "tree_text": "\n".join(_compact_lines),
+                "tree_text": "\n".join(_ctx.lines),
                 "element_count": _counter[0] - 1,
                 "snapshot_id": snapshot_id,
                 "format": "compact",
             }
             if _q:
                 result["match"] = match
-                result["matched"] = len(_compact_lines)
+                result["matched"] = len(_ctx.lines)
 
         # (M3) Expose the structured recognition summary alongside the fused tree
         # so an agent can branch on correctness without walking every node.
