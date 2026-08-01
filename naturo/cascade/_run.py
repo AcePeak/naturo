@@ -401,6 +401,102 @@ def _graft_additive_nodes(
             name=name, elapsed_ms=elapsed_ms, status="no_elements"))
 
 
+def _stage_cdp(
+    backend, root_tree: ElementInfo, merged_elements: List[ElementInfo],
+    stats: CascadeStats, *, app: Optional[str], hwnd: Optional[int],
+    pid: Optional[int], depth: int, coverage_target: float,
+    backend_name: str, enable_cdp: bool, window_area: int,
+) -> None:
+    """Provider 2 — CDP (Electron/CEF/Chromium web content).
+
+    When the window embeds a browser, fetch its DOM via the Chrome DevTools
+    Protocol and graft it under the browser control; if no debug port is owned
+    by the app, recover the same content from the render widget's UIA tree
+    (Chromium exposes its DOM as UIA). Mutates *root_tree*/*merged_elements*/
+    *stats* in place — never reassigns the root, so the caller keeps its handle.
+    """
+    should_try_cdp = enable_cdp and (
+        coverage_target > 0 or backend_name == "auto" or backend_name in ("cdp",)
+    )
+    if not (should_try_cdp and root_tree is not None):
+        return
+    current_coverage = _estimate_coverage(merged_elements, window_area) if window_area > 0 else 0.0
+    # Only try CDP if coverage is below target (or always when backend_name=auto)
+    if not (backend_name == "auto" or current_coverage < coverage_target):
+        return
+
+    t0 = time.monotonic()
+    cdp_elements: List[ElementInfo] = []
+    debug_port: Optional[int] = None
+    try:
+        # Try Electron-specific detection first, then generic CDP
+        try:
+            from naturo.electron import get_debug_port as _electron_port
+            if app:
+                debug_port = _electron_port(app)
+        except Exception as exc:
+            logger.debug("Electron port detection failed for '%s': %s", app, exc)
+
+        # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
+        if debug_port is None:
+            # Resolve the target window's PID so find_cdp_port can read the
+            # browser's command line (its Phase 1) and pick up a non-default
+            # --remote-debugging-port — not only the common ports it blind-probes.
+            cdp_pid = pid
+            if cdp_pid is None and hwnd is not None:
+                try:
+                    import ctypes
+                    import ctypes.wintypes
+                    _pid = ctypes.wintypes.DWORD()
+                    ctypes.windll.user32.GetWindowThreadProcessId(
+                        int(hwnd), ctypes.byref(_pid)
+                    )
+                    cdp_pid = _pid.value or None
+                except Exception:
+                    cdp_pid = None
+            debug_port = _get_cascade_pkg().find_cdp_port(cdp_pid)
+    except Exception as exc:
+        logger.debug("CDP port detection failed: %s", exc)
+
+    if debug_port:
+        # Offset CDP viewport coords by the embedded browser's render surface
+        # (not the app window), so the page lands inside the browser control;
+        # fall back to the window origin if not found.
+        bounds = _web_render_bounds(hwnd) or (
+            root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+        cdp_elements = _get_cascade_pkg()._fetch_cdp_elements(pid or 0, debug_port, bounds)
+
+    elapsed = (time.monotonic() - t0) * 1000
+    if cdp_elements:
+        # Graft CDP web elements UNDER the browser control's UIA node (not flat at
+        # the window root) so the tree reflects that the page lives inside the
+        # embedded browser. Also feed coverage math.
+        merged_elements.extend(_graft_cdp(root_tree, cdp_elements))
+        stats.providers.append(ProviderStat(
+            name="cdp", elements=len(cdp_elements), elapsed_ms=elapsed, status="ok"))
+        return
+
+    stats.providers.append(ProviderStat(
+        name="cdp", elapsed_ms=elapsed,
+        status="skipped" if debug_port is None else "no_elements"))
+    # No CDP debug port owned by this app — recover the embedded web content from
+    # the render widget's UIA tree instead. Chromium exposes its DOM as UIA, so
+    # Tauri/WebView2/Electron apps that don't open a debug port (e.g. Clash Verge)
+    # are still readable, structurally, with zero debug port.
+    _t0w = time.monotonic()
+    # Webview DOM-as-UIA needs a deeper probe than the surrounding chrome; keep a
+    # floor of 12 unless the caller asked for unlimited.
+    _web_depth = depth if depth <= 0 else max(depth, 12)
+    _web_nodes = _webview_uia_content(backend, hwnd, _web_depth)
+    if _web_nodes:
+        _graft_web_under_control(root_tree, _web_nodes)
+        for _n in _web_nodes:
+            merged_elements.extend(_flatten(_n))
+        stats.providers.append(ProviderStat(
+            name="webview_uia", elements=len(_web_nodes),
+            elapsed_ms=(time.monotonic() - _t0w) * 1000, status="ok"))
+
+
 def run_cascade(
     backend,
     *,
@@ -675,94 +771,11 @@ def run_cascade(
         merged_elements.extend(_best_flat[1:])  # skip root (merged below)
 
     # ── Provider 2: CDP (Electron/CEF apps) ─────────────────────────────────
-    should_try_cdp = enable_cdp and (
-        coverage_target > 0
-        or backend_name == "auto"
-        or backend_name in ("cdp",)
+    _stage_cdp(
+        backend, root_tree, merged_elements, stats,
+        app=app, hwnd=hwnd, pid=pid, depth=depth, coverage_target=coverage_target,
+        backend_name=backend_name, enable_cdp=enable_cdp, window_area=window_area,
     )
-
-    if should_try_cdp and root_tree is not None:
-        current_coverage = _estimate_coverage(merged_elements, window_area) if window_area > 0 else 0.0
-
-        # Only try CDP if coverage is below target (or always when backend_name=auto)
-        if backend_name == "auto" or current_coverage < coverage_target:
-            t0 = time.monotonic()
-            cdp_elements: List[ElementInfo] = []
-            debug_port: Optional[int] = None
-
-            try:
-                # Try Electron-specific detection first, then generic CDP
-                try:
-                    from naturo.electron import get_debug_port as _electron_port
-                    if app:
-                        debug_port = _electron_port(app)
-                except Exception as exc:
-                    logger.debug("Electron port detection failed for '%s': %s", app, exc)
-
-                # Fall back to generic CDP port discovery (Chrome, Edge, etc.)
-                if debug_port is None:
-                    # Resolve the target window's PID so find_cdp_port can read
-                    # the browser's command line (its Phase 1) and pick up a
-                    # non-default --remote-debugging-port — not only the common
-                    # ports it blind-probes. Windows-only, best-effort.
-                    cdp_pid = pid
-                    if cdp_pid is None and hwnd is not None:
-                        try:
-                            import ctypes
-                            import ctypes.wintypes
-                            _pid = ctypes.wintypes.DWORD()
-                            ctypes.windll.user32.GetWindowThreadProcessId(
-                                int(hwnd), ctypes.byref(_pid)
-                            )
-                            cdp_pid = _pid.value or None
-                        except Exception:
-                            cdp_pid = None
-                    debug_port = _get_cascade_pkg().find_cdp_port(cdp_pid)
-            except Exception as exc:
-                logger.debug("CDP port detection failed: %s", exc)
-
-            if debug_port:
-                # Offset CDP viewport coords by the embedded browser's render
-                # surface (not the app window), so the page lands inside the
-                # browser control; fall back to the window origin if not found.
-                bounds = _web_render_bounds(hwnd) or (
-                    root_tree.x, root_tree.y, root_tree.width, root_tree.height)
-                cdp_elements = _get_cascade_pkg()._fetch_cdp_elements(
-                    pid or 0, debug_port, bounds
-                )
-
-            elapsed = (time.monotonic() - t0) * 1000
-            if cdp_elements:
-                # Graft CDP web elements UNDER the browser control's UIA node (not
-                # flat at the window root) so the tree reflects that the page lives
-                # inside the embedded browser. Also feed coverage math.
-                merged_elements.extend(_graft_cdp(root_tree, cdp_elements))
-
-                stats.providers.append(ProviderStat(
-                    name="cdp", elements=len(cdp_elements), elapsed_ms=elapsed, status="ok"
-                ))
-            else:
-                stats.providers.append(ProviderStat(
-                    name="cdp", elapsed_ms=elapsed,
-                    status="skipped" if debug_port is None else "no_elements"
-                ))
-                # No CDP (no debug port owned by this app) — recover the embedded
-                # web content from the render widget's UIA tree instead. Chromium
-                # exposes its DOM as UIA accessible objects, so Tauri/WebView2/
-                # Electron apps that don't open a debug port (e.g. Clash Verge) are
-                # still readable, structurally, with zero debug port.
-                _t0w = time.monotonic()
-                # Webview DOM-as-UIA needs a deeper probe than the surrounding
-                # chrome; keep a floor of 12 unless the caller asked for unlimited.
-                _web_depth = depth if depth <= 0 else max(depth, 12)
-                _web_nodes = _webview_uia_content(backend, hwnd, _web_depth)
-                if _web_nodes:
-                    _graft_web_under_control(root_tree, _web_nodes)
-                    for _n in _web_nodes:
-                        merged_elements.extend(_flatten(_n))
-                    stats.providers.append(ProviderStat(
-                        name="webview_uia", elements=len(_web_nodes),
-                        elapsed_ms=(time.monotonic() - _t0w) * 1000, status="ok"))
 
     # ── Provider 2b: Java Access Bridge (Swing/AWT apps) ─────────────────────
     # The primary provider loop above stops at the first non-empty accessibility
