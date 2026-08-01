@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from naturo.backends.base import ElementInfo
+from naturo.cascade._coverage import _flatten
 
 # Genuine cross-source role synonyms. Roles are already normalized to naturo's
 # vocabulary by the native layer, so most matches are exact; these cover the few
@@ -79,18 +80,6 @@ def _roles_match(a: str, b: str) -> bool:
         return True
     syn = _ROLE_SYNONYMS.get(a)
     return bool(syn and b in syn)
-
-
-def _flatten(root: ElementInfo) -> List[ElementInfo]:
-    out: List[ElementInfo] = []
-
-    def _v(n: ElementInfo) -> None:
-        out.append(n)
-        for c in (n.children or []):
-            _v(c)
-
-    _v(root)
-    return out
 
 
 def _same_element(a: ElementInfo, b: ElementInfo) -> bool:

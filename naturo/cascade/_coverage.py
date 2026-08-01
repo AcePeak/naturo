@@ -66,12 +66,13 @@ def _estimate_coverage(elements: List[ElementInfo], window_area: int) -> float:
 
 
 def _flatten(root: ElementInfo) -> List[ElementInfo]:
-    """Depth-first flatten of element tree."""
+    """Depth-first flatten of an element tree (the canonical cascade walker —
+    imported by sibling modules rather than re-implemented)."""
     result: List[ElementInfo] = []
 
     def _visit(el: ElementInfo) -> None:
         result.append(el)
-        for child in el.children:
+        for child in (el.children or []):
             _visit(child)
 
     _visit(root)
