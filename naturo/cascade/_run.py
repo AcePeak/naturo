@@ -497,6 +497,212 @@ def _stage_cdp(
             elapsed_ms=(time.monotonic() - _t0w) * 1000, status="ok"))
 
 
+def _stage_jab(
+    backend, root_tree: ElementInfo, merged_elements: List[ElementInfo],
+    stats: CascadeStats, *, app: Optional[str], window_title: Optional[str],
+    hwnd: Optional[int], pid: Optional[int], depth: int,
+    backend_name: str, enable_jab: bool,
+) -> None:
+    """Provider 2b — Java Access Bridge (Swing/AWT).
+
+    The Provider-1 loop stops at the first non-empty tree; for a Java window that
+    is the UIA *chrome* — the real Swing controls live below a SunAwtFrame UIA
+    collapses into one opaque node, so ``auto`` never reaches the jab provider.
+    Detect a Java window and fold its JAB controls into the root via the same
+    unified-tree correspondence as UIA↔MSAA (#932). Mutates in place.
+    """
+    already_have_jab = any(p.name == "jab" and p.status == "ok" for p in stats.providers)
+    if not (enable_jab and backend_name == "auto"
+            and root_tree is not None and not already_have_jab):
+        return
+
+    resolved_hwnd = hwnd
+    if resolved_hwnd is None:
+        try:
+            resolved_hwnd = backend._resolve_hwnd(
+                app=app, window_title=window_title, hwnd=hwnd, pid=pid)
+        except Exception as exc:
+            logger.debug("Auto cascade: HWND resolution for JAB failed: %s", exc)
+            resolved_hwnd = None
+
+    if not (resolved_hwnd is not None
+            and _get_cascade_pkg()._is_java_window(resolved_hwnd)):
+        return
+
+    t0 = time.monotonic()
+    jab_tree: Optional[ElementInfo] = None
+    try:
+        jab_tree = backend.get_element_tree(hwnd=resolved_hwnd, depth=depth, backend="jab")
+    except Exception as exc:
+        logger.debug("Auto cascade: JAB probe failed: %s", exc)
+    elapsed = (time.monotonic() - t0) * 1000
+
+    # Fold JAB controls into the UIA root via the SAME unified-tree correspondence
+    # as UIA↔MSAA: a control both sources expose collapses to ONE ref with JAB
+    # recorded as corroborating; JAB-unique controls graft under their geometric
+    # parent. `jab_added` = the net-new controls, for the stat. merge_a11y_trees
+    # mutates and returns the same root object here (root_tree is non-None).
+    jab_added: List[ElementInfo] = []
+    if jab_tree is not None:
+        tagged_jab = _tag_source(jab_tree, "jab")
+        try:
+            _, jab_added = merge_a11y_trees(root_tree, tagged_jab)
+        except Exception as exc:  # never let unification break recognition
+            logger.debug("JAB unify merge fell back to append: %s", exc)
+            for child in tagged_jab.children:
+                root_tree.children.append(child)
+                jab_added.extend(_flatten(child))
+
+    if jab_added:
+        merged_elements.extend(jab_added)
+        stats.providers.append(ProviderStat(
+            name="jab", elements=len(jab_added), elapsed_ms=elapsed, status="ok"))
+    else:
+        stats.providers.append(ProviderStat(
+            name="jab", elapsed_ms=elapsed, status="no_elements"))
+
+
+def _stage_com(
+    backend, root_tree: ElementInfo, merged_elements: List[ElementInfo],
+    stats: CascadeStats, *, app: Optional[str], window_title: Optional[str],
+    hwnd: Optional[int], pid: Optional[int], backend_name: str, enable_com: bool,
+    excel_max_cells: int, excel_max_rows: int, excel_max_cols: int,
+) -> None:
+    """Provider 2c — COM/Excel (spreadsheet cells UIA collapses into one node).
+
+    Excel exposes its grid only via COM, so ``see`` otherwise shows just the
+    ribbon/chrome. Bind the running Excel instance and graft its cells onto the
+    root, mirroring the additive CDP/JAB providers (M2). Mutates in place.
+    """
+    already_have_com = any(p.name == "com" and p.status == "ok" for p in stats.providers)
+    if not (enable_com and backend_name == "auto"
+            and root_tree is not None and not already_have_com):
+        return
+    com_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
+    if not (com_hwnd is not None and _get_cascade_pkg()._is_excel_window(com_hwnd)):
+        return
+    t0 = time.monotonic()
+    com_cells: List[ElementInfo] = []
+    try:
+        com_cells = _get_cascade_pkg()._fetch_excel_cells(
+            com_hwnd, max_cells=excel_max_cells,
+            max_rows=excel_max_rows, max_cols=excel_max_cols)
+    except Exception as exc:
+        logger.debug("Auto cascade: COM/Excel probe failed: %s", exc)
+    elapsed = (time.monotonic() - t0) * 1000
+    _graft_additive_nodes("com", "com", com_cells, elapsed,
+                          root_tree, merged_elements, stats)
+
+
+def _stage_scintilla(
+    backend, root_tree: ElementInfo, merged_elements: List[ElementInfo],
+    stats: CascadeStats, *, app: Optional[str], window_title: Optional[str],
+    hwnd: Optional[int], pid: Optional[int], backend_name: str,
+) -> None:
+    """Provider 2d — Scintilla (Notepad++/SciTE/IDE editing surface).
+
+    The Scintilla surface is opaque to UIA — the tree shows the pane but no text.
+    Read the document via Scintilla's own message API and graft it. Its OWN stage
+    with its OWN hwnd resolution — NOT nested under COM, where an Excel-less
+    window would silently disable editor recognition too. Mutates in place.
+    """
+    if not (backend_name == "auto" and root_tree is not None):
+        return
+    sci_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
+    if not (sci_hwnd is not None and _get_cascade_pkg()._is_scintilla_window(sci_hwnd)):
+        return
+    t0 = time.monotonic()
+    sci_nodes: List[ElementInfo] = []
+    try:
+        sci_nodes = _get_cascade_pkg()._fetch_scintilla_content(sci_hwnd)
+    except Exception as exc:
+        logger.debug("Auto cascade: Scintilla probe failed: %s", exc)
+    elapsed = (time.monotonic() - t0) * 1000
+    _graft_additive_nodes("scintilla", "scintilla", sci_nodes, elapsed,
+                          root_tree, merged_elements, stats)
+
+
+def _stage_vision_ocr(
+    root_tree: Optional[ElementInfo], merged_elements: List[ElementInfo],
+    stats: CascadeStats, *, window_area: int, coverage_target: float,
+    fill_gaps_ai: bool, run_ocr: bool, screenshot_path: Optional[str],
+    ai_provider: str, screenshot_scale_factor: float,
+    ai_model: Optional[str], ai_api_key: Optional[str],
+) -> None:
+    """Providers 3 & 4 — AI vision + local OCR fallbacks (pixel recovery).
+
+    When the structured tree is too shallow (few nodes, mostly invalid bounds)
+    auto-fire AI vision (#275); ``--fill-gaps`` opts in explicitly. OCR recovers
+    text baked into images/canvas that accessibility APIs cannot see. Both merge
+    with IoU/text dedup so a pixel node overlapping a deterministic one only
+    corroborates it (deterministic stays preferred). Mutates in place.
+    """
+    # Shallow-tree auto-trigger: when UIA is too thin, enable AI vision even
+    # without --fill-gaps. But an explicit run_ocr IS the pixel path the caller
+    # chose (local, fast) — don't also auto-fire the slow, network/credential-
+    # dependent AI fallback on top of it; explicit --fill-gaps still opts into AI.
+    shallow_fallback = False
+    if root_tree is not None and not fill_gaps_ai and not run_ocr:
+        flat_all = _flatten(root_tree)
+        is_shallow, total_count, invalid_count = _is_shallow_tree(flat_all)
+        if is_shallow and screenshot_path:
+            shallow_fallback = True
+            logger.info(
+                "UIA tree too shallow (%d elements, %d with invalid bounds), "
+                "falling back to AI vision...", total_count, invalid_count)
+
+    # ── Provider 3: AI vision fallback ──────────────────────────────────────
+    should_run_ai = (fill_gaps_ai or shallow_fallback) and root_tree is not None and screenshot_path
+    if should_run_ai:
+        current_coverage = _estimate_coverage(merged_elements, window_area) if window_area > 0 else 0.0
+        if current_coverage < coverage_target or coverage_target == 0.0 or shallow_fallback:
+            t0 = time.monotonic()
+            bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+            ai_elements = _get_cascade_pkg()._fetch_ai_elements(
+                screenshot_path, bounds, ai_provider,
+                scale_factor=screenshot_scale_factor, model=ai_model, api_key=ai_api_key)
+            elapsed = (time.monotonic() - t0) * 1000
+            trigger = "shallow_tree" if shallow_fallback else "fill_gaps"
+            if ai_elements:
+                # (#694) Merge AI elements into the UIA tree with IoU dedup instead
+                # of flat append — skip duplicates, attach novel elements to the
+                # deepest matching parent node.
+                novel, added_count, skipped_count = _get_cascade_pkg()._merge_ai_into_tree(
+                    root_tree, ai_elements)
+                merged_elements.extend(novel)
+                stats.providers.append(ProviderStat(
+                    name="vision", elements=added_count, elapsed_ms=elapsed, status="ok"))
+                logger.info("AI vision: %d added, %d duplicates skipped (trigger: %s)",
+                            added_count, skipped_count, trigger)
+            else:
+                stats.providers.append(ProviderStat(
+                    name="vision", elapsed_ms=elapsed, status="skipped"))
+
+    # ── Provider 4: local OCR fallback ──────────────────────────────────────
+    # UNCERTAIN by construction — same IoU/text dedup as AI vision, so OCR that
+    # overlaps a deterministic node corroborates it and only genuinely image-only
+    # text is added as an uncertain, warned node (M2).
+    if run_ocr and root_tree is not None and screenshot_path:
+        t0 = time.monotonic()
+        bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
+        ocr_elements: List[ElementInfo] = []
+        try:
+            ocr_elements = _get_cascade_pkg()._fetch_ocr_elements(screenshot_path, bounds)
+        except Exception as exc:
+            logger.debug("OCR provider failed: %s", exc)
+        elapsed = (time.monotonic() - t0) * 1000
+        if ocr_elements:
+            novel, added_count, skipped_count = _get_cascade_pkg()._merge_ai_into_tree(
+                root_tree, ocr_elements)
+            merged_elements.extend(novel)
+            stats.providers.append(ProviderStat(
+                name="ocr", elements=added_count, elapsed_ms=elapsed, status="ok"))
+            logger.info("OCR: %d added, %d duplicates skipped", added_count, skipped_count)
+        else:
+            stats.providers.append(ProviderStat(
+                name="ocr", elapsed_ms=elapsed, status="no_elements"))
+
+
 def run_cascade(
     backend,
     *,
@@ -778,205 +984,32 @@ def run_cascade(
     )
 
     # ── Provider 2b: Java Access Bridge (Swing/AWT apps) ─────────────────────
-    # The primary provider loop above stops at the first non-empty accessibility
-    # tree.  For a Java window that tree is the UIA *window chrome* (title bar,
-    # system buttons) — the actual Swing controls live below a SunAwtFrame that
-    # UIA collapses into one opaque node, so the loop never reaches the "jab"
-    # provider and the moat is silently lost on the default ``auto`` path (it
-    # only worked via an explicit ``--backend jab``).  Detect a Java window and
-    # merge its JAB elements here, mirroring the additive CDP provider above, so
-    # ``naturo see --backend auto`` actually delivers Java recognition (#932).
-    already_have_jab = any(
-        p.name == "jab" and p.status == "ok" for p in stats.providers
-    )
-    if enable_jab and backend_name == "auto" and root_tree is not None and not already_have_jab:
-        resolved_hwnd = hwnd
-        if resolved_hwnd is None:
-            try:
-                resolved_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-                )
-            except Exception as exc:
-                logger.debug("Auto cascade: HWND resolution for JAB failed: %s", exc)
-                resolved_hwnd = None
+    if root_tree is not None:
+        _stage_jab(backend, root_tree, merged_elements, stats,
+                   app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                   depth=depth, backend_name=backend_name, enable_jab=enable_jab)
 
-        if resolved_hwnd is not None and _get_cascade_pkg()._is_java_window(
-            resolved_hwnd
-        ):
-            t0 = time.monotonic()
-            jab_tree: Optional[ElementInfo] = None
-            try:
-                jab_tree = backend.get_element_tree(
-                    hwnd=resolved_hwnd, depth=depth, backend="jab",
-                )
-            except Exception as exc:
-                logger.debug("Auto cascade: JAB probe failed: %s", exc)
-            elapsed = (time.monotonic() - t0) * 1000
-
-            # Fold the JAB controls into the UIA root via the SAME unified-tree
-            # correspondence as UIA↔MSAA (Phase 3): a control both UIA and JAB
-            # expose (e.g. the Java frame UIA also sees) collapses to ONE ref with
-            # JAB recorded as a corroborating source, instead of being duplicated
-            # by a naive append; JAB-unique controls graft under their geometric
-            # parent. `jab_added` = the net-new (JAB-unique) controls, for the stat.
-            jab_added: List[ElementInfo] = []
-            if jab_tree is not None:
-                tagged_jab = _tag_source(jab_tree, "jab")
-                try:
-                    root_tree, jab_added = merge_a11y_trees(root_tree, tagged_jab)
-                except Exception as exc:  # never let unification break recognition
-                    logger.debug("JAB unify merge fell back to append: %s", exc)
-                    for child in tagged_jab.children:
-                        root_tree.children.append(child)
-                        jab_added.extend(_flatten(child))
-
-            if jab_added:
-                merged_elements.extend(jab_added)
-                stats.providers.append(ProviderStat(
-                    name="jab", elements=len(jab_added),
-                    elapsed_ms=elapsed, status="ok",
-                ))
-            else:
-                stats.providers.append(ProviderStat(
-                    name="jab", elapsed_ms=elapsed, status="no_elements",
-                ))
-
-    # Provider 2c: COM/Excel (spreadsheet cells UIA collapses into one node).
-    # Excel exposes its grid only via COM, so ``see`` on an Excel
-    # window otherwise shows just the ribbon/chrome.  Bind the running Excel
-    # instance and graft its cells onto the root, mirroring the additive
-    # CDP/JAB providers above, so ``see --backend auto`` delivers spreadsheet
-    # recognition (M2).
-    already_have_com = any(
-        p.name == "com" and p.status == "ok" for p in stats.providers
-    )
-    if enable_com and backend_name == "auto" and root_tree is not None and not already_have_com:
-        com_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
-
-        if com_hwnd is not None and _get_cascade_pkg()._is_excel_window(com_hwnd):
-            t0 = time.monotonic()
-            com_cells: List[ElementInfo] = []
-            try:
-                com_cells = _get_cascade_pkg()._fetch_excel_cells(
-                    com_hwnd,
-                    max_cells=excel_max_cells,
-                    max_rows=excel_max_rows,
-                    max_cols=excel_max_cols,
-                )
-            except Exception as exc:
-                logger.debug("Auto cascade: COM/Excel probe failed: %s", exc)
-            elapsed = (time.monotonic() - t0) * 1000
-            _graft_additive_nodes("com", "com", com_cells, elapsed,
-                                  root_tree, merged_elements, stats)
+    # ── Provider 2c: COM/Excel (spreadsheet grid) ────────────────────────────
+    if root_tree is not None:
+        _stage_com(backend, root_tree, merged_elements, stats,
+                   app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                   backend_name=backend_name, enable_com=enable_com,
+                   excel_max_cells=excel_max_cells, excel_max_rows=excel_max_rows,
+                   excel_max_cols=excel_max_cols)
 
     # ── Provider 2d: Scintilla (Notepad++/SciTE/IDE editors) ─────────────────
-    # The Scintilla editing surface is opaque to UIA — the tree shows the pane
-    # but no text. Read the document via Scintilla's own message API and graft it
-    # as a deterministic node, mirroring the COM/CDP/JAB providers. This is its
-    # OWN stage with its OWN hwnd resolution — NOT nested under `enable_com`,
-    # where `enable_com=False` (or an Excel-less window) would silently disable
-    # editor recognition too.
-    if backend_name == "auto" and root_tree is not None:
-        sci_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
-        if sci_hwnd is not None and _get_cascade_pkg()._is_scintilla_window(sci_hwnd):
-            t0 = time.monotonic()
-            sci_nodes: List[ElementInfo] = []
-            try:
-                sci_nodes = _get_cascade_pkg()._fetch_scintilla_content(sci_hwnd)
-            except Exception as exc:
-                logger.debug("Auto cascade: Scintilla probe failed: %s", exc)
-            elapsed = (time.monotonic() - t0) * 1000
-            _graft_additive_nodes("scintilla", "scintilla", sci_nodes, elapsed,
-                                  root_tree, merged_elements, stats)
+    if root_tree is not None:
+        _stage_scintilla(backend, root_tree, merged_elements, stats,
+                         app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+                         backend_name=backend_name)
 
-    # ── Shallow tree detection (issue #275) ────────────────────────────────
-    # When the UIA tree is too shallow (few elements, mostly invalid bounds),
-    # automatically enable AI vision fallback even without --fill-gaps.
-    # BUT when the caller explicitly asked for OCR (run_ocr), that IS the
-    # pixel-recovery path they chose — a local, fast provider — so don't also
-    # auto-fire the (slow, network/credential-dependent) AI-vision fallback on top
-    # of it. Explicit --fill-gaps still opts into AI regardless.
-    shallow_fallback = False
-    if root_tree is not None and not fill_gaps_ai and not run_ocr:
-        flat_all = _flatten(root_tree)
-        is_shallow, total_count, invalid_count = _is_shallow_tree(flat_all)
-        if is_shallow and screenshot_path:
-            shallow_fallback = True
-            logger.info(
-                "UIA tree too shallow (%d elements, %d with invalid bounds), "
-                "falling back to AI vision...",
-                total_count, invalid_count,
-            )
-
-    # ── Provider 3: AI vision fallback ──────────────────────────────────────
-    should_run_ai = (fill_gaps_ai or shallow_fallback) and root_tree is not None and screenshot_path
-    if should_run_ai:
-        current_coverage = _estimate_coverage(merged_elements, window_area) if window_area > 0 else 0.0
-
-        if current_coverage < coverage_target or coverage_target == 0.0 or shallow_fallback:
-            t0 = time.monotonic()
-            bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
-            ai_elements = _get_cascade_pkg()._fetch_ai_elements(
-                screenshot_path, bounds, ai_provider,
-                scale_factor=screenshot_scale_factor,
-                model=ai_model,
-                api_key=ai_api_key,
-            )
-            elapsed = (time.monotonic() - t0) * 1000
-
-            trigger = "shallow_tree" if shallow_fallback else "fill_gaps"
-            if ai_elements:
-                # (#694) Merge AI elements into the UIA tree with IoU dedup
-                # instead of flat append — skip duplicates, attach novel
-                # elements to the deepest matching parent node.
-                novel, added_count, skipped_count = _get_cascade_pkg()._merge_ai_into_tree(
-                    root_tree, ai_elements,
-                )
-                merged_elements.extend(novel)
-                stats.providers.append(ProviderStat(
-                    name="vision", elements=added_count, elapsed_ms=elapsed,
-                    status="ok",
-                ))
-                logger.info(
-                    "AI vision: %d added, %d duplicates skipped (trigger: %s)",
-                    added_count, skipped_count, trigger,
-                )
-            else:
-                stats.providers.append(ProviderStat(
-                    name="vision", elapsed_ms=elapsed, status="skipped"
-                ))
-
-    # Provider 4: local OCR fallback (text baked into images/canvas that
-    # accessibility APIs cannot see).  UNCERTAIN by construction — merged with
-    # the same IoU/text dedup as AI vision, so OCR that overlaps a deterministic
-    # node corroborates it (deterministic stays preferred) and only genuinely
-    # image-only text is added as an uncertain, warned node (M2).
-    if run_ocr and root_tree is not None and screenshot_path:
-        t0 = time.monotonic()
-        bounds = (root_tree.x, root_tree.y, root_tree.width, root_tree.height)
-        ocr_elements: List[ElementInfo] = []
-        try:
-            ocr_elements = _get_cascade_pkg()._fetch_ocr_elements(
-                screenshot_path, bounds,
-            )
-        except Exception as exc:
-            logger.debug("OCR provider failed: %s", exc)
-        elapsed = (time.monotonic() - t0) * 1000
-        if ocr_elements:
-            novel, added_count, skipped_count = _get_cascade_pkg()._merge_ai_into_tree(
-                root_tree, ocr_elements,
-            )
-            merged_elements.extend(novel)
-            stats.providers.append(ProviderStat(
-                name="ocr", elements=added_count, elapsed_ms=elapsed, status="ok",
-            ))
-            logger.info(
-                "OCR: %d added, %d duplicates skipped", added_count, skipped_count,
-            )
-        else:
-            stats.providers.append(ProviderStat(
-                name="ocr", elapsed_ms=elapsed, status="no_elements",
-            ))
+    # ── Providers 3 & 4: AI vision + local OCR (pixel recovery) ──────────────
+    _stage_vision_ocr(root_tree, merged_elements, stats,
+                      window_area=window_area, coverage_target=coverage_target,
+                      fill_gaps_ai=fill_gaps_ai, run_ocr=run_ocr,
+                      screenshot_path=screenshot_path, ai_provider=ai_provider,
+                      screenshot_scale_factor=screenshot_scale_factor,
+                      ai_model=ai_model, ai_api_key=ai_api_key)
 
     # ── De-loop the tree (MSAA navigation loops and re-emits chrome) ─────────
     # Scoped to MSAA only: UIA/JAB/CDP/COM trees are clean and an exact
