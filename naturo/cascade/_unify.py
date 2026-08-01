@@ -23,7 +23,6 @@ mission memory; a loose match bloats the tree, a strict one duplicates.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Dict, List, Optional
 
 from naturo.backends.base import ElementInfo
