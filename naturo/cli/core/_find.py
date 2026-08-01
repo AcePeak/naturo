@@ -157,11 +157,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         entry = id_map.resolve(app_id)
         if entry is None:
             msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            if json_output:
-                click.echo(_common._json_error_str("APP_ID_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
         hwnd = entry.handle
 
     # (#1173) Validate --limit up front, before any strategy dispatch and before
@@ -175,11 +171,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     # invariant (same code on headless CI as on a Windows desktop).
     if limit < 1:
         msg = f"--limit must be a positive integer, got {limit}"
-        if json_output:
-            click.echo(_common._json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "INVALID_INPUT", msg)
 
     # (#1144 / #809 §4) Strategy auto-detection — when the caller gives a bare
     # query and no explicit strategy flag, infer the locator strategy from the
@@ -216,11 +208,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             conflict = ("--selector takes no text query; it resolves a selector path, "
                         "not a named element.")
         if conflict is not None:
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", conflict))
-            else:
-                click.echo(f"Error: {conflict}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", conflict)
         _find_with_selector(
             selector, find_all,
             app=app, window_title=window_title, hwnd=hwnd, pid=pid,
@@ -235,26 +223,14 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     if image_template is not None:
         if ai:
             msg = "--image and --ai are mutually exclusive; choose one find strategy."
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         if ocr:
             msg = "--image and --ocr are mutually exclusive; choose one find strategy."
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         if query is not None or query_opt is not None:
             msg = ("--image takes no text query; it locates a template image, "
                    "not a named element.")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         _find_with_image(
             image_template, threshold, find_all,
             app=app, window_title=window_title, hwnd=hwnd, pid=pid,
@@ -282,20 +258,12 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     if ocr:
         if ai:
             msg = "--ocr and --ai are mutually exclusive; choose one find strategy."
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         ocr_query = query if query is not None else query_opt
         if ocr_query is None or not ocr_query.strip():
             msg = ("--ocr needs the text to find. Provide it as the positional "
                    "QUERY or via --query/-q (e.g. naturo find --ocr \"Start\").")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         _find_with_ocr(
             ocr_query, find_all,
             app=app, window_title=window_title, hwnd=hwnd, pid=pid,
@@ -319,11 +287,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             msg = ("Missing or empty argument 'QUERY'. Provide a non-empty query "
                    "as a positional arg or --query/-q option, or use --all to "
                    "match every element.")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
 
     # Auto-enable AI mode when --provider or --model is explicitly set (#287)
     if not ai and (ai_provider != "auto" or ai_model is not None or ai_api_key is not None):
@@ -338,11 +302,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             msg = ("--window/--hwnd/--pid are not supported with --ai "
                    "(vision mode operates on a screenshot); use --app to scope "
                    "the target application.")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "INVALID_INPUT", msg)
         _find_with_ai(query, ai_provider, screenshot, app, json_output,
                       model=ai_model, api_key=ai_api_key)
         return
@@ -351,19 +311,11 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     # negative is invalid. No upper bound — the native layer bounds the total.
     if depth < 0:
         msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
-        if json_output:
-            click.echo(_common._json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "INVALID_INPUT", msg)
 
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("UI inspection")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "PLATFORM_ERROR", msg)
 
     try:
         be = _common._get_backend(json_output)
@@ -371,11 +323,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                                    pid=pid, depth=depth, backend=backend)
         if tree is None:
             msg = "No window found or UI tree is empty."
-            if json_output:
-                click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
 
         from naturo.search import search_elements
         # Convert backend ElementInfo tree to bridge ElementInfo for search
@@ -506,17 +454,9 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         # envelope its siblings (see/menu-inspect/highlight) emit for the same
         # condition — instead of flattening it into an unrecoverable
         # UNKNOWN_ERROR via the broad handler below.
-        if json_output:
-            click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "WINDOW_NOT_FOUND", str(e))
     except Exception as e:
-        if json_output:
-            click.echo(_common._json_error_str("UNKNOWN_ERROR", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "UNKNOWN_ERROR", str(e))
 
 
 def _window_origin(target_hwnd: int | None) -> tuple[int, int]:
@@ -829,11 +769,7 @@ def _find_with_image(
     import os
 
     def _emit(code: str, message: str) -> NoReturn:
-        if json_output:
-            click.echo(_common._json_error_str(code, message))
-        else:
-            click.echo(f"Error: {message}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, code, message)
 
     try:
         matches, origin_x, origin_y, target_hwnd, haystack_width, haystack_height = (
@@ -990,11 +926,7 @@ def _find_with_ocr(
     import os
 
     def _emit(code: str, message: str) -> NoReturn:
-        if json_output:
-            click.echo(_common._json_error_str(code, message))
-        else:
-            click.echo(f"Error: {message}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, code, message)
 
     # Offline-input validation first, so the bad-input → code contract is the same
     # on every OS; the offline path needs no live capture and skips the GUI gate.
@@ -1222,11 +1154,7 @@ def _find_with_selector(
     )
 
     def _emit_error(code: str, message: str) -> None:
-        if json_output:
-            click.echo(_common._json_error_str(code, message))
-        else:
-            click.echo(f"Error: {message}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, code, message)
 
     # Dereference a saved @name selector to its stored path (#105), matching the
     # click family's behavior exactly.
@@ -1398,20 +1326,12 @@ def _find_with_ai(
         from naturo.ai_find import ai_find_element
     except ImportError as e:
         msg = f"AI find dependencies not available: {e}"
-        if json_output:
-            click.echo(_common._json_error_str("MISSING_DEPENDENCY", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "MISSING_DEPENDENCY", msg)
 
     # Validate screenshot path
     if screenshot and not __import__("os").path.exists(screenshot):
         msg = f"Screenshot file not found: {screenshot}"
-        if json_output:
-            click.echo(_common._json_error_str("FILE_NOT_FOUND", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "FILE_NOT_FOUND", msg)
 
     try:
         result = ai_find_element(
@@ -1435,11 +1355,7 @@ def _find_with_ai(
             code = "AI_PROVIDER_UNAVAILABLE"
         elif "capture" in msg.lower():
             code = "CAPTURE_FAILED"
-        if json_output:
-            click.echo(_common._json_error_str(code, msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, code, msg)
 
     if json_output:
         output = {
