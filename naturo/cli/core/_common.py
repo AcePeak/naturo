@@ -18,7 +18,7 @@ import os
 import platform
 import sys
 from collections.abc import Callable
-from typing import TypeVar
+from typing import NoReturn, TypeVar
 
 import click
 
@@ -29,6 +29,26 @@ from naturo.errors import WindowNotFoundError  # noqa: F401
 logger = logging.getLogger(__name__)
 
 _F = TypeVar("_F", bound=Callable[..., object])
+
+
+def _emit_error(json_output: bool, code: str, msg: str) -> None:
+    """Echo a CLI error in the active output format.
+
+    JSON mode prints the ``{"success": false, "error": {...}}`` envelope; text
+    mode prints ``Error: <msg>`` to stderr. Centralizes the format that the CLI
+    surface otherwise repeats inline at ~70 call sites.
+    """
+    if json_output:
+        click.echo(_json_error_str(code, msg))
+    else:
+        click.echo(f"Error: {msg}", err=True)
+
+
+def _fail(json_output: bool, code: str, msg: str) -> NoReturn:
+    """Emit a CLI error (see :func:`_emit_error`) and exit non-zero — the standard
+    CLI failure path (``exit 1``, never Click's ``Usage:`` exit-2 banner)."""
+    _emit_error(json_output, code, msg)
+    raise SystemExit(1)
 
 
 def require_desktop_session(json_output: bool = False) -> Callable[[_F], _F]:

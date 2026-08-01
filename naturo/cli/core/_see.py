@@ -146,11 +146,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         entry = id_map.resolve(app_id)
         if entry is None:
             msg = f'App ID "{app_id}" not found or expired. Run "naturo app list" to refresh.'
-            if json_output:
-                click.echo(_common._json_error_str("APP_ID_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "APP_ID_NOT_FOUND", msg)
         # (#573) Use hwnd + pid for precise targeting.  Do NOT set app
         # to process_name — it may be a full path that breaks fuzzy matching.
         hwnd = entry.handle
@@ -161,19 +157,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     # Negative is the only invalid input now — the native layer bounds the total.
     if depth < 0:
         msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
-        if json_output:
-            click.echo(_common._json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "INVALID_INPUT", msg)
 
     if not _common._platform_supports_gui():
         msg = _common._platform_error_msg("UI inspection")
-        if json_output:
-            click.echo(_common._json_error_str("PLATFORM_ERROR", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "PLATFORM_ERROR", msg)
 
     # (#1022) Auto-create the parent directory for --path so a missing folder
     # doesn't surface as a raw [Errno 2] mislabeled as UNKNOWN_ERROR on save.
@@ -293,11 +281,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 hwnds = be._resolve_hwnds(app=app)
                 if not hwnds:
                     msg = f"No windows found for app '{app}'."
-                    if json_output:
-                        click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
-                    else:
-                        click.echo(f"Error: {msg}", err=True)
-                    raise SystemExit(1)
+                    _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
 
                 # Get element tree for each window
                 from naturo.backends.base import ElementInfo as BaseElementInfo
@@ -316,11 +300,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
                 if not window_trees:
                     msg = "All windows have empty UI trees."
-                    if json_output:
-                        click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
-                    else:
-                        click.echo(f"Error: {msg}", err=True)
-                    raise SystemExit(1)
+                    _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
 
                 # Merge into a single root: create a virtual root node
                 # with each window's tree as a child
@@ -357,11 +337,7 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
 
         if tree is None:
             msg = "No window found or UI tree is empty."
-            if json_output:
-                click.echo(_common._json_error_str("WINDOW_NOT_FOUND", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            _common._fail(json_output, "WINDOW_NOT_FOUND", msg)
 
         snapshot_id = None
         ref_map: dict[str, str] = {}  # Maps "eN" → backend element id
@@ -739,14 +715,6 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             click.echo(f"\nScreenshot saved: {result.path}")
 
     except _common.WindowNotFoundError as e:
-        if json_output:
-            click.echo(_common._json_error_str("WINDOW_NOT_FOUND", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "WINDOW_NOT_FOUND", str(e))
     except Exception as e:
-        if json_output:
-            click.echo(_common._json_error_str("UNKNOWN_ERROR", str(e)))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
+        _common._fail(json_output, "UNKNOWN_ERROR", str(e))
