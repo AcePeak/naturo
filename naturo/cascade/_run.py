@@ -17,6 +17,17 @@ from naturo.cascade._coverage import (
 from naturo.cascade._unify import merge_a11y_trees
 logger = logging.getLogger(__name__)
 
+# ── Cascade tuning (load-bearing thresholds; see the competition loop) ──
+#: UIA node count at/above which UIA is treated as complete and the heavier
+#: MSAA probe is skipped (charmap-class opaque-UIA windows fall below this).
+_UIA_RICH_ENOUGH = 60
+#: MSAA displaces the UIA base only when it DWARFS it by this factor — never
+#: when merely larger (a complete-UIA app where MSAA just adds container noise).
+_MSAA_DWARF_RATIO = 10
+#: raw:deduped node-count ratio above which an MSAA tree is mostly phantom
+#: nav-loop chrome (not real content) and must not displace a real UIA tree.
+_MSAA_LOOP_RATIO = 3
+
 
 def _get_cascade_pkg():
     """Get the naturo.cascade package module for late-bound attribute access.
@@ -352,6 +363,24 @@ def _webview_uia_content(backend, hwnd: Optional[int], depth: int) -> List[Eleme
     return nodes
 
 
+def _resolve_additive_hwnd(
+    backend, app: Optional[str], window_title: Optional[str],
+    hwnd: Optional[int], pid: Optional[int],
+) -> Optional[int]:
+    """HWND for an additive provider (COM/Scintilla) to bind to: the given
+    ``hwnd`` if any, else the backend's resolution of app/title/pid. Returns None
+    (logged) on failure — the provider simply skips, never breaks the cascade."""
+    if hwnd is not None:
+        return hwnd
+    try:
+        return backend._resolve_hwnd(
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+        )
+    except Exception as exc:
+        logger.debug("Additive-provider HWND resolution failed: %s", exc)
+        return None
+
+
 def run_cascade(
     backend,
     *,
@@ -554,7 +583,7 @@ def run_cascade(
                 tagged = _tag_source(tree, pname)
                 flat = _flatten(tagged)
                 elements_count = len(flat)
-                _msaa_loopy = _raw_n > 3 * max(elements_count, 1)
+                _msaa_loopy = _raw_n > _MSAA_LOOP_RATIO * max(elements_count, 1)
 
             # (#394) A root-only tree (0 children) is not useful — keep trying.
             if not tree.children:
@@ -589,7 +618,7 @@ def run_cascade(
             # noise: notepad uia 34 vs msaa 300 → keep UIA).
             if elements_count > _best_size and (
                 pname == "uia" or _uia_size <= 0
-                or (elements_count > 10 * _uia_size and not _msaa_loopy)
+                or (elements_count > _MSAA_DWARF_RATIO * _uia_size and not _msaa_loopy)
             ):
                 _best_size = elements_count
                 _best_flat = flat
@@ -597,7 +626,7 @@ def run_cascade(
                 window_area = _window_area(tree)
 
             # UIA already rich enough → don't pay for the heavier backends.
-            if pname == "uia" and elements_count >= 60:
+            if pname == "uia" and elements_count >= _UIA_RICH_ENOUGH:
                 break
         except Exception as exc:
             elapsed = (time.monotonic() - t0) * 1000
@@ -789,17 +818,7 @@ def run_cascade(
         p.name == "com" and p.status == "ok" for p in stats.providers
     )
     if enable_com and backend_name == "auto" and root_tree is not None and not already_have_com:
-        com_hwnd = hwnd
-        if com_hwnd is None:
-            try:
-                com_hwnd = backend._resolve_hwnd(
-                    app=app, window_title=window_title, hwnd=hwnd, pid=pid,
-                )
-            except Exception as exc:
-                logger.debug(
-                    "Auto cascade: HWND resolution for COM/Excel failed: %s", exc,
-                )
-                com_hwnd = None
+        com_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
 
         if com_hwnd is not None and _get_cascade_pkg()._is_excel_window(com_hwnd):
             t0 = time.monotonic()
@@ -829,20 +848,25 @@ def run_cascade(
                     name="com", elapsed_ms=elapsed, status="no_elements",
                 ))
 
-        # Provider 2d: Scintilla (Notepad++/SciTE/IDE editors). The Scintilla
-        # editing surface is opaque to UIA — the tree shows the pane but no text.
-        # Read the document via Scintilla's own message API and graft it as a
-        # deterministic node, mirroring the COM/CDP/JAB providers.
-        if com_hwnd is not None and _get_cascade_pkg()._is_scintilla_window(com_hwnd):
+    # ── Provider 2d: Scintilla (Notepad++/SciTE/IDE editors) ─────────────────
+    # The Scintilla editing surface is opaque to UIA — the tree shows the pane
+    # but no text. Read the document via Scintilla's own message API and graft it
+    # as a deterministic node, mirroring the COM/CDP/JAB providers. This is its
+    # OWN stage with its OWN hwnd resolution — NOT nested under `enable_com`,
+    # where `enable_com=False` (or an Excel-less window) would silently disable
+    # editor recognition too.
+    if backend_name == "auto" and root_tree is not None:
+        sci_hwnd = _resolve_additive_hwnd(backend, app, window_title, hwnd, pid)
+        if sci_hwnd is not None and _get_cascade_pkg()._is_scintilla_window(sci_hwnd):
             t0 = time.monotonic()
             sci_nodes: List[ElementInfo] = []
             try:
-                sci_nodes = _get_cascade_pkg()._fetch_scintilla_content(com_hwnd)
+                sci_nodes = _get_cascade_pkg()._fetch_scintilla_content(sci_hwnd)
             except Exception as exc:
                 logger.debug("Auto cascade: Scintilla probe failed: %s", exc)
             elapsed = (time.monotonic() - t0) * 1000
 
-            if sci_nodes and root_tree is not None:
+            if sci_nodes:
                 for node in sci_nodes:
                     tagged = _tag_source(node, "scintilla")
                     root_tree.children.append(tagged)
