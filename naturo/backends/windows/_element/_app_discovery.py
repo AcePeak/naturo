@@ -70,13 +70,15 @@ def _prefer(cand: tuple, best: Optional[tuple]) -> tuple:
 
 def _score_app_window(backend, w: BaseWindowInfo, *, pid_only: bool,
                       match_process: bool, app_query: str,
-                      search_lower: str) -> int:
-    """Score one window for the primary --app/--window-title/--pid pass.
+                      search_lower: str, demote_shell: bool = True) -> int:
+    """Score one window for --app/--window-title/--pid matching.
 
     pid-only candidates get a base 1; --app matches process name/alias (exact 4,
-    substring 3); --window-title matches title (exact 4, substring 1).
-    Desktop-shell windows are demoted to 1 under --app (#524) so a real File
-    Explorer window wins. Returns 0 for no match.
+    substring 3); --window-title matches title (exact 4, substring 1). When
+    *demote_shell* is set, desktop-shell windows are demoted to 1 under --app
+    (#524) so a real File Explorer window wins — the single-window resolver wants
+    this; the enumerate-all resolver (_resolve_hwnds) keeps every match at its raw
+    score and opts out. Returns 0 for no match.
     """
     proc_stem = ntpath.basename(w.process_name).lower()
     if proc_stem.endswith(".exe"):
@@ -115,7 +117,7 @@ def _score_app_window(backend, w: BaseWindowInfo, *, pid_only: bool,
 
     # (#524) Desktop shell (Progman etc.) hosts the desktop under explorer.exe —
     # demote so any real File Explorer window (3-4) wins.
-    if match_process:
+    if demote_shell and match_process:
         wclass = backend._get_window_class_name(w.handle)
         if wclass in backend._DESKTOP_SHELL_CLASSES:
             score = 1
@@ -601,45 +603,19 @@ class AppDiscoveryMixin:
         matches = []  # [(score, in_console, title_len, WindowInfo), ...]
 
         for w in windows:
-            score = 0
-            # (#789) Extract basename — see _resolve_hwnd for rationale.
-            proc_stem = ntpath.basename(w.process_name).lower()
-            if proc_stem.endswith(".exe"):
-                proc_stem = proc_stem[:-4]
-            title_lower = w.title.lower()
-
-            if match_process:
-                # Process-name matching (normalized query, #1084)
-                if app_query == proc_stem:
-                    score = 4
-                elif app_query in proc_stem:
-                    score = 3
-                # (#465) No title fallback for --app (see _resolve_hwnd)
-                # Alias matching
-                if score == 0:
-                    aliases = self._APP_ALIASES.get(app_query, set())
-                    for alias in aliases:
-                        if alias == proc_stem:
-                            score = 4
-                            break
-                        if alias in proc_stem:
-                            score = 3
-                            break
-            else:
-                # --window-title: only match window title
-                if search_lower == title_lower:
-                    score = 4
-                elif search_lower in title_lower:
-                    score = 1
-
+            # Same scoring as the single-window resolver (shared _score_app_window),
+            # but WITHOUT the desktop-shell demote (#524): enumerate-all keeps every
+            # match at its raw score and lets the caller see them all.
+            score = _score_app_window(
+                self, w, pid_only=False, match_process=match_process,
+                app_query=app_query, search_lower=search_lower, demote_shell=False)
             if score == 0:
                 continue
 
-            # Session-aware ranking
+            # Session-aware ranking (console windows first).
             in_console = False
             if console_session >= 0:
-                w_session = _get_process_session_id(w.pid)
-                in_console = (w_session == console_session)
+                in_console = (_get_process_session_id(w.pid) == console_session)
 
             matches.append((score, in_console, len(w.title), w))
 
