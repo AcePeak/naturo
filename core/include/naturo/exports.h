@@ -52,8 +52,23 @@ extern "C" {
  * Both are set far above any real single-window UI (a human never faces 20k live
  * controls at once); only runaway/pathological trees ever reach them.
  */
-#define NATURO_MAX_TREE_NODES 20000   /* breadth cap: stop after this many nodes */
-#define NATURO_MAX_TREE_MS    10000   /* wall-clock cap in ms (mirrors JAB's GetTickCount budget) */
+#define NATURO_MAX_TREE_NODES 8000    /* PRIMARY (deterministic) breadth cap: stop after this many nodes.
+                                       * Far above any real single-window UI a human drives control-by-
+                                       * control (99.9% of windows complete FAR below this — no clamp);
+                                       * only a pathological/virtualized explosion reaches it. Chosen so
+                                       * it reliably fires BEFORE the wall-clock ceiling even on a loaded
+                                       * box, keeping the returned node set deterministic (one walk, no
+                                       * buffer re-walk). A window with 8000+ live controls is a data grid
+                                       * to read via its grid API, not 8000 individual refs. */
+/*
+ * The wall-clock cap is a *runaway ceiling only*, deliberately generous — NOT
+ * the primary bound. A tight time cap makes the returned tree size vary with
+ * machine load (the same window yields fewer nodes on a busy box), which (a)
+ * breaks repeatability and (b) can under-fill the tree enough to trigger the
+ * cascade's expensive AI/OCR gap-fill. The node cap governs normal truncation
+ * (deterministic); this only catches a genuinely stuck/pathologically-slow walk.
+ */
+#define NATURO_MAX_TREE_MS    30000   /* runaway ceiling in ms (mirrors JAB's GetTickCount budget) */
 
 /* ── Lifecycle ────────────────────────────────────── */
 

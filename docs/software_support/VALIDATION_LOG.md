@@ -309,14 +309,27 @@ clear-X ≈ (1007,50).
   depth ~15: 59 nodes at d12 → explodes to >8MB, the walk overflowed the buffer and returned
   **NOTHING**, so the cascade fell back to an empty MSAA shell — that's why `see` "couldn't
   see" Naturobot). **Fixed natively** in `core/src/element.cpp`: the UIA walk now carries a
-  node-count + wall-clock budget (`NATURO_MAX_TREE_NODES=20000`, `NATURO_MAX_TREE_MS=10000`,
-  mirrors JAB's `GetTickCount` budget) — hitting either stops descending/emitting and returns
-  the **partial tree already collected**. Also `bridge/_core.py`: 4 MB initial buffer + honor
-  the native's exact `needed` size on `-4` (no more doubled walk). Result: 自然机器人 default
-  `see` went from **empty (24 MSAA junk)** → **9.7k real UIA nodes (nav 应用商店/我的应用/… by
-  ref) in ~12s**; normal windows unaffected (calc 57 nodes/1.6s); 852 core/element tests green.
-  Rebuild: vcvars64 → `cmake -G Ninja` → deploy `bin/naturo_core.dll`. **This is phase 1 of the
-  Unified-Element-Tree goal** (phase 2 = UIA+MSAA correspondence merge).
+  **node-count (PRIMARY, deterministic) + wall-clock (runaway ceiling) budget**
+  (`NATURO_MAX_TREE_NODES=8000`, `NATURO_MAX_TREE_MS=30000`, mirrors JAB's `GetTickCount`) —
+  hitting either stops descending/emitting and returns the **partial tree already collected**.
+  Node cap is primary so the set is **deterministic regardless of machine load** (a tight time
+  cap made size vary run-to-run → flaky empties + spurious AI/OCR gap-fill; the 30s ceiling only
+  catches a genuinely stuck walk). Also `bridge/_core.py`: **16 MB initial buffer** (holds the
+  node-cap worst case in ONE walk — no size-racing re-walk) + honor the native's exact `needed`
+  size on `-4`. Result: 自然机器人 default `see`: **empty (24 MSAA junk) → 8000 real UIA nodes
+  (nav 应用商店/我的应用/计划任务/历史运行 by ref), deterministic ~9.5s across runs**; normal
+  windows unaffected (calc 58 nodes, full tree — 8000 never reached by real UI). Rebuild:
+  vcvars64 → `cmake -G Ninja` → deploy `bin/naturo_core.dll`.
+- **✅ DONE — Phase 2: Unified Element Tree (UIA+MSAA correspondence merge).** New
+  `naturo/cascade/_unify.py` (`merge_a11y_trees`): when UIA and MSAA both ran (thin-UIA case),
+  instead of winner-take-all it merges into ONE tree — corresponding controls (geometry +
+  role-equivalence + normalized-name) collapse to a single operable ref recording the secondary
+  as a **corroborating source** (`properties["corroborated_by"]`, the existing ADR-§4 fusion field,
+  so technique-classification stays deterministic), and controls unique to the loser **graft under
+  their geometric parent**. Wired in `_run.py` after the competition; a no-op for rich-UIA windows
+  (they short-circuit before MSAA — no perf cost). Verified: **charmap 27 (uia-only) → 48 unified**
+  (grafted the MSAA-unique char-grid/advanced controls UIA missed). 5 new unit tests + 1038 green.
+  **Phase 3 (reuse the same `merge_a11y_trees` for JAB/IA2/CDP/COM) — remaining.**
 - **电脑管家 (App#1):** content (software grid, install/uninstall buttons) is not see-able and injection is self-protection-blocked → operations there are coordinate-based, which violates iron-law #1's spirit. Acceptable only as a fallback; a fully clean 电脑管家 adaptation is **not currently achievable** (its self-protection is legitimate; we don't bypass it).
 - **Qt introspector (moat):** `C:\Users\Naturobot\.naturo-qt\{nq_probe.cpp, qt_introspect.ps1}` compiles and injects; **works on normal Qt apps** (no self-protection). To validate: run it against a plain Qt app (e.g. WPS if Qt) and feed the deterministic QWidget tree into `naturo see`. Injection is a user-run, security-gated step.
 - **Windows Calculator (calc):** ✅ validated as #37 (UWP/WinUI SUPPORTED; 7+8=15 via

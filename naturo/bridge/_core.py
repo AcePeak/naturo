@@ -500,19 +500,24 @@ class NaturoCore:
         Raises:
             NaturoCoreError: On UIAutomation or buffer error.
         """
-        # 4 MB initial: fits most trees — including a runaway tree already bounded
-        # by the native node/time backstop (~3-5 MB) — in ONE walk, avoiding a
-        # doubled walk (each re-walk re-pays the up-to-NATURO_MAX_TREE_MS budget).
-        buf_size = 4 << 20
+        # 16 MB initial: large enough to hold ANY tree already bounded by the
+        # native node/time backstop (NATURO_MAX_TREE_NODES≈20k × long-CJK-name
+        # nodes ≲ 12 MB) in a SINGLE walk. Critical because the native's
+        # wall-clock budget makes a runaway window's size vary run-to-run
+        # (~3.5-4.2 MB for Naturobot): a smaller initial buffer would sometimes
+        # overflow → a second full budget-length walk that itself varies → flaky
+        # empties. Zeroing 16 MB is sub-10 ms; the buffer is freed immediately.
+        buf_size = 16 << 20
         buf = ctypes.create_string_buffer(buf_size)
         count = self._lib.naturo_get_element_tree(hwnd, depth, buf, buf_size)
 
         if count == -4:
-            # Buffer too small: the native writes the EXACT needed size into the
-            # first 4 bytes — honor it (a big-but-legit tree can exceed 4 MB) so
-            # we never fail on size; one re-walk at exactly the right size.
+            # Ultimate safety for a genuinely huge (un-budgeted / explicit-depth)
+            # tree: the native writes the EXACT needed size into the first 4
+            # bytes — honor it so we never fail on size. Grow past the reported
+            # need so a size-varying re-walk still fits.
             needed = int.from_bytes(bytes(buf.raw[:4]), "little")
-            buf_size = max(needed, 8 << 20) + 4096
+            buf_size = max(needed * 2, 32 << 20) + 4096
             buf = ctypes.create_string_buffer(buf_size)
             count = self._lib.naturo_get_element_tree(hwnd, depth, buf, buf_size)
 

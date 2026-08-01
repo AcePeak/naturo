@@ -14,6 +14,7 @@ from naturo.cascade._coverage import (
     _tag_source,
     _window_area,
 )
+from naturo.cascade._unify import merge_a11y_trees
 logger = logging.getLogger(__name__)
 
 
@@ -474,6 +475,11 @@ def run_cascade(
     _best_size = -1
     _best_flat: List[ElementInfo] = []
     _uia_size = -1  # baseline; a heavier backend only wins if it DWARFS UIA
+    # Keep each a11y source's tagged tree so that, when both UIA and MSAA ran
+    # (they only both run when UIA was thin — the case where they genuinely
+    # complement), we can UNIFY them instead of discarding the loser (Unified
+    # Element Tree: one node per real control, carrying the union of sources).
+    _source_trees: dict = {}
 
     # Class-authoritative routing: a window whose class maps to a known provider
     # (SunAwt→JAB, Mozilla→IA2) is opaque to UIA *by construction*, so trust the
@@ -563,6 +569,9 @@ def run_cascade(
             stats.providers.append(ProviderStat(
                 name=pname, elements=elements_count, elapsed_ms=elapsed, status="ok"))
 
+            if pname in ("uia", "msaa"):
+                _source_trees[pname] = tagged
+
             if pname == "uia":
                 _uia_size = elements_count
 
@@ -595,6 +604,23 @@ def run_cascade(
             logger.debug("Provider %s failed: %s", pname, exc)
             stats.providers.append(ProviderStat(
                 name=pname, elapsed_ms=elapsed, status="error"))
+
+    # Unify UIA + MSAA when both ran (thin-UIA case): fold the loser's real
+    # controls into the winner instead of discarding them — corresponding
+    # controls union their source tag + capabilities onto one node, controls
+    # unique to the loser graft under their geometric parent. One operable ref
+    # per real control; the caller never has to pick a source. (Rich-UIA windows
+    # short-circuit before MSAA runs, so this is a no-op there — no perf cost.)
+    if (root_tree is not None and _class_pref is None
+            and "uia" in _source_trees and "msaa" in _source_trees):
+        secondary = (_source_trees["msaa"] if root_tree is _source_trees.get("uia")
+                     else _source_trees["uia"])
+        if secondary is not root_tree:
+            try:
+                root_tree = merge_a11y_trees(root_tree, secondary)
+                _best_flat = _flatten(root_tree)
+            except Exception as exc:  # never let unification break recognition
+                logger.debug("a11y unify merge skipped: %s", exc)
 
     if _best_flat:
         merged_elements.extend(_best_flat[1:])  # skip root (merged below)
