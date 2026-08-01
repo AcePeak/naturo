@@ -218,6 +218,110 @@ def _tree_to_json(el: Any, ctx: _JsonRenderCtx, parent_ref: str | None = None,
     return d
 
 
+#: Roles that count as actionable for --compact's "print only meaningful nodes".
+_CLI_ACTIONABLE = frozenset({
+    "button", "hyperlink", "link", "edit", "text", "checkbox",
+    "radiobutton", "combobox", "menuitem", "listitem", "tab",
+    "tabitem", "treeitem", "slider", "spinner", "document",
+})
+
+
+@dataclass
+class _TextRenderCtx:
+    """Immutable config + mutable accumulators for :func:`_print_tree`."""
+    store_snapshot: bool
+    element_obj_to_ref: dict
+    display_ref_map: dict              # display "eN" -> stable ref (mutated)
+    visible_only: bool
+    compact: bool
+    full_text: bool
+    show_selectors: bool
+    sel_builder: Any
+    selector_app: str
+    seq: list                         # ref counter [0] (mutated)
+
+
+def _print_tree(el: Any, ctx: _TextRenderCtx, indent: int = 0,
+                ancestors_dicts: list | None = None) -> None:
+    """Print an ElementInfo tree with short refs (e1, e2, …) for ``naturo click
+    eN`` (BUG-071). Honours --compact (minimal line for meaningful nodes only),
+    --visible-only (#365), --selectors (#102), and shows fusion source tags +
+    per-node r/a/e capabilities. Recursive; mutates ctx.seq / ctx.display_ref_map.
+    """
+    if ancestors_dicts is None:
+        ancestors_dicts = []
+
+    ctx.seq[0] += 1
+    ref = f"e{ctx.seq[0]}"
+
+    if ctx.store_snapshot:  # (#502) map display ref -> stable ref
+        stable_ref = ctx.element_obj_to_ref.get(id(el))
+        if stable_ref:
+            ctx.display_ref_map[ref] = stable_ref
+
+    _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
+    child_ancestors = ancestors_dicts + [_el_to_selector_dict(el)]  # (#102)
+
+    if ctx.visible_only and _is_offscreen:  # (#365)
+        for child in el.children:
+            _print_tree(child, ctx, indent, child_ancestors)
+        return
+
+    prefix = "  " * indent
+
+    # True per-node capabilities: [r]eadable / [a]ctionable / [e]ditable.
+    _cp = getattr(el, "properties", {}) or {}
+    _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
+                                   ("e", "editable")) if _cp.get(k))
+    _caps_str = f" [{_caps}]" if _caps else ""
+
+    if ctx.compact:
+        # Agent-friendly minimal line — eN [role] "name" [=value]; refs still
+        # assigned for every node so click eN resolves, but only meaningful
+        # nodes (named / actionable / valued) print.
+        _name = f' "{el.name}"' if el.name else ""
+        _val = getattr(el, "value", None)
+        _val_str = ""
+        if _val:
+            _shown, _elided = bounded_value(_val, full=ctx.full_text)
+            _val_str = f" ={_shown!r}"
+            if _elided:
+                _val_str += f" …(+{_elided} chars)"
+        if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
+            click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}{_caps_str}")
+        for child in el.children:
+            _print_tree(child, ctx, indent + 1, child_ancestors)
+        return
+
+    name_str = f' "{el.name}"' if el.name else ""
+    pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
+    props = getattr(el, "properties", {})
+    # Fusion tag: every source that saw this control, e.g. [uia+msaa] — primary
+    # `source` plus any `corroborated_by` sources folded in.
+    if props.get("source"):
+        _srcs = [props["source"]] + list(props.get("corroborated_by") or [])
+        source_str = f" [{'+'.join(dict.fromkeys(_srcs))}]"
+    else:
+        source_str = ""
+    offscreen_str = " [offscreen]" if _is_offscreen else ""
+    selector_str = ""
+    if ctx.show_selectors:  # (#102)
+        selector_uri = _build_selector(el, ancestors_dicts, ctx.sel_builder, ctx.selector_app)
+        selector_str = f"  {selector_uri}"
+    click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{_caps_str}{selector_str}")
+
+    # (#372) Text content for Document/Edit/Text: full with --full-text, else a
+    # bounded preview marking how much was elided (read all with `naturo get eN`).
+    if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+        _shown, _elided = bounded_value(el.value, full=ctx.full_text)
+        disp = _shown.replace("\n", "\\n").replace("\r", "")
+        suffix = f" \u2026(+{_elided} chars)" if _elided else ""
+        click.echo(f"{prefix}  \u00bb {disp}{suffix}")
+
+    for child in el.children:
+        _print_tree(child, ctx, indent + 1, child_ancestors)
+
+
 @click.command()
 @click.option("--app", help="Target application (name or partial match)")
 @click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
@@ -517,100 +621,14 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             if _recognition_warning:
                 click.echo(_recognition_warning, err=True)
         else:
-            # BUG-071: include short element IDs (e1, e2, ...) that can be
-            # passed to ``naturo click e3`` for quick interaction.
-            _ref_counter = [0]
-            _CLI_ACTIONABLE = {
-                "button", "hyperlink", "link", "edit", "text", "checkbox",
-                "radiobutton", "combobox", "menuitem", "listitem", "tab",
-                "tabitem", "treeitem", "slider", "spinner", "document",
-            }
-
-            def print_tree(el, indent=0, ancestors_dicts=None) -> None:
-                """Print element tree with short element refs."""
-                if ancestors_dicts is None:
-                    ancestors_dicts = []
-
-                _ref_counter[0] += 1
-                ref = f"e{_ref_counter[0]}"
-
-                # (#502) Map display ref → stable ref for click resolution
-                if store_snapshot:
-                    stable_ref = _element_obj_to_ref.get(id(el))
-                    if stable_ref:
-                        _display_ref_map[ref] = stable_ref
-
-                # (#365) Zero-bounds = offscreen
-                _is_offscreen = (el.x == 0 and el.y == 0 and el.width == 0 and el.height == 0)
-
-                # (#102) Track ancestors for selector building
-                el_dict = _el_to_selector_dict(el)
-                child_ancestors = ancestors_dicts + [el_dict]
-
-                # (#365) --visible-only: skip offscreen elements
-                if visible_only and _is_offscreen:
-                    for child in el.children:
-                        print_tree(child, indent, child_ancestors)
-                    return
-
-                prefix = "  " * indent
-
-                # (goal) --compact: agent-friendly minimal line — eN [role] "name"
-                # [=value], no bounds/props/selectors. Refs still assigned for all
-                # nodes so `naturo click eN` resolves; only meaningful nodes print.
-                # True per-node capabilities: [r]eadable/[a]ctionable/[e]ditable
-                _cp = getattr(el, "properties", {}) or {}
-                _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
-                                               ("e", "editable")) if _cp.get(k))
-                _caps_str = f" [{_caps}]" if _caps else ""
-
-                if compact:
-                    _name = f' "{el.name}"' if el.name else ""
-                    _val = getattr(el, "value", None)
-                    _val_str = ""
-                    if _val:
-                        _shown, _elided = bounded_value(_val, full=full_text)
-                        _val_str = f" ={_shown!r}"
-                        if _elided:
-                            _val_str += f" …(+{_elided} chars)"
-                    if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
-                        click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}{_caps_str}")
-                    for child in el.children:
-                        print_tree(child, indent + 1, child_ancestors)
-                    return
-
-                name_str = f' "{el.name}"' if el.name else ""
-                pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
-                props = getattr(el, "properties", {})
-                # Fusion tag: show every source that saw this control, e.g.
-                # [uia+msaa], so the unified merge is visible — the primary
-                # `source` plus any `corroborated_by` sources folded in.
-                if props.get("source"):
-                    _srcs = [props["source"]] + list(props.get("corroborated_by") or [])
-                    source_str = f" [{'+'.join(dict.fromkeys(_srcs))}]"
-                else:
-                    source_str = ""
-                offscreen_str = " [offscreen]" if _is_offscreen else ""
-                # (#102) Show selector when --selectors is requested
-                selector_str = ""
-                if show_selectors:
-                    selector_uri = _build_selector(el, ancestors_dicts, _sel_builder, _selector_app)
-                    selector_str = f"  {selector_uri}"
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{_caps_str}{selector_str}")
-
-                # (#372) Show text content for Document/Edit/Text elements: full
-                # when --full-text, otherwise a bounded preview with a marker for
-                # how much was elided (read it all with `naturo get eN`).
-                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    _shown, _elided = bounded_value(el.value, full=full_text)
-                    disp = _shown.replace("\n", "\\n").replace("\r", "")
-                    suffix = f" \u2026(+{_elided} chars)" if _elided else ""
-                    click.echo(f"{prefix}  \u00bb {disp}{suffix}")
-
-                for child in el.children:
-                    print_tree(child, indent + 1, child_ancestors)
-
-            print_tree(tree)
+            # BUG-071: short refs (e1, e2, …) for ``naturo click e3``.
+            _text_ctx = _TextRenderCtx(
+                store_snapshot=store_snapshot,
+                element_obj_to_ref=_element_obj_to_ref if store_snapshot else {},
+                display_ref_map=_display_ref_map, visible_only=visible_only,
+                compact=compact, full_text=full_text, show_selectors=show_selectors,
+                sel_builder=_sel_builder, selector_app=_selector_app, seq=[0])
+            _print_tree(tree, _text_ctx)
             # (M1) Warn (stderr) when any node is AI/image-only (uncertain).
             if _recognition_warning:
                 click.echo(_recognition_warning, err=True)
