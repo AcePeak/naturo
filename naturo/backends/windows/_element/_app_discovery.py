@@ -20,6 +20,128 @@ from naturo.process import _get_console_session_id, _get_process_session_id
 logger = logging.getLogger(__name__)
 
 
+# ── _resolve_hwnd building blocks ────────────────────────────────────────────
+# Extracted from the former monolithic _resolve_hwnd so its two scoring passes
+# share one selection ladder and one scorer instead of duplicating them
+# (behaviour is identical — verbatim lifts). Module-level (not methods) so the
+# widespread MagicMock(spec=Backend) test doubles that bind only _resolve_hwnd
+# don't intercept them; _score_app_window takes the backend explicitly for the
+# few members it needs (_APP_ALIASES / _get_window_class_name / shell classes).
+
+
+def _window_flags(w: BaseWindowInfo, console_session: int, fg_hwnd: int) -> tuple:
+    """``(in_console, is_foreground)`` ranking flags for one window.
+
+    *in_console* (#230): the window lives in the active console session, not
+    Session 0. *is_foreground* (#449): it is the focused window — the
+    deterministic tie-breaker for consecutive commands.
+    """
+    in_console = False
+    if console_session >= 0:
+        in_console = (_get_process_session_id(w.pid) == console_session)
+    is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
+    return in_console, is_foreground
+
+
+def _prefer(cand: tuple, best: Optional[tuple]) -> tuple:
+    """Best-window selection ladder (was duplicated in both scoring passes).
+
+    Each argument is ``(score, in_console, is_foreground, area, window)``;
+    returns whichever should win. Preference, higher wins: score, then console
+    session (#230), then foreground (#449), then window area (#440 — a tiny popup
+    must never beat the main window).
+    """
+    if best is None:
+        return cand
+    score, in_console, is_foreground, area, _w = cand
+    b_score, b_console, b_fg, b_area, _bw = best
+    if score > b_score:
+        return cand
+    if score == b_score:
+        if in_console and not b_console:
+            return cand
+        if in_console == b_console:
+            if is_foreground and not b_fg:
+                return cand
+            if is_foreground == b_fg and area > b_area:
+                return cand
+    return best
+
+
+def _score_app_window(backend, w: BaseWindowInfo, *, pid_only: bool,
+                      match_process: bool, app_query: str,
+                      search_lower: str) -> int:
+    """Score one window for the primary --app/--window-title/--pid pass.
+
+    pid-only candidates get a base 1; --app matches process name/alias (exact 4,
+    substring 3); --window-title matches title (exact 4, substring 1).
+    Desktop-shell windows are demoted to 1 under --app (#524) so a real File
+    Explorer window wins. Returns 0 for no match.
+    """
+    proc_stem = ntpath.basename(w.process_name).lower()
+    if proc_stem.endswith(".exe"):
+        proc_stem = proc_stem[:-4]
+    title_lower = w.title.lower()
+
+    score = 0
+    if pid_only:
+        # (#471) All PID-filtered windows are valid candidates.
+        score = 1
+    elif match_process:
+        # Process-name matching (priority), normalized app_query (#1084).
+        if app_query == proc_stem:
+            score = 4  # exact process name
+        elif app_query in proc_stem:
+            score = 3  # substring in process name
+        # (#465) No title-only fallback here — it caused cross-process
+        # contamination. Alias matching for cross-locale app names:
+        if score == 0:
+            for alias in backend._APP_ALIASES.get(app_query, set()):
+                if alias == proc_stem:
+                    score = 4  # alias → exact process name
+                    break
+                if alias in proc_stem:
+                    score = 3  # alias → substring in process name
+                    break
+    else:
+        # --window-title: only match window title.
+        if search_lower == title_lower:
+            score = 4  # exact title
+        elif search_lower in title_lower:
+            score = 1  # substring in title
+
+    if score == 0:
+        return 0
+
+    # (#524) Desktop shell (Progman etc.) hosts the desktop under explorer.exe —
+    # demote so any real File Explorer window (3-4) wins.
+    if match_process:
+        wclass = backend._get_window_class_name(w.handle)
+        if wclass in backend._DESKTOP_SHELL_CLASSES:
+            score = 1
+    return score
+
+
+def _no_match_error(search: Optional[str], pid: Optional[int], windows: list):
+    """Build the WindowNotFoundError with up to 5 candidate windows (BUG-070)."""
+    from naturo.errors import WindowNotFoundError
+    candidates: list = []
+    seen = set()
+    for w in windows:
+        label = f"{w.process_name} — \"{w.title}\""
+        if label not in seen and w.title:
+            seen.add(label)
+            candidates.append(label)
+        if len(candidates) >= 5:
+            break
+    search_label = search or f"PID {pid}"
+    hint = f"No window matching '{search_label}'."
+    if candidates:
+        hint += " Did you mean:\n" + "\n".join(f"  • {c}" for c in candidates)
+    hint += "\nTip: use 'naturo list windows' to see all windows."
+    return WindowNotFoundError(search_label, suggested_action=hint)
+
+
 class AppDiscoveryMixin:
     """Resolve application names, window titles, and PIDs to window handles."""
 
@@ -278,123 +400,28 @@ class AppDiscoveryMixin:
         # picks the most appropriate one.
         pid_only = pid is not None and not search
 
-        best_score = 0
-        best_session_bonus = False  # True if best_window is in console session
-        best_is_foreground = False  # True if best_window is the foreground window
-        best_window = None
-        # Every scored candidate, recorded as (score, in_console, is_foreground,
-        # area, WindowInfo).  After the incremental pick below, the windows that
-        # tie with the winner on (score, session, foreground) are re-ranked by
-        # real on-screen content so an empty UWP ghost frame never beats the
-        # live window (see _refine_by_content).
+        # ``best`` holds the winning (score, in_console, is_foreground, area,
+        # WindowInfo) tuple; ``scored`` keeps every candidate so the UWP
+        # content-first tie-break below can re-rank the windows that tie with the
+        # winner on (score, session, foreground) — this is what stops an empty
+        # UWP ghost frame from beating the live window (see _refine_by_content).
+        best: Optional[tuple] = None
         scored: list = []
 
         for w in windows:
-            score = 0
-            # (#789) Extract basename before matching — process_name may
-            # contain a full path (e.g. C:\Windows\System32\notepad.exe)
-            # and matching against the full path causes --app system to
-            # incorrectly match any process in System32.
-            proc_stem = ntpath.basename(w.process_name).lower()
-            # Strip .exe suffix for comparison
-            if proc_stem.endswith(".exe"):
-                proc_stem = proc_stem[:-4]
-            title_lower = w.title.lower()
-
-            if pid_only:
-                # All PID-filtered windows are valid candidates
-                score = 1
-            elif match_process:
-                # Process-name matching (priority). Uses the normalized
-                # `app_query` (basename, no .exe) so a full-path --app value
-                # round-trips (#1084).
-                if app_query == proc_stem:
-                    score = 4  # exact process name
-                elif app_query in proc_stem:
-                    score = 3  # substring in process name
-                # (#465) Title-only fallback removed from --app matching.
-                # When --app is used, we only match by process name or alias.
-                # Title-only matches caused cross-process contamination: e.g.
-                # --app notepad picking a Chrome window titled "help with notepad".
-                # Use --window-title for title-based matching.
-                #
-                # Alias matching: cross-locale app name resolution
-                if score == 0:
-                    aliases = self._APP_ALIASES.get(app_query, set())
-                    for alias in aliases:
-                        if alias == proc_stem:
-                            score = 4  # alias → exact process name
-                            break
-                        if alias in proc_stem:
-                            score = 3  # alias → substring in process name
-                            break
-            else:
-                # --window-title: only match window title
-                if search_lower == title_lower:
-                    score = 4  # exact title
-                elif search_lower in title_lower:
-                    score = 1  # substring in title
-
+            score = _score_app_window(
+                self, w, pid_only=pid_only, match_process=match_process,
+                app_query=app_query, search_lower=search_lower)
             if score == 0:
                 continue
+            in_console, is_foreground = _window_flags(w, console_session, fg_hwnd)
+            cand = (score, in_console, is_foreground, w.width * w.height, w)
+            scored.append(cand)
+            best = _prefer(cand, best)
 
-            # (#524) Desktop shell deprioritization: explorer.exe hosts both
-            # File Explorer and the desktop (Program Manager, class "Progman").
-            # When --app explorer is used, users expect File Explorer, not the
-            # desktop.  Detect shell windows by class name and reduce their
-            # score to 1, so any real File Explorer window (score 3-4) wins.
-            # If no File Explorer windows exist, the desktop still matches.
-            if match_process:
-                wclass = self._get_window_class_name(w.handle)
-                if wclass in self._DESKTOP_SHELL_CLASSES:
-                    score = 1  # demote desktop shell windows
-
-            # Session-aware ranking (#230): prefer windows in the active
-            # console session over windows in Session 0 (services session).
-            # This prevents schtasks-launched commands from targeting ghost
-            # processes that exist in the non-interactive session.
-            in_console = False
-            if console_session >= 0:
-                w_session = _get_process_session_id(w.pid)
-                in_console = (w_session == console_session)
-
-            # (#449) Check if this window is the foreground window
-            is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
-
-            scored.append((score, in_console, is_foreground,
-                           w.width * w.height, w))
-
-            # Decision: pick this window if it has a higher score, or if
-            # scores are equal but this window is in the console session
-            # while the current best is not.  Among equal score + session,
-            # prefer the foreground window (#449: consecutive commands
-            # should target the same window deterministically).  Finally,
-            # prefer the larger window area (#440: popup menus are tiny
-            # top-level windows that should not beat the main window).
-            if score > best_score:
-                best_score = score
-                best_session_bonus = in_console
-                best_is_foreground = is_foreground
-                best_window = w
-            elif score == best_score and best_window is not None:
-                if in_console and not best_session_bonus:
-                    # Same score but this one is in the interactive session
-                    best_session_bonus = in_console
-                    best_is_foreground = is_foreground
-                    best_window = w
-                elif in_console == best_session_bonus:
-                    # (#449) Prefer the foreground window for deterministic
-                    # resolution when multiple windows match equally.
-                    if is_foreground and not best_is_foreground:
-                        best_is_foreground = True
-                        best_window = w
-                    elif is_foreground == best_is_foreground:
-                        w_area = w.width * w.height
-                        best_area = best_window.width * best_window.height
-                        if w_area > best_area:
-                            best_window = w
-
-        if best_window is not None:
+        best_window = best[4] if best is not None else None
+        if best is not None:
+            best_score, best_session_bonus, best_is_foreground = best[0], best[1], best[2]
             # Content-first tie-break: among the windows that tied with the
             # winner on every cheap signal (score, session, foreground), prefer
             # the one that actually holds on-screen UI.  This is what stops a
@@ -516,66 +543,24 @@ class AppDiscoveryMixin:
                 title_lower = w.title.lower()
                 if not title_lower:
                     continue
-
                 score = 0
                 if search_lower == title_lower:
                     score = 4  # exact title match
                 elif search_lower in title_lower:
-                    score = 2  # substring in title
-
+                    score = 2  # substring in title (below process matches at 3-4)
                 if score == 0:
                     continue
+                in_console, is_foreground = _window_flags(w, console_session, fg_hwnd)
+                cand = (score, in_console, is_foreground, w.width * w.height, w)
+                best = _prefer(cand, best)
 
-                in_console = False
-                if console_session >= 0:
-                    w_session = _get_process_session_id(w.pid)
-                    in_console = (w_session == console_session)
-
-                is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
-
-                if score > best_score:
-                    best_score = score
-                    best_session_bonus = in_console
-                    best_is_foreground = is_foreground
-                    best_window = w
-                elif score == best_score and best_window is not None:
-                    if in_console and not best_session_bonus:
-                        best_session_bonus = in_console
-                        best_is_foreground = is_foreground
-                        best_window = w
-                    elif in_console == best_session_bonus:
-                        if is_foreground and not best_is_foreground:
-                            best_is_foreground = True
-                            best_window = w
-                        elif is_foreground == best_is_foreground:
-                            w_area = w.width * w.height
-                            best_area = best_window.width * best_window.height
-                            if w_area > best_area:
-                                best_window = w
-
+            best_window = best[4] if best is not None else None
             if best_window is not None:
                 return best_window.handle
 
-        # No match — build candidate suggestions (BUG-070)
-        from naturo.errors import WindowNotFoundError
+        # No match — build candidate suggestions (BUG-070).
+        raise _no_match_error(search, pid, windows)
 
-        candidates = []
-        seen = set()
-        for w in windows:
-            label = f"{w.process_name} — \"{w.title}\""
-            if label not in seen and w.title:
-                seen.add(label)
-                candidates.append(label)
-            if len(candidates) >= 5:
-                break
-
-        search_label = search or f"PID {pid}"
-        hint = f"No window matching '{search_label}'."
-        if candidates:
-            hint += " Did you mean:\n" + "\n".join(f"  • {c}" for c in candidates)
-        hint += "\nTip: use 'naturo list windows' to see all windows."
-
-        raise WindowNotFoundError(search_label, suggested_action=hint)
     def _resolve_hwnds(self, app: Optional[str] = None,
                        window_title: Optional[str] = None) -> list[int]:
         """Resolve ALL window handles matching app name or window title.
