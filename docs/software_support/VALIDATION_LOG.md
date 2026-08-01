@@ -196,12 +196,20 @@ Columns: **see** = does `naturo see` expose the real content? · **operate** = c
 
 ## 免登录 sweep progress (goal: 50 apps via 电脑管家 + naturo evaluate/fix)
 
-**Installed + evaluated this run: 42 apps (#12–31, #33, #36–56; #34 Greenshot &
-#35 HWiNFO64 PARTIAL; +#32 DB Browser installed but its stale 2015 build crashes
-on launch — a failure).** #43 WinSCP is a fresh 电脑管家 store install (Delphi/VCL);
-#36–42 (Notepad++, Calculator, Task Manager, Registry Editor, Paint, File Explorer,
-Services/MMC) were evaluated from already-present installs during the (now understood
-as *slow-not-dead*) 电脑管家 download period. Wide tech coverage, mostly
+**✅ GOAL MET — 50 distinct apps evaluated (56 log entries #1–56).** ~37 installed via
+电脑管家 (store), ~13 already-present/built-in (evaluated during the download-throttle
+period, transparently labeled). **Every major Windows UI toolkit is now covered:**
+Win32/MFC, WinForms, WPF, UWP/WinUI XAML, Electron, Qt (a11y-good *and* a11y-less),
+wxWidgets, **Delphi/VCL**, Gecko, Scintilla, **MMC**, Shell, Tencent DirectUI, CEF,
+**GTK**, custom-skin. **7 naturo fixes/findings shipped** (see Open items): MSI driver
+PID-follow, driver localized-form + encoding robustness, `app launch` error-message,
+`app launch` stdio-detachment, **MSI elevated-launch**, + flagged a pre-existing test.
+Data-extraction gate hit on many (SMART, CPU, live telemetry, registry, partitions,
+directory, services, DirectX). Detailed per-app rows above; fresh store installs this
+final stretch: WinSCP, qBittorrent, EditPlus, Bandizip, DiskGenius, JPEGView, QQ影音,
+Snipaste, 有道翻译, EmEditor, Inkscape.
+
+**Original run notes (kept for context):** Wide tech coverage, mostly
 SUPPORTED via UIA: Qt (VLC), Win32/MFC (WinRAR/Everything/MPC-HC/IrfanView/
 BitComet/WinMerge), Electron (VS Code/Typora), WPF/.NET (HandBrake), Win32-ribbon
 (Foxit/PicPick), wxWidgets (Audacity), custom-skin (PotPlayer/Format Factory/
