@@ -303,12 +303,20 @@ clear-X ≈ (1007,50).
   *Productization note:* this belongs in naturo proper as an `naturo install --wizard`
   / installer-driver helper (the logic is generic: foreground → see → click advance/
   accept by ref → follow-by-PID). Currently a support-tools script, not shipped.
-- **naturo `see` node-count safety backstop (perf).** Default `see` is unlimited depth
-  (`--depth 0`, by design #1289). On a file-manager-style window with a huge virtualized
-  list (WinRAR showing the D: drive, #14) the native UIA walk took ~200s — reads as a
-  hang. Workaround today: `--depth N`. Proper fix: a *pure safety backstop* on total node
-  count in the native tree walk (allowed by #1289 — a very high cap that only prevents
-  runaway traversal, not a functional clamp). Native `naturo_core.dll` change (MSVC present).
+- **✅ DONE — naturo `see` runaway-traversal backstop (perf).** Default `see` is unlimited
+  depth (`--depth 0`, #1289). Pathological windows explode in **breadth** (huge virtualized
+  list — WinRAR #14 / Everything #16) or a deep-cyclic subtree (**our own 自然机器人** past
+  depth ~15: 59 nodes at d12 → explodes to >8MB, the walk overflowed the buffer and returned
+  **NOTHING**, so the cascade fell back to an empty MSAA shell — that's why `see` "couldn't
+  see" Naturobot). **Fixed natively** in `core/src/element.cpp`: the UIA walk now carries a
+  node-count + wall-clock budget (`NATURO_MAX_TREE_NODES=20000`, `NATURO_MAX_TREE_MS=10000`,
+  mirrors JAB's `GetTickCount` budget) — hitting either stops descending/emitting and returns
+  the **partial tree already collected**. Also `bridge/_core.py`: 4 MB initial buffer + honor
+  the native's exact `needed` size on `-4` (no more doubled walk). Result: 自然机器人 default
+  `see` went from **empty (24 MSAA junk)** → **9.7k real UIA nodes (nav 应用商店/我的应用/… by
+  ref) in ~12s**; normal windows unaffected (calc 57 nodes/1.6s); 852 core/element tests green.
+  Rebuild: vcvars64 → `cmake -G Ninja` → deploy `bin/naturo_core.dll`. **This is phase 1 of the
+  Unified-Element-Tree goal** (phase 2 = UIA+MSAA correspondence merge).
 - **电脑管家 (App#1):** content (software grid, install/uninstall buttons) is not see-able and injection is self-protection-blocked → operations there are coordinate-based, which violates iron-law #1's spirit. Acceptable only as a fallback; a fully clean 电脑管家 adaptation is **not currently achievable** (its self-protection is legitimate; we don't bypass it).
 - **Qt introspector (moat):** `C:\Users\Naturobot\.naturo-qt\{nq_probe.cpp, qt_introspect.ps1}` compiles and injects; **works on normal Qt apps** (no self-protection). To validate: run it against a plain Qt app (e.g. WPS if Qt) and feed the deterministic QWidget tree into `naturo see`. Injection is a user-run, security-gated step.
 - **Windows Calculator (calc):** ✅ validated as #37 (UWP/WinUI SUPPORTED; 7+8=15 via

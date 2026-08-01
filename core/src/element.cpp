@@ -272,24 +272,35 @@ static void build_element_json_cached(IUIAutomationTreeWalker* walker,
                                        IUIAutomationElement* element,
                                        IUIAutomationCacheRequest* cache_request,
                                        int depth, std::string& out,
-                                       int& count) {
+                                       int& count, int max_nodes, DWORD deadline) {
     if (!element) return;
 
     count++;
     append_element_json_cached(element, out);
 
-    // Children
+    // Children — descend only while within the runaway backstops (breadth +
+    // wall-clock, see NATURO_MAX_TREE_NODES/_MS). When a budget is hit we stop
+    // emitting children (valid empty "children":[]) and unwind, yielding the
+    // partial tree collected so far instead of exploding on a pathological
+    // window (huge virtualized list / deep-cyclic Qt subtree).
     out += ",\"children\":[";
-    if (depth > 1) {
+    if (depth > 1 && count < max_nodes && GetTickCount() < deadline) {
         IUIAutomationElement* child = NULL;
         HRESULT hr = walker->GetFirstChildElementBuildCache(
             element, cache_request, &child);
         bool first = true;
         while (SUCCEEDED(hr) && child) {
+            // Backstop must also break the SIBLING loop: a virtualized list can
+            // have ~1e6 siblings at ONE level. Release the pending child so it
+            // does not leak on the early exit.
+            if (count >= max_nodes || GetTickCount() >= deadline) {
+                child->Release();
+                break;
+            }
             if (!first) out += ",";
             first = false;
             build_element_json_cached(walker, child, cache_request,
-                                       depth - 1, out, count);
+                                       depth - 1, out, count, max_nodes, deadline);
 
             IUIAutomationElement* next = NULL;
             hr = walker->GetNextSiblingElementBuildCache(
@@ -309,7 +320,7 @@ static void build_element_json_cached(IUIAutomationTreeWalker* walker,
 static void build_element_json_current(IUIAutomationTreeWalker* walker,
                                         IUIAutomationElement* element,
                                         int depth, std::string& out,
-                                        int& count) {
+                                        int& count, int max_nodes, DWORD deadline) {
     if (!element) return;
 
     count++;
@@ -346,14 +357,19 @@ static void build_element_json_current(IUIAutomationTreeWalker* walker,
     append_keyboard_shortcut_field(read_keyboard_shortcut(element, false), out);
 
     out += ",\"children\":[";
-    if (depth > 1) {
+    if (depth > 1 && count < max_nodes && GetTickCount() < deadline) {
         IUIAutomationElement* child = NULL;
         HRESULT hr = walker->GetFirstChildElement(element, &child);
         bool first = true;
         while (SUCCEEDED(hr) && child) {
+            if (count >= max_nodes || GetTickCount() >= deadline) {
+                child->Release();
+                break;
+            }
             if (!first) out += ",";
             first = false;
-            build_element_json_current(walker, child, depth - 1, out, count);
+            build_element_json_current(walker, child, depth - 1, out, count,
+                                       max_nodes, deadline);
 
             IUIAutomationElement* next = NULL;
             hr = walker->GetNextSiblingElement(child, &next);
@@ -458,12 +474,19 @@ NATURO_API int naturo_get_element_tree(uintptr_t hwnd, int depth,
     std::string json;
     json.reserve(8192);
     int count = 0;
+    // Runaway-traversal backstops (breadth + wall-clock). Hitting either makes
+    // the walk return the partial tree it already collected instead of burning
+    // tens of seconds and overflowing the buffer (which yields NOTHING). Pure
+    // safety nets, far above any real single-window UI — see exports.h.
+    const DWORD deadline = GetTickCount() + NATURO_MAX_TREE_MS;
 
     if (use_cache) {
-        build_element_json_cached(walker, root, cache_request, depth, json, count);
+        build_element_json_cached(walker, root, cache_request, depth, json, count,
+                                  NATURO_MAX_TREE_NODES, deadline);
     } else {
         // Fallback to non-cached path
-        build_element_json_current(walker, root, depth, json, count);
+        build_element_json_current(walker, root, depth, json, count,
+                                   NATURO_MAX_TREE_NODES, deadline);
     }
 
     walker->Release();

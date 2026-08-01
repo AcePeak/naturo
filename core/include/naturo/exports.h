@@ -40,6 +40,21 @@ extern "C" {
  */
 #define NATURO_MAX_TREE_DEPTH 100
 
+/*
+ * Runaway-traversal backstops for the tree walkers (breadth + wall-clock).
+ * NATURO_MAX_TREE_DEPTH bounds DEPTH only; a pathological window can still
+ * explode in BREADTH (a virtualized list with ~1e6 items, e.g. Everything, or a
+ * deep/cyclic Qt subtree, e.g. our own Naturobot past depth ~15) — walking it
+ * unbounded burns tens of seconds and overflows the JSON buffer, so the caller
+ * gets NOTHING instead of the real shallow content it already reached. These are
+ * pure safety backstops (NOT content clamps, per #1289): when either is hit the
+ * walk stops DESCENDING/EMITTING and returns the partial tree collected so far.
+ * Both are set far above any real single-window UI (a human never faces 20k live
+ * controls at once); only runaway/pathological trees ever reach them.
+ */
+#define NATURO_MAX_TREE_NODES 20000   /* breadth cap: stop after this many nodes */
+#define NATURO_MAX_TREE_MS    10000   /* wall-clock cap in ms (mirrors JAB's GetTickCount budget) */
+
 /* ── Lifecycle ────────────────────────────────────── */
 
 /**
