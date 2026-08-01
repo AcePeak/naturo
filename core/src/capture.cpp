@@ -14,6 +14,24 @@
 #include <cstring>
 #include <new>
 
+// ── Windows.Graphics.Capture (WGC) — GPU/DirectComposition surface capture ──
+// PrintWindow and screen BitBlt both return a blank frame for windows whose
+// content is composited via a DXGI swap-chain / hardware overlay (Chromium/CEF
+// message panes, DirectComposition, some Electron/Qt surfaces). WGC captures the
+// window through the DWM's real composition path, so it sees that content. Used
+// only as the last-resort fallback when the GDI paths come back blank.
+#include <d3d11.h>
+#include <dxgi.h>
+#include <inspectable.h>
+#include <roapi.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Graphics.h>
+#include <winrt/Windows.Graphics.Capture.h>
+#include <winrt/Windows.Graphics.DirectX.h>
+#include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
+#include <windows.graphics.capture.interop.h>
+#include <windows.graphics.directx.direct3d11.interop.h>
+
 /**
  * @brief Convert a UTF-8 string to a wide (UTF-16) string.
  * @param utf8 Null-terminated UTF-8 string.
@@ -67,6 +85,118 @@ static int write_bmp(const char* path, const void* pixels, int width, int height
     fclose(f);
     return 0;
 }
+
+// ── WGC capture implementation ──────────────────────────────────────────────
+
+namespace {
+
+namespace wgc = winrt::Windows::Graphics::Capture;
+namespace wgd = winrt::Windows::Graphics::DirectX;
+namespace wgd3d = winrt::Windows::Graphics::DirectX::Direct3D11;
+
+// Pull the underlying ID3D11Texture2D out of a WinRT IDirect3DSurface.
+static winrt::com_ptr<ID3D11Texture2D> texture_from_surface(
+        wgd3d::IDirect3DSurface const& surface) {
+    auto access = surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
+    winrt::com_ptr<ID3D11Texture2D> tex;
+    winrt::check_hresult(access->GetInterface(winrt::guid_of<ID3D11Texture2D>(), tex.put_void()));
+    return tex;
+}
+
+// Capture *target* via WGC into a BMP at *output_path*. Returns 0 on success,
+// -5 if WGC is unsupported on this OS, -4 on frame timeout, -2 on other failure.
+static int capture_window_wgc_impl(HWND target, const char* output_path) {
+    if (!wgc::GraphicsCaptureSession::IsSupported()) return -5;
+
+    // D3D11 device (hardware, then WARP fallback). BGRA needed for WGC.
+    winrt::com_ptr<ID3D11Device> d3dDevice;
+    winrt::com_ptr<ID3D11DeviceContext> d3dContext;
+    UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags,
+                                   nullptr, 0, D3D11_SDK_VERSION,
+                                   d3dDevice.put(), nullptr, d3dContext.put());
+    if (FAILED(hr)) {
+        hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, flags,
+                               nullptr, 0, D3D11_SDK_VERSION,
+                               d3dDevice.put(), nullptr, d3dContext.put());
+        if (FAILED(hr)) return -2;
+    }
+    auto dxgiDevice = d3dDevice.as<IDXGIDevice>();
+    winrt::com_ptr<::IInspectable> inspectable;
+    winrt::check_hresult(CreateDirect3D11DeviceFromDXGIDevice(dxgiDevice.get(), inspectable.put()));
+    auto device = inspectable.as<wgd3d::IDirect3DDevice>();
+
+    // GraphicsCaptureItem for the target window.
+    auto interop = winrt::get_activation_factory<wgc::GraphicsCaptureItem,
+                                                 ::IGraphicsCaptureItemInterop>();
+    wgc::GraphicsCaptureItem item{ nullptr };
+    hr = interop->CreateForWindow(target, winrt::guid_of<wgc::GraphicsCaptureItem>(),
+                                  winrt::put_abi(item));
+    if (FAILED(hr) || !item) return -2;
+    auto size = item.Size();
+    if (size.Width <= 0 || size.Height <= 0) return -2;
+
+    // Free-threaded pool: no DispatcherQueue needed, poll for the frame.
+    auto framePool = wgc::Direct3D11CaptureFramePool::CreateFreeThreaded(
+        device, wgd::DirectXPixelFormat::B8G8R8A8UIntNormalized, 2, size);
+    auto session = framePool.CreateCaptureSession(item);
+    try { session.IsBorderRequired(false); } catch (...) {}  // hide yellow border (Win11)
+    session.StartCapture();
+
+    wgc::Direct3D11CaptureFrame frame{ nullptr };
+    for (int i = 0; i < 60 && !frame; ++i) {   // ~1.2s max wait for first frame
+        frame = framePool.TryGetNextFrame();
+        if (!frame) Sleep(20);
+    }
+    if (!frame) { session.Close(); framePool.Close(); return -4; }
+
+    auto surfaceTex = texture_from_surface(frame.Surface());
+    D3D11_TEXTURE2D_DESC desc{};
+    surfaceTex->GetDesc(&desc);
+
+    D3D11_TEXTURE2D_DESC sdesc = desc;
+    sdesc.Usage = D3D11_USAGE_STAGING;
+    sdesc.BindFlags = 0;
+    sdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    sdesc.MiscFlags = 0;
+    winrt::com_ptr<ID3D11Texture2D> staging;
+    if (FAILED(d3dDevice->CreateTexture2D(&sdesc, nullptr, staging.put()))) {
+        frame.Close(); session.Close(); framePool.Close(); return -2;
+    }
+    d3dContext->CopyResource(staging.get(), surfaceTex.get());
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(d3dContext->Map(staging.get(), 0, D3D11_MAP_READ, 0, &mapped))) {
+        frame.Close(); session.Close(); framePool.Close(); return -2;
+    }
+
+    int width = (int)desc.Width;
+    int height = (int)desc.Height;
+    int row_size = ((width * 3 + 3) & ~3);
+    int data_size = row_size * height;
+    unsigned char* pixels = new (std::nothrow) unsigned char[data_size];
+    int rc = -2;
+    if (pixels) {
+        // WGC gives top-down BGRA; BMP wants bottom-up BGR.
+        const unsigned char* src = (const unsigned char*)mapped.pData;
+        for (int y = 0; y < height; ++y) {
+            const unsigned char* srow = src + (size_t)y * mapped.RowPitch;
+            unsigned char* drow = pixels + (size_t)(height - 1 - y) * row_size;
+            for (int x = 0; x < width; ++x) {
+                drow[x * 3 + 0] = srow[x * 4 + 0];  // B
+                drow[x * 3 + 1] = srow[x * 4 + 1];  // G
+                drow[x * 3 + 2] = srow[x * 4 + 2];  // R
+            }
+        }
+        rc = write_bmp(output_path, pixels, width, height);
+        delete[] pixels;
+    }
+    d3dContext->Unmap(staging.get(), 0);
+    frame.Close(); session.Close(); framePool.Close();
+    return rc;
+}
+
+}  // namespace
 
 extern "C" {
 
@@ -222,6 +352,29 @@ NATURO_API int naturo_capture_window(uintptr_t hwnd, const char* output_path) {
     return rc;
 }
 
+NATURO_API int naturo_capture_window_wgc(uintptr_t hwnd, const char* output_path) {
+    if (!output_path) return -1;
+    HWND target = (HWND)hwnd;
+    if (!target) target = GetForegroundWindow();
+    if (!target || !IsWindow(target)) return -1;
+
+    // WGC needs a WinRT apartment on the calling thread. Init MTA; tolerate the
+    // thread already being STA (RPC_E_CHANGED_MODE) — the free-threaded frame
+    // pool works from either. Only uninitialize what we initialized.
+    HRESULT hrInit = RoInitialize(RO_INIT_MULTITHREADED);
+    bool didInit = SUCCEEDED(hrInit);
+    if (FAILED(hrInit) && hrInit != RPC_E_CHANGED_MODE) return -2;
+
+    int rc;
+    try {
+        rc = capture_window_wgc_impl(target, output_path);
+    } catch (...) {
+        rc = -2;
+    }
+    if (didInit) RoUninitialize();
+    return rc;
+}
+
 } // extern "C"
 
 #else
@@ -238,6 +391,12 @@ NATURO_API int naturo_capture_screen(int screen_index, const char* output_path) 
 }
 
 NATURO_API int naturo_capture_window(uintptr_t hwnd, const char* output_path) {
+    (void)hwnd;
+    (void)output_path;
+    return -2;  // Not supported on this platform
+}
+
+NATURO_API int naturo_capture_window_wgc(uintptr_t hwnd, const char* output_path) {
     (void)hwnd;
     (void)output_path;
     return -2;  // Not supported on this platform

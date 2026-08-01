@@ -627,6 +627,29 @@ class CaptureMixin:
                 except Exception as exc:
                     logger.debug("Screen-region capture fallback failed: %s", exc)
 
+                # Ultimate fallback: if the screen-region heal ALSO came back blank,
+                # the content is GPU/DirectComposition-composited in a way GDI cannot
+                # read at all (a hardware overlay / DXGI swap-chain absent from the
+                # desktop GDI surface — some Chromium/CEF message panes, custom skins).
+                # WGC (Windows.Graphics.Capture) captures through the DWM's real
+                # composition and DOES see that content. Only runs when every GDI path
+                # already blanked, so normal captures never pay for it.
+                if self._image_is_blank(output_path):
+                    logger.info(
+                        "capture_window: GDI paths all blank for hwnd %s; falling back "
+                        "to WGC (Windows.Graphics.Capture).", check_hwnd)
+                    fd_wgc, tmp_wgc = tempfile.mkstemp(suffix=".bmp")
+                    os.close(fd_wgc)
+                    try:
+                        core.capture_window_wgc(handle, tmp_wgc)
+                        width, height, fmt = self._convert_bmp(tmp_wgc, output_path)
+                    except Exception as exc:
+                        logger.debug("WGC capture fallback failed: %s", exc)
+                        try:
+                            os.remove(tmp_wgc)
+                        except OSError:
+                            pass
+
         # Determine DPI from the window's monitor position
         scale_factor = 1.0
         dpi = 96

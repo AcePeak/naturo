@@ -116,6 +116,19 @@ NATURO_API int naturo_capture_screen(int screen_index, const char* output_path);
  */
 NATURO_API int naturo_capture_window(uintptr_t hwnd, const char* output_path);
 
+/**
+ * @brief Capture a window via Windows.Graphics.Capture (WGC).
+ *
+ * Captures GPU/DirectComposition-composited content (Chromium/CEF message panes,
+ * hardware overlays) that PrintWindow and screen BitBlt return blank for. Used as
+ * the last-resort fallback in the capture pipeline. Windows 10 1803+.
+ * @param hwnd Window handle (HWND cast to uintptr_t). 0 = foreground window.
+ * @param output_path File path to save the screenshot (BMP format).
+ * @return 0 on success, -1 invalid arg, -2 capture error, -4 frame timeout,
+ *         -5 WGC unsupported on this OS.
+ */
+NATURO_API int naturo_capture_window_wgc(uintptr_t hwnd, const char* output_path);
+
 /* ── Window Listing ───────────────────────────────── */
 
 /**

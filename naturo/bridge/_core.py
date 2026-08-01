@@ -112,6 +112,8 @@ class NaturoCore:
         # Window capture
         self._lib.naturo_capture_window.restype = ctypes.c_int
         self._lib.naturo_capture_window.argtypes = [ctypes.c_size_t, ctypes.c_char_p]
+        self._lib.naturo_capture_window_wgc.restype = ctypes.c_int
+        self._lib.naturo_capture_window_wgc.argtypes = [ctypes.c_size_t, ctypes.c_char_p]
 
         # Window listing
         self._lib.naturo_list_windows.restype = ctypes.c_int
@@ -414,6 +416,30 @@ class NaturoCore:
             lambda path_bytes: self._lib.naturo_capture_window(hwnd, path_bytes),
             output_path,
             "capture_window",
+        )
+
+    def capture_window_wgc(self, hwnd: int = 0, output_path: str = "capture.bmp") -> str:
+        """Capture a window via Windows.Graphics.Capture (WGC).
+
+        Captures GPU/DirectComposition-composited content (Chromium/CEF message
+        panes, hardware overlays) that ``capture_window`` (PrintWindow) and screen
+        BitBlt return blank for. Windows 10 1803+.
+
+        Args:
+            hwnd: Window handle. Pass 0 to capture the foreground window.
+            output_path: File path to save the screenshot (BMP format).
+
+        Returns:
+            The output file path.
+
+        Raises:
+            NaturoCoreError: On capture failure (incl. -4 frame timeout, -5 WGC
+                unsupported on this OS).
+        """
+        return self._capture_to_path(
+            lambda path_bytes: self._lib.naturo_capture_window_wgc(hwnd, path_bytes),
+            output_path,
+            "capture_window_wgc",
         )
 
     def list_windows(self) -> list[WindowInfo]:

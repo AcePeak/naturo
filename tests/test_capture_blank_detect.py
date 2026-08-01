@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import tempfile
 import os
+from unittest.mock import MagicMock
 
 from PIL import Image
 
@@ -73,3 +74,44 @@ def test_gradient_is_not_blank():
         assert CaptureMixin._image_is_blank(path) is False
     finally:
         os.remove(path)
+
+
+# ── WGC ultimate-fallback dispatch ──────────────────────────────────────────
+# When PrintWindow AND the screen-region heal both come back blank (a GPU/
+# DirectComposition surface GDI cannot read), capture_window must fall back to
+# WGC (Windows.Graphics.Capture). Pure dispatch test — all Windows/DLL calls mocked.
+
+
+def _capture_backend(**attrs) -> MagicMock:
+    obj = MagicMock()
+    core = MagicMock()
+    obj._ensure_core.return_value = core
+    obj._core = core
+    for k, v in attrs.items():
+        setattr(obj, k, v)
+    return obj
+
+
+def test_wgc_fires_when_all_gdi_paths_blank():
+    obj = _capture_backend()
+    obj._window_is_unoccluded_onscreen.return_value = False  # skip visibility-first
+    obj._window_is_minimized.return_value = False
+    obj._image_is_blank.return_value = True                  # PrintWindow + heal both blank
+    obj._capture_window_via_screen.return_value = (100, 200, "png")
+    obj._convert_bmp.return_value = (100, 200, "png")
+
+    CaptureMixin.capture_window(obj, hwnd=1234, output_path="out.png",
+                               raise_if_occluded=False)
+
+    obj._ensure_core.return_value.capture_window.assert_called()       # PrintWindow tried
+    obj._ensure_core.return_value.capture_window_wgc.assert_called_once()  # WGC rescue fired
+
+
+def test_wgc_not_used_when_capture_is_not_blank():
+    obj = _capture_backend()
+    obj._window_is_unoccluded_onscreen.return_value = True   # visibility-first succeeds
+    obj._capture_window_via_screen.return_value = (100, 200, "png")
+
+    CaptureMixin.capture_window(obj, hwnd=1234, output_path="out.png")
+
+    obj._ensure_core.return_value.capture_window_wgc.assert_not_called()

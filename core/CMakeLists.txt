@@ -33,6 +33,11 @@ if(WIN32)
         psapi
         advapi32
         imm32
+        # WGC (Windows.Graphics.Capture) GPU-surface capture — see capture.cpp
+        windowsapp
+        d3d11
+        dxgi
+        runtimeobject
     )
 endif()
 
