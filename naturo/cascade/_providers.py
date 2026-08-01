@@ -155,6 +155,125 @@ def _fetch_cdp_elements(
 # ── AI vision helper ──────────────────────────────────────────────────────────
 
 
+def _raw_bounds(
+    b: object, default_w: float = 0.0, default_h: float = 0.0,
+) -> Optional[tuple[float, float, float, float]]:
+    """Normalize a raw AI ``bounds`` value to ``(a, b, c, d)`` floats.
+
+    Accepts both the list form ``[x, y, w, h]`` (or ``[x1, y1, x2, y2]``) and the
+    dict form ``{"x", "y", "width", "height"}``; returns ``None`` for anything
+    unusable so callers can skip it. The third/fourth slots carry either w/h or
+    x2/y2 — the caller knows which from the detected format.
+    """
+    if isinstance(b, (list, tuple)) and len(b) >= 4:
+        return float(b[0]), float(b[1]), float(b[2]), float(b[3])
+    if isinstance(b, dict):
+        return (
+            float(b.get("x", 0)), float(b.get("y", 0)),
+            float(b.get("width", default_w)), float(b.get("height", default_h)),
+        )
+    return None
+
+
+def _detect_xyxy_bounds(elements: list) -> bool:
+    """Detect whether the AI returned ``[x1,y1,x2,y2]`` rather than ``[x,y,w,h]``.
+
+    In corner form the 3rd/4th values are always >= the 1st/2nd; in width/height
+    form they usually aren't. If >80% of elements look like corner form, treat the
+    whole batch as ``xyxy``.
+    """
+    xyxy_count = total_checked = 0
+    for raw in elements:
+        if not isinstance(raw, dict):
+            continue
+        q = _raw_bounds(raw.get("bounds", {}))
+        if q is None:
+            continue
+        v0, v1, v2, v3 = q
+        total_checked += 1
+        if v2 >= v0 and v3 >= v1:
+            xyxy_count += 1
+    if total_checked > 0 and xyxy_count / total_checked > 0.8:
+        logger.info("AI vision: detected [x1,y1,x2,y2] bounds format (%d/%d)",
+                    xyxy_count, total_checked)
+        return True
+    return False
+
+
+def _detect_ai_scale(
+    elements: list, img_w: int, img_h: int, is_xyxy: bool,
+) -> tuple[float, float]:
+    """Recover the downscale ratio when the AI answered in a smaller pixel space.
+
+    Claude's vision API internally downscales large images, so the returned coords
+    live in that smaller space. Compare the max coord the AI emitted against the
+    real screenshot size; only correct when the gap is >1.5x (a genuine downscale,
+    not measurement noise). Returns ``(1.0, 1.0)`` when no correction is needed.
+    """
+    ai_scale_x, ai_scale_y = 1.0, 1.0
+    if not (img_w > 0 and img_h > 0 and elements):
+        return ai_scale_x, ai_scale_y
+    max_ai_x = max_ai_y = 0.0
+    for raw in elements:
+        if not isinstance(raw, dict):
+            continue
+        q = _raw_bounds(raw.get("bounds", {}))
+        if q is None:
+            continue
+        v0, v1, v2, v3 = q
+        if is_xyxy:  # v2,v3 are already the max (x2,y2) corner
+            max_ai_x, max_ai_y = max(max_ai_x, v2), max(max_ai_y, v3)
+        else:
+            max_ai_x, max_ai_y = max(max_ai_x, v0 + v2), max(max_ai_y, v1 + v3)
+    if max_ai_x > 0 and img_w / max_ai_x > 1.5:
+        ai_scale_x = img_w / max_ai_x
+    if max_ai_y > 0 and img_h / max_ai_y > 1.5:
+        ai_scale_y = img_h / max_ai_y
+    if ai_scale_x != 1.0 or ai_scale_y != 1.0:
+        logger.info(
+            "AI vision: auto-scale %.2fx,%.2fy (AI max: %.0f,%.0f → img: %d,%d)",
+            ai_scale_x, ai_scale_y, max_ai_x, max_ai_y, img_w, img_h)
+    return ai_scale_x, ai_scale_y
+
+
+def _ai_raw_to_element(
+    i: int, raw: object, is_xyxy: bool,
+    ai_scale_x: float, ai_scale_y: float, win_x: int, win_y: int,
+) -> Optional[ElementInfo]:
+    """Convert one raw AI dict into a screen-coordinate :class:`ElementInfo`.
+
+    Applies the detected corner->wh conversion and downscale ratio, then offsets
+    by the window origin and clamps to non-negative screen coords. Returns
+    ``None`` (and logs at debug) for malformed entries so the caller skips them.
+    """
+    if not isinstance(raw, dict):
+        logger.debug("AI vision: skipping non-dict element at index %d: %r", i, raw)
+        return None
+    q = _raw_bounds(raw.get("bounds", {}), default_w=50.0, default_h=20.0)
+    if q is None:
+        logger.debug("AI vision: skipping element %d with bad bounds: %r",
+                     i, raw.get("bounds", {}))
+        return None
+    bx, by, bw, bh = q
+    if is_xyxy:  # corner form → width/height
+        bw, bh = bw - bx, bh - by
+    # Scale AI coords to physical screenshot pixels, then offset by the window
+    # origin. Clamp to >= 0 since negative screen coords aren't useful.
+    ex = max(0, int(bx * ai_scale_x) + win_x)
+    ey = max(0, int(by * ai_scale_y) + win_y)
+    ew = int(bw * ai_scale_x)
+    eh = int(bh * ai_scale_y)
+    return ElementInfo(
+        id=f"ai_{i}",
+        role=raw.get("role", "Unknown").capitalize(),
+        name=raw.get("name", ""),
+        value=None,
+        x=ex, y=ey, width=ew, height=eh,
+        children=[],
+        properties={"source": "vision", "confidence": raw.get("confidence", 0.5)},
+    )
+
+
 def _fetch_ai_elements(
     screenshot_path: str,
     window_bounds: tuple[int, int, int, int],
@@ -262,110 +381,18 @@ def _fetch_ai_elements(
                 logger.warning("AI vision: 0 elements parsed from response: %.500s",
                                str(raw))
 
-        # (#694) Auto-detect coordinate scale: if the AI returned coords in a
-        # smaller image space (Claude API downscales large images), compute the
-        # ratio from AI-max-coord to actual screenshot size.
-        # Use the screenshot dimensions (img_w, img_h) as ground truth.
-        ai_scale_x, ai_scale_y = 1.0, 1.0
-
-        # (#694) Auto-detect bounds format: AI may return [x1,y1,x2,y2]
-        # (top-left + bottom-right) instead of the requested [x,y,w,h].
-        # Detect by checking if 3rd value >= 1st value for most elements.
-        is_xyxy = False
-        if result.elements:
-            xyxy_count = 0
-            total_checked = 0
-            for raw_el in result.elements:
-                if not isinstance(raw_el, dict):
-                    continue
-                b = raw_el.get("bounds", {})
-                if isinstance(b, (list, tuple)) and len(b) >= 4:
-                    v0, v1, v2, v3 = b[0], b[1], b[2], b[3]
-                elif isinstance(b, dict):
-                    v0 = b.get("x", 0)
-                    v1 = b.get("y", 0)
-                    v2 = b.get("width", 0)
-                    v3 = b.get("height", 0)
-                else:
-                    continue
-                total_checked += 1
-                # In [x1,y1,x2,y2] format, x2 > x1 and y2 > y1 always.
-                # In [x,y,w,h] format, w is typically much smaller than x
-                # for elements not at the left edge.
-                if v2 >= v0 and v3 >= v1:
-                    xyxy_count += 1
-            if total_checked > 0 and xyxy_count / total_checked > 0.8:
-                is_xyxy = True
-                logger.info("AI vision: detected [x1,y1,x2,y2] bounds format (%d/%d)",
-                            xyxy_count, total_checked)
-
-        if img_w > 0 and img_h > 0 and result.elements:
-            max_ai_x = 0.0
-            max_ai_y = 0.0
-            for raw_el in result.elements:
-                if not isinstance(raw_el, dict):
-                    continue
-                b = raw_el.get("bounds", {})
-                if isinstance(b, (list, tuple)) and len(b) >= 4:
-                    if is_xyxy:
-                        # b[2],b[3] are already x2,y2 (max coords)
-                        max_ai_x = max(max_ai_x, b[2])
-                        max_ai_y = max(max_ai_y, b[3])
-                    else:
-                        max_ai_x = max(max_ai_x, b[0] + b[2])
-                        max_ai_y = max(max_ai_y, b[1] + b[3])
-                elif isinstance(b, dict):
-                    max_ai_x = max(max_ai_x, b.get("x", 0) + b.get("width", 0))
-                    max_ai_y = max(max_ai_y, b.get("y", 0) + b.get("height", 0))
-            # Only apply scaling if AI coords are significantly smaller than
-            # the actual image (at least 1.5x smaller — means API downscaled)
-            if max_ai_x > 0 and img_w / max_ai_x > 1.5:
-                ai_scale_x = img_w / max_ai_x
-            if max_ai_y > 0 and img_h / max_ai_y > 1.5:
-                ai_scale_y = img_h / max_ai_y
-            if ai_scale_x != 1.0 or ai_scale_y != 1.0:
-                logger.info(
-                    "AI vision: auto-scale %.2fx,%.2fy (AI max: %.0f,%.0f → img: %d,%d)",
-                    ai_scale_x, ai_scale_y, max_ai_x, max_ai_y, img_w, img_h,
-                )
+        # (#694) The AI may answer in [x1,y1,x2,y2] corner form and/or in a
+        # downscaled pixel space (Claude's API shrinks large images). Detect both
+        # from the batch, then parse each element through the shared converter.
+        is_xyxy = _detect_xyxy_bounds(result.elements)
+        ai_scale_x, ai_scale_y = _detect_ai_scale(result.elements, img_w, img_h, is_xyxy)
 
         elements: List[ElementInfo] = []
         for i, raw in enumerate(result.elements):
-            if not isinstance(raw, dict):
-                logger.debug("AI vision: skipping non-dict element at index %d: %r", i, raw)
-                continue
-            b = raw.get("bounds", {})
-            if isinstance(b, (list, tuple)) and len(b) >= 4:
-                bx, by, bw, bh = b[0], b[1], b[2], b[3]
-            elif isinstance(b, dict):
-                bx = b.get("x", 0)
-                by = b.get("y", 0)
-                bw = b.get("width", 50)
-                bh = b.get("height", 20)
-            else:
-                logger.debug("AI vision: skipping element %d with bad bounds: %r", i, b)
-                continue
-            # Convert [x1,y1,x2,y2] → [x,y,w,h] if detected
-            if is_xyxy:
-                bw = bw - bx  # x2 - x1 = width
-                bh = bh - by  # y2 - y1 = height
-            # Scale AI coords to physical screenshot pixels, then offset.
-            # Clamp to >= 0 since negative screen coords aren't useful.
-            ex = max(0, int(bx * ai_scale_x) + win_x)
-            ey = max(0, int(by * ai_scale_y) + win_y)
-            ew = int(bw * ai_scale_x)
-            eh = int(bh * ai_scale_y)
-            role = raw.get("role", "Unknown").capitalize()
-            name = raw.get("name", "")
-            elements.append(ElementInfo(
-                id=f"ai_{i}",
-                role=role,
-                name=name,
-                value=None,
-                x=ex, y=ey, width=ew, height=eh,
-                children=[],
-                properties={"source": "vision", "confidence": raw.get("confidence", 0.5)},
-            ))
+            el = _ai_raw_to_element(
+                i, raw, is_xyxy, ai_scale_x, ai_scale_y, win_x, win_y)
+            if el is not None:
+                elements.append(el)
         return elements
     except Exception as exc:
         logger.warning("AI vision element fetch failed: %s", exc, exc_info=True)
