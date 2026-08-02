@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from naturo.mcp._resolve import require_hwnd
+from naturo.tree_render import ACTIONABLE_ROLES
 from naturo.value_preview import bounded_value
 
 logger = logging.getLogger(__name__)
@@ -17,12 +18,8 @@ logger = logging.getLogger(__name__)
 # and (for compact) the line accumulator ride in _McpTreeCtx. This is the MCP
 # token-optimized contract — deliberately distinct from the CLI `see` renderer.
 
-#: Roles that count as actionable when the compact walk decides what to emit.
-_MCP_ACTIONABLE = frozenset({
-    "button", "hyperlink", "link", "edit", "text", "checkbox",
-    "radiobutton", "combobox", "menuitem", "listitem", "tab", "tabitem",
-    "treeitem", "slider", "spinner", "document", "datagrid", "dataitem",
-})
+#: Actionable role set — unified across CLI + MCP (see naturo/tree_render.py).
+_MCP_ACTIONABLE = ACTIONABLE_ROLES
 
 
 @dataclass

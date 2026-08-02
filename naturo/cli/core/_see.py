@@ -9,6 +9,7 @@ from typing import Any
 import click
 
 import naturo.cli.core._common as _common
+from naturo.tree_render import ACTIONABLE_ROLES
 from naturo.value_preview import bounded_value
 
 
@@ -218,12 +219,8 @@ def _tree_to_json(el: Any, ctx: _JsonRenderCtx, parent_ref: str | None = None,
     return d
 
 
-#: Roles that count as actionable for --compact's "print only meaningful nodes".
-_CLI_ACTIONABLE = frozenset({
-    "button", "hyperlink", "link", "edit", "text", "checkbox",
-    "radiobutton", "combobox", "menuitem", "listitem", "tab",
-    "tabitem", "treeitem", "slider", "spinner", "document",
-})
+#: Actionable role set — unified across CLI + MCP (see naturo/tree_render.py).
+_CLI_ACTIONABLE = ACTIONABLE_ROLES
 
 
 @dataclass
