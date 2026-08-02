@@ -77,6 +77,7 @@ class TestSetElementValue:
         mock_elem = MagicMock()
         mock_vp = MagicMock()
         mock_vp.CurrentIsReadOnly = False
+        mock_vp.CurrentValue = "Hello World"  # read-back confirms the set took
 
         mock_pat_unk = MagicMock()
         mock_pat_unk.QueryInterface.return_value = mock_vp
@@ -91,6 +92,31 @@ class TestSetElementValue:
             )
             assert result is True
             mock_vp.SetValue.assert_called_once_with("Hello World")
+
+    def test_returns_false_when_setvalue_does_not_take(self, windows_backend):
+        """(#3) SetValue raised no error but the value did NOT populate the live
+        field (Electron/CEF phantom element, e.g. DingTalk's search box) — the
+        read-back is empty, so set_element_value must return False (a false success
+        here could make an agent act on an empty search / wrong target)."""
+        mock_mod = MagicMock()
+        mock_mod.UIA_ValuePatternId = 10002
+        mock_uia = MagicMock()
+        mock_elem = MagicMock()
+        mock_vp = MagicMock()
+        mock_vp.CurrentIsReadOnly = False
+        mock_vp.CurrentValue = ""            # SetValue was a no-op — field stayed empty
+
+        mock_pat_unk = MagicMock()
+        mock_pat_unk.QueryInterface.return_value = mock_vp
+        mock_elem.GetCurrentPattern.return_value = mock_pat_unk
+
+        with patch.object(windows_backend, "_init_comtypes_uia",
+                          return_value=(mock_uia, mock_mod)), \
+             patch.object(windows_backend, "_find_uia_element",
+                          return_value=mock_elem):
+            result = windows_backend.set_element_value("你好", hwnd=12345, role="Edit")
+            assert result is False
+            mock_vp.SetValue.assert_called_once_with("你好")
 
     def test_returns_false_when_element_not_found(self, windows_backend):
         """set_element_value returns False when target element not found."""

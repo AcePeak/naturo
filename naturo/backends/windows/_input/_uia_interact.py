@@ -551,6 +551,25 @@ class UIAInteractMixin:
                 vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
                 if not vp.CurrentIsReadOnly:
                     vp.SetValue(text)
+                    # Read back and VERIFY the set actually took. On some
+                    # Electron/CEF/Qt controls SetValue raises no error yet does NOT
+                    # populate the live field — the UIA element is a phantom detached
+                    # from the real Chromium/Qt input (seen on DingTalk's search box).
+                    # A bare `return True` there was a FALSE success: an agent would
+                    # believe it had typed (e.g. a recipient's name into search) when
+                    # nothing changed — a real safety hazard, not just noise. Return
+                    # False on a mismatch so the caller falls back to keystroke/paste.
+                    try:
+                        readback = vp.CurrentValue or ""
+                    except Exception:
+                        readback = ""
+                    if text and text not in readback:
+                        logger.info(
+                            "SetValue: ValuePattern reported no error but the value "
+                            "did NOT take (set %d chars, read back %r) for name=%r — "
+                            "treating as failure so the caller can fall back.",
+                            len(text), readback[:40], name)
+                        return False
                     logger.info("SetValue: set via ValuePattern (name=%r, len=%d)",
                                 name, len(text))
                     return True
