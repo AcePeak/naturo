@@ -60,6 +60,35 @@ class TestCoordinateClick:
         assert result.exit_code == 0
         mock_backend.click.assert_called_once_with(x=500, y=300, button="left", double=False, input_mode="normal")
 
+    def test_no_focus_when_point_under_same_app_popup(self, runner, mock_backend):
+        # BUG-B: a coord click whose point is covered by ANOTHER top-level window
+        # of the SAME app (an emoji/menu popup) must NOT raise _focus_hwnd —
+        # raising the main window would occlude the popup and the click would fall
+        # through to the main window's child.
+        mock_backend._is_winui_window.return_value = False
+        with _patch_resolve_app_id(hwnd=12345), _patch_backend(mock_backend), _patch_auto_route(), \
+             patch("naturo.cli.interaction._click._window_root_at_point",
+                   return_value=(99999, "emoji popup", 777)), \
+             patch("naturo.cli.interaction._click._window_pid", return_value=777):
+            result = runner.invoke(
+                click_cmd, ["--coords", "500", "300", "--hwnd", "12345"],
+                catch_exceptions=False)
+        assert result.exit_code == 0
+        mock_backend.focus_window.assert_not_called()   # did NOT raise the main window
+        mock_backend.click.assert_called_once()
+
+    def test_focus_when_point_under_different_app(self, runner, mock_backend):
+        # A DIFFERENT-process occluder still warrants raising the target forward.
+        mock_backend._is_winui_window.return_value = False
+        with _patch_resolve_app_id(hwnd=12345), _patch_backend(mock_backend), _patch_auto_route(), \
+             patch("naturo.cli.interaction._click._window_root_at_point",
+                   return_value=(99999, "other app", 888)), \
+             patch("naturo.cli.interaction._click._window_pid", return_value=777):
+            runner.invoke(
+                click_cmd, ["--coords", "500", "300", "--hwnd", "12345"],
+                catch_exceptions=False)
+        mock_backend.focus_window.assert_called_once_with(hwnd=12345)  # raised the target
+
     def test_offset_shifts_coords(self, runner, mock_backend):
         # --offset shifts the resolved click point (here a --coords target).
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():

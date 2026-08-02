@@ -451,10 +451,28 @@ def click_cmd(query: str | None, on_text: str | None, ref_alias: str | None,
                 _is_uwp = backend._is_winui_window(_focus_hwnd)
             except Exception as exc:
                 logger.debug("WinUI detection failed (hwnd=%s): %s", _focus_hwnd, exc)
-        try:
-            backend.focus_window(hwnd=_focus_hwnd)
-        except Exception as exc:
-            logger.debug("Window focus failed (hwnd=%s): %s", _focus_hwnd, exc)
+        # (BUG-B) For an explicit coordinate click, do NOT raise _focus_hwnd when
+        # the point is currently covered by ANOTHER top-level window of the SAME
+        # app — a popup/overlay (emoji/menu/dropdown panel). Focusing the main
+        # window would move it ABOVE that popup, so the click would fall through
+        # to the main window's child instead of hitting the popup the coordinates
+        # were aimed at. A different-PROCESS occluder still warrants raising the
+        # target forward, so this only skips for a same-pid overlay.
+        _skip_focus = False
+        if x is not None and y is not None:
+            _top = _window_root_at_point(x, y)
+            if (_top and _top[0] and _top[0] != _focus_hwnd and _top[2]
+                    and _window_pid(_focus_hwnd) == _top[2]):
+                _skip_focus = True
+                logger.debug(
+                    "click: not raising hwnd %s — point (%s,%s) is under a same-app "
+                    "popup (hwnd %s); raising the main window would occlude it.",
+                    _focus_hwnd, x, y, _top[0])
+        if not _skip_focus:
+            try:
+                backend.focus_window(hwnd=_focus_hwnd)
+            except Exception as exc:
+                logger.debug("Window focus failed (hwnd=%s): %s", _focus_hwnd, exc)
 
     # (#231) Capture before-state for post-action verification
     _before_state = None

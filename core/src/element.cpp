@@ -227,15 +227,26 @@ static void append_element_json_cached(IUIAutomationElement* element,
         rect = {0, 0, 0, 0};
     }
 
-    char buf[1024];
-    snprintf(buf, sizeof(buf),
-        "{\"id\":\"%s\",\"role\":\"%s\",\"name\":\"%s\",\"value\":null,"
-        "\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld",
-        auto_id.c_str(), role, name.c_str(),
-        rect.left, rect.top,
-        rect.right - rect.left,
-        rect.bottom - rect.top);
-    out += buf;
+    // Build the node header directly into the output string — NEVER via a
+    // fixed-size buffer. auto_id/name are escaped UIA strings of unbounded length
+    // (CEF/Chromium composite ids and CJK names balloon to 6 bytes/char as
+    // \uXXXX); a fixed snprintf buffer truncated them mid-string, producing
+    // invalid JSON ("Expecting ':' delimiter" on the Python side) for exactly the
+    // long-named nodes DingTalk/Electron expose. std::string has no such limit.
+    out += "{\"id\":\"";
+    out += auto_id;
+    out += "\",\"role\":\"";
+    out += role;
+    out += "\",\"name\":\"";
+    out += name;
+    out += "\",\"value\":null,\"x\":";
+    out += std::to_string((long)rect.left);
+    out += ",\"y\":";
+    out += std::to_string((long)rect.top);
+    out += ",\"width\":";
+    out += std::to_string((long)(rect.right - rect.left));
+    out += ",\"height\":";
+    out += std::to_string((long)(rect.bottom - rect.top));
 
     // (#886) Emit the keyboard shortcut so UIA elements expose the same
     // accessibility metadata as the MSAA/IA2 backends instead of always null.
@@ -342,15 +353,26 @@ static void build_element_json_current(IUIAutomationTreeWalker* walker,
     RECT rect = {0, 0, 0, 0};
     element->get_CurrentBoundingRectangle(&rect);
 
-    char buf[1024];
-    snprintf(buf, sizeof(buf),
-        "{\"id\":\"%s\",\"role\":\"%s\",\"name\":\"%s\",\"value\":null,"
-        "\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld",
-        auto_id.c_str(), role, name.c_str(),
-        rect.left, rect.top,
-        rect.right - rect.left,
-        rect.bottom - rect.top);
-    out += buf;
+    // Build the node header directly into the output string — NEVER via a
+    // fixed-size buffer. auto_id/name are escaped UIA strings of unbounded length
+    // (CEF/Chromium composite ids and CJK names balloon to 6 bytes/char as
+    // \uXXXX); a fixed snprintf buffer truncated them mid-string, producing
+    // invalid JSON ("Expecting ':' delimiter" on the Python side) for exactly the
+    // long-named nodes DingTalk/Electron expose. std::string has no such limit.
+    out += "{\"id\":\"";
+    out += auto_id;
+    out += "\",\"role\":\"";
+    out += role;
+    out += "\",\"name\":\"";
+    out += name;
+    out += "\",\"value\":null,\"x\":";
+    out += std::to_string((long)rect.left);
+    out += ",\"y\":";
+    out += std::to_string((long)rect.top);
+    out += ",\"width\":";
+    out += std::to_string((long)(rect.right - rect.left));
+    out += ",\"height\":";
+    out += std::to_string((long)(rect.bottom - rect.top));
 
     // (#886) Emit the keyboard shortcut (live Current properties — this is the
     // fallback path used when the cache request could not be created).
@@ -712,18 +734,24 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
         found->get_CurrentBoundingRectangle(&found_rect);
     }
 
-    char buf[1024];
-    snprintf(buf, sizeof(buf),
-        "{\"id\":\"%s\",\"role\":\"%s\",\"name\":\"%s\",\"value\":null,"
-        "\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld",
-        found_aid.c_str(),
-        control_type_to_role(found_ct),
-        found_name.c_str(),
-        found_rect.left, found_rect.top,
-        found_rect.right - found_rect.left,
-        found_rect.bottom - found_rect.top);
-
-    std::string json(buf);
+    // Direct std::string build (no fixed buffer): found_aid/found_name are
+    // escaped UIA strings of unbounded length; a fixed snprintf buffer truncated
+    // them mid-string → invalid JSON on the `find` path (BUG-D), the find analog
+    // of the tree-walk truncation above.
+    std::string json = "{\"id\":\"";
+    json += found_aid;
+    json += "\",\"role\":\"";
+    json += control_type_to_role(found_ct);
+    json += "\",\"name\":\"";
+    json += found_name;
+    json += "\",\"value\":null,\"x\":";
+    json += std::to_string((long)found_rect.left);
+    json += ",\"y\":";
+    json += std::to_string((long)found_rect.top);
+    json += ",\"width\":";
+    json += std::to_string((long)(found_rect.right - found_rect.left));
+    json += ",\"height\":";
+    json += std::to_string((long)(found_rect.bottom - found_rect.top));
     // (#886) Surface the keyboard shortcut on find results too, so
     // `naturo find` exposes the same accessibility metadata as `see`.
     append_keyboard_shortcut_field(read_keyboard_shortcut(found, use_cache), json);
@@ -1130,15 +1158,24 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
     json += ",\"pattern\":";
     json += pattern_name;
 
-    char meta[512];
-    snprintf(meta, sizeof(meta),
-        ",\"role\":\"%s\",\"name\":\"%s\",\"automation_id\":\"%s\""
-        ",\"x\":%ld,\"y\":%ld,\"width\":%ld,\"height\":%ld}",
-        elem_role, elem_name.c_str(), elem_aid.c_str(),
-        elem_rect.left, elem_rect.top,
-        elem_rect.right - elem_rect.left,
-        elem_rect.bottom - elem_rect.top);
-    json += meta;
+    // Direct std::string build (no fixed buffer): elem_name/elem_aid are escaped
+    // UIA strings of unbounded length; a fixed meta[512] buffer truncated them
+    // mid-string → invalid JSON (BUG-D) on the value-read path.
+    json += ",\"role\":\"";
+    json += elem_role;
+    json += "\",\"name\":\"";
+    json += elem_name;
+    json += "\",\"automation_id\":\"";
+    json += elem_aid;
+    json += "\",\"x\":";
+    json += std::to_string((long)elem_rect.left);
+    json += ",\"y\":";
+    json += std::to_string((long)elem_rect.top);
+    json += ",\"width\":";
+    json += std::to_string((long)(elem_rect.right - elem_rect.left));
+    json += ",\"height\":";
+    json += std::to_string((long)(elem_rect.bottom - elem_rect.top));
+    json += "}";
 
     elem->Release();
     root->Release();
