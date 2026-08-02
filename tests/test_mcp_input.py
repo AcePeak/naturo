@@ -128,9 +128,11 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "hello world"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        # Normal mode with no writable ValuePattern → atomic clipboard paste.
-        assert data["method"] == "clipboard_paste"
-        mock_backend.clipboard_set.assert_any_call("hello world")
+        # No writable ValuePattern → keystroke (Unicode SendInput, IME-immune).
+        # Paste is NOT tried first: a synthetic Ctrl+V is silently dropped by
+        # CEF/Chromium controls (DingTalk), so paste-first would hide failure.
+        assert data["method"] == "keystroke"
+        assert mock_backend.type_text.call_args[1]["text"] == "hello world"
 
     def test_type_text_custom_wpm(self, server, mock_backend):
         # wpm only applies to the keystroke fallback; force it by making paste
@@ -153,7 +155,7 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "日本語テスト 🎉"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        mock_backend.clipboard_set.assert_any_call("日本語テスト 🎉")
+        assert mock_backend.type_text.call_args[1]["text"] == "日本語テスト 🎉"
 
     def test_type_text_hardware_mode(self, server, mock_backend):
         result = _call_tool(server, "type_text", {"text": "hw", "input_mode": "hardware"})
@@ -173,17 +175,17 @@ class TestTypeText:
         mock_backend.set_focused_element_value.assert_called_once_with("naturo", append=True)
         mock_backend.type_text.assert_not_called()
 
-    def test_type_text_falls_back_to_clipboard_paste_without_value_pattern(self, server, mock_backend):
-        """No writable ValuePattern (default) → clipboard paste: atomic and
-        IME-immune. A fast per-key SendInput drops chars on heavy controls like
-        Win11 Notepad ("hello from naturo" -> "hello      turo")."""
+    def test_type_text_keystroke_first_without_value_pattern(self, server, mock_backend):
+        """No writable ValuePattern (default) → keystroke, NOT paste. A synthetic
+        Ctrl+V is silently dropped by CEF/Chromium controls, so pasting first
+        would mask the failure; keystroke (human profile) is the reliable rung and
+        paste is only a verified fallback (naturo/actions.py:smart_type_text)."""
         result = _call_tool(server, "type_text", {"text": "naturo"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        assert data["method"] == "clipboard_paste"
+        assert data["method"] == "keystroke"
         mock_backend.set_focused_element_value.assert_called_once()
-        # paste path used → no per-key keystroke injection
-        mock_backend.type_text.assert_not_called()
+        mock_backend.type_text.assert_called_once()
 
     def test_type_text_falls_back_to_keystroke_when_paste_unavailable(self, server, mock_backend):
         """Neither ValuePattern nor clipboard paste can apply → keystroke."""

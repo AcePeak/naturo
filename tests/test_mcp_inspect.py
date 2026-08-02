@@ -522,14 +522,14 @@ class TestGetElementValue:
         _call_tool(server, "get_element_value", {"automation_id": "txt_input"})
         mock_backend.get_element_value.assert_called_once_with(
             ref=None, automation_id="txt_input", role=None,
-            name=None, window_title=None, hwnd=None,
+            name=None, app=None, window_title=None, hwnd=None,
         )
 
     def test_by_role_and_name(self, server, mock_backend):
         _call_tool(server, "get_element_value", {"role": "Edit", "name": "Username"})
         mock_backend.get_element_value.assert_called_once_with(
             ref=None, automation_id=None, role="Edit",
-            name="Username", window_title=None, hwnd=None,
+            name="Username", app=None, window_title=None, hwnd=None,
         )
 
 
