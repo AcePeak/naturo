@@ -306,7 +306,8 @@ def _resolve_hwnd(backend, app, window_title):
     Raises:
         WindowNotFoundError: When the supplied selector matches no window.
     """
-    return backend._resolve_hwnd(app=app, window_title=window_title)
+    from naturo.window import require_hwnd
+    return require_hwnd(backend, app=app, window_title=window_title)
 
 
 def _do_set_com_cell(hwnd, address, ref, value, json_output) -> None:
