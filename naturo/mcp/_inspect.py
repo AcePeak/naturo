@@ -645,35 +645,30 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         """
         backend = _get_backend()
 
-        # Resolve ref to identifiers
-        resolved_aid = automation_id
-        resolved_role = role
-        resolved_name = name
+        # Shared #1208 resolution: ref → identifiers + cached coords + source
+        # window, so an UNNAMED element (no AutomationId/name) can still be set
+        # via its cached location — parity with the CLI `set`, which the MCP tool
+        # previously lacked (its inline copy dropped the coords fallback).
+        from naturo.values import resolve_element_identifiers
+        resolved_aid, resolved_role, resolved_name, coords, snap_hwnd = (
+            resolve_element_identifiers(ref, automation_id, role, name))
 
-        if ref and not resolved_aid:
-            from naturo.snapshot import get_snapshot_manager
-            mgr = get_snapshot_manager()
-            result = mgr.resolve_ref_element(ref)
-            if result:
-                elem, _snap_id = result
-                if elem.identifier:
-                    resolved_aid = elem.identifier
-                elif elem.role and (elem.title or elem.label):
-                    resolved_role = resolved_role or elem.role
-                    resolved_name = resolved_name or elem.title or elem.label
+        # (#957) Loud window resolution — an unmatched window_title raises
+        # WindowNotFoundError rather than silently targeting the foreground
+        # window. Prefer the element's own source window (occlusion-independent)
+        # when the ref carried one.
+        target_hwnd = snap_hwnd or require_hwnd(
+            backend, window_title=window_title, hwnd=hwnd)
 
-        # (#957) Resolve the window selector through the shared helper: an
-        # unmatched window_title raises WindowNotFoundError (mapped to a
-        # WINDOW_NOT_FOUND envelope) rather than silently targeting the
-        # foreground window and reporting success on the wrong window.
-        target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
-
+        _x, _y = coords or (None, None)
         success = backend.set_element_value(
             text=value,
-            hwnd=target_hwnd,
+            hwnd=target_hwnd or 0,
             name=resolved_name,
             automation_id=resolved_aid,
             role=resolved_role,
+            x=_x,
+            y=_y,
         )
         if not success:
             return {

@@ -164,9 +164,9 @@ class TestSetValue:
             ])
 
         assert result.exit_code == 0
-        mock._resolve_hwnd.assert_called_once_with(
-            app="notepad", window_title=None,
-        )
+        # The shared require_hwnd passes only supplied selectors (a None
+        # window_title is omitted, not forwarded) — behaviourally identical.
+        mock._resolve_hwnd.assert_called_once_with(app="notepad")
         mock.set_element_value.assert_called_once_with(
             text="hello",
             hwnd=12345,

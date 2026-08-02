@@ -135,7 +135,9 @@ def test_element_not_found_inline_dict_gets_category(server, backend):
 
 def test_set_value_failed_is_registered_with_contract(server, backend):
     backend.set_element_value.return_value = False
-    err = _error_of(_call(server, "set_element_value", {"value": "x", "ref": "e1"}))
+    # automation_id (not ref) so resolution reaches the backend call rather than
+    # raising a stale-snapshot error on the unresolvable ref (#1208 shared resolver).
+    err = _error_of(_call(server, "set_element_value", {"value": "x", "automation_id": "foo"}))
     assert err["code"] == ErrorCode.SET_VALUE_FAILED
     assert err["category"] == "automation"
     _assert_full_contract(err)
