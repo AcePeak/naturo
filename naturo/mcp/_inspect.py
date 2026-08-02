@@ -39,18 +39,40 @@ class _McpTreeCtx:
 
 
 def _mcp_serialize(el: Any, ctx: _McpTreeCtx) -> dict:
-    """Full JSON node dict (recursive): stable id, bounds, properties, and the
-    M3 correctness-fusion fields when the node carries a cascade source."""
+    """JSON node dict (recursive): stable id, bounds, a size-bounded value, the
+    useful property keys, and M3 correctness-fusion fields.
+
+    Deliberately does NOT dump the raw backend ``el.properties`` bag or the full
+    untruncated ``el.value``. Emitting both verbatim for every node made the
+    ``format="json"`` payload unbounded on large trees (and able to carry
+    non-JSON-serialisable values) — the fragility the CLI ``_tree_to_json`` path
+    avoids by previewing values and cherry-picking props. This mirrors that safe
+    shape so the two surfaces don't drift. Full text is available via ``get eN``.
+    """
     stable_ref = ctx.element_obj_to_ref.get(id(el), el.id)
     display_ref = f"e{ctx.counter[0]}"
     ctx.counter[0] += 1
     ctx.display_ref_map[display_ref] = stable_ref
-    d = {
-        "id": stable_ref, "role": el.role, "name": el.name, "value": el.value,
+    d: dict = {
+        "id": stable_ref, "role": el.role, "name": el.name,
         "bounds": {"x": el.x, "y": el.y, "width": el.width, "height": el.height},
-        "properties": el.properties,
     }
-    _fusion = ctx.annotate(el.properties or {})
+    if el.value:
+        _shown, _elided = bounded_value(el.value, full=ctx.full_text)
+        d["value"] = _shown
+        if _elided:
+            d["value_length"] = len(el.value)
+    else:
+        d["value"] = el.value
+    _p = el.properties or {}
+    for _k in ("keyboard_shortcut", "source"):
+        if _p.get(_k):
+            d[_k] = _p[_k]
+    _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
+                                   ("e", "editable")) if _p.get(k))
+    if _caps:
+        d["caps"] = _caps
+    _fusion = ctx.annotate(_p)
     if _fusion is not None:
         d["techniques"] = _fusion["techniques"]
         d["correctness"] = _fusion["correctness"]
@@ -130,9 +152,10 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
 
         format="compact" (default) returns ``tree_text``: one indented line per
         actionable/named element as ``eN <role> "<name>" [=value]`` — ~10x fewer
-        tokens than the JSON tree (no bounds/nulls/raw properties), and directly
-        readable by the LLM. Click/type by the same ``eN`` ref. Use format="json"
-        only when you need bounds, raw properties, or the nested structure.
+        tokens than the JSON tree (no bounds/nulls), and directly readable by the
+        LLM. Click/type by the same ``eN`` ref. Use format="json" only when you
+        need bounds or the nested structure (values are preview-bounded and the
+        raw property bag is filtered to the useful keys, same as the CLI).
 
         match="<intent text>" returns ONLY the elements whose role or name matches
         (case-insensitive substring, or all words present) — e.g. match="save"
