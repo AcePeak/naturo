@@ -36,44 +36,11 @@ def _get_screen_bound() -> int:
 
 
 def _window_root_at_point(x: int, y: int):
-    """Return the top-level window actually under screen point ``(x, y)``.
-
-    Lets the click command report which window a coordinate click really
-    landed on, so naturo never claims success when an overlapping window — or
-    a failed foreground switch — silently received the click instead (#1207).
-
-    Args:
-        x: Screen X coordinate.
-        y: Screen Y coordinate.
-
-    Returns:
-        ``(root_hwnd, title, pid)`` for the top-level window at the point, or
-        ``None`` if it cannot be determined (e.g. non-Windows or no window).
-    """
-    import sys
-    if sys.platform != "win32":
-        return None
-    try:
-        import ctypes
-        from ctypes import wintypes
-        user32 = ctypes.windll.user32
-        user32.WindowFromPoint.restype = wintypes.HWND
-        user32.WindowFromPoint.argtypes = [wintypes.POINT]
-        user32.GetAncestor.restype = wintypes.HWND
-        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
-        hwnd = user32.WindowFromPoint(wintypes.POINT(int(x), int(y)))
-        if not hwnd:
-            return None
-        root = user32.GetAncestor(hwnd, 2) or hwnd  # GA_ROOT = 2
-        length = user32.GetWindowTextLengthW(root)
-        buf = ctypes.create_unicode_buffer(length + 1)
-        user32.GetWindowTextW(root, buf, length + 1)
-        pid = wintypes.DWORD()
-        user32.GetWindowThreadProcessId(root, ctypes.byref(pid))
-        return int(root), buf.value, int(pid.value)
-    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
-        logger.debug("WindowFromPoint(%s, %s) failed: %s", x, y, exc)
-        return None
+    """The top-level window under screen point ``(x, y)`` — ``(root_hwnd, title,
+    pid)`` or ``None``. Delegates to the shared :func:`naturo.window.window_root_at_point`
+    (#1207) so the CLI and MCP ``click`` report landing-window identically."""
+    from naturo.window import window_root_at_point
+    return window_root_at_point(x, y)
 
 
 def _window_pid(hwnd: int):

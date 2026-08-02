@@ -65,7 +65,16 @@ def register_input_tools(server, _get_backend, _safe_tool):
         backend = _get_backend()
         backend.click(x=x, y=y, element_id=element_id, button=button, double=double,
                       input_mode=input_mode)
-        return {"success": True, "method": method}
+        result: dict = {"success": True, "method": method}
+        # (#1207) Report which top-level window the click actually landed on, so
+        # the MCP click — like the CLI click — never blindly claims success on an
+        # overlapping window or after a failed foreground switch.
+        if x is not None and y is not None:
+            from naturo.window import window_root_at_point
+            hit = window_root_at_point(x, y)
+            if hit:
+                result["hit_window"] = {"hwnd": hit[0], "title": hit[1], "pid": hit[2]}
+        return result
 
     @server.tool()
     @_safe_tool

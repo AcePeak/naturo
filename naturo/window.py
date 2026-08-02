@@ -14,9 +14,49 @@ had their own copy of this contract — this module is the single source.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from naturo.backends.base import Backend
+
+logger = logging.getLogger(__name__)
+
+
+def window_root_at_point(x: int, y: int):
+    """Top-level window actually under screen point ``(x, y)``.
+
+    Lets ``click`` report which window a coordinate click really landed on, so
+    naturo never claims success when an overlapping window — or a failed
+    foreground switch — silently received the click instead (#1207). Shared by
+    the CLI ``click`` and the MCP ``click`` tool.
+
+    Returns ``(root_hwnd, title, pid)``, or ``None`` on non-Windows / if the
+    window cannot be determined.
+    """
+    import sys
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        user32.WindowFromPoint.restype = wintypes.HWND
+        user32.WindowFromPoint.argtypes = [wintypes.POINT]
+        user32.GetAncestor.restype = wintypes.HWND
+        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+        hwnd = user32.WindowFromPoint(wintypes.POINT(int(x), int(y)))
+        if not hwnd:
+            return None
+        root = user32.GetAncestor(hwnd, 2) or hwnd  # GA_ROOT = 2
+        length = user32.GetWindowTextLengthW(root)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(root, buf, length + 1)
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(root, ctypes.byref(pid))
+        return int(root), buf.value, int(pid.value)
+    except Exception as exc:  # noqa: BLE001 — ctypes/OS errors vary
+        logger.debug("WindowFromPoint(%s, %s) failed: %s", x, y, exc)
+        return None
 
 
 def require_hwnd(
