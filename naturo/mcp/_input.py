@@ -169,16 +169,18 @@ def register_input_tools(server, _get_backend, _safe_tool):
         if hwnd is not None or window_title is not None:
             target_hwnd = require_hwnd(backend, window_title=window_title, hwnd=hwnd)
             backend.focus_window(hwnd=target_hwnd, title=window_title)
-        is_combo = "+" in key
-        for _ in range(count):
-            if is_combo:
-                key_list = [k.strip() for k in key.replace("+", " ").split()]
-                backend.hotkey(*key_list, input_mode=input_mode)
-            else:
-                backend.press_key(key=key, input_mode=input_mode)
-        if is_combo:
-            return {"success": True, "action": "hotkey", "combo": key}
-        return {"success": True}
+        # Shared press logic (naturo/actions.py): a '+'-combo OR a lone modifier
+        # (alt/ctrl/shift/win) routes through hotkey — the bridge can't hold a
+        # bare modifier — so `press_key("alt")` no longer silently no-ops here as
+        # it did before, matching the CLI `press` command.
+        from naturo.actions import smart_press_key
+        outcome = smart_press_key(backend, key, count=count, input_mode=input_mode)
+        result: dict = {"success": True}
+        if outcome["method"] == "hotkey":
+            result["action"] = "hotkey"
+            if outcome["combo"]:
+                result["combo"] = outcome["combo"]
+        return result
 
     @server.tool()
     @_safe_tool

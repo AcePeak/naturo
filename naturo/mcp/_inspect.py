@@ -538,6 +538,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        app: Optional[str] = None,
         window_title: Optional[str] = None,
         hwnd: Optional[int] = None,
     ) -> dict:
@@ -552,6 +553,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             automation_id: UIA AutomationId string.
             role: Element role filter (e.g. ``"Edit"``).
             name: Element name filter.
+            app: Application name filter (partial match) — parity with CLI `get`.
             window_title: Target window title (partial match).
             hwnd: Target window handle.
 
@@ -564,6 +566,7 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
             automation_id=automation_id,
             role=role,
             name=name,
+            app=app,
             window_title=window_title,
             hwnd=hwnd,
         )

@@ -23,6 +23,51 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+# Modifier keys that can be pressed standalone (Alt activates the menu bar, etc.).
+# The bridge's key_press() only handles regular named keys, so a bare modifier
+# must be routed through hotkey() with a modifier-only flag. Shared here so the
+# CLI `press` and MCP `press_key` surfaces resolve them identically.
+_MODIFIER_ALIASES: dict[str, str] = {
+    "alt": "alt", "lalt": "alt", "ralt": "alt",
+    "ctrl": "ctrl", "control": "ctrl", "lctrl": "ctrl", "rctrl": "ctrl",
+    "shift": "shift", "lshift": "shift", "rshift": "shift",
+    "win": "win", "meta": "win", "super": "win",
+    "command": "win", "cmd": "win", "lwin": "win", "rwin": "win",
+}
+
+
+def is_standalone_modifier(key: str) -> bool:
+    """True if *key* is a lone modifier (alt/ctrl/shift/win, incl. aliases)."""
+    return key.lower().strip() in _MODIFIER_ALIASES
+
+
+def smart_press_key(
+    backend, key: str, *, count: int = 1, input_mode: str = "normal"
+) -> dict:
+    """Press *key* (or a '+'-combo) *count* times, shared by CLI + MCP.
+
+    A '+'-combo (``ctrl+c``) or a lone modifier (``alt``) routes through
+    ``hotkey()`` — the bridge's ``key_press`` cannot hold a bare modifier down —
+    while every other key goes through ``press_key()``. Centralising this here
+    stops the MCP ``press_key`` (which used to send a lone ``alt`` straight to
+    ``press_key`` and no-op) from drifting from the CLI, which special-cases it.
+
+    Returns ``{"method": "hotkey"|"key", "combo": <str|None>}``.
+    """
+    combo = "+" in key
+    modifier = is_standalone_modifier(key)
+    for _ in range(max(1, count)):
+        if combo:
+            keys = [k.strip() for k in key.replace("+", " ").split()]
+            backend.hotkey(*keys, input_mode=input_mode)
+        elif modifier:
+            backend.hotkey(_MODIFIER_ALIASES[key.lower().strip()], input_mode=input_mode)
+        else:
+            backend.press_key(key=key, input_mode=input_mode)
+    return {"method": "hotkey" if (combo or modifier) else "key",
+            "combo": key if combo else None}
+
+
 def paste_text(backend, text: str) -> bool:
     """Insert ``text`` via clipboard paste (Ctrl+V), preserving the clipboard.
 

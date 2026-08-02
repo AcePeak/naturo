@@ -35,8 +35,11 @@ class FakeBackend:
     def clipboard_set(self, text):
         self.calls.append(("clipboard_set", text))
 
-    def hotkey(self, *keys):
+    def hotkey(self, *keys, **_kw):
         self.calls.append(("hotkey", keys))
+
+    def press_key(self, key, input_mode="normal"):
+        self.calls.append(("press_key", key))
 
     def kinds(self):
         return [c[0] for c in self.calls]
@@ -91,3 +94,33 @@ def test_verify_off_skips_reads_and_stays_keystroke():
     assert out["method"] == "keystroke"
     assert out["verified"] is None
     assert "hotkey" not in b.kinds()
+
+
+def test_press_combo_routes_through_hotkey():
+    b = FakeBackend()
+    out = actions.smart_press_key(b, "ctrl+c")
+    assert out == {"method": "hotkey", "combo": "ctrl+c"}
+    assert b.calls == [("hotkey", ("ctrl", "c"))]
+
+
+def test_press_standalone_modifier_routes_through_hotkey():
+    # The bug: MCP used to send a lone `alt` to press_key (a no-op). It must hotkey.
+    b = FakeBackend()
+    out = actions.smart_press_key(b, "alt")
+    assert out["method"] == "hotkey"
+    assert out["combo"] is None
+    assert b.calls == [("hotkey", ("alt",))]
+    assert "press_key" not in b.kinds()
+
+
+def test_press_regular_key_uses_press_key():
+    b = FakeBackend()
+    out = actions.smart_press_key(b, "enter", count=2)
+    assert out["method"] == "key"
+    assert b.calls == [("press_key", "enter"), ("press_key", "enter")]
+
+
+def test_press_modifier_alias_normalizes():
+    b = FakeBackend()
+    actions.smart_press_key(b, "control")  # alias of ctrl
+    assert b.calls == [("hotkey", ("ctrl",))]
