@@ -556,6 +556,22 @@ class TestSetElementValue:
         assert data["success"] is False
         assert data["error"]["code"] == "SET_VALUE_FAILED"
 
+    def test_com_cell_routes_to_excel_object_model(self, server, mock_backend):
+        """A com_* cell (WPS/Excel grid) routes to write_excel_cell, not
+        ValuePattern — parity with the CLI `set` (#1208 shared values service)."""
+        from unittest.mock import patch
+        with patch("naturo.cascade._com_excel.write_excel_cell",
+                   return_value=True) as w:
+            result = _call_tool(server, "set_element_value", {
+                "value": "42", "automation_id": "com_B2", "hwnd": 111,
+            })
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["pattern"] == "COM"
+        assert data["cell"] == "B2"
+        w.assert_called_once_with(111, "B2", "42")
+        mock_backend.set_element_value.assert_not_called()
+
     def test_with_window_title_resolves_hwnd(self, server, mock_backend):
         _call_tool(server, "set_element_value", {
             "value": "test", "window_title": "Notepad",

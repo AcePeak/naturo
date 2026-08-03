@@ -660,6 +660,23 @@ def register_inspect_tools(server, _get_backend, _safe_tool):
         target_hwnd = snap_hwnd or require_hwnd(
             backend, window_title=window_title, hwnd=hwnd)
 
+        # com_ cells (WPS 表格 / Excel grid grafted by the COM provider) have no
+        # UIA ValuePattern — route to the spreadsheet object model, matching the
+        # CLI `set`. Deterministic and GUI-independent (no coordinate click).
+        if resolved_aid and resolved_aid.startswith("com_"):
+            from naturo.cascade._com_excel import write_excel_cell
+            address = resolved_aid[len("com_"):]
+            if not write_excel_cell(target_hwnd, address, value):
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "SET_VALUE_FAILED",
+                        "message": f"Failed to write spreadsheet cell {address}.",
+                    },
+                }
+            return {"success": True, "action": "set_value", "value": value,
+                    "cell": address, "pattern": "COM"}
+
         _x, _y = coords or (None, None)
         success = backend.set_element_value(
             text=value,
