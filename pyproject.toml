@@ -62,7 +62,7 @@ ai = [
     "openai>=1.0,<3.0",
 ]
 mcp = [
-    "mcp>=1.0,<2.0",
+    "mcp>=1.0,<3.0",
 ]
 cdp = [
     "websocket-client>=1.0,<2.0",
