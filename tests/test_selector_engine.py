@@ -18,6 +18,7 @@ from naturo.selector import (
     SelectorBuilder,
     SelectorNode,
     SelectorParseError,
+    SelectorResolver,
     _fuzzy_match,
     _levenshtein_similarity,
     _parse_simple,
@@ -493,3 +494,128 @@ class TestXmlEscape:
 
     def test_no_escaping_needed(self):
         assert _xml_escape("plain text") == "plain text"
+
+
+# ── Emit → parse → resolve round-trip (#1190) ────────────────────────────────
+
+
+def _tree_node(role, name, children=None, automationid=""):
+    """Build a resolver-shaped element dict (the shape SelectorResolver walks)."""
+    return {
+        "role": role,
+        "name": name,
+        "automationid": automationid,
+        "value": "",
+        "x": 10,
+        "y": 20,
+        "width": 100,
+        "height": 40,
+        "children": children or [],
+    }
+
+
+class TestSelectorRoundTrip:
+    """The selector a builder EMITS for an element must RESOLVE back to it (#1190).
+
+    This is the engine-level (``naturo.selector``) contract behind the #1190 CLI
+    round-trip: ``SelectorBuilder.build_uri`` → ``parse`` → ``SelectorResolver``
+    must land on the exact element the selector was emitted for. It pins the
+    portable wildcard host (``app://*``) specifically — the host that regressed in
+    #1190 — alongside a concrete host, so the ``see``/``find`` → ``click``/``type``
+    emit-and-reuse workflow cannot silently break at the engine layer.
+
+    Hermetic: pure dicts + the pure-logic engine, no backend or desktop.
+    """
+
+    # A Notepad-shaped tree: Window > Pane > Document (the #1190 repro shape),
+    # with a Chinese title/name to also guard the CJK path that #1190 called out.
+    TITLE = "无标题 - Notepad"
+    DOC_NAME = "文本编辑器"
+
+    def _tree(self):
+        document = _tree_node("Document", self.DOC_NAME)
+        pane = _tree_node("Pane", "", children=[document])
+        window = _tree_node("Window", self.TITLE, children=[pane])
+        return [window]
+
+    def _window_dict(self):
+        return self._tree()[0]
+
+    def _pane_dict(self):
+        return self._window_dict()["children"][0]
+
+    def _document_dict(self):
+        return self._pane_dict()["children"][0]
+
+    def test_wildcard_host_full_path_round_trips(self):
+        """app://* selector emitted for the Document resolves back to it."""
+        builder = SelectorBuilder()
+        # Emit exactly what find/see emit: target + discriminating ancestors,
+        # portable wildcard host (app defaults to "*" when no --app is given).
+        emitted = builder.build_uri(
+            self._document_dict(),
+            ancestors=[self._window_dict(), self._pane_dict()],
+            app="*",
+        )
+        assert emitted.startswith("app://*/"), emitted
+
+        ast = parse(emitted)
+        assert ast.app == "*"
+
+        result = SelectorResolver().resolve(ast, self._tree())
+        assert result is not None, f"emitted selector did not round-trip: {emitted}"
+        assert result.element["name"] == self.DOC_NAME
+        assert result.match_quality == "exact"
+
+    def test_concrete_host_full_path_round_trips(self):
+        """A concrete-host selector must still round-trip unchanged (#1190 control)."""
+        builder = SelectorBuilder()
+        emitted = builder.build_uri(
+            self._document_dict(),
+            ancestors=[self._window_dict(), self._pane_dict()],
+            app="notepad.exe",
+        )
+        assert emitted.startswith("app://notepad.exe/"), emitted
+
+        ast = parse(emitted)
+        assert ast.app == "notepad.exe"
+
+        result = SelectorResolver().resolve(ast, self._tree())
+        assert result is not None
+        assert result.element["name"] == self.DOC_NAME
+
+    def test_wildcard_and_concrete_hosts_resolve_identically(self):
+        """The host is a scope hint, not a path constraint: both land on the same
+        element against a given tree (why the wildcard host is round-trippable)."""
+        resolver = SelectorResolver()
+        wild = resolver.resolve(
+            parse(f'app://*/Window[@name="{self.TITLE}"]/Document[@name="{self.DOC_NAME}"]'),
+            self._tree(),
+        )
+        concrete = resolver.resolve(
+            parse(f'app://notepad.exe/Window[@name="{self.TITLE}"]/Document[@name="{self.DOC_NAME}"]'),
+            self._tree(),
+        )
+        assert wild is not None and concrete is not None
+        assert wild.element["name"] == concrete.element["name"] == self.DOC_NAME
+
+    def test_wildcard_host_window_only_round_trips(self):
+        """app://*/Window[@name=…] (single node) resolves — issue control row."""
+        builder = SelectorBuilder()
+        emitted = builder.build_uri(self._window_dict(), app="*")
+        ast = parse(emitted)
+        result = SelectorResolver().resolve(ast, self._tree())
+        assert result is not None, emitted
+        assert result.element["name"] == self.TITLE
+
+    def test_wildcard_host_leaf_only_round_trips(self):
+        """app://*/Document[@name=…] (no Window segment) resolves — issue control row."""
+        ast = parse(f'app://*/Document[@name="{self.DOC_NAME}"]')
+        result = SelectorResolver().resolve(ast, self._tree())
+        assert result is not None
+        assert result.element["name"] == self.DOC_NAME
+
+    def test_wildcard_host_unknown_element_reports_no_match(self):
+        """A wildcard host naming a missing element must fail honestly (no false match)."""
+        ast = parse(f'app://*/Window[@name="{self.TITLE}"]/Document[@name="does-not-exist"]')
+        assert SelectorResolver().resolve(ast, self._tree()) is None
