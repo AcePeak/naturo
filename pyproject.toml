@@ -56,6 +56,12 @@ dev = [
     # ``tomllib`` is stdlib only on Python 3.11+; tests read pyproject.toml on
     # 3.9/3.10 via the ``tomli`` backport (#910).
     "tomli>=2.0; python_version < '3.11'",
+    # The MCP tool tests (test_desktop/test_excel/test_jab/test_msaa + test_mcp_server)
+    # need the mcp package to actually RUN — otherwise they importorskip and are
+    # silently skipped. The cross-platform "Python Tests" CI jobs install only
+    # ``.[dev]`` (the Windows-DLL job adds ``mcp``), so without this the MCP server
+    # was untested on Ubuntu/macOS. Pull in the pinned mcp so the tests run everywhere.
+    "naturo[mcp]",
 ]
 ai = [
     "anthropic>=0.20,<2.0",
