@@ -52,6 +52,19 @@ git config user.email "ace.busy@gmail.com"
 git fetch origin && git checkout qa-work && git reset --hard origin/develop
 [ -f naturo/bin/naturo_core.dll ] || { mkdir -p naturo/bin; cp ../naturo/naturo/bin/naturo_core.dll naturo/bin/; }
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8   # forestall the cp936/gbk console mojibake that has cost a re-run every cycle (Step 2.4)
+
+# (#969) BLOCKING PREFLIGHT — refuse to verify if `import naturo` resolves OUTSIDE this
+# worktree. An editable install (egg-link/.pth) pointing at a sibling worktree (e.g. the
+# stale naturo-qa-mariana) makes every `python -m naturo` probe below silently exercise the
+# WRONG code → false PASS/FAIL verdicts (this already produced one false FAIL). Hard-abort
+# the whole cycle here, loudly, instead of trusting a probe against stale code. This is a
+# GATE, not the reactive Step-2.4 re-check: it runs once, up front, before any verification.
+WT="$(pwd)"
+NF="$(python -c 'import naturo,sys;print(naturo.__file__)' 2>/dev/null)"
+case "$NF" in
+  "$WT"/*) echo "preflight ok: naturo -> $NF (under this worktree)" ;;
+  *) echo "ABORT (#969): 'import naturo' resolves to '${NF:-<import failed>}', NOT under $WT — the editable install points at another/stale worktree. Re-pin with 'pip install -e .' in THIS worktree before verifying. Refusing to run probes against stale code." >&2; exit 1 ;;
+esac
 ```
 **Harness hygiene (preventive, not just reactive).** The two artifacts in Step 2.4 — a cp936/gbk console
 mangling valid UTF-8, and `naturo … | head` reporting the *pipe's* exit code instead of naturo's — recur
