@@ -90,7 +90,15 @@ def test_backend_exception_reports_failure(tool, args, method):
     """When the backend op raises (even an unexpected error), the tool must
     return success:false — never swallow it into a success envelope."""
     backend = MagicMock()
-    backend.set_focused_element_value.return_value = False  # type_text → keystroke path
+    backend.set_focused_element_value.return_value = False  # type_text: fail the value-pattern rung
+    if tool == "type_text":
+        # type_text's delivery ladder is value-pattern → clipboard paste → keystroke
+        # (#1219). The value-pattern rung is failed above; also fail the clipboard rung
+        # (_paste_text sends backend.hotkey("ctrl","v")) so the op genuinely reaches the
+        # keystroke backend call whose RuntimeError this case asserts must surface —
+        # otherwise the clipboard rung "delivers" on the mock and honestly reports
+        # success (a real success via fallback, not a silent failure).
+        backend.hotkey.side_effect = RuntimeError("clipboard paste blocked")
     getattr(backend, method).side_effect = RuntimeError(f"{method} exploded")
     p1, p2 = _server_patches(backend)
     with p1, p2:
