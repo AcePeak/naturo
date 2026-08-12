@@ -315,6 +315,7 @@ List running applications (delegates to 'app list').
 |------|------|-------------|
 | `--all` | boolean | Show all processes (not just apps with windows) |
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these columns (comma-separated for multiple; tab-separated output). A single field of a single row prints the bare value for `$(...)` capture. |
 
 ### `naturo list screens`
 
@@ -325,6 +326,7 @@ List connected screens/monitors.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these columns (comma-separated for multiple; tab-separated output). A single field of a single row prints the bare value for `$(...)` capture. |
 
 ### `naturo list windows`
 
@@ -340,6 +342,15 @@ List open windows.
 | `--app-id` | text | Stable app/window ID from "naturo app list" output (e.g. a1) |
 | `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these columns (comma-separated for multiple; tab-separated output). A single field of a single row prints the bare value for `$(...)` capture. |
+
+**Examples:**
+
+```bash
+naturo list windows --app "SOLIDWORKS" --field hwnd    # bare HWND for $(...)
+naturo list windows --field hwnd,pid,title             # multi-column, tab-separated
+naturo list windows --field hwnd -j                    # projected JSON envelope
+```
 
 ## `naturo menu-inspect`
 
@@ -757,6 +768,7 @@ Find a running application by name or PID.
 |------|------|-------------|
 | `--pid` | integer | Search by PID instead of name |
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these process columns (comma-separated for multiple; tab-separated output). Valid: pid, name, path, is_running, window_count. |
 
 ### `naturo app focus`
 
@@ -850,6 +862,7 @@ List running applications with visible windows.
 |------|------|-------------|
 | `--all` | boolean | Show all processes (not just apps with windows) |
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these columns (comma-separated for multiple; tab-separated output). A single field of a single row prints the bare value for `$(...)` capture. |
 
 ### `naturo app maximize`
 
@@ -1033,6 +1046,7 @@ List open windows (optionally filtered by app name or PID).
 |------|------|-------------|
 | `--pid` | integer | Process ID |
 | `--json`, `-j` | boolean | JSON output |
+| `--field`, `-F` | text | Print only these columns (comma-separated for multiple; tab-separated output). A single field of a single row prints the bare value for `$(...)` capture. |
 
 **Examples:**
 
