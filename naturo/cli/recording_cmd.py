@@ -256,7 +256,10 @@ def record_show(recording_id: str, json_output: bool):
         sys.exit(1)
 
     if json_output:
-        click.echo(json_dumps(rec.to_dict()))
+        # (#1142) Lead with the canonical success envelope so ``record show -j``
+        # carries ``"success": true`` like every other command; the recording
+        # fields follow unchanged for backward compatibility.
+        click.echo(json_dumps({"success": True, **rec.to_dict()}))
     else:
         click.echo(f"Recording: {rec.recording_id}")
         click.echo(f"Name:      {rec.name}")

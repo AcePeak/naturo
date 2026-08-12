@@ -9,7 +9,7 @@ import click
 
 from naturo.cli import browser_cmd
 from naturo.cli._browser._group import browser
-from naturo.cli.error_helpers import emit_error
+from naturo.cli.error_helpers import emit_error, success_envelope
 
 
 # ── Navigate ──────────────────────────────────────────────────────────────────
@@ -34,9 +34,9 @@ def navigate(ctx: click.Context, url: str, wait_until: str, json_output: bool) -
         page.navigate(url, wait_until=wait_until)
         if json_output:
             click.echo(json_dumps({
+                "success": True,
                 "url": page.url,
                 "title": page.title,
-                "status": "ok",
             }))
         else:
             click.echo(f"Navigated to: {page.url}")
@@ -63,7 +63,7 @@ def eval_cmd(ctx: click.Context, expression: str, json_output: bool) -> None:
     try:
         result = page.evaluate(expression)
         if json_output:
-            click.echo(json_dumps({"result": result}))
+            click.echo(json_dumps({"success": True, "result": result}))
         else:
             click.echo(result)
     finally:
@@ -79,7 +79,7 @@ def url_cmd(ctx: click.Context, json_output: bool) -> None:
     try:
         current_url = page.url
         if json_output:
-            click.echo(json_dumps({"url": current_url}))
+            click.echo(json_dumps({"success": True, "url": current_url}))
         else:
             click.echo(current_url)
     finally:
@@ -95,7 +95,7 @@ def title_cmd(ctx: click.Context, json_output: bool) -> None:
     try:
         current_title = page.title
         if json_output:
-            click.echo(json_dumps({"title": current_title}))
+            click.echo(json_dumps({"success": True, "title": current_title}))
         else:
             click.echo(current_title)
     finally:
@@ -114,7 +114,7 @@ def tabs_cmd(ctx: click.Context, json_output: bool) -> None:
     try:
         tab_list = page.tabs()
         if json_output:
-            click.echo(json_dumps(tab_list, indent=2))
+            click.echo(json_dumps(success_envelope("tabs", tab_list), indent=2))
         else:
             for i, tab in enumerate(tab_list):
                 click.echo(f"  {i + 1}. [{tab.get('id', '')[:8]}] {tab.get('title', '')} — {tab.get('url', '')}")
@@ -188,7 +188,7 @@ def scroll_cmd(ctx: click.Context, to_bottom: bool, to_top: bool,
             )
 
         if json_output:
-            click.echo(json_dumps({"status": "ok", "action": msg}))
+            click.echo(json_dumps({"success": True, "action": msg}))
         else:
             click.echo(msg)
     finally:

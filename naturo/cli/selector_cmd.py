@@ -471,6 +471,14 @@ def selector_export(app_name: str, output_path: str | None, json_output: bool):
             click.echo(json_dumps({"success": True, "path": output_path, "count": len(merged)}))
         else:
             click.echo(f"Exported {len(merged)} selectors to {output_path}")
+    elif json_output:
+        # (#1142) Piping to stdout under -j still carries the canonical success
+        # envelope so an agent can rely on top-level ``success``; the re-importable
+        # document keys (app/selectors) follow, plus a count for symmetry with the
+        # --output path above.
+        click.echo(json_dumps({
+            "success": True, "app": app_name, "selectors": merged, "count": len(merged),
+        }, ensure_ascii=False))
     else:
         click.echo(content)
 
