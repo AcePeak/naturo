@@ -352,6 +352,18 @@ class ElementTreeMixin:
                     "readable": getattr(el, "readable", None),
                     "actionable": getattr(el, "actionable", None),
                     "editable": getattr(el, "editable", None),
+                    # (#896) UIA accessibility properties — same bridge→backend
+                    # getattr survival as states/readable above. Populated by the
+                    # native UIA traversal; absent (→ None, dropped) for backends
+                    # that don't emit them and for test fixtures.
+                    "is_enabled": getattr(el, "is_enabled", None),
+                    "is_offscreen": getattr(el, "is_offscreen", None),
+                    "help_text": getattr(el, "help_text", None),
+                    "localized_control_type": getattr(
+                        el, "localized_control_type", None),
+                    "is_keyboard_focusable": getattr(
+                        el, "is_keyboard_focusable", None),
+                    "has_keyboard_focus": getattr(el, "has_keyboard_focus", None),
                 }.items() if v is not None
             }
 
