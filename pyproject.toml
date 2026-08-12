@@ -60,8 +60,11 @@ dev = [
     # need the mcp package to actually RUN — otherwise they importorskip and are
     # silently skipped. The cross-platform "Python Tests" CI jobs install only
     # ``.[dev]`` (the Windows-DLL job adds ``mcp``), so without this the MCP server
-    # was untested on Ubuntu/macOS. Pull in the pinned mcp so the tests run everywhere.
-    "naturo[mcp]",
+    # was untested on Ubuntu/macOS. Pull in the pinned mcp so the tests run.
+    # Gated to py>=3.10: EVERY mcp release requires Python >=3.10, so on 3.9 there is
+    # no installable mcp at all — the tests legitimately skip there (mcp genuinely
+    # unavailable), and 3.9 must not try to install it or the whole `.[dev]` fails.
+    "naturo[mcp]; python_version >= '3.10'",
 ]
 ai = [
     "anthropic>=0.20,<2.0",
