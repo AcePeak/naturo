@@ -10,7 +10,11 @@ import sys
 
 import click
 
-from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.error_helpers import (
+    emit_error,
+    emit_exception_error,
+    success_envelope,
+)
 from naturo.errors import NaturoError
 
 
@@ -194,7 +198,10 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
                         "width": el.width,
                         "height": el.height,
                     })
-                click.echo(json_dumps(output))
+                # (#1054) Wrap the collection in the canonical success envelope
+                # ({"success": true, "elements": [...], "count": N}) so --all -j
+                # matches ``find -j`` and every other command's success shape.
+                click.echo(json_dumps(success_envelope("elements", output)))
             else:
                 if not matches:
                     filters = []
@@ -275,7 +282,11 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
             )
 
         if json_output:
+            # (#1054) Lead with the success envelope key so ``get -j`` carries
+            # ``"success": true`` like every other command (and its own error
+            # path). The element fields follow, unchanged, for backward compat.
             element_data = {
+                "success": True,
                 "ref": ref,
                 "role": result.get("role"),
                 "name": result.get("name"),

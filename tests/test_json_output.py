@@ -95,7 +95,9 @@ class TestJSONOutputFormat:
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output)
+        # (#865) see -j now wraps the tree in a success envelope; these tests
+        # inspect the tree body, so unwrap it here.
+        data = json.loads(result.output)["tree"]
 
         # Root: has AutomationId "RootWindow"
         assert data["id"] == "e1"
@@ -122,7 +124,9 @@ class TestJSONOutputFormat:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
-        data = json.loads(result.output)
+        # (#865) see -j now wraps the tree in a success envelope; these tests
+        # inspect the tree body, so unwrap it here.
+        data = json.loads(result.output)["tree"]
         txt = data["children"][2]
         assert txt["automation_id"] == ""
 
@@ -145,7 +149,9 @@ class TestJSONOutputFormat:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
-        data = json.loads(result.output)
+        # (#865) see -j now wraps the tree in a success envelope; these tests
+        # inspect the tree body, so unwrap it here.
+        data = json.loads(result.output)["tree"]
         txt = data["children"][2]
         assert txt["automation_id"] == ""
 
@@ -165,7 +171,9 @@ class TestJSONOutputFormat:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
-        data = json.loads(result.output)
+        # (#865) see -j now wraps the tree in a success envelope; these tests
+        # inspect the tree body, so unwrap it here.
+        data = json.loads(result.output)["tree"]
 
         # Root has no parent
         assert "parent_ref" not in data
@@ -192,7 +200,9 @@ class TestJSONOutputFormat:
                 mock_platform.system.return_value = "Windows"
                 result = runner.invoke(see, ["--json", "--no-snapshot"])
 
-        data = json.loads(result.output)
+        # (#865) see -j now wraps the tree in a success envelope; these tests
+        # inspect the tree body, so unwrap it here.
+        data = json.loads(result.output)["tree"]
 
         def check(node):
             parent = node.get("parent_ref")

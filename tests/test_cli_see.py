@@ -356,10 +356,13 @@ class TestJsonOutput:
             ], catch_exceptions=False)
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["role"] == "Window"
-        assert data["name"] == "Test Window"
-        assert "children" in data
-        assert len(data["children"]) == 2
+        # (#865) Success now emits the canonical envelope: success + tree.
+        assert data["success"] is True
+        tree = data["tree"]
+        assert tree["role"] == "Window"
+        assert tree["name"] == "Test Window"
+        assert "children" in tree
+        assert len(tree["children"]) == 2
         assert data["dpi_context"]["scale_factor"] == 1.0
 
     def test_json_contains_selectors(self, runner, mock_backend):
@@ -369,8 +372,9 @@ class TestJsonOutput:
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
         data = json.loads(result.output)
-        assert "selector" in data
-        assert "selector" in data["children"][0]
+        tree = data["tree"]
+        assert "selector" in tree
+        assert "selector" in tree["children"][0]
 
     def test_json_sequential_refs(self, runner, mock_backend):
         """JSON output assigns sequential e1, e2, e3 IDs."""
@@ -379,9 +383,10 @@ class TestJsonOutput:
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
         data = json.loads(result.output)
-        assert data["id"] == "e1"
-        assert data["children"][0]["id"] == "e2"
-        assert data["children"][1]["id"] == "e3"
+        tree = data["tree"]
+        assert tree["id"] == "e1"
+        assert tree["children"][0]["id"] == "e2"
+        assert tree["children"][1]["id"] == "e3"
 
     def test_json_parent_ref(self, runner, mock_backend):
         """Children in JSON have parent_ref pointing to parent's display ID."""
@@ -390,7 +395,7 @@ class TestJsonOutput:
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
         data = json.loads(result.output)
-        child = data["children"][0]
+        child = data["tree"]["children"][0]
         assert child["parent_ref"] == "e1"
         assert child["parent_id"] == "e1"
 
@@ -413,7 +418,7 @@ class TestJsonOutput:
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
         data = json.loads(result.output)
-        edit_node = data["children"][1]  # The Edit element
+        edit_node = data["tree"]["children"][1]  # The Edit element
         assert edit_node["value_preview"] == "Hello world"
         assert edit_node["value_length"] == 11
 
@@ -424,7 +429,7 @@ class TestJsonOutput:
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
         data = json.loads(result.output)
-        btn = data["children"][0]
+        btn = data["tree"]["children"][0]
         assert btn["automation_id"] == "btn1"
 
     def test_json_dpi_context_fallback(self, runner, mock_backend):
@@ -437,6 +442,30 @@ class TestJsonOutput:
         data = json.loads(result.output)
         assert data["dpi_context"]["scale_factor"] == 1.0
         assert data["dpi_context"]["dpi"] == 96
+
+    def test_json_success_envelope_contract(self, runner, mock_backend):
+        """(#865) Success emits the same ``success`` discriminator as failure.
+
+        Pins the whole envelope: ``success`` is present and True, the element
+        tree is under ``"tree"`` (not spilled at the root), and the run-level
+        metadata (``dpi_context``) sits alongside it — so a scripter can branch
+        on ``.success`` on both the success and error paths (the error path
+        already emits ``{"success": false, ...}``).
+        """
+        with _patch_platform(), _patch_backend(mock_backend):
+            result = runner.invoke(see, [
+                "--json", "--no-snapshot",
+            ], catch_exceptions=False)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "success" in data  # the discriminator is always present
+        assert data["success"] is True
+        assert isinstance(data["tree"], dict)
+        assert data["tree"]["role"] == "Window"
+        # Tree body must not leak to the envelope root.
+        assert "role" not in data
+        assert "children" not in data
+        assert "dpi_context" in data
 
 
 # ── Visible-only filtering ─────────────────────────────────────────────
@@ -465,7 +494,7 @@ class TestVisibleOnlyFilter:
             result = runner.invoke(see, [
                 "--json", "--no-snapshot", "--visible-only",
             ], catch_exceptions=False)
-        data = json.loads(result.output)
+        data = json.loads(result.output)["tree"]
         child_names = [c["name"] for c in data["children"]]
         assert "Visible" in child_names
         assert "Hidden" not in child_names
@@ -511,7 +540,7 @@ class TestVisibleOnlyFilter:
             result = runner.invoke(see, [
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
-        data = json.loads(result.output)
+        data = json.loads(result.output)["tree"]
         off_child = data["children"][0]
         assert off_child["offscreen"] is True
 
@@ -902,7 +931,7 @@ class TestKeyboardShortcutOutput:
             result = runner.invoke(see, [
                 "--json", "--no-snapshot",
             ], catch_exceptions=False)
-        data = json.loads(result.output)
+        data = json.loads(result.output)["tree"]
         btn = data["children"][0]
         assert btn["keyboard_shortcut"] == "Ctrl+S"
 
@@ -923,6 +952,6 @@ class TestKeyboardShortcutOutput:
             result = runner.invoke(see, [
                 "--json", "--no-snapshot", "--backend", "uia",
             ], catch_exceptions=False)
-        data = json.loads(result.output)
+        data = json.loads(result.output)["tree"]
         btn = data["children"][0]
         assert btn["source"] == "cdp"

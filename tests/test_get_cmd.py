@@ -114,10 +114,42 @@ class TestGetCLI:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
+        # (#1054) Success now carries the canonical ``success`` envelope key so
+        # an agent can branch on resp["success"] like every other command.
+        assert data["success"] is True
         assert data["value"] == "Hello World"
         assert data["pattern"] == "ValuePattern"
         assert data["role"] == "Edit"
         assert data["ref"] == "e47"
+
+    def test_get_all_json_envelope(self):
+        """(#1054) get --all -j wraps matches in {success, elements, count}."""
+        from naturo.backends.base import ElementInfo
+
+        btn = ElementInfo(
+            id="e2", role="Button", name="OK", value=None,
+            x=1, y=2, width=3, height=4, children=[], properties={},
+        )
+        root = ElementInfo(
+            id="e1", role="Window", name="Root", value=None,
+            x=0, y=0, width=100, height=100, children=[btn], properties={},
+        )
+
+        mock = MagicMock()
+        mock.get_element_tree.return_value = root
+        runner = CliRunner()
+
+        with _apply_patches(mock):
+            result = runner.invoke(
+                main, ["--json", "get", "--all", "--role", "Button"],
+            )
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert isinstance(data["elements"], list)
+        assert data["count"] == len(data["elements"]) == 1
+        assert data["elements"][0]["role"] == "Button"
 
     def test_get_by_automation_id(self):
         """Get element value by AutomationId."""
@@ -765,9 +797,12 @@ class TestGetAllFlag:
             ])
 
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        # (#1054) --all -j now emits {success, elements, count}, not a bare array.
+        payload = json.loads(result.output)
+        assert payload["success"] is True
+        data = payload["elements"]
         assert isinstance(data, list)
-        assert len(data) == 3
+        assert len(data) == payload["count"] == 3
         names = [el["name"] for el in data]
         assert "Save" in names
         assert "Cancel" in names
@@ -786,7 +821,7 @@ class TestGetAllFlag:
             ])
 
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = json.loads(result.output)["elements"]
         assert len(data) == 2
         assert data[0]["value"] == "alice"
         assert data[1]["value"] == "***"
@@ -804,7 +839,7 @@ class TestGetAllFlag:
             ])
 
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = json.loads(result.output)["elements"]
         assert len(data) == 1
         assert data[0]["name"] == "Save"
         assert data[0]["role"] == "Button"
@@ -840,8 +875,10 @@ class TestGetAllFlag:
             ])
 
         assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert data == []
+        payload = json.loads(result.output)
+        assert payload["success"] is True
+        assert payload["elements"] == []
+        assert payload["count"] == 0
 
     def test_all_no_matches_plain(self):
         """--all with no matches exits with error in plain mode."""
@@ -895,7 +932,7 @@ class TestGetAllFlag:
                 "--json", "get", "--role", "Button", "--all",
             ])
 
-        data = json.loads(result.output)
+        data = json.loads(result.output)["elements"]
         first = data[0]
         assert "x" in first
         assert "y" in first

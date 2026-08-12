@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import io
+import json
 import logging
 import sys
 from collections.abc import Sequence
@@ -120,6 +121,88 @@ def _finalize_error_envelope(result: Any) -> Any:
             if err.get("suggested_action") is None:
                 err["suggested_action"] = _DEFAULT_SUGGESTED_ACTION.get(err["code"])
     return result
+
+
+# ── isError ↔ success reconciliation (#882) ──────────────────────────────────
+# FastMCP renders a tool that *returns normally* with ``isError: false`` even
+# when the returned payload is ``{"success": false, ...}`` — so an agent had to
+# check both the transport ``isError`` flag AND the payload ``success`` field.
+# ``_install_iserror_success_sync`` wraps the low-level ``CallToolRequest``
+# handler so the transport-level ``isError`` is derived from the payload:
+# ``isError == not success`` for every naturo-originated result. (Genuine
+# protocol failures — unknown tool, malformed args, no desktop session — still
+# raise and surface as ``isError: true`` with no ``success`` payload, which
+# remains correct.)
+
+
+def _payload_reports_failure(payload: Any) -> bool:
+    """True only when a decoded payload positively reports ``success: false``."""
+    return isinstance(payload, dict) and payload.get("success") is False
+
+
+def _content_reports_failure(
+    content: Any, structured_content: Any = None,
+) -> bool:
+    """True when a CallToolResult's body positively reports ``success: false``.
+
+    Prefers ``structuredContent`` when it carries the ``success`` flag; else
+    parses the first ``TextContent`` block's JSON text — the shape naturo's
+    ``-> dict`` tools produce (a single JSON text block, no structured content).
+    Non-JSON / non-``success`` bodies yield ``False`` so only a positive failure
+    signal ever flips ``isError``.
+    """
+    if _payload_reports_failure(structured_content):
+        return True
+    try:
+        iterator = iter(content)
+    except TypeError:
+        return False
+    for block in iterator:
+        text = getattr(block, "text", None)
+        if isinstance(text, str):
+            try:
+                payload = json.loads(text)
+            except (ValueError, TypeError):
+                continue
+            if _payload_reports_failure(payload):
+                return True
+    return False
+
+
+def _install_iserror_success_sync(server: FastMCP) -> None:
+    """Make the transport ``isError`` track the payload ``success`` flag (#882).
+
+    Wraps the low-level ``CallToolRequest`` handler FastMCP registers at
+    construction. That handler returns a :class:`~mcp.types.ServerResult`
+    wrapping a :class:`~mcp.types.CallToolResult` with ``isError=False`` for any
+    tool that returned normally — including naturo's ``{"success": false, ...}``
+    failure envelopes. The wrapper flips ``isError`` to ``True`` when (and only
+    when) the result body reports ``success: false``, giving MCP clients a single
+    discriminator (``isError``) that always agrees with ``payload.success``.
+
+    Intercepting the transport handler (rather than ``FastMCP.call_tool``) keeps
+    the in-process ``call_tool`` return type unchanged for direct callers/tests.
+    """
+    from mcp import types as _mcp_types
+
+    handlers = server._mcp_server.request_handlers
+    original = handlers.get(_mcp_types.CallToolRequest)
+    if original is None:  # pragma: no cover - handler is always registered
+        return
+
+    @functools.wraps(original)
+    async def _handler(req: _mcp_types.CallToolRequest) -> _mcp_types.ServerResult:
+        result = await original(req)
+        root = getattr(result, "root", None)
+        if (
+            isinstance(root, _mcp_types.CallToolResult)
+            and not root.isError
+            and _content_reports_failure(root.content, root.structuredContent)
+        ):
+            root.isError = True
+        return result
+
+    handlers[_mcp_types.CallToolRequest] = _handler
 
 
 class _SanitizingFastMCP(FastMCP):
@@ -357,6 +440,10 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     # Pydantic parameter-validation errors are sanitized by the
     # _SanitizingFastMCP.call_tool override, which is wired into the low-level
     # JSON-RPC handler at construction time (see the class docstring, #844).
+
+    # (#882) Make the transport ``isError`` flag track the payload's ``success``
+    # flag for every registered tool, so agents need only one discriminator.
+    _install_iserror_success_sync(server)
     return server
 
 

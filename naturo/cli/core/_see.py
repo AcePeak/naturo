@@ -514,8 +514,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["correctness"] = _fusion["correctness"]
                     d["confidence"] = _fusion["confidence"]
                 return d
-            out = to_dict(tree)
-            assert out is not None, "Root element should never be filtered"
+            tree_dict = to_dict(tree)
+            assert tree_dict is not None, "Root element should never be filtered"
+
+            # (#865) Wrap the tree in the canonical success envelope so ``see -j``
+            # emits ``{"success": true, ...}`` on success — matching its own error
+            # path and every other command (``list windows -j`` etc.). The element
+            # tree lives under ``"tree"``; the run-level metadata (snapshot_id,
+            # cascade_stats, recognition_summary, dpi_context) sits alongside it at
+            # the envelope top level, so a scripter can branch on ``.success``.
+            out: dict[str, Any] = {"success": True, "tree": tree_dict}
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
             if cascade_stats:
