@@ -49,6 +49,8 @@ _EXPECTED_WINDOW_TARGET_TOOLS = frozenset({
     "get_element_value", "set_element_value", "toggle_element",
     "select_element", "expand_collapse_element", "wait_for_element",
     "wait_until_gone", "type_text", "press_key",
+    # (#1318) click gained hwnd/window_title to name + verify its target window.
+    "click",
 })
 
 # Tools that legitimately still declare a ``title`` parameter meaning something
