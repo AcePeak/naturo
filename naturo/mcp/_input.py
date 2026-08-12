@@ -22,8 +22,19 @@ def _paste_text(backend, text: str) -> bool:
     caller's clipboard is saved and restored so it is not clobbered.
 
     Returns True if the paste was delivered (clipboard set + Ctrl+V sent).
+
+    (#1160) The clipboard content is routed through the SAME NATURO_SAFE_INPUT
+    guard as keystroke typing before Ctrl+V: pasting is subject to the identical
+    SendInput/focus-race threat, so a bare paste must not become a bypass. When
+    the guard is armed and ``text`` is unsafe, nothing is set on the clipboard
+    and nothing is pasted — the helper returns False without delivering. The
+    caller (``type_text``) already validates ``text`` up front, so this is
+    defense-in-depth that keeps the guarantee at the paste boundary itself.
     """
     import time
+    from naturo.safety import unsafe_input_reason
+    if unsafe_input_reason(text):
+        return False
     try:
         saved = backend.clipboard_get()
     except Exception:

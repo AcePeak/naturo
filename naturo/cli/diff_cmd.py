@@ -49,9 +49,13 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
         return
     hwnd = resolved_hwnd
 
-    # If --app is given without --hwnd, use app as window title
-    if app and not hwnd and not window_title:
-        window_title = app
+    # (#1121) --app resolves by application/process NAME — the same resolver
+    # `see`/`capture`/`list windows` use — NOT by window title. The old code
+    # aliased `window_title = app`, so `diff --app Calculator` looked for a
+    # window whose *title* contained "Calculator" and failed on any app whose
+    # title differs from its name (e.g. the localized "计算器"). We now pass
+    # `app` straight through to `backend.get_element_tree(app=...)`, which runs
+    # `_resolve_hwnd(app=...)`.
 
     if interval is not None and interval <= 0:
         msg = f"--interval must be > 0, got {interval}"
@@ -62,7 +66,7 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
         sys.exit(1)
         return
 
-    if not snapshots and not window_title and not hwnd:
+    if not snapshots and not window_title and not hwnd and not app:
         msg = "Specify two --snapshot IDs, --window, --app, --hwnd, or --app-id"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
@@ -85,13 +89,15 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
     from naturo.errors import NaturoError, WindowNotFoundError
 
     try:
-        if window_title or hwnd:
+        if window_title or hwnd or app:
             backend = get_backend()
-            target_label = window_title or f"hwnd={hwnd}"
+            target_label = window_title or app or f"hwnd={hwnd}"
             if not json_output:
                 click.echo(f"Capturing UI tree for '{target_label}'...")
 
             tree_kwargs: dict = {}
+            if app:
+                tree_kwargs["app"] = app
             if window_title:
                 tree_kwargs["window_title"] = window_title
             if hwnd:
@@ -111,21 +117,34 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
 
             result = diff_trees(tree_before, tree_after)
         else:
-            # Snapshot-based diff
-            from naturo.snapshot import SnapshotManager
-            mgr = SnapshotManager()
-            _snap1 = mgr.get_snapshot(snapshots[0])
-            _snap2 = mgr.get_snapshot(snapshots[1])
+            # (#1121) Snapshot-based diff. `see` stores the full element tree in
+            # each snapshot's `ui_map` (a flat dict of UIElement keyed by eN ref,
+            # with parent_id/children links), so we can rebuild the two trees and
+            # feed them to the SAME `diff_trees` routine the live --window path
+            # uses. Previously this branch was a hard-coded "not yet implemented"
+            # placeholder even though it was the first documented example.
+            from naturo.snapshot import get_snapshot_manager
+            mgr = get_snapshot_manager()
+            snap_before = mgr.get_snapshot(snapshots[0])
+            snap_after = mgr.get_snapshot(snapshots[1])
 
-            # For snapshot diff, we'd need the element trees stored in snapshots
-            # This is a placeholder — real impl would extract trees from snapshot data
-            msg = "Snapshot-based diff requires element trees stored in snapshots (not yet implemented)"
-            if json_output:
-                click.echo(_json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Note: {msg}", err=True)
-            sys.exit(1)
-            return
+            tree_before = _tree_from_snapshot(snap_before)
+            tree_after = _tree_from_snapshot(snap_after)
+            if tree_before is None or tree_after is None:
+                missing = snapshots[0] if tree_before is None else snapshots[1]
+                msg = (
+                    f"Snapshot '{missing}' has no stored element tree "
+                    f"(ui_map is empty). Re-capture it with 'naturo see' before "
+                    f"diffing."
+                )
+                if json_output:
+                    click.echo(_json_error_str("INVALID_INPUT", msg))
+                else:
+                    click.echo(f"Error: {msg}", err=True)
+                sys.exit(1)
+                return
+
+            result = diff_trees(tree_before, tree_after)
 
         _output_diff(result, json_output)
 
@@ -149,6 +168,85 @@ def diff(ctx: click.Context, snapshots: tuple[str, ...], window_title: str | Non
         else:
             click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
+
+
+def _tree_from_snapshot(snapshot):
+    """Rebuild an ``ElementInfo`` tree from a snapshot's ``ui_map`` (#1121).
+
+    ``see`` persists the captured element tree flattened into
+    ``snapshot.ui_map`` — a ``dict[str, UIElement]`` keyed by ``eN`` ref, where
+    each :class:`~naturo.models.snapshot.UIElement` carries ``parent_id`` and a
+    ``children`` list of child refs. This reconstructs the nested
+    :class:`~naturo.backends.base.ElementInfo` tree that :func:`diff_trees`
+    consumes, so a snapshot-to-snapshot diff runs through the exact same
+    comparison path as the live ``--window`` diff.
+
+    Returns the root ``ElementInfo``, or ``None`` when the snapshot stored no
+    elements (empty ``ui_map``).
+    """
+    from naturo.backends.base import ElementInfo
+
+    ui_map = snapshot.ui_map or {}
+    if not ui_map:
+        return None
+
+    # First pass: a childless ElementInfo per element, keyed by ref.
+    nodes: dict[str, ElementInfo] = {}
+    for ref, el in ui_map.items():
+        frame = el.frame or (0, 0, 0, 0)
+        x, y, w, h = (list(frame) + [0, 0, 0, 0])[:4]
+        nodes[ref] = ElementInfo(
+            id=el.id or ref,
+            role=el.role or "",
+            name=el.title or el.label or "",
+            value=el.value,
+            x=int(x), y=int(y), width=int(w), height=int(h),
+            children=[],
+            properties={},
+        )
+
+    # Second pass: wire children by ref and note which refs are children.
+    referenced: set[str] = set()
+    for ref, el in ui_map.items():
+        parent = nodes[ref]
+        for child_ref in el.children or []:
+            child = nodes.get(child_ref)
+            if child is not None:
+                parent.children.append(child)
+                referenced.add(child_ref)
+
+    # Roots: elements with no parent in the map and never linked as a child.
+    roots = [
+        nodes[ref]
+        for ref, el in ui_map.items()
+        if ref not in referenced
+        and (el.parent_id is None or el.parent_id not in ui_map)
+    ]
+    if not roots:
+        # Degenerate/cyclic map — fall back to anything not referenced.
+        roots = [nodes[ref] for ref in ui_map if ref not in referenced]
+    if not roots:
+        roots = list(nodes.values())
+
+    if len(roots) == 1:
+        return roots[0]
+
+    # Multiple top-level windows: wrap them under a synthetic root so the whole
+    # forest is compared (mirrors how `see --app` merges multi-window trees).
+    return ElementInfo(
+        id="snapshot_root",
+        role="Snapshot",
+        name=(
+            snapshot.application_name
+            or snapshot.window_title
+            or snapshot.snapshot_id
+            or "snapshot"
+        ),
+        value=None,
+        x=0, y=0, width=0, height=0,
+        children=roots,
+        properties={},
+    )
 
 
 def _output_diff(result, json_output: bool) -> None:

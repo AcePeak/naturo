@@ -154,6 +154,35 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
 
     backend = _common._get_backend(json_output)
 
+    # (#1160) Close the clipboard-only paste bypass. A bare `type --paste`
+    # (text is None) injects the current clipboard via Ctrl+V — subject to the
+    # exact same SendInput/focus-race threat the #960 guard neutralizes — yet
+    # the text-argument guard above never ran because there was no text. When
+    # the guard is armed, read the clipboard now and run it through the SAME
+    # unsafe_input_reason() check, refusing with UNSAFE_INPUT_BLOCKED (and
+    # injecting nothing) if the pending content is dangerous. Normal users
+    # (guard off) are unaffected: unsafe_input_reason() short-circuits and the
+    # clipboard is not even read.
+    if paste_mode and text is None:
+        from naturo.safety import is_safe_input_enabled, unsafe_input_reason
+        if is_safe_input_enabled():
+            try:
+                _clip = backend.clipboard_get()
+            except Exception as exc:
+                logger.debug("Clipboard read for safety guard failed: %s", exc)
+                _clip = None
+            # Only a real string is inspectable content; anything else
+            # (None / unknown clipboard type) is treated as nothing to check.
+            _unsafe = unsafe_input_reason(_clip if isinstance(_clip, str) else None)
+            if _unsafe:
+                _common._json_err(
+                    f"Refusing to paste unsafe clipboard content ({_unsafe}) "
+                    f"because NATURO_SAFE_INPUT=1 is set. Nothing was pasted.",
+                    json_output,
+                    code="UNSAFE_INPUT_BLOCKED",
+                )
+                return
+
     # Auto-routing: detect best interaction method for target app
     route_info = _common._auto_route(app, None, method, json_output)
 
