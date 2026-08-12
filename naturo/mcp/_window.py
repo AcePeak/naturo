@@ -40,107 +40,124 @@ def register_window_tools(server, _get_backend, _safe_tool):
     @server.tool()
     @_safe_tool
     def focus_window(
-        title: Optional[str] = None,
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Bring a window to the foreground and give it focus.
 
         Args:
-            title: Window title (partial match).
+            window_title: Window title (partial match). Canonical selector name,
+                consistent across all MCP window-targeting tools (#900).
             app: Application/process name (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title`` (kept for
+                back-compat); ``window_title`` wins if both are given.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.focus_window(title=app or title, hwnd=hwnd)
         return {"success": True, "action": "focus"}
 
     @server.tool()
     @_safe_tool
     def window_close(
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
         force: bool = False,
+        title: Optional[str] = None,
     ) -> dict:
         """Close a window (graceful or forced).
 
         Args:
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
             force: If True, forcefully terminate the owning process.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.close_window(title=app or title, hwnd=hwnd, force=force)
         return {"success": True, "action": "close"}
 
     @server.tool()
     @_safe_tool
     def window_minimize(
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Minimize a window.
 
         Args:
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.minimize_window(title=app or title, hwnd=hwnd)
         return {"success": True, "action": "minimize"}
 
     @server.tool()
     @_safe_tool
     def window_maximize(
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Maximize a window.
 
         Args:
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.maximize_window(title=app or title, hwnd=hwnd)
         return {"success": True, "action": "maximize"}
 
     @server.tool()
     @_safe_tool
     def window_restore(
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Restore a minimized or maximized window to normal state.
 
         Args:
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.restore_window(title=app or title, hwnd=hwnd)
         return {"success": True, "action": "restore"}
 
@@ -149,23 +166,26 @@ def register_window_tools(server, _get_backend, _safe_tool):
     def window_move(
         x: int,
         y: int,
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Move a window to a position (keeps current size).
 
         Args:
             x: Target X coordinate.
             y: Target Y coordinate.
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
         """
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.move_window(x=x, y=y, title=app or title, hwnd=hwnd)
         return {"success": True, "action": "move", "x": x, "y": y}
 
@@ -174,18 +194,20 @@ def register_window_tools(server, _get_backend, _safe_tool):
     def window_resize(
         width: int,
         height: int,
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Resize a window (keeps current position).
 
         Args:
             width: Target width in pixels (must be >= 1).
             height: Target height in pixels (must be >= 1).
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
@@ -193,6 +215,7 @@ def register_window_tools(server, _get_backend, _safe_tool):
         if width < 1 or height < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"width and height must be >= 1, got {width}x{height}"}}
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.resize_window(width=width, height=height, title=app or title, hwnd=hwnd)
         return {"success": True, "action": "resize", "width": width, "height": height}
 
@@ -203,9 +226,10 @@ def register_window_tools(server, _get_backend, _safe_tool):
         y: int,
         width: int,
         height: int,
+        window_title: Optional[str] = None,
         app: Optional[str] = None,
-        title: Optional[str] = None,
         hwnd: Optional[int] = None,
+        title: Optional[str] = None,
     ) -> dict:
         """Set window position and size in one call.
 
@@ -214,9 +238,10 @@ def register_window_tools(server, _get_backend, _safe_tool):
             y: Target Y coordinate.
             width: Target width in pixels (must be >= 1).
             height: Target height in pixels (must be >= 1).
+            window_title: Window title (partial match). Canonical selector name (#900).
             app: Application/process name (partial match).
-            title: Window title (partial match).
             hwnd: Direct window handle.
+            title: Deprecated alias for ``window_title``; ``window_title`` wins.
 
         Returns:
             Dict with success flag.
@@ -224,6 +249,7 @@ def register_window_tools(server, _get_backend, _safe_tool):
         if width < 1 or height < 1:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"width and height must be >= 1, got {width}x{height}"}}
         backend = _get_backend()
+        title = window_title if window_title is not None else title
         backend.set_bounds(x=x, y=y, width=width, height=height, title=app or title, hwnd=hwnd)
         return {"success": True, "action": "set-bounds", "x": x, "y": y, "width": width, "height": height}
 
