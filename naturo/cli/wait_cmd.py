@@ -134,12 +134,11 @@ def wait(ctx, duration, element, window_title, gone, timeout, interval,
         return
 
     if not has_condition:
+        # Nothing to wait on — required positional/flag absent → usage error,
+        # exit 2 (#897). Envelope code stays INVALID_INPUT; only exit code differs.
+        from naturo.cli.error_helpers import emit_usage_error
         msg = "Specify a duration (e.g. 'naturo wait 3') or a condition (--element, --window, --gone)"
-        if json_output:
-            click.echo(_json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        emit_usage_error(msg, json_output)
         return
 
     if timeout < 0:

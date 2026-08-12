@@ -24,12 +24,14 @@ class TestWaitCommand:
 
     def test_wait_no_args(self, runner):
         result = runner.invoke(main, ["wait"])
-        assert result.exit_code == 1
+        # #897: missing required arg (no duration/condition) is a usage error → exit 2.
+        assert result.exit_code == 2
         assert "Specify" in result.output or "error" in result.output.lower()
 
     def test_wait_json_no_args(self, runner):
         result = runner.invoke(main, ["wait", "--json"])
-        assert result.exit_code == 1
+        # #897: exit code moves to 2 for the usage class; envelope code stays INVALID_INPUT.
+        assert result.exit_code == 2
         data = json.loads(result.output)
         assert data["success"] is False
         assert "INVALID_INPUT" in data["error"]["code"]
@@ -327,7 +329,8 @@ class TestSnapshotCleanValidation:
 class TestGlobalJsonFlag:
     def test_json_flag_propagates(self, runner):
         result = runner.invoke(main, ["--json", "wait"])
-        assert result.exit_code == 1
+        # #897: `wait` with no duration/condition is a usage error → exit 2.
+        assert result.exit_code == 2
         # Should produce JSON error output
         data = json.loads(result.output)
         assert "success" in data

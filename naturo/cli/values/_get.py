@@ -13,6 +13,7 @@ import click
 from naturo.cli.error_helpers import (
     emit_error,
     emit_exception_error,
+    emit_usage_error,
     success_envelope,
 )
 from naturo.errors import NaturoError
@@ -183,8 +184,8 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
     # ── --all mode: return all matching elements ─────────────────────────
     if get_all:
         if not role and not name:
-            emit_error(
-                "INVALID_INPUT",
+            # Missing required flag for --all mode → usage error, exit 2 (#897).
+            emit_usage_error(
                 "--all requires --role or --name to specify what to search for",
                 json_output,
                 suggested_action="Add --role (e.g. --role Button) or --name "
@@ -264,8 +265,8 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
 
     # ── Single element mode (default) ────────────────────────────────────
     if not ref and not automation_id and not role and not name:
-        emit_error(
-            "INVALID_INPUT",
+        # No target supplied → missing required arg → usage error, exit 2 (#897).
+        emit_usage_error(
             "Specify a target: element ref (e47), --automation-id, or --role/--name",
             json_output,
             suggested_action="Provide a target element using a ref (e47), "

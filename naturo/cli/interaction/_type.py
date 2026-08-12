@@ -112,8 +112,11 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     if paste_mode and not text:
         text = None  # Signal clipboard-only paste (no text to set)
     elif not text:
-        _common._json_err("TEXT argument is required (or use --paste to paste clipboard)",
-                  json_output, code="INVALID_INPUT")
+        # Missing required positional → usage error, exit 2 (#897). The envelope
+        # code stays INVALID_INPUT; only the exit code differs from a runtime fault.
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("TEXT argument is required (or use --paste to paste clipboard)",
+                         json_output)
         return
 
     # (#661) Text is typed literally by default — Windows paths like

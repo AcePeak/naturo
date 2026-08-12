@@ -152,8 +152,10 @@ def press(keys: tuple[str, ...], count: int, delay: float, hold_duration: float 
     if ref_alias and not on_element:
         on_element = ref_alias
     if not keys:
-        _common._json_err("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, ctrl+c).",
-                  json_output, code="INVALID_INPUT")
+        # Missing required positional → usage error, exit 2 (#897).
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("Missing argument 'KEY'. Provide a key name (e.g., enter, tab, ctrl+c).",
+                         json_output)
         return
 
     if count < 1:
@@ -473,7 +475,9 @@ def hotkey(keys, keys_option, hold_duration, app, window_title, hwnd,
     elif keys_option:
         combo = "+".join(keys_option)
     else:
-        _common._json_err("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output, code="INVALID_INPUT")
+        # No key combo supplied → usage error, exit 2 (#897).
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("Specify keys as 'ctrl+c' or via --keys ctrl --keys c", json_output)
         return
 
     # Delegate to press via Click context invoke

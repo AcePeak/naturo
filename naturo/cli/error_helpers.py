@@ -19,6 +19,16 @@ from naturo.errors import NaturoError, category_for_code
 
 _CommandT = TypeVar("_CommandT", bound=click.Command)
 
+# POSIX reserves exit code 2 for usage errors ("the caller invoked me wrong").
+# Click's own argument parser already exits 2 for the errors it catches (unknown
+# subcommand, missing flag value, no subcommand on a group). naturo's *custom*
+# pre-execution validators — missing required positional, missing required flag —
+# must exit with the same code so a scripter's `case $? in 2) usage ;; 1) retry`
+# dispatcher classifies every usage mistake identically. This is distinct from an
+# operation failure (exit 1) and from a runtime-invalid *value* (called correctly,
+# value rejected during execution), which both stay on exit 1. See issue #897.
+USAGE_ERROR_EXIT = 2
+
 
 def success_envelope(collection_key: str, items: Iterable[Any]) -> dict[str, Any]:
     """Build the canonical ``-j`` success envelope for a collection read.
@@ -510,6 +520,43 @@ def emit_error(
     else:
         click.echo(f"Error: {message}", err=True)
     sys.exit(exit_code)
+
+
+def emit_usage_error(
+    message: str,
+    json_output: bool,
+    *,
+    code: str = "INVALID_INPUT",
+    suggested_action: Optional[str] = None,
+) -> NoReturn:
+    """Emit a pre-execution usage / argument-validation error and exit **2** (#897).
+
+    Use this for the *usage* class only: a required positional or required flag is
+    absent, so the caller invoked the command wrong. POSIX reserves exit code 2 for
+    this, matching Click's own parser (which already exits 2 for unknown
+    subcommands / missing flag values). The emitted output — JSON envelope under
+    ``-j`` (default ``code`` ``INVALID_INPUT``) or a plain ``Error: <message>`` line
+    — is byte-for-byte identical to :func:`emit_error`; **only the process exit code
+    differs** (2 instead of 1). The envelope ``code`` and the exit code are
+    independent (issue #897): the envelope keeps ``INVALID_INPUT``.
+
+    Do NOT route runtime-invalid *values* here (e.g. ``--wpm 0``, a duration out of
+    range, an unresolvable ref): those are called-correctly-but-rejected operation
+    failures and stay on :func:`emit_error`'s exit-1 path.
+
+    Args:
+        message: Human-readable message (identical to what ``emit_error`` prints).
+        json_output: Whether to emit the JSON envelope instead of plain text.
+        code: JSON envelope error code. Stays ``INVALID_INPUT`` for the arg class.
+        suggested_action: Optional recovery hint override for the envelope.
+    """
+    emit_error(
+        code,
+        message,
+        json_output,
+        suggested_action=suggested_action,
+        exit_code=USAGE_ERROR_EXIT,
+    )
 
 
 def emit_exception_error(

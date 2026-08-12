@@ -10,7 +10,7 @@ import platform
 
 import click
 
-from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.error_helpers import emit_error, emit_exception_error, emit_usage_error
 from naturo.errors import NaturoError, StaleSnapshotCacheError
 
 
@@ -197,8 +197,8 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
 
     # Validate: need a target element
     if not ref and not automation_id and not role and not name:
-        emit_error(
-            "INVALID_INPUT",
+        # No target supplied → missing required arg → usage error, exit 2 (#897).
+        emit_usage_error(
             "Specify a target: element ref (e47), --automation-id, "
             "or --role/--name",
             json_output,
@@ -218,8 +218,8 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
         )
 
     if action_flags == 0 and value is None:
-        emit_error(
-            "INVALID_INPUT",
+        # Neither a value nor an action flag → missing required arg → exit 2 (#897).
+        emit_usage_error(
             "Specify a value to set, or use --toggle/--select/"
             "--expand/--collapse",
             json_output,
