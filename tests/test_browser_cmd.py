@@ -453,6 +453,17 @@ class TestTabs:
         assert result.exit_code == 0
         mock_page.switch_tab.assert_called_once_with("ABC123")
 
+    def test_tab_switch_json(self, runner: click.testing.CliRunner,
+                             mock_page: MagicMock) -> None:
+        # (#1152) `browser tab` now accepts --json and emits the success envelope.
+        result = _invoke(runner, ["tab", "ABC123", "--json"], mock_page)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["action"] == "browser_tab"
+        assert data["tab_id"] == "ABC123"
+        mock_page.switch_tab.assert_called_once_with("ABC123")
+
 
 # ── scroll ───────────────────────────────────────────────────────────────────
 
@@ -524,6 +535,18 @@ class TestClose:
         result = _invoke(runner, ["close"], mock_page)
         assert result.exit_code == 0
         assert "closed" in result.output.lower()
+        mock_page.close.assert_called()
+
+    def test_close_json(self, runner: click.testing.CliRunner,
+                        mock_page: MagicMock) -> None:
+        # (#1152) `browser close` now accepts --json and emits the success
+        # envelope instead of bare prose — it is on every scripted session's
+        # teardown path.
+        result = _invoke(runner, ["close", "--json"], mock_page)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["action"] == "browser_close"
         mock_page.close.assert_called()
 
 

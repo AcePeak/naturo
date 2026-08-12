@@ -124,13 +124,21 @@ def tabs_cmd(ctx: click.Context, json_output: bool) -> None:
 
 @browser.command("tab")
 @click.argument("tab_id")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def tab_cmd(ctx: click.Context, tab_id: str) -> None:
+def tab_cmd(ctx: click.Context, tab_id: str, json_output: bool) -> None:
     """Switch to a specific tab by ID."""
-    page = browser_cmd._get_page(ctx)
+    page = browser_cmd._get_page(ctx, json_output=json_output)
     try:
         page.switch_tab(tab_id)
-        click.echo(f"Switched to tab: {tab_id}")
+        if json_output:
+            click.echo(json_dumps({
+                "success": True,
+                "action": "browser_tab",
+                "tab_id": tab_id,
+            }))
+        else:
+            click.echo(f"Switched to tab: {tab_id}")
     finally:
         page.close()
 
@@ -191,9 +199,16 @@ def scroll_cmd(ctx: click.Context, to_bottom: bool, to_top: bool,
 
 
 @browser.command("close")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def close_cmd(ctx: click.Context) -> None:
+def close_cmd(ctx: click.Context, json_output: bool) -> None:
     """Close the CDP connection."""
-    page = browser_cmd._get_page(ctx)
+    page = browser_cmd._get_page(ctx, json_output=json_output)
     page.close()
-    click.echo("Browser connection closed.")
+    if json_output:
+        click.echo(json_dumps({
+            "success": True,
+            "action": "browser_close",
+        }))
+    else:
+        click.echo("Browser connection closed.")
