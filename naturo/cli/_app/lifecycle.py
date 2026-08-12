@@ -39,12 +39,10 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
     if not name and app_name:
         name = app_name
     if not name and not path:
-        msg = "Specify application name or --path"
-        if json_output:
-            click.echo(_json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        # No app name or --path → missing required arg → usage error, exit 2 (#897).
+        # Envelope code stays INVALID_INPUT; only the exit code differs.
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("Specify application name or --path", json_output)
         return
 
     # (#776) Reject app IDs — launch requires an app name/path, not a running-app ID

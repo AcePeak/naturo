@@ -343,14 +343,13 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         if actionable or role:
             query = "*"
         else:
+            # Missing required positional → usage error, exit 2 (#897). Envelope
+            # code stays INVALID_INPUT; only the exit code differs from a fault.
+            from naturo.cli.error_helpers import emit_usage_error
             msg = ("Missing or empty argument 'QUERY'. Provide a non-empty query "
                    "as a positional arg or --query/-q option, or use --all to "
                    "match every element.")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            emit_usage_error(msg, json_output)
 
     # Auto-enable AI mode when --provider or --model is explicitly set (#287)
     if not ai and (ai_provider != "auto" or ai_model is not None or ai_api_key is not None):
