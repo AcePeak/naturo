@@ -60,7 +60,7 @@ def stealth_flags_cmd(json_output: bool) -> None:
     from naturo.browser._stealth import STEALTH_FLAGS
 
     if json_output:
-        click.echo(json_dumps({"flags": STEALTH_FLAGS}))
+        click.echo(json_dumps({"success": True, "flags": STEALTH_FLAGS}))
     else:
         click.echo(" ".join(STEALTH_FLAGS))
 

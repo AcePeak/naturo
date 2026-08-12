@@ -35,7 +35,7 @@ def screenshot_cmd(ctx: click.Context, path: str, selector: Optional[str],
             path, full_page=full_page, selector=selector
         )
         if json_output:
-            click.echo(json_dumps({"path": saved_path, "status": "ok"}))
+            click.echo(json_dumps({"success": True, "path": saved_path}))
         else:
             click.echo(f"Screenshot saved: {saved_path}")
     except ValueError as exc:

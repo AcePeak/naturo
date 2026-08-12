@@ -9,7 +9,7 @@ import click
 
 from naturo.cli import browser_cmd
 from naturo.cli._browser._group import browser
-from naturo.cli.error_helpers import emit_exception_error
+from naturo.cli.error_helpers import emit_exception_error, success_envelope
 
 
 # ── Launch / Profiles (#758) ────────────────────────────────────────────────
@@ -104,7 +104,7 @@ def profiles_cmd(user_data_dir: Optional[str], json_output: bool) -> None:
     profiles = _list_profiles(user_data_dir=user_data_dir)
 
     if json_output:
-        click.echo(json_dumps({"profiles": profiles, "count": len(profiles)}, indent=2))
+        click.echo(json_dumps(success_envelope("profiles", profiles), indent=2))
     elif not profiles:
         click.echo("No Chrome profiles found.")
         click.echo("Hint: profiles are read from Chrome's 'Local State' file.")
