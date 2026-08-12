@@ -51,10 +51,16 @@ _BOGUS_TITLE = "__no_such_window_zzz__"
 _SEMANTIC_EXCEPTIONS = {
     # Wait tools: a window that is not (yet) present is a valid target, not an
     # immediate error. ``wait_until_gone`` on an absent window even succeeds
-    # immediately ("already gone"); ``wait_for_element`` times out. Neither is
-    # the silent-foreground-fallback bug this contract guards against.
+    # immediately ("already gone"); ``wait_for_element``/``wait_for_window``
+    # time out (TIMEOUT, not WINDOW_NOT_FOUND). None is the silent-foreground-
+    # fallback bug this contract guards against.
     "wait_for_element",
     "wait_until_gone",
+    # (#900) wait_for_window gained the canonical ``window_title`` selector
+    # (renamed from ``title``), so it now enters this registry probe. Waiting
+    # for a not-yet-present window is a valid target → TIMEOUT, same family as
+    # the other wait tools above.
+    "wait_for_window",
 }
 
 
@@ -114,6 +120,18 @@ def _make_backend():
     # find_element resolves window_title internally via _resolve_hwnd (#963), so
     # an unmatched title raises here exactly as the real backend does.
     backend.find_element.side_effect = not_found
+    # (#900) The window-mutation tools (focus_window, window_close/minimize/
+    # maximize/restore/move/resize/set_bounds) gained the canonical
+    # ``window_title`` selector and so enter this registry probe. They delegate
+    # resolution to the backend, whose real implementation resolves the title
+    # via _resolve_hwnd and raises WindowNotFoundError on no match — never
+    # falling back to the foreground window. Mirror that here so the mock is
+    # faithful and the loud-failure contract is genuinely exercised.
+    for _method in (
+        "focus_window", "close_window", "minimize_window", "maximize_window",
+        "restore_window", "move_window", "resize_window", "set_bounds",
+    ):
+        getattr(backend, _method).side_effect = not_found
     return backend
 
 
