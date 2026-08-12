@@ -58,10 +58,20 @@ class TestFindQueryOption:
         assert "Missing argument" not in (result.output or "")
         mock_backend.get_element_tree.assert_called()
 
-    def test_query_option_overrides_positional(self, runner, mock_backend):
-        """When both provided, --query takes precedence over positional."""
+    def test_query_option_conflicts_with_positional(self, runner, mock_backend):
+        """Positional QUERY + --query is a conflict, not a silent override (#1201).
+
+        The old behavior silently let -q win and dropped the positional query;
+        supplying the text query via two sources now errors INVALID_INPUT rather
+        than returning a confidently-wrong result set.
+        """
+        import json
         result = runner.invoke(find_cmd, ["positional", "--query", "named", "--json"])
-        assert "Missing argument" not in (result.output or "")
+        assert result.exit_code != 0, result.output
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT", data
+        mock_backend.get_element_tree.assert_not_called()
 
     def test_no_query_gives_json_error(self, runner):
         """Missing both positional and --query gives a clear JSON error."""
@@ -114,8 +124,17 @@ class TestFindAllFlag:
         assert "Missing argument" not in (result.output or "")
         mock_backend.get_element_tree.assert_called()
 
-    def test_all_overrides_positional(self, runner, mock_backend):
-        """--all takes precedence even if a positional query is given."""
+    def test_all_conflicts_with_positional(self, runner, mock_backend):
+        """--all + a positional query is a conflict, not a silent override (#1198).
+
+        Previously --all silently discarded the positional query and matched
+        every element as success:true. A positional/-q query combined with --all
+        now errors INVALID_INPUT so the caller's real query is never dropped.
+        """
+        import json
         result = runner.invoke(find_cmd, ["Save", "--all", "--json"])
-        assert "Missing argument" not in (result.output or "")
-        mock_backend.get_element_tree.assert_called()
+        assert result.exit_code != 0, result.output
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT", data
+        mock_backend.get_element_tree.assert_not_called()

@@ -302,6 +302,34 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         )
         return
 
+    # (#1198 / #1201) Conflict-guard the text-query sources. The positional
+    # QUERY, --query/-q and --all each supply the text-search target, and they
+    # are mutually exclusive: silently letting one win (the old precedence —
+    # --all over a query, -q over the positional) returns a confidently-wrong
+    # result set under success:true (the silent-wrong class #1193 closed for the
+    # empty query). Reject more than one text source with the same INVALID_INPUT
+    # envelope the --image/--selector conflicts already use. (--role/--actionable
+    # legitimately combine with --all, and --all still means "every match" for
+    # the image/selector/ocr strategies dispatched above — this guard is only the
+    # default text path.)
+    _text_sources: list[str] = []
+    if query is not None:
+        _text_sources.append("positional QUERY")
+    if query_opt is not None:
+        _text_sources.append("--query/-q")
+    if find_all:
+        _text_sources.append("--all")
+    if len(_text_sources) > 1:
+        msg = (f"Multiple query sources supplied ({', '.join(_text_sources)}); "
+               "use exactly one. --all matches every element, while a positional "
+               "QUERY or --query/-q searches for that text — combining them is "
+               "ambiguous, so the query is not silently dropped.")
+        if json_output:
+            click.echo(_common._json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+
     # Resolve query: --all flag → wildcard, --query option → override positional
     if find_all:
         query = "*"
@@ -453,6 +481,13 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 _el_to_selector_dict(r.element), ancestors_dicts, app=_selector_app)
 
         if json_output:
+            # (#1195) Emit the SAME per-element schema the --image/--ocr/--selector
+            # strategies do: populate center_x/center_y (from bounds) and a
+            # non-null coordinate_frame. A live UIA find reports screen-absolute
+            # x,y — identical to the frame --image labels "screen" — so consumers
+            # of `find -j` read one stable schema regardless of resolving strategy
+            # instead of branching on it (computing the center / guessing the
+            # frame for UIA, reading the fields for --image).
             data = [
                 {
                     "ref": _element_id_to_ref.get(id(r.element), r.element.id),
@@ -464,6 +499,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                     "y": r.element.y,
                     "width": r.element.width,
                     "height": r.element.height,
+                    "center_x": r.element.x + r.element.width // 2,
+                    "center_y": r.element.y + r.element.height // 2,
                     "selector": _build_result_selector(r),
                     "breadcrumb": r.breadcrumb_str,
                     "keyboard_shortcut": r.element.keyboard_shortcut,
@@ -475,6 +512,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 "elements": data,
                 "count": len(data),
                 "snapshot_id": snapshot_id,
+                "coordinate_frame": "screen",
             }, indent=2))
         else:
             if not results:
@@ -1220,12 +1258,20 @@ def _find_with_selector(
         parse, SelectorParseError, SelectorResolver, normalize_app_name,
     )
 
-    def _emit_error(code: str, message: str) -> None:
+    def _emit_error(code: str, message: str, *,
+                    suggested_action: str | None = None) -> None:
         if json_output:
-            click.echo(_common._json_error_str(code, message))
+            click.echo(_common._json_error_str(
+                code, message, suggested_action=suggested_action))
         else:
             click.echo(f"Error: {message}", err=True)
         raise SystemExit(1)
+
+    # (#1189) Remember whether the caller reached us via a *saved* @app/name ref
+    # or a *structural* path (app://… URI or //Role short-form): the two need
+    # different SELECTOR_NOT_FOUND recovery hints, and the @name is rewritten to
+    # its stored structural path just below, erasing the distinction.
+    _is_saved_ref = selector_str.startswith("@")
 
     # Dereference a saved @name selector to its stored path (#105), matching the
     # click family's behavior exactly.
@@ -1297,7 +1343,21 @@ def _find_with_selector(
         resolved = [result.element] if result is not None else []
 
     if not resolved:
-        _emit_error("SELECTOR_NOT_FOUND", f"Selector matched no elements: {selector_str}")
+        # (#1189) A structural path (app://… / //Role) matched no element: the
+        # actionable recovery is tree inspection, NOT the saved-selector registry
+        # (the caller never used a saved selector). Mirror ELEMENT_NOT_FOUND's
+        # guidance. A genuine saved @app/name ref keeps the saved-selector hint
+        # (the registry default) — its own entry point.
+        structural_hint = (
+            "Element not found. Use 'naturo see' to inspect the current UI tree, "
+            "verify the selector path (e.g. Role:Name against what 'see' shows), "
+            "or 'naturo wait --element' to wait for it to appear."
+        )
+        _emit_error(
+            "SELECTOR_NOT_FOUND",
+            f"Selector matched no elements: {selector_str}",
+            suggested_action=None if _is_saved_ref else structural_hint,
+        )
 
     from naturo.bridge import ElementInfo as BridgeElementInfo
     from naturo.snapshot import get_snapshot_manager
@@ -1360,6 +1420,10 @@ def _find_with_selector(
             "elements": data,
             "count": len(data),
             "snapshot_id": snapshot_id,
+            # (#1195) One element/envelope schema across strategies: the selector
+            # path resolves a live UIA tree, so its coordinates are screen-absolute
+            # — labelled identically to the text and --image strategies.
+            "coordinate_frame": "screen",
         }, indent=2))
     else:
         for child in children:
