@@ -31,6 +31,34 @@ def _get_backend():
     return get_backend()
 
 
+def _resolve_pid_to_hwnd(backend, app, window_title, hwnd, pid):
+    """Resolve ``--pid`` to a concrete window handle (#871).
+
+    ``get``/``set`` target a window by ``hwnd`` through the UIA value-pattern
+    path (``get_element_value`` / ``set_element_value`` take no ``pid``), so
+    ``--pid`` is threaded the same way the ``app`` window-state commands thread
+    it: through the backend's canonical ``_resolve_hwnd`` resolver — the exact
+    path ``see``/``capture``/``click`` use.  An explicit ``--hwnd`` wins and
+    short-circuits resolution; an unresolvable ``--pid`` raises
+    :class:`~naturo.errors.WindowNotFoundError` (loud failure), never a silent
+    fall-through to the foreground window.
+
+    Args:
+        backend: Active backend instance (provides ``_resolve_hwnd``).
+        app: ``--app`` value, or ``None`` (narrows the PID match).
+        window_title: ``--window`` value, or ``None`` (narrows the PID match).
+        hwnd: Current ``--hwnd`` value; returned as-is when set.
+        pid: ``--pid`` value, or ``None``.
+
+    Returns:
+        The resolved window handle, or the passed-through ``hwnd`` when no
+        ``--pid`` was supplied.
+    """
+    if pid is not None and hwnd is None:
+        return backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
+    return hwnd
+
+
 def _collect_matching_elements(tree, role=None, name=None):
     """Walk the element tree and collect all elements matching role/name.
 
@@ -81,11 +109,12 @@ def _collect_matching_elements(tree, role=None, name=None):
 @click.option("--title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", default=None, type=int,
               help="Window handle (HWND)")
+@click.option("--pid", default=None, type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, default=None,
               help="JSON output")
 @click.pass_context
 def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
-            app_id, window_title, hwnd, json_output) -> None:
+            app_id, window_title, hwnd, pid, json_output) -> None:
     """Read element text/value.
 
     Read the current value of a UI element. Accepts an element ref (e47),
@@ -102,6 +131,7 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
       naturo get --aid txtSearch          # By AutomationId
       naturo get --role Edit --name Search # By role + name
       naturo get e47 -p value             # Just the value text
+      naturo get --pid 1234 e47           # Scope the ref to a process
       naturo get --role Button --app explorer --all -j  # All buttons
       naturo get --role Edit --all        # All edit fields
     """
@@ -170,6 +200,8 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
 
         try:
             backend = _get_backend()
+            # (#871) Thread --pid through the canonical window resolver.
+            hwnd = _resolve_pid_to_hwnd(backend, app, window_title, hwnd, pid)
             tree = backend.get_element_tree(
                 app=app, window_title=window_title, hwnd=hwnd,
                 depth=20, backend="auto",
@@ -250,6 +282,8 @@ def get_cmd(ctx, target, ref, automation_id, role, name, get_all, prop, app,
 
     try:
         backend = _get_backend()
+        # (#871) Thread --pid through the canonical window resolver.
+        hwnd = _resolve_pid_to_hwnd(backend, app, window_title, hwnd, pid)
         result = backend.get_element_value(
             ref=ref,
             automation_id=automation_id,

@@ -164,8 +164,10 @@ class TestSetValue:
             ])
 
         assert result.exit_code == 0
+        # (#871) ``set`` now threads --pid through the same canonical resolver,
+        # so the call carries ``pid`` (None here — no --pid was supplied).
         mock._resolve_hwnd.assert_called_once_with(
-            app="notepad", window_title=None,
+            app="notepad", window_title=None, pid=None,
         )
         mock.set_element_value.assert_called_once_with(
             text="hello",

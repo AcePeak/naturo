@@ -82,16 +82,74 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
         sys.exit(1)
 
 
+def _resolve_pid_from_window(window_title, hwnd, json_output):
+    """Resolve a ``--window``/``--hwnd`` target to its owning process ID (#871).
+
+    ``quit`` terminates a process, so a window target is first resolved to a
+    concrete handle through the backend's canonical ``_resolve_hwnd`` (the same
+    resolver the gold-standard commands use), then mapped to the PID that owns
+    that handle via the backend's window list.
+
+    Args:
+        window_title: ``--window`` value, or ``None``.
+        hwnd: ``--hwnd`` value, or ``None``.
+        json_output: Whether to emit a JSON error envelope on failure.
+
+    Returns:
+        The owning process ID, or ``None`` when resolution failed (an error
+        envelope has already been emitted and the process has exited via
+        :func:`sys.exit`).
+    """
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        resolved_hwnd = backend._resolve_hwnd(window_title=window_title, hwnd=hwnd)
+        pid = next(
+            (w.pid for w in backend.list_windows() if w.handle == resolved_hwnd),
+            None,
+        )
+    except NaturoError as exc:
+        if json_output:
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
+        else:
+            _safe_echo(f"Error: {exc.message}", err=True)
+        sys.exit(1)
+        return None
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+        return None
+
+    if pid is None:
+        target = window_title or f"hwnd {hwnd}"
+        msg = f"No running window matched '{target}'."
+        if json_output:
+            click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return None
+    return pid
+
+
 @click.command("quit")
 @click.argument("name", required=False, default=None)
 @click.option("--name", "name_option", hidden=True, help="Application name (deprecated, use positional)")
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--force", is_flag=True, help="Force kill immediately")
 @click.option("--timeout", type=float, default=10.0, help="Graceful shutdown timeout")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output) -> None:
+def app_quit(ctx, name, name_option, app_name, window_title, hwnd, pid, force,
+             timeout, json_output) -> None:
     """Quit an application gracefully (or force kill).
 
     NAME is the application name to quit.
@@ -101,6 +159,8 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
       naturo app quit notepad
       naturo app quit chrome --force
       naturo app quit --pid 12345
+      naturo app quit --window "Untitled - Notepad"
+      naturo app quit --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
@@ -120,8 +180,21 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
         if pid is None:
             pid = entry.pid
 
+    # (#871) Accept the window-targeting family (--window/--hwnd) that the
+    # gold-standard commands expose. ``quit`` acts on a *process*, so a window
+    # target is resolved to its owning PID via the canonical ``_resolve_hwnd``
+    # resolver — the same path see/capture/click use — rather than a
+    # signature change. An explicit NAME/--pid still wins; a window target that
+    # matches no window fails loudly (WINDOW_NOT_FOUND) instead of silently
+    # quitting nothing.
+    if not name and pid is None and (hwnd is not None or window_title):
+        resolved_pid = _resolve_pid_from_window(window_title, hwnd, json_output)
+        if resolved_pid is None:
+            return  # error already emitted
+        pid = resolved_pid
+
     if not name and pid is None:
-        msg = "Specify application name or --pid"
+        msg = "Specify application name, --pid, --window, or --hwnd"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:

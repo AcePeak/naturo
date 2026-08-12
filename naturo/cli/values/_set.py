@@ -122,12 +122,13 @@ def _resolve_element_identifiers(ref, automation_id, role, name):
 @click.option("--title", "window_title", default=None, hidden=True, help="")
 @click.option("--hwnd", default=None, type=int,
               help="Window handle (HWND)")
+@click.option("--pid", default=None, type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, default=None,
               help="JSON output")
 @click.pass_context
 def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
             select, expand, collapse, app, app_id, window_title, hwnd,
-            json_output) -> None:
+            pid, json_output) -> None:
     """Set element value/state.
 
     Write a value to a UI element, toggle a checkbox, select a list item,
@@ -143,6 +144,7 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
       naturo set e8 --select             # Select a list/radio item
       naturo set e5 --expand             # Expand a combo box
       naturo set e5 --collapse           # Collapse a combo box
+      naturo set --pid 1234 e47 "hello"  # Scope the ref to a process
       naturo set --role Edit --name Search "test" --app notepad
     """
     if json_output is None:
@@ -241,10 +243,10 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
             _resolve_element_identifiers(ref, automation_id, role, name)
         )
 
-        # Resolve app/window to HWND
+        # Resolve app/window/pid to HWND
         target_hwnd = hwnd or 0
-        if (app or window_title) and not target_hwnd:
-            target_hwnd = _resolve_hwnd(backend, app, window_title)
+        if (app or window_title or pid) and not target_hwnd:
+            target_hwnd = _resolve_hwnd(backend, app, window_title, pid)
         # Fall back to the snapshot's source window so point resolution can walk
         # the correct window's UIA tree (occlusion-independent). (#1208)
         if not target_hwnd and resolved_snap_hwnd:
@@ -277,22 +279,29 @@ def set_cmd(ctx, target, value, ref, automation_id, role, name, toggle,
         emit_exception_error(exc, json_output, fallback_code="UNKNOWN_ERROR")
 
 
-def _resolve_hwnd(backend, app, window_title):
-    """Resolve an explicitly-supplied app/window_title selector to a handle.
+def _resolve_hwnd(backend, app, window_title, pid=None):
+    """Resolve an explicitly-supplied app/window_title/pid selector to a handle.
 
-    Called only when ``app`` or ``window_title`` was provided, so an unmatched
-    selector is an error, not a cue to fall back to the foreground window:
-    ``backend._resolve_hwnd`` raises :class:`~naturo.errors.WindowNotFoundError`
-    on no match and the exception propagates to the command's error handler,
-    which emits a ``WINDOW_NOT_FOUND`` envelope. Swallowing it and returning
-    ``0`` (foreground) was the silent-failure bug #964 — for ``set`` it wrote
-    the value to whatever window happened to be focused. Mirrors the MCP #957
+    Called only when ``app``, ``window_title``, or ``pid`` was provided, so an
+    unmatched selector is an error, not a cue to fall back to the foreground
+    window: ``backend._resolve_hwnd`` raises
+    :class:`~naturo.errors.WindowNotFoundError` on no match and the exception
+    propagates to the command's error handler, which emits a
+    ``WINDOW_NOT_FOUND`` envelope. Swallowing it and returning ``0``
+    (foreground) was the silent-failure bug #964 — for ``set`` it wrote the
+    value to whatever window happened to be focused. Mirrors the MCP #957
     ``require_hwnd`` loud-failure contract.
+
+    ``--pid`` (#871) resolves through the same canonical resolver the
+    gold-standard ``see``/``capture``/``click`` commands use, so the whole
+    window-targeting flag family behaves identically across commands.
 
     Args:
         backend: Backend instance.
         app: Application name (partial match), or ``None``.
         window_title: Window title pattern (partial match), or ``None``.
+        pid: Process ID to target (narrowed by app/window_title when given),
+            or ``None``.
 
     Returns:
         The resolved window handle (int).
@@ -300,7 +309,7 @@ def _resolve_hwnd(backend, app, window_title):
     Raises:
         WindowNotFoundError: When the supplied selector matches no window.
     """
-    return backend._resolve_hwnd(app=app, window_title=window_title)
+    return backend._resolve_hwnd(app=app, window_title=window_title, pid=pid)
 
 
 def _do_set_value(backend, hwnd, automation_id, role, name, ref, value,
