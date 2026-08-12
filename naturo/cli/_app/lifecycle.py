@@ -8,11 +8,19 @@ import sys
 import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli._field import emit_projection, field_option, parse_fields, resolve_fields
 from naturo.cli._app._common import (
     _APP_ID_RE,
     _resolve_app_id,
     _safe_echo,
 )
+
+# Row schemas for --field projection (#1206), kept beside the emitters below.
+_APP_LIST_FIELDS = (
+    "id", "handle", "hwnd", "pid", "process_name", "title",
+    "x", "y", "width", "height", "is_visible", "is_minimized",
+)
+_FIND_FIELDS = ("pid", "name", "path", "is_running", "window_count")
 
 
 @click.command("launch")
@@ -278,8 +286,9 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) ->
 @click.command("list")
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def app_list(ctx, show_all, json_output) -> None:
+def app_list(ctx, show_all, json_output, field) -> None:
     """List running applications with visible windows.
 
     By default, shows user-facing applications with visible windows
@@ -384,26 +393,36 @@ def app_list(ctx, show_all, json_output) -> None:
         window_pids = {w.pid for w in windows}
         background_apps = [a for a in all_procs if a.pid not in window_pids]
 
+    # Canonical per-window row schema, built once and shared by the `-j`
+    # payload and `--field` projection so their keys never drift (#1206).
+    window_rows = [
+        {
+            "id": f"a{i}",
+            "handle": w.handle,
+            # `hwnd` alias mirrors `list windows` so the two commands
+            # share one interchangeable window schema (#952).
+            "hwnd": w.handle,
+            "pid": w.pid,
+            "process_name": w.process_name,
+            "title": w.title,
+            "x": w.x, "y": w.y,
+            "width": w.width, "height": w.height,
+            "is_visible": w.is_visible,
+            "is_minimized": w.is_minimized,
+        }
+        for i, w in enumerate(windows, start=1)
+    ]
+
+    fields = parse_fields(field)
+    if fields is not None:
+        resolve_fields(fields, _APP_LIST_FIELDS, json_output)
+        emit_projection(window_rows, fields, "windows", json_output)
+        return
+
     if json_output:
         result = {
             "success": True,
-            "windows": [
-                {
-                    "id": f"a{i}",
-                    "handle": w.handle,
-                    # `hwnd` alias mirrors `list windows` so the two commands
-                    # share one interchangeable window schema (#952).
-                    "hwnd": w.handle,
-                    "pid": w.pid,
-                    "process_name": w.process_name,
-                    "title": w.title,
-                    "x": w.x, "y": w.y,
-                    "width": w.width, "height": w.height,
-                    "is_visible": w.is_visible,
-                    "is_minimized": w.is_minimized,
-                }
-                for i, w in enumerate(windows, start=1)
-            ],
+            "windows": window_rows,
             "count": len(windows),
         }
         if show_all:
@@ -441,8 +460,9 @@ def app_list(ctx, show_all, json_output) -> None:
 @click.argument("name")
 @click.option("--pid", type=int, help="Search by PID instead of name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def app_find(ctx, name, pid, json_output) -> None:
+def app_find(ctx, name, pid, json_output, field) -> None:
     """Find a running application by name or PID."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
@@ -470,16 +490,32 @@ def app_find(ctx, name, pid, json_output) -> None:
 
     proc = find_process(name=name, pid=pid)
     if proc:
+        # `find` resolves a single process; `--field` projects that one row —
+        # under -j into the `process` object, in text mode to a bare tab-joined
+        # value line so a lookup like `--field pid` is $(...)-capturable (#1206).
+        proc_row = {
+            "pid": proc.pid,
+            "name": proc.name,
+            "path": proc.path,
+            "is_running": proc.is_running,
+            "window_count": proc.window_count,
+        }
+        fields = parse_fields(field)
+        if fields is not None:
+            resolve_fields(fields, _FIND_FIELDS, json_output)
+            if json_output:
+                click.echo(json_dumps(
+                    {"success": True, "process": {f: proc_row[f] for f in fields}},
+                    indent=2,
+                ))
+            else:
+                from naturo.cli._field import format_value
+                click.echo("\t".join(format_value(proc_row[f]) for f in fields))
+            return
         if json_output:
             click.echo(json_dumps({
                 "success": True,
-                "process": {
-                    "pid": proc.pid,
-                    "name": proc.name,
-                    "path": proc.path,
-                    "is_running": proc.is_running,
-                    "window_count": proc.window_count,
-                },
+                "process": proc_row,
             }, indent=2))
         else:
             _safe_echo(f"Found: {proc.name} (PID: {proc.pid})")

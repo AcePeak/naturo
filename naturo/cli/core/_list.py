@@ -8,6 +8,18 @@ import platform
 import click
 
 import naturo.cli.core._common as _common
+from naturo.cli._field import emit_projection, field_option, parse_fields, resolve_fields
+
+# Row schemas for --field projection (#1206). Kept next to the emitters below so
+# the valid-field set stays in lockstep with the dicts those emitters build.
+_WINDOW_FIELDS = (
+    "id", "handle", "hwnd", "title", "process_name", "pid",
+    "x", "y", "width", "height", "is_visible", "is_minimized",
+)
+_SCREEN_FIELDS = (
+    "index", "name", "device_path", "x", "y", "width", "height",
+    "is_primary", "scale_factor", "dpi", "work_area",
+)
 
 
 def _window_state(w) -> str:
@@ -60,11 +72,12 @@ def list_cmd() -> None:
 @list_cmd.command()
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def apps(ctx, show_all, json_output) -> None:
+def apps(ctx, show_all, json_output, field) -> None:
     """List running applications (delegates to 'app list')."""
     from naturo.cli.app_cmd import app_list
-    ctx.invoke(app_list, show_all=show_all, json_output=json_output)
+    ctx.invoke(app_list, show_all=show_all, json_output=json_output, field=field)
 
 
 @list_cmd.command()
@@ -81,7 +94,8 @@ def apps(ctx, show_all, json_output) -> None:
               help="Show every raw HWND. By default, duplicate handles of the "
                    "same window (UWP frames/helper strips sharing one pid+title) "
                    "are collapsed to one usable handle per window.")
-def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None:
+@field_option
+def windows(app, window_title, hwnd, app_id, pid, json_output, show_all, field) -> None:
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
@@ -183,7 +197,11 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
                     err=True,
                 )
 
-        if json_output:
+        # Build the canonical row schema whenever it is needed — for the `-j`
+        # payload or for `--field` projection (which reuses these exact rows so
+        # the projected keys never drift from the emitted schema, #1206).
+        fields = parse_fields(field)
+        if json_output or fields is not None:
             # Assign stable session-scoped IDs (a1, a2, ...) on the listed
             # windows so each entry is directly targetable with --app-id, matching
             # `list apps` / `app list` (#952). Without this the emitted `id` would
@@ -210,6 +228,11 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
                 }
                 for i, w in enumerate(win_list, start=1)
             ]
+
+        if fields is not None:
+            resolve_fields(fields, _WINDOW_FIELDS, json_output)
+            emit_projection(data, fields, "windows", json_output)
+        elif json_output:
             click.echo(json_dumps({"success": True, "windows": data, "count": len(data)}, indent=2))
         else:
             if not win_list:
@@ -232,7 +255,8 @@ def windows(app, window_title, hwnd, app_id, pid, json_output, show_all) -> None
 
 @list_cmd.command()
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def screens(json_output) -> None:
+@field_option
+def screens(json_output, field) -> None:
     """List connected screens/monitors.
 
     Shows monitor index, resolution, position, DPI scale factor, and
@@ -243,7 +267,8 @@ def screens(json_output) -> None:
         backend = _common._get_backend(json_output)
         monitors = backend.list_monitors()
 
-        if json_output:
+        fields = parse_fields(field)
+        if json_output or fields is not None:
             items = []
             for m in monitors:
                 # (#359) Use model_name as 'name', keep device path separate
@@ -263,6 +288,11 @@ def screens(json_output) -> None:
                 if m.work_area:
                     item["work_area"] = m.work_area
                 items.append(item)
+
+        if fields is not None:
+            resolve_fields(fields, _SCREEN_FIELDS, json_output)
+            emit_projection(items, fields, "monitors", json_output)
+        elif json_output:
             click.echo(json_dumps({"success": True, "monitors": items, "count": len(items)}, indent=2))
         else:
             from naturo.cli.table import print_table
