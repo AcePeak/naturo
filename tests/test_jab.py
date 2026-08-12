@@ -160,7 +160,7 @@ class TestJABMCP:
 
     def test_mcp_see_ui_tree_accepts_jab(self):
         """see_ui_tree MCP tool is created and accepts 'jab' backend."""
-        pytest.importorskip("mcp")
+        pytest.importorskip("mcp.server.fastmcp")
         from naturo.mcp_server import create_server
 
         # Verify the server can be created (which registers all tools)
