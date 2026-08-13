@@ -2,14 +2,18 @@
 
 Working example scripts demonstrating naturo automation patterns.
 
+The first four use the ergonomic **in-process Python SDK** — `import naturo`
+and automate directly, no subprocess and no CLI parsing. The two agent scripts
+cover MCP / agent-framework wiring.
+
 ## Scripts
 
 | Script | Description | Complexity |
 |--------|-------------|------------|
-| `notepad_hello.py` | Launch Notepad, type text, capture screenshot, close | Beginner |
-| `window_capture.py` | Capture screenshots of all visible windows | Beginner |
-| `ui_inspector.py` | Interactive UI element tree explorer | Intermediate |
-| `form_filler.py` | Auto-fill form controls (Calculator demo) | Intermediate |
+| `notepad_hello.py` | Launch Notepad, type text, capture screenshot, close (SDK) | Beginner |
+| `window_capture.py` | Capture screenshots of all visible windows (SDK) | Beginner |
+| `ui_inspector.py` | Interactive UI element tree explorer (SDK) | Intermediate |
+| `form_filler.py` | Drive form controls, read the tree (Calculator demo, SDK) | Intermediate |
 | `agent_demo.py` | AI agent integration patterns (CLI, MCP, vision) | Advanced |
 | `agent_frameworks.py` | Plug naturo's tools into OpenAI / Anthropic / LangChain | Advanced |
 
@@ -28,7 +32,7 @@ python notepad_hello.py
 # Capture all visible windows
 python window_capture.py --output-dir ./screenshots
 
-# Explore an app's UI tree interactively
+# Explore an app's UI tree interactively (add --cascade for the fused tree)
 python ui_inspector.py notepad
 
 # Calculator automation
@@ -46,36 +50,68 @@ python agent_frameworks.py anthropic   # Anthropic tool-use wiring
 python agent_frameworks.py langchain   # LangChain StructuredTool wiring
 ```
 
-## Common Patterns
+## The Python SDK
 
-### Run a command and parse JSON output
+`import naturo` gives you an ergonomic, in-process API over the same engine the
+CLI and MCP server use. Import-and-go in under 10 lines:
 
 ```python
-import json, subprocess
+import naturo
 
-result = subprocess.run(
-    ["naturo", "app", "list", "--json"],
-    capture_output=True, text=True,
-)
-data = json.loads(result.stdout)
-for app in data["apps"]:
-    print(app["process_name"], app["title"])
+app = naturo.launch("notepad")          # App handle (waits until ready)
+naturo.type("hello", window="Notepad")  # IME-immune type ladder
+tree = naturo.see(window="Notepad")     # root Element; walk .children / .descendants
+el = naturo.find("Button:Save", window="Notepad")
+if el:
+    el.click()                          # elements act on themselves
+naturo.capture("shot.png", window="Notepad")
+app.quit()
 ```
 
-### Launch, interact, close
+Core verbs (module-level, or as `Desktop`/`Session`/`App` methods):
+`see`, `find`, `click`, `type`, `press`, `get_value`, `set_value`,
+`capture`, `launch`, `quit`, `wait`, `windows`.
+
+### Reusable session
 
 ```python
-subprocess.run(["naturo", "app", "launch", "notepad", "--wait-until-ready"])
-subprocess.run(["naturo", "type", "Hello!"])
-subprocess.run(["naturo", "app", "quit", "notepad"])
+import naturo
+
+desktop = naturo.Desktop()              # or naturo.Session() — reuses one backend
+for win in desktop.windows():
+    print(win.process_name, win.title)
 ```
 
-### Target by app ID
+### Context-managed app
 
 ```python
-# List apps to assign IDs
-subprocess.run(["naturo", "app", "list"])
-# Use the assigned ID
-subprocess.run(["naturo", "app", "focus", "a1"])
-subprocess.run(["naturo", "click", "--on", "e3", "--app", "a1"])
+import naturo
+
+with naturo.launch("calculator") as app:   # quits on exit
+    for key in ("4", "2", "multiply", "7", "enter"):
+        app.press(key)
+    tree = app.see()
+    for el in tree.descendants():
+        if el.role == "Text" and el.name:
+            print(el.name)
+```
+
+### The fused, correctness-tagged tree (the moat)
+
+```python
+import naturo
+
+# UIA + web (CDP) + Java (JAB) + Excel cells (COM) merged into one tree,
+# each node tagged deterministic vs uncertain.
+tree = naturo.see(app="chrome", cascade=True)
+```
+
+### Still prefer the CLI?
+
+The `naturo` command remains a first-class surface for shell / subprocess use:
+
+```bash
+naturo app launch notepad --wait-until-ready
+naturo type "Hello!"
+naturo app quit notepad
 ```
