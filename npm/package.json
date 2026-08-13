@@ -1,6 +1,6 @@
 {
   "name": "naturo",
-  "version": "0.1.0",
+  "version": "0.3.2",
   "description": "Cross-platform desktop automation engine for AI agents — see, click, type, automate. MCP server included.",
   "keywords": [
     "automation",
