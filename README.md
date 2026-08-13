@@ -12,6 +12,8 @@
 
 > **Why naturo?** It is the only open-source Windows automation engine with **commercial-RPA-grade multi-framework recognition** — UIA + MSAA/IA2 + Java Access Bridge + Electron/CDP + vision fusion. UIA-only rivals (UFO², Windows-MCP, Terminator) are blind to Electron and Java app content. See the reproducible proof: [**Recognition coverage benchmark → docs/RECOGNITION.md**](docs/RECOGNITION.md).
 
+> **How it works (deep dive):** the architecture, cascade fusion, correctness tagging, and the native C++ core, with diagrams — [**How Naturo Works → docs/blog/how-naturo-works.md**](docs/blog/how-naturo-works.md).
+
 > **New here?** Get Claude to open, type into, and save a Notepad file in under five minutes: [**5-minute quickstart → docs/QUICKSTART.md**](docs/QUICKSTART.md).
 
 ## Tutorials
