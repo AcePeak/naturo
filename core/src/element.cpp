@@ -197,6 +197,79 @@ static bool cached_bool(IUIAutomationElement* element, PROPERTYID pid) {
     return result;
 }
 
+// (#896) Read a VT_BOOL property from the cache (use_cache) or live Current
+// tree; false if absent or not a boolean.
+static bool read_bool_prop(IUIAutomationElement* element, PROPERTYID pid,
+                           bool use_cache) {
+    VARIANT v;
+    VariantInit(&v);
+    bool result = false;
+    HRESULT hr = use_cache ? element->GetCachedPropertyValue(pid, &v)
+                           : element->GetCurrentPropertyValue(pid, &v);
+    if (SUCCEEDED(hr) && v.vt == VT_BOOL) {
+        result = (v.boolVal != VARIANT_FALSE);
+    }
+    VariantClear(&v);
+    return result;
+}
+
+// (#896) Read a VT_BSTR property from the cache (use_cache) or live Current
+// tree; returns JSON-escaped text, or "" when absent/empty.
+static std::string read_string_prop(IUIAutomationElement* element,
+                                    PROPERTYID pid, bool use_cache) {
+    VARIANT v;
+    VariantInit(&v);
+    std::string result;
+    HRESULT hr = use_cache ? element->GetCachedPropertyValue(pid, &v)
+                           : element->GetCurrentPropertyValue(pid, &v);
+    if (SUCCEEDED(hr) && v.vt == VT_BSTR && v.bstrVal &&
+        SysStringLen(v.bstrVal) > 0) {
+        result = json_escape(v.bstrVal);
+    }
+    VariantClear(&v);
+    return result;
+}
+
+// (#896) Append the six UIA accessibility properties as JSON fields, matching
+// the snake_case keys the Python bridge (_models._parse_element) reads:
+// is_enabled, is_offscreen, is_keyboard_focusable, has_keyboard_focus (bools),
+// help_text, localized_control_type (strings, null when empty/absent). Reads
+// from the batched cache when use_cache is true, else the live Current tree.
+static void append_uia_a11y_props(IUIAutomationElement* element, bool use_cache,
+                                  std::string& out) {
+    out += read_bool_prop(element, UIA_IsEnabledPropertyId, use_cache)
+               ? ",\"is_enabled\":true" : ",\"is_enabled\":false";
+    out += read_bool_prop(element, UIA_IsOffscreenPropertyId, use_cache)
+               ? ",\"is_offscreen\":true" : ",\"is_offscreen\":false";
+    out += read_bool_prop(element, UIA_IsKeyboardFocusablePropertyId, use_cache)
+               ? ",\"is_keyboard_focusable\":true"
+               : ",\"is_keyboard_focusable\":false";
+    out += read_bool_prop(element, UIA_HasKeyboardFocusPropertyId, use_cache)
+               ? ",\"has_keyboard_focus\":true" : ",\"has_keyboard_focus\":false";
+
+    std::string help = read_string_prop(element, UIA_HelpTextPropertyId,
+                                        use_cache);
+    out += ",\"help_text\":";
+    if (help.empty()) {
+        out += "null";
+    } else {
+        out += "\"";
+        out += help;
+        out += "\"";
+    }
+
+    std::string lct = read_string_prop(
+        element, UIA_LocalizedControlTypePropertyId, use_cache);
+    out += ",\"localized_control_type\":";
+    if (lct.empty()) {
+        out += "null";
+    } else {
+        out += "\"";
+        out += lct;
+        out += "\"";
+    }
+}
+
 static void append_element_json_cached(IUIAutomationElement* element,
                                         std::string& out) {
     // Read from cache (no IPC — properties already fetched in batch)
@@ -252,6 +325,10 @@ static void append_element_json_cached(IUIAutomationElement* element,
     out += (has_value || has_text) ? ",\"readable\":true" : ",\"readable\":false";
     out += (has_value && !readonly) ? ",\"editable\":true" : ",\"editable\":false";
     out += (has_invoke || has_toggle) ? ",\"actionable\":true" : ",\"actionable\":false";
+
+    // (#896) Screen-reader accessibility metadata (enabled/offscreen/help/
+    // localized role/keyboard focusability) from the batched cache.
+    append_uia_a11y_props(element, true, out);
 }
 
 /**
@@ -345,6 +422,9 @@ static void build_element_json_current(IUIAutomationTreeWalker* walker,
     // fallback path used when the cache request could not be created).
     append_keyboard_shortcut_field(read_keyboard_shortcut(element, false), out);
 
+    // (#896) Accessibility metadata from live Current properties (fallback path).
+    append_uia_a11y_props(element, false, out);
+
     out += ",\"children\":[";
     if (depth > 1) {
         IUIAutomationElement* child = NULL;
@@ -399,6 +479,16 @@ static HRESULT create_element_cache_request(
     (*cache_request)->AddProperty(UIA_IsInvokePatternAvailablePropertyId);
     (*cache_request)->AddProperty(UIA_IsTogglePatternAvailablePropertyId);
     (*cache_request)->AddProperty(UIA_ValueIsReadOnlyPropertyId);
+    // (#896) UIA accessibility properties surfaced per-element (see
+    // append_uia_a11y_props): enabled/offscreen/keyboard-focusable/has-focus
+    // and help text / localized role. Batched here so the cached reads resolve
+    // without extra cross-process COM calls.
+    (*cache_request)->AddProperty(UIA_IsEnabledPropertyId);
+    (*cache_request)->AddProperty(UIA_IsOffscreenPropertyId);
+    (*cache_request)->AddProperty(UIA_HelpTextPropertyId);
+    (*cache_request)->AddProperty(UIA_LocalizedControlTypePropertyId);
+    (*cache_request)->AddProperty(UIA_IsKeyboardFocusablePropertyId);
+    (*cache_request)->AddProperty(UIA_HasKeyboardFocusPropertyId);
 
     // Fetch direct children scope for tree walking
     (*cache_request)->put_TreeScope(TreeScope_Element);
@@ -704,6 +794,8 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
     // (#886) Surface the keyboard shortcut on find results too, so
     // `naturo find` exposes the same accessibility metadata as `see`.
     append_keyboard_shortcut_field(read_keyboard_shortcut(found, use_cache), json);
+    // (#896) Surface the same UIA accessibility metadata on find results.
+    append_uia_a11y_props(found, use_cache, json);
     json += ",\"children\":[]}";
 
     found->Release();
