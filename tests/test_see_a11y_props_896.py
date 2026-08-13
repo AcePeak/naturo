@@ -16,6 +16,7 @@ All hermetic — no live desktop, no native DLL.
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 from unittest.mock import MagicMock, patch
@@ -331,6 +332,11 @@ class TestAssignStableRefs:
 # ── 5. comtypes a11y reader value mapping ──────────────────────────────────
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="get_element_a11y_uia resolves a live element via comtypes/UIA "
+    "(Windows-only); the cross-platform plumbing is covered by the other tests here",
+)
 class TestGetElementA11yUia:
     """The Python/comtypes single-element reader maps UIA Current* props."""
 
