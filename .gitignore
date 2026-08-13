@@ -48,6 +48,11 @@ naturo/bin/*.so
 naturo/bin/*.dylib
 naturo-screen-*.png
 
+# Embedded Python runtime — a ~40MB build artifact assembled by
+# scripts/bundle_python.py (#41). Never committed; rebuilt on demand.
+dist/runtime/
+get-pip.py
+
 # Working directory debug artifacts
 .work/*.png
 .work/*.log
