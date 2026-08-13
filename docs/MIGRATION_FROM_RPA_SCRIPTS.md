@@ -52,6 +52,7 @@ equivalent.
   - [Form Filling](#form-filling)
   - [Dropdown / Playlist Selection](#dropdown--playlist-selection)
 - [Full Migration Example](#full-migration-example)
+- [Validation & Equivalence Proof](#validation--equivalence-proof)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -1884,6 +1885,43 @@ page.close()
 - 10 lines of Chrome profile setup → 0 lines (naturo manages it)
 - 0 lines of anti-detection config (it's the default)
 - `time.sleep()` replaced with proper `wait_for()` where possible
+
+---
+
+## Validation & Equivalence Proof
+
+The mappings in this guide are not aspirational — they are backed by executable
+equivalence tests that pin each old-library idiom to its naturo replacement and
+assert the same semantics (same element matched, same text extracted, same
+element count, same keys/clipboard delivered). The idioms are drawn verbatim
+from the real client corpus (`naturobot-dev/rpa-client-*`, 24+ private repos):
+
+| Surface | Proof | Corpus source | Runs on |
+| --- | --- | --- | --- |
+| Browser (DrissionPage/Selenium/CDP) | `tests/browser/test_migration_equivalence.py` (#766) | `rpa-client-lingkehudong`, `rpa-client-henjiuyiqian` | Real headless Chrome (`-m desktop`) |
+| Desktop (uiautomation/pywinauto/pyperclip) | `tests/test_rpa_client_equivalence.py` (#763) | `rpa-client-henjiuyiqian` (WeChat), `rpa-client-lingkehudong` (Xiaohongshu list scrape) | Hermetic — any platform, no live desktop |
+
+The desktop suite drives the public `naturo.sdk` surface against an injected
+fake backend, so it is fully offline and part of the default CI run. It proves
+the following pattern set is covered 1:1:
+
+| rpa-client idiom (Before) | naturo equivalent (After) |
+| --- | --- |
+| `auto.WindowControl(Name="微信")` | `naturo.see(window="微信")` / loud `require_hwnd` focus |
+| `ctrl.ButtonControl(Name=…).Click()` | `naturo.find("Button:…").click()` (element centre) |
+| `page.ele(sel).text` / `.attr()` | `Element.value` / `Desktop.get_value(role=…, name=…)` |
+| `items = page.eles("xpath://…")` + `.text` loop | `root.descendants()` filtered by role → same count, same text, same order |
+| `send_keys('^a')` / `{ENTER}` / `{PGDN}`×3 | `press("ctrl+a")` / `press("enter")` / `press("pagedown", count=3)` |
+| `pyperclip.copy(kw); send_keys('^v')` | `Element.type(kw)` → IME-immune ladder (ValuePattern → clipboard+Ctrl+V) |
+| `page.ele(sel, timeout=10)` (implicit wait) | `naturo.wait("Role:Name", timeout=…)` (polls until present / times out) |
+| `page.scroll.down(1000)` | `Desktop.scroll(direction="down", amount=…)` |
+| `page.get_screenshot(path)` | `Desktop.capture(path, window=…)` |
+
+Client repos are private and are **not** vendored into naturo; only the idiom
+*shapes* are reproduced under test. Patterns still validated only at the doc
+level (not yet in the hermetic suite): iframe traversal, network-request
+interception, slider-captcha trajectories, and multi-account profile isolation —
+these are exercised by the browser suite (#766) against real Chrome.
 
 ---
 
