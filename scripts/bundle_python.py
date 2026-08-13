@@ -173,6 +173,7 @@ def build_runtime(
     *,
     from_local: bool,
     workdir: Path,
+    extras: str = "",
 ) -> float:
     """Assemble the embedded runtime at ``dest`` and return its size in MB.
 
@@ -183,6 +184,11 @@ def build_runtime(
         from_local: Install the local checkout (``pip install .``) instead of the
             published wheel.
         workdir: Scratch directory for downloads.
+        extras: Optional pip extras to install alongside naturo, given as the
+            bracket body without the brackets (e.g. ``"mcp,windows"``). Empty
+            installs the lean default. Applies to both the published-wheel and
+            ``--from-local`` targets so callers such as the self-contained
+            ``.mcpb`` builder can pull the full server dependency set.
 
     Returns:
         The assembled runtime's total size in megabytes.
@@ -219,11 +225,12 @@ def build_runtime(
 
     # 5. Install naturo. Published wheel by default so the native C++ core is not
     #    rebuilt; --from-local installs the working checkout instead.
+    suffix = f"[{extras}]" if extras else ""
     if from_local:
-        target = str(REPO_ROOT)
+        target = f"{REPO_ROOT}{suffix}" if suffix else str(REPO_ROOT)
         print(f"  installing local checkout: {target}")
     else:
-        target = f"naturo=={naturo_version}"
+        target = f"naturo{suffix}=={naturo_version}"
         print(f"  installing published wheel: {target}")
     proc = _run([str(python_exe), "-m", "pip", "install", "--no-warn-script-location", target])
     if proc.returncode != 0:
