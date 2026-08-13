@@ -220,6 +220,46 @@ naturo highlight e11 --app notepad         # Highlight specific ref
 naturo highlight --app notepad -A out.png  # Save annotated screenshot
 ```
 
+## Python SDK
+
+Prefer to stay in Python? `import naturo` gives you an ergonomic, in-process API
+over the same engine the CLI and MCP server use — no subprocess, no output
+parsing. Import-and-go in under 10 lines:
+
+```python
+import naturo
+
+app = naturo.launch("notepad")           # App handle; waits until ready
+naturo.type("hello", window="Notepad")   # IME-immune type ladder (ValuePattern→clipboard→keystroke)
+tree = naturo.see(window="Notepad")      # root Element; walk .children / .descendants / .find
+el = naturo.find("Button:Save", window="Notepad")
+if el:
+    el.click()                           # elements act on themselves
+naturo.capture("shot.png", window="Notepad")
+app.quit()
+```
+
+Core verbs are available both as module-level functions and as methods on a
+reusable `Desktop` / `Session` session (or a launched `App`):
+`see`, `find`, `click`, `type`, `press`, `get_value`, `set_value`, `capture`,
+`launch`, `quit`, `wait`, `windows`.
+
+```python
+import naturo
+
+# Context-managed app quits on exit; the fused cascade tree is one flag away.
+with naturo.launch("calculator") as app:
+    for key in ("4", "2", "multiply", "7", "enter"):
+        app.press(key)
+    tree = app.see()                      # or app.see(cascade=True) for UIA+CDP+JAB+COM
+    for el in tree.descendants():
+        if el.role == "Text" and el.name:
+            print(el.name)
+```
+
+Runnable scripts live in [`examples/`](examples/) (`notepad_hello.py`,
+`form_filler.py`, `ui_inspector.py`, `window_capture.py`).
+
 ## Cascade Recognition
 
 Most desktop automation tools rely on a single accessibility API (UIA) — when

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Capture screenshots of all visible application windows.
 
-Demonstrates window enumeration and per-app screenshot capture.
+Demonstrates window enumeration and per-window capture via the in-process SDK —
+no subprocess, no JSON parsing.
 
 Requirements:
     - Windows 10/11 with a desktop session
@@ -13,23 +14,9 @@ Usage:
 """
 
 import argparse
-import json
 import os
-import subprocess
-import sys
 
-
-def run_json(cmd: str) -> dict:
-    """Run a naturo CLI command with --json and parse the output."""
-    result = subprocess.run(
-        ["naturo"] + cmd.split() + ["--json"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        print(f"Command failed: naturo {cmd} --json", file=sys.stderr)
-        return {"success": False}
-    return json.loads(result.stdout)
+import naturo
 
 
 def main() -> None:
@@ -40,35 +27,26 @@ def main() -> None:
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # List all visible application windows
-    data = run_json("app list")
-    if not data.get("success"):
-        print("Failed to list applications.", file=sys.stderr)
-        sys.exit(1)
+    desktop = naturo.Desktop()
 
-    apps = data.get("apps", [])
-    print(f"Found {len(apps)} application(s)")
+    # Enumerate every visible top-level window.
+    wins = [w for w in desktop.windows() if w.is_visible and not w.is_minimized]
+    print(f"Found {len(wins)} visible window(s)")
 
-    for app in apps:
-        app_id = app.get("id", "")
-        title = app.get("title", "unknown")
-        process = app.get("process_name", "unknown")
-
-        # Sanitize filename
-        safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in process)
-        path = os.path.join(args.output_dir, f"{safe_name}_{app_id}.png")
-
-        print(f"  Capturing {process}: {title[:50]}...")
-        result = subprocess.run(
-            ["naturo", "capture", "--hwnd", str(app.get("handle", 0)),
-             "--path", path],
-            capture_output=True,
-            text=True,
+    for win in wins:
+        # Sanitize the process name into a filename.
+        safe_name = "".join(
+            c if c.isalnum() or c in "-_ " else "_" for c in win.process_name
         )
-        if result.returncode == 0:
-            print(f"    Saved: {path}")
-        else:
-            print("    Failed to capture")
+        path = os.path.join(args.output_dir, f"{safe_name}_{win.handle}.png")
+
+        print(f"  Capturing {win.process_name}: {win.title[:50]}...")
+        try:
+            # Target the exact window by its handle — no title guessing.
+            result = desktop.capture(path, hwnd=win.handle)
+            print(f"    Saved: {result.path} ({result.width}x{result.height})")
+        except naturo.NaturoError as exc:
+            print(f"    Failed to capture: {exc}")
 
     print(f"\nScreenshots saved to {args.output_dir}/")
 
