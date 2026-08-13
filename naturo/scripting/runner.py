@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
@@ -213,7 +214,13 @@ def run_script(
             )
         cmd = [interpreter, str(script_path), *forwarded]
 
-    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    # An `if` STATEMENT on sys.platform (not a ternary, not os.name) so mypy prunes
+    # the Windows-only branch under --platform linux — CREATE_NEW_PROCESS_GROUP is a
+    # Windows-only subprocess attribute and CI lints on Linux. Runtime is identical.
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        creationflags = 0
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
