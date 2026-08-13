@@ -15,10 +15,20 @@ the orchestrator, on an isolated target); nothing here touches a real process.
 """
 from __future__ import annotations
 
+import sys
+
 import pytest
 from click.testing import CliRunner
 
 from naturo.hooks.manager import HOOK_ACTIONS, HookError, HookManager
+
+# The DLL-injection path is Windows-only: ``inject_dll`` raises immediately on a
+# non-Windows platform, before the admin / dll-exists / pid guards it wraps. Gate
+# those guard tests to Windows; a dedicated test below asserts the non-Windows
+# rejection instead.
+_WINDOWS_ONLY = pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows-only DLL injection path"
+)
 
 
 # ── A fake native core modelling the hook engine's contract ──────────────────
@@ -325,6 +335,7 @@ def main_cli():
 # ── Injector: admin pre-flight + argument guards (no real injection) ──────────
 
 
+@_WINDOWS_ONLY
 def test_inject_requires_admin(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     import naturo.hooks.injector as injector
 
@@ -337,6 +348,7 @@ def test_inject_requires_admin(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert "administrator" in str(exc.value).lower()
 
 
+@_WINDOWS_ONLY
 def test_inject_missing_dll_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     import naturo.hooks.injector as injector
 
@@ -347,6 +359,7 @@ def test_inject_missing_dll_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "not found" in str(exc.value).lower()
 
 
+@_WINDOWS_ONLY
 @pytest.mark.parametrize("pid", [0, -1, -999])
 def test_inject_invalid_pid_raises(tmp_path, monkeypatch: pytest.MonkeyPatch, pid: int) -> None:
     import naturo.hooks.injector as injector
@@ -356,6 +369,17 @@ def test_inject_invalid_pid_raises(tmp_path, monkeypatch: pytest.MonkeyPatch, pi
     monkeypatch.setattr(injector, "is_admin", lambda: True)
     with pytest.raises(injector.HookInjectionError):
         injector.inject_dll(pid, str(dll), require_admin=True)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="asserts the non-Windows rejection")
+def test_inject_rejects_non_windows(tmp_path) -> None:
+    import naturo.hooks.injector as injector
+
+    dll = tmp_path / "fake.dll"
+    dll.write_bytes(b"MZ")
+    with pytest.raises(injector.HookInjectionError) as exc:
+        injector.inject_dll(4321, str(dll), require_admin=True)
+    assert "windows" in str(exc.value).lower()
 
 
 def test_is_admin_returns_bool() -> None:
