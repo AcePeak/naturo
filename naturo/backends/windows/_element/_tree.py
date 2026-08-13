@@ -763,4 +763,12 @@ class ElementTreeMixin:
                 result["value"] = _elem_name
                 result["pattern"] = "NameProperty"
 
+        # Normalize document line endings (\r\n and lone \r -> \n) at the single
+        # reader, so `see`-population and `get` — which both delegate here — agree
+        # byte-for-byte, not just on content (#1212). Win11 Notepad's TextPattern
+        # returns lone \r as its line break.
+        if isinstance(result, dict) and isinstance(result.get("value"), str) \
+                and "\r" in result["value"]:
+            result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
+
         return result
