@@ -11,7 +11,9 @@ from naturo.process import (
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
     _matches_app_by_process_name,
 )
-from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
+from naturo.errors import (
+    AppNotFoundError, InteractionFailedError, QuitIncompleteError, TimeoutError,
+)
 
 
 class TestProcessInfo:
@@ -635,15 +637,20 @@ class TestResolveLaunchName:
 
 
 class TestQuitApp:
+    # Patch _resolve_pid_from_backend so name-based quit on a Windows host does
+    # NOT enumerate the live desktop's windows — keeps these unit tests hermetic
+    # and deterministic regardless of what is actually running.
+    @patch("naturo.process._resolve_pid_from_backend", return_value=None)
     @patch("naturo.process.find_process")
-    def test_quit_not_found(self, mock_find):
+    def test_quit_not_found(self, mock_find, mock_resolve):
         mock_find.return_value = None
         with pytest.raises(AppNotFoundError):
             quit_app(name="nonexistent")
 
+    @patch("naturo.process._resolve_pid_from_backend", return_value=None)
     @patch("naturo.process._force_kill")
     @patch("naturo.process.find_process")
-    def test_quit_force(self, mock_find, mock_kill):
+    def test_quit_force(self, mock_find, mock_kill, mock_resolve):
         # First call finds the process; subsequent calls return None (killed)
         mock_find.side_effect = [ProcessInfo(pid=123, name="app"), None, None]
         quit_app(name="app", force=True)
@@ -674,12 +681,17 @@ class TestQuitApp:
         with pytest.raises(InteractionFailedError):
             quit_app(name="notepad", timeout=0.1)
 
+    # Hermetic: patch _app_has_visible_windows so the by-name respawn check does
+    # NOT query the live desktop for a real Notepad window (that made this test
+    # flaky — green only when a Notepad window happened to be visible). Here we
+    # simulate "the respawned app DOES have visible windows" → must fail.
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
     @patch("naturo.process.find_process")
-    def test_verify_quit_app_still_running_by_name(self, mock_find):
+    def test_verify_quit_app_still_running_by_name(self, mock_find, mock_has_windows):
         """#496: _verify_quit must check by name, not just PID.
 
         After force-killing PID 100, if 'notepad' is still running under
-        PID 200 (respawned), verification must fail.
+        PID 200 (respawned) with visible windows, verification must fail.
         """
         # First call: PID lookup returns None (target PID is dead)
         # Second call: name lookup returns a new process (respawned)
@@ -690,7 +702,7 @@ class TestQuitApp:
                 return ProcessInfo(pid=200, name="notepad.exe")
             return None
         mock_find.side_effect = find_side_effect
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
     @patch("naturo.process.find_process")
@@ -737,7 +749,7 @@ class TestQuitApp:
                 return ProcessInfo(pid=200, name="notepad.exe")
             return None
         mock_find.side_effect = find_side_effect
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
 
@@ -1192,7 +1204,7 @@ class TestUWPQuitResolution:
             ProcessInfo(pid=3000, name="calculatorapp.exe"),  # respawn check
         ]
 
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("计算器", None, target_pid=1000, timeout=0.5)
 
 

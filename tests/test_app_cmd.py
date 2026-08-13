@@ -190,6 +190,22 @@ class TestAppQuit:
             result = runner.invoke(app_quit, ["--app", "notepad"])
         assert result.exit_code == 0
 
+    def test_quit_incomplete_surfaces_failure(self, runner):
+        """#1197 Never-Lie: a quit that leaves the app running must surface as a
+        failure (non-zero exit, success:false, QUIT_INCOMPLETE) — never a false
+        'Quit notepad' success message."""
+        from naturo.errors import QuitIncompleteError
+        with patch(
+            "naturo.process.quit_app",
+            side_effect=QuitIncompleteError("notepad", [4242]),
+        ):
+            result = runner.invoke(app_quit, ["notepad", "--json"])
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data["success"] is False
+        assert data["error"]["code"] == "QUIT_INCOMPLETE"
+        assert 4242 in data["error"]["context"]["surviving_pids"]
+
 
 # ---------------------------------------------------------------------------
 # app relaunch

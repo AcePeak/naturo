@@ -648,10 +648,10 @@ class TestQuitAppVerification:
     """quit_app must verify the process is actually dead (#484)."""
 
     def test_quit_app_raises_when_process_survives_force_kill(self):
-        """quit_app raises InteractionFailedError when process won't die."""
+        """quit_app raises QuitIncompleteError when process won't die (#1197)."""
         from unittest.mock import patch, MagicMock
         from naturo.process import quit_app, ProcessInfo
-        from naturo.errors import InteractionFailedError
+        from naturo.errors import QuitIncompleteError
 
         fake_proc = ProcessInfo(pid=99999, name="stubborn.exe", is_running=True)
 
@@ -674,7 +674,7 @@ class TestQuitAppVerification:
             mock_time.monotonic = fake_monotonic
             mock_time.sleep = MagicMock()
 
-            with pytest.raises(InteractionFailedError, match="still running"):
+            with pytest.raises(QuitIncompleteError, match="still running"):
                 quit_app(name="stubborn", timeout=0.1)
 
     def test_quit_app_succeeds_when_process_dies(self):
