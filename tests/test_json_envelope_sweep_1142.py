@@ -95,6 +95,13 @@ _COMPUTE_READS: tuple[tuple[str, ...], ...] = (
     ("browser", "profiles"),
 )
 
+# Script runner (#42): driven with a trivial inline program so the ``-j`` success
+# envelope is asserted hermetically — it spawns a subprocess interpreter (the
+# resolver's system Python), needs no desktop or native DLL. Maps path -> args.
+_SCRIPT_DRIVEN: dict[tuple[str, ...], list[str]] = {
+    ("run",): ["-c", "pass"],
+}
+
 # Browser commands are driven against a mocked CDP page (no Chrome needed), exactly
 # as ``tests/test_browser_cmd.py`` does. Maps path -> extra positional args.
 _BROWSER_DRIVEN: dict[tuple[str, ...], list[str]] = {
@@ -184,9 +191,19 @@ def _drive_browser(path: tuple[str, ...]) -> dict:
     return json.loads(result.output)
 
 
+def _drive_script(path: tuple[str, ...]) -> dict:
+    args = [*path, *_SCRIPT_DRIVEN[path], "-j"]
+    result = CliRunner().invoke(main, args)
+    assert result.exit_code == 0, result.output
+    return json.loads(result.output)
+
+
 # The full set of runtime-driven commands (used by the classification check).
 _DRIVEN: frozenset[tuple[str, ...]] = frozenset(
-    set(_STORE_ROOTS) | set(_COMPUTE_READS) | set(_BROWSER_DRIVEN)
+    set(_STORE_ROOTS)
+    | set(_COMPUTE_READS)
+    | set(_BROWSER_DRIVEN)
+    | set(_SCRIPT_DRIVEN)
 )
 
 
@@ -418,5 +435,15 @@ def test_compute_read_success_envelope(path: tuple[str, ...]) -> None:
 def test_browser_success_envelope(path: tuple[str, ...]) -> None:
     """Browser commands emit the envelope when driven against a mocked page."""
     payload = _drive_browser(path)
+    _assert_envelope(path, payload)
+    assert payload["success"] is True
+
+
+@pytest.mark.parametrize(
+    "path", sorted(_SCRIPT_DRIVEN), ids=lambda p: " ".join(p),
+)
+def test_script_runner_success_envelope(path: tuple[str, ...]) -> None:
+    """`naturo run -c "pass" -j` emits a top-level ``success: true`` envelope."""
+    payload = _drive_script(path)
     _assert_envelope(path, payload)
     assert payload["success"] is True
