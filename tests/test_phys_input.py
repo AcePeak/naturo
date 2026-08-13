@@ -275,8 +275,15 @@ class TestCLIInputMode:
 
     @patch("naturo.cli.interaction._common._get_backend")
     def test_type_normal_mode_default(self, mock_get_backend):
-        """naturo type without --input-mode should default to normal."""
+        """naturo type without --input-mode should default to normal.
+
+        (#1219) The default now climbs the value_pattern → clipboard → keystroke
+        ladder; force the two higher rungs to not apply so we reach the keystroke
+        rung and can assert it receives input_mode="normal".
+        """
         mock_backend = MagicMock()
+        mock_backend.set_focused_element_value.return_value = False  # skip value_pattern
+        mock_backend.hotkey.side_effect = Exception("no clipboard")  # skip clipboard paste
         mock_get_backend.return_value = mock_backend
 
         from naturo.cli.interaction import type_cmd

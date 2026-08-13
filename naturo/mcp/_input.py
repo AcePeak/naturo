@@ -25,46 +25,14 @@ _EN_REF_RE = re.compile(r"e\d+")
 
 
 def _paste_text(backend, text: str) -> bool:
-    """Insert ``text`` via clipboard paste — atomic, fast, and IME-immune.
+    """Backward-compatible thin wrapper around :func:`naturo.actions.paste_text`.
 
-    A fast per-character SendInput drops characters on heavy controls (Win11
-    Notepad's RichEdit under the modern TSF input host): "hello from naturo"
-    lands as "hello      turo". Pasting inserts the whole string in one shot,
-    so there is no per-key race and no IME composition to corrupt it. The
-    caller's clipboard is saved and restored so it is not clobbered.
-
-    Returns True if the paste was delivered (clipboard set + Ctrl+V sent).
-
-    (#1160) The clipboard content is routed through the SAME NATURO_SAFE_INPUT
-    guard as keystroke typing before Ctrl+V: pasting is subject to the identical
-    SendInput/focus-race threat, so a bare paste must not become a bypass. When
-    the guard is armed and ``text`` is unsafe, nothing is set on the clipboard
-    and nothing is pasted — the helper returns False without delivering. The
-    caller (``type_text``) already validates ``text`` up front, so this is
-    defense-in-depth that keeps the guarantee at the paste boundary itself.
+    The clipboard-paste helper now lives in ``naturo.actions`` so the CLI and
+    MCP share ONE implementation of the type ladder (#1219). This wrapper keeps
+    ``naturo.mcp._input._paste_text`` importable for existing callers/tests.
     """
-    import time
-    from naturo.safety import unsafe_input_reason
-    if unsafe_input_reason(text):
-        return False
-    try:
-        saved = backend.clipboard_get()
-    except Exception:
-        saved = None
-    delivered = False
-    try:
-        backend.clipboard_set(text)
-        backend.hotkey("ctrl", "v")
-        time.sleep(0.06)  # let the target consume the clipboard before restoring it
-        delivered = True
-    except Exception:
-        delivered = False
-    if saved is not None:
-        try:
-            backend.clipboard_set(saved)
-        except Exception:
-            pass
-    return delivered
+    from naturo.actions import paste_text
+    return paste_text(backend, text)
 
 
 def register_input_tools(server, _get_backend, _safe_tool):
@@ -270,20 +238,11 @@ def register_input_tools(server, _get_backend, _safe_tool):
         #   2. clipboard paste → insert atomically (fast, IME-immune, no per-key race) —
         #      this is what heavy controls like Win11 Notepad need, where fast keystroke
         #      SendInput drops chars ("hello from naturo" -> "hello      turo");
-        #   3. keystroke at the requested wpm — now with profile="human" so wpm is
-        #      actually honored (the old call left profile="linear", so wpm was ignored
-        #      and it typed at 5 ms/char, which is the drop cause).
-        method = "keystroke"
-        used = False
-        if input_mode == "normal":
-            used = bool(backend.set_focused_element_value(text, append=True))
-            if used:
-                method = "value_pattern"
-        if not used and input_mode == "normal" and _paste_text(backend, text):
-            used = True
-            method = "clipboard_paste"
-        if not used:
-            backend.type_text(text=text, wpm=wpm, input_mode=input_mode, profile="human")
+        #   3. keystroke at the requested wpm with profile="human" so wpm is honored.
+        # The ladder itself lives in naturo.actions.smart_type_text — the SAME
+        # helper the CLI ``naturo type`` calls, so the two surfaces can't drift.
+        from naturo.actions import smart_type_text
+        method = smart_type_text(backend, text, input_mode=input_mode, wpm=wpm)
         return {"success": True, "method": method}
 
     @server.tool()

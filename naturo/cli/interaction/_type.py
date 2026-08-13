@@ -343,6 +343,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         # silently.
         _uia_method = route_info.get("method") == "uia" if route_info else False
         _used_uia = False
+        # (#1219) Delivery method of the default reliability ladder (below), so
+        # it is observable in the result the same way MCP reports ``method``.
+        _ladder_method = None
 
         if paste_mode:
             if text is not None:
@@ -410,8 +413,24 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 backend.type_text(text, delay_ms=int(delay), profile=profile,
                                   wpm=wpm, input_mode=input_mode)
         else:
-            backend.type_text(text, delay_ms=int(delay), profile=profile,
-                              wpm=wpm, input_mode=input_mode)
+            # (#1219) DEFAULT path — route through the shared IME-immune ladder
+            # (ValuePattern → clipboard paste → keystroke), the SAME helper MCP
+            # ``type_text`` uses. This is the fix: the CLI used to call the raw
+            # keystroke backend here, which CJK/TSF IMEs corrupt ("naturo" ->
+            # "nature"). Explicit escape hatches keep their raw behavior:
+            # ``--paste`` handled above; ``--input-mode hardware|hook`` flows in
+            # as input_mode and smart_type_text sends those straight to the
+            # keystroke rung, bypassing the ladder. ``--restore`` gates the
+            # clipboard rung's save/restore of the user's prior clipboard.
+            from naturo.actions import smart_type_text
+            _ladder_method = smart_type_text(
+                backend, text,
+                input_mode=input_mode,
+                wpm=wpm,
+                delay_ms=int(delay),
+                profile=profile,
+                restore=restore,
+            )
 
         if press_return:
             backend.press_key("enter")
@@ -451,6 +470,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     result_data = {"action": action, "text": display_text, "length": display_len}
     if _used_uia:
         result_data["input_method"] = "uia_set_value"
+    elif _ladder_method:
+        # (#1219) Surface which ladder rung delivered the text
+        # (value_pattern | clipboard_paste | keystroke) — observable like MCP.
+        result_data["input_method"] = _ladder_method
     if on_element:
         result_data["target"] = on_element
     if route_info:
@@ -503,6 +526,12 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         and _verification.verified is False
         and not paste_mode
         and not _used_uia
+        # (#1219) Don't paste-fallback when the ladder already delivered via
+        # clipboard paste — re-pasting the same way is redundant and risks
+        # double-inserting the text. A keystroke or ValuePattern delivery that
+        # still failed verification is worth retrying via the clipboard, a
+        # genuinely different mechanism.
+        and _ladder_method != "clipboard_paste"
         and text is not None
     ):
         logger.debug("Type verification failed — retrying with paste mode (#425)")
