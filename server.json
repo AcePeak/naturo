@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.acepeak/naturo",
+  "title": "Naturo",
+  "description": "Windows desktop automation for AI agents — see, click, type across native, Java, Excel, browser.",
+  "version": "0.3.2",
+  "websiteUrl": "https://github.com/AcePeak/naturo",
+  "repository": {
+    "url": "https://github.com/AcePeak/naturo",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "naturo",
+      "version": "0.3.2",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        { "type": "positional", "value": "mcp" },
+        { "type": "positional", "value": "start" }
+      ]
+    }
+  ]
+}
