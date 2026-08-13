@@ -62,21 +62,27 @@ elements naturo recognizes two ways:
 The delta is the multi-framework advantage; `Extra via` shows which provider
 found the elements UIA alone could not.
 
-### Results (Windows 11; Electron rows measured 2026-06-16; JAB row re-verified 2026-06-29)
+### Results (Windows 11; Electron/JAB fixture rows 2026-06; mature external apps 2026-08-13)
 
 | App | Framework | UIA-only | Cascade | Delta | Extra via |
 | --- | --- | ---: | ---: | ---: | --- |
 | Chrome (local web/Electron-class app) | Electron/CDP | 52 | 89 | **+37** | cdp (+34) |
 | Owned Electron fixture (real Electron app) | Electron/CDP | 83 | 113 | **+30** | cdp (+30) |
 | Owned Java Swing fixture (real Swing app) | Java Access Bridge | 6 | 46 | **+40** | jab (+40) |
+| **VS Code** (mature external IDE) | Electron | 13 | 111 | **+98** | full-cascade depth vs UIA-only baseline |
+| **DingTalk / 钉钉** (mature external app) | CEF | 55 | 59 | **+4** | msaa (+44 recovered; net +4 unique) |
+| **同花顺 / THS** (mature external app) | hybrid (自绘 + CEF) | 3 | 3 | +0* | msaa (23 seen); *自绘 grids need OCR (#1213-class) |
+
+The three **mature external apps** were measured live on this benchmark desktop (2026-08-13, #937): VS Code was installed for the run and launched with a CDP debug port; DingTalk and 同花顺 were already installed. VS Code's **+98** (111 vs 13) and DingTalk's MSAA recovery are the multi-framework advantage a UIA-only rival cannot match. (THS's main surface is custom-drawn — the accessibility tree is thin by design; recovering that content is the OCR/自绘 path, tracked separately.)
 
 **Documented gaps (measured honestly — no fabrication):**
 
-- **Mature external Java apps (JetBrains IDE / DBeaver):** the owned-fixture JAB
-  row above is measured live, but the larger external Java apps are not installed
-  on the benchmark desktop. The harness supports them
-  (`measure_running_app(..., title_substring="DBeaver")`); QA tracks measuring
-  them in #935.
+- **JetBrains IDEs / DBeaver (mature external Java apps):** the owned-fixture JAB
+  row is measured live and VS Code/DingTalk cover the Electron/CEF external case,
+  but a large external *Java* app (DBeaver/IntelliJ) is not yet installed here
+  (winget's DBeaver Community is msstore-only). The harness supports them
+  (`measure_window(window_title="DBeaver", app=..., framework=...)`); QA tracks
+  measuring them next.
 - **SAP GUI:** not available in this environment — planned (`SAP scripting/COM`
   provider).
 
