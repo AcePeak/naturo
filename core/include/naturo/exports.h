@@ -422,6 +422,96 @@ NATURO_API int naturo_jab_find_element(uintptr_t hwnd, const char* role,
  */
 NATURO_API int naturo_jab_check_support(uintptr_t hwnd);
 
+/* ── Win32 API Hooking (MinHook) ──────────────────── */
+
+/*
+ * In-process Win32 API function hooking, backed by the vendored MinHook
+ * (MIT) trampoline library. Hooks are installed on a curated set of
+ * resolvable exported APIs (see naturo_hook_supported) inside the *current*
+ * process; each intercepted call is recorded in a bounded, thread-safe log
+ * ring-buffer that the caller drains with naturo_hook_drain_log.
+ *
+ * Hook action (the ``action`` argument to naturo_hook_install):
+ *   0 = HOOK_ACTION_LOG   — record the call, then call the original API
+ *                           (the trampoline) and return its real result.
+ *   1 = HOOK_ACTION_BLOCK — record the call, then return a per-API sentinel
+ *                           *without* calling the original API. The sentinel
+ *                           is the API's documented failure value:
+ *                             MessageBoxW -> 0
+ *                             MessageBoxA -> 0
+ *                             CreateFileW -> INVALID_HANDLE_VALUE, and
+ *                                            SetLastError(ERROR_ACCESS_DENIED)
+ *                             CreateFileA -> INVALID_HANDLE_VALUE, and
+ *                                            SetLastError(ERROR_ACCESS_DENIED)
+ *
+ * Cross-process hooking is achieved by loading naturo_core into a target
+ * process (DLL injection, driven from Python — see naturo/hooks/injector.py)
+ * and calling these same exports from the injected module; the exports
+ * themselves always operate on the process they run in.
+ */
+
+/**
+ * @brief Install (or re-arm) a hook on a named, supported Win32 API.
+ *
+ * Idempotent: installing an already-hooked API updates its action in place.
+ * The (module, function) pair must name one of the supported APIs reported by
+ * naturo_hook_supported; the module may be given with or without a ".dll"
+ * suffix (case-insensitive), the function name is matched case-insensitively.
+ *
+ * @param module   Module/DLL name (e.g. "user32" or "user32.dll").
+ * @param function Exported function name (e.g. "MessageBoxW").
+ * @param action   0 = log-and-forward, 1 = block-and-return-sentinel.
+ * @return 0 on success, -1 on invalid/unsupported argument,
+ *         -2 on MinHook/system error.
+ */
+NATURO_API int naturo_hook_install(const char* module, const char* function,
+                                   int action);
+
+/**
+ * @brief List the currently installed hooks.
+ * @param result_json Buffer to receive a JSON array. Each object:
+ *        {"module":"user32.dll","function":"MessageBoxW","action":"log|block",
+ *         "call_count":N}
+ * @param buf_size Size of the buffer in bytes.
+ * @return Number of installed hooks (>= 0), or -4 if buffer too small.
+ */
+NATURO_API int naturo_hook_list(char* result_json, int buf_size);
+
+/**
+ * @brief Remove a previously installed hook.
+ * @param module   Module/DLL name (as accepted by naturo_hook_install).
+ * @param function Exported function name.
+ * @return 0 on success, 1 if no such hook is installed,
+ *         -1 on invalid argument, -2 on MinHook/system error.
+ */
+NATURO_API int naturo_hook_remove(const char* module, const char* function);
+
+/**
+ * @brief Drain (return and clear) the monitored-call log.
+ * @param result_json Buffer to receive a JSON array. Each object:
+ *        {"seq":N,"module":"user32.dll","function":"MessageBoxW",
+ *         "action":"log|block","detail":"..."}
+ *        Records are ordered oldest-first.
+ * @param buf_size Size of the buffer in bytes.
+ * @return Number of log records returned (>= 0), or -4 if buffer too small.
+ */
+NATURO_API int naturo_hook_drain_log(char* result_json, int buf_size);
+
+/**
+ * @brief Remove every installed hook and clear the monitored-call log.
+ * @return 0 on success.
+ */
+NATURO_API int naturo_hook_clear(void);
+
+/**
+ * @brief List the Win32 APIs this build knows how to hook.
+ * @param result_json Buffer to receive a JSON array. Each object:
+ *        {"module":"user32.dll","function":"MessageBoxW"}
+ * @param buf_size Size of the buffer in bytes.
+ * @return Number of supported APIs (>= 0), or -4 if buffer too small.
+ */
+NATURO_API int naturo_hook_supported(char* result_json, int buf_size);
+
 #ifdef __cplusplus
 }
 #endif
