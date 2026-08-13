@@ -141,6 +141,19 @@ class ElementInfo:
             (e.g., "enabled,focusable,visible,checked"). Currently populated by the
             Java Access Bridge backend, which exposes a control's checked/selected
             state; ``None`` for backends that do not emit states. (#1200)
+        is_enabled: Whether the element is currently enabled/interactable
+            (UIA ``IsEnabled``). ``None`` when the backend does not report it.
+        is_offscreen: Whether the element is scrolled/clipped off-screen
+            (UIA ``IsOffscreen``). ``None`` when not reported.
+        help_text: Extended tooltip/description a screen reader announces
+            (UIA ``HelpText``). ``None`` when not reported.
+        localized_control_type: Locale-specific role name a screen reader
+            announces (UIA ``LocalizedControlType``, e.g. "按钮" for a button).
+            ``None`` when not reported.
+        is_keyboard_focusable: Whether Tab/Shift+Tab can reach this element
+            (UIA ``IsKeyboardFocusable``). ``None`` when not reported.
+        has_keyboard_focus: Whether the element currently holds keyboard focus
+            (UIA ``HasKeyboardFocus``). ``None`` when not reported. (#896)
     """
     id: str
     role: str
@@ -161,6 +174,15 @@ class ElementInfo:
     readable: Optional[bool] = None
     actionable: Optional[bool] = None
     editable: Optional[bool] = None
+    # (#896) UIA accessibility properties. These are emitted per-element by the
+    # native UIA traversal (core/src/element.cpp); a backend that does not read
+    # them (MSAA/IA2/JAB/OCR/UWP fallback, test fixtures) leaves them ``None``.
+    is_enabled: Optional[bool] = None
+    is_offscreen: Optional[bool] = None
+    help_text: Optional[str] = None
+    localized_control_type: Optional[str] = None
+    is_keyboard_focusable: Optional[bool] = None
+    has_keyboard_focus: Optional[bool] = None
 
 
 def _parse_element(data: dict) -> ElementInfo:
@@ -189,6 +211,12 @@ def _parse_element(data: dict) -> ElementInfo:
         readable=data.get("readable"),
         actionable=data.get("actionable"),
         editable=data.get("editable"),
+        is_enabled=data.get("is_enabled"),
+        is_offscreen=data.get("is_offscreen"),
+        help_text=data.get("help_text"),
+        localized_control_type=data.get("localized_control_type"),
+        is_keyboard_focusable=data.get("is_keyboard_focusable"),
+        has_keyboard_focus=data.get("has_keyboard_focus"),
     )
 
 

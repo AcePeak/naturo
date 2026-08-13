@@ -46,6 +46,36 @@ def _build_identity_path(el: Any, parent_path: str, sibling_index: int) -> str:
     return f"{parent_path}/{segment}"
 
 
+_A11Y_PROP_KEYS = (
+    "is_enabled",
+    "is_offscreen",
+    "help_text",
+    "localized_control_type",
+    "is_keyboard_focusable",
+    "has_keyboard_focus",
+)
+
+
+def _a11y_kwargs(props: Dict[str, Any], ui_element_cls: Type) -> Dict[str, Any]:
+    """Build the (#896) UIA accessibility kwargs the ``UIElement`` class accepts.
+
+    The keys are filtered against the target class's dataclass fields so that a
+    minimal stub ``UIElement`` (e.g. a test fixture) that predates these fields
+    still constructs cleanly instead of raising ``TypeError``.
+    """
+    import dataclasses
+
+    try:
+        allowed = {f.name for f in dataclasses.fields(ui_element_cls)}
+    except TypeError:
+        allowed = set()
+    return {
+        k: props.get(k)
+        for k in _A11Y_PROP_KEYS
+        if k in allowed
+    }
+
+
 def _hash_to_ref_number(path: str) -> int:
     """Hash an identity path to a deterministic ref number in [1, 9999]."""
     digest = hashlib.sha256(path.encode("utf-8")).hexdigest()
@@ -127,6 +157,10 @@ def assign_stable_refs(
             parent_id=parent_ref,
             children=child_refs,
             keyboard_shortcut=props.get("keyboard_shortcut"),
+            # (#896) UIA accessibility properties carried in the backend props
+            # dict; absent → None so snapshots from backends that don't emit
+            # them (and older snapshots) round-trip unchanged.
+            **_a11y_kwargs(props, ui_element_cls),
         )
         ref_map[ref] = el.id
         return ref

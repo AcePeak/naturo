@@ -506,6 +506,21 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
                     d["source"] = props["source"]
+                # (#896) UIA accessibility properties. Emitted only when the
+                # backend reported the property (value is not None) — a bool
+                # False (e.g. is_enabled=False for a disabled control) is a
+                # real, meaningful signal and IS emitted. Absent otherwise so a
+                # backend that never reads them adds no noise to the tree.
+                for _prop_key, _out_key in (
+                    ("is_enabled", "is_enabled"),
+                    ("is_offscreen", "is_offscreen"),
+                    ("help_text", "help_text"),
+                    ("localized_control_type", "localized_control_type"),
+                    ("is_keyboard_focusable", "is_keyboard_focusable"),
+                    ("has_keyboard_focus", "has_keyboard_focus"),
+                ):
+                    if props.get(_prop_key) is not None:
+                        d[_out_key] = props[_prop_key]
                 # (M1) Correctness-tagged fusion: every cascade node carries
                 # techniques[] + correctness + confidence; deterministic first.
                 _fusion = _fusion_annotate(props)

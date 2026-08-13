@@ -768,6 +768,86 @@ class UIAInteractMixin:
             logger.debug("get_element_value_uia failed: %s", exc)
             return None
 
+    def get_element_a11y_uia(
+        self,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read a single element's UIA accessibility properties (Python/comtypes).
+
+        Resolves a live UIA element (by identity, then cached point, then role —
+        the same order as :meth:`get_element_value_uia`) and reads the six
+        accessibility properties that the ``see`` snapshot schema exposes (#896):
+        ``is_enabled`` (IsEnabled), ``is_offscreen`` (IsOffscreen), ``help_text``
+        (HelpText), ``localized_control_type`` (LocalizedControlType),
+        ``is_keyboard_focusable`` (IsKeyboardFocusable) and ``has_keyboard_focus``
+        (HasKeyboardFocus).
+
+        This is the working Python-layer path for a *targeted* element even
+        before the native UIA traversal is taught to emit these properties for
+        every node in ``see`` (which needs a native-core rebuild). Each property
+        is read independently so one unsupported/erroring property does not drop
+        the rest; a property that cannot be read comes back ``None``.
+
+        Args:
+            hwnd: Window handle to scope identity/tree search. 0 = desktop root.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId of the target element.
+            role: UIA control type (e.g. ``"Edit"``).
+            x: Screen X of the cached element centre (point fallback).
+            y: Screen Y of the cached element centre (point fallback).
+
+        Returns:
+            A dict with the six keys above, or ``None`` if no element resolved
+            or comtypes/UIA is unavailable.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot read UIA a11y props")
+            return None
+
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
+            if elem is None:
+                return None
+
+            def _read_bool(attr: str) -> Optional[bool]:
+                try:
+                    return bool(getattr(elem, attr))
+                except (COMError, AttributeError, OSError):
+                    return None
+
+            def _read_str(attr: str) -> Optional[str]:
+                try:
+                    val = getattr(elem, attr)
+                except (COMError, AttributeError, OSError):
+                    return None
+                return val or None
+
+            return {
+                "is_enabled": _read_bool("CurrentIsEnabled"),
+                "is_offscreen": _read_bool("CurrentIsOffscreen"),
+                "help_text": _read_str("CurrentHelpText"),
+                "localized_control_type": _read_str(
+                    "CurrentLocalizedControlType"),
+                "is_keyboard_focusable": _read_bool(
+                    "CurrentIsKeyboardFocusable"),
+                "has_keyboard_focus": _read_bool("CurrentHasKeyboardFocus"),
+            }
+        except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
+            logger.debug("get_element_a11y_uia failed: %s", exc)
+            return None
+
     def toggle_element(
         self,
         hwnd: int = 0,
