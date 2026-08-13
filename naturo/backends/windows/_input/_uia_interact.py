@@ -481,6 +481,51 @@ class UIAInteractMixin:
                     best, best_area = el, area
         return best
 
+    @staticmethod
+    def _get_uia_pattern(elem, pattern_id, iface):
+        """Acquire a UIA pattern interface off ``elem``, or ``None`` if unsupported.
+
+        The single gate shared by the value READ
+        (:meth:`get_element_value_uia`) and WRITE (:meth:`set_element_value`)
+        paths — plus :meth:`toggle_element`, :meth:`select_element` and
+        :meth:`expand_collapse_element` — so the directions can never drift on
+        the one subtlety that already bit them (#1212).
+
+        comtypes returns a **non-None NULL COM pointer** for a pattern the
+        element does not support (e.g. a Slider has no ValuePattern). This must
+        be gated on *truthiness* — ``if not ptr`` is ``True`` for a NULL pointer
+        — because ``ptr is not None`` is ``True`` for it and then
+        ``QueryInterface`` raises ``ValueError: NULL COM pointer access``.
+        Before this gate was centralised the write side used the correct
+        ``if ptr`` check while the read side used ``is not None`` and bailed the
+        whole read to ``None`` on any element lacking ValuePattern, never
+        reaching its TextPattern / TogglePattern / Name fallbacks.
+
+        Args:
+            elem: The resolved UIA element.
+            pattern_id: The ``UIA_*PatternId`` to request.
+            iface: The ``IUIAutomation*Pattern`` interface to query for.
+
+        Returns:
+            The queried pattern interface, or ``None`` when the element does
+            not support it (or the query errored).
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        try:
+            ptr = elem.GetCurrentPattern(pattern_id)
+        except (COMError, AttributeError, OSError):
+            return None
+        # NULL COM pointer for an unsupported pattern is non-None but falsy.
+        if not ptr:
+            return None
+        try:
+            return ptr.QueryInterface(iface)
+        except (COMError, AttributeError, OSError, ValueError):
+            return None
+
     def set_element_value(
         self,
         text: str,
@@ -558,14 +603,12 @@ class UIAInteractMixin:
                                  name, automation_id, role)
                     return False
 
-            # 1) ValuePattern — text/edit controls. NB: comtypes returns a
-            #    non-None NULL COM pointer for an UNSUPPORTED pattern (a Slider has
-            #    no ValuePattern), so gate on truthiness — `if ptr:` is False for a
-            #    NULL pointer — not `is not None`, which would QueryInterface a NULL
-            #    pointer and raise "NULL COM pointer access".
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-            if pat_unk:
-                vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+            # 1) ValuePattern — text/edit controls. The NULL-COM-pointer gate for
+            #    an unsupported pattern lives in the shared ``_get_uia_pattern``
+            #    helper, so read and write can't drift on it (#1212).
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is not None:
                 if not vp.CurrentIsReadOnly:
                     vp.SetValue(text)
                     logger.info("SetValue: set via ValuePattern (name=%r, len=%d)",
@@ -576,9 +619,10 @@ class UIAInteractMixin:
             # 2) RangeValuePattern — Slider/Spinner/ProgressBar carry a numeric
             #    value and do NOT support ValuePattern. Parse the number and clamp
             #    to the control's [min, max] so an out-of-range request still lands.
-            rv_unk = elem.GetCurrentPattern(mod.UIA_RangeValuePatternId)
-            if rv_unk:
-                rv = rv_unk.QueryInterface(mod.IUIAutomationRangeValuePattern)
+            rv = self._get_uia_pattern(
+                elem, mod.UIA_RangeValuePatternId,
+                mod.IUIAutomationRangeValuePattern)
+            if rv is not None:
                 if rv.CurrentIsReadOnly:
                     logger.debug("SetValue: RangeValuePattern is read-only")
                     return False
@@ -631,10 +675,10 @@ class UIAInteractMixin:
             elem = uia.GetFocusedElement()
             if elem is None:
                 return False
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-            if pat_unk is None:
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is None:
                 return False
-            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
             if vp.CurrentIsReadOnly:
                 return False
             new_value = ((vp.CurrentValue or "") + text) if append else text
@@ -717,11 +761,19 @@ class UIAInteractMixin:
 
             value = None
             pattern = None
+            # Pattern acquisition uses the same NULL-COM-pointer-safe gate as
+            # the WRITE path (:meth:`set_element_value`) via ``_get_uia_pattern``
+            # (#1212). Previously this read used ``if pat is not None`` — the
+            # exact trap the write side documents against — so an element that
+            # lacked ValuePattern raised "NULL COM pointer access" and the whole
+            # read bailed to None instead of falling through to TextPattern /
+            # TogglePattern / Name.
             try:
-                pat = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-                if pat is not None:
-                    value = pat.QueryInterface(
-                        mod.IUIAutomationValuePattern).CurrentValue
+                vp = self._get_uia_pattern(
+                    elem, mod.UIA_ValuePatternId,
+                    mod.IUIAutomationValuePattern)
+                if vp is not None:
+                    value = vp.CurrentValue
                     pattern = "ValuePattern"
             except (COMError, AttributeError):
                 pass
@@ -730,11 +782,11 @@ class UIAInteractMixin:
             # (not just None) value. (#1208)
             if not value:
                 try:
-                    pat = elem.GetCurrentPattern(mod.UIA_TextPatternId)
-                    if pat is not None:
-                        rng = pat.QueryInterface(
-                            mod.IUIAutomationTextPattern).DocumentRange
-                        _text = rng.GetText(-1)
+                    tp = self._get_uia_pattern(
+                        elem, mod.UIA_TextPatternId,
+                        mod.IUIAutomationTextPattern)
+                    if tp is not None:
+                        _text = tp.DocumentRange.GetText(-1)
                         if _text:
                             value = _text
                             pattern = "TextPattern"
@@ -742,10 +794,11 @@ class UIAInteractMixin:
                     pass
             if not value:
                 try:
-                    pat = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
-                    if pat is not None:
-                        state = pat.QueryInterface(
-                            mod.IUIAutomationTogglePattern).CurrentToggleState
+                    tg = self._get_uia_pattern(
+                        elem, mod.UIA_TogglePatternId,
+                        mod.IUIAutomationTogglePattern)
+                    if tg is not None:
+                        state = tg.CurrentToggleState
                         value = {0: "Off", 1: "On", 2: "Indeterminate"}.get(
                             state, "Unknown")
                         pattern = "TogglePattern"
@@ -887,12 +940,12 @@ class UIAInteractMixin:
                 logger.debug("Toggle: target element not found")
                 return None
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
-            if pat_unk is None:
+            tp = self._get_uia_pattern(
+                elem, mod.UIA_TogglePatternId, mod.IUIAutomationTogglePattern)
+            if tp is None:
                 logger.debug("Toggle: element does not support TogglePattern")
                 return None
 
-            tp = pat_unk.QueryInterface(mod.IUIAutomationTogglePattern)
             tp.Toggle()
 
             # Read new state: 0=Off, 1=On, 2=Indeterminate
@@ -945,12 +998,13 @@ class UIAInteractMixin:
                 logger.debug("Select: target element not found")
                 return False
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_SelectionItemPatternId)
-            if pat_unk is None:
+            sp = self._get_uia_pattern(
+                elem, mod.UIA_SelectionItemPatternId,
+                mod.IUIAutomationSelectionItemPattern)
+            if sp is None:
                 logger.debug("Select: element does not support SelectionItemPattern")
                 return False
 
-            sp = pat_unk.QueryInterface(mod.IUIAutomationSelectionItemPattern)
             sp.Select()
             logger.info("Select: selected element (name=%r)", name)
             return True
@@ -1001,12 +1055,13 @@ class UIAInteractMixin:
                 logger.debug("ExpandCollapse: target element not found")
                 return False
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ExpandCollapsePatternId)
-            if pat_unk is None:
+            ecp = self._get_uia_pattern(
+                elem, mod.UIA_ExpandCollapsePatternId,
+                mod.IUIAutomationExpandCollapsePattern)
+            if ecp is None:
                 logger.debug("ExpandCollapse: element does not support ExpandCollapsePattern")
                 return False
 
-            ecp = pat_unk.QueryInterface(mod.IUIAutomationExpandCollapsePattern)
             if expand:
                 ecp.Expand()
                 logger.info("ExpandCollapse: expanded element (name=%r)", name)
