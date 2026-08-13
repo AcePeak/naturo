@@ -14,6 +14,14 @@
 
 > **New here?** Get Claude to open, type into, and save a Notepad file in under five minutes: [**5-minute quickstart → docs/QUICKSTART.md**](docs/QUICKSTART.md).
 
+## Tutorials
+
+Guided, end-to-end walkthroughs — each with complete, runnable examples (CLI + the Python SDK), and every command checked against the code:
+
+1. [**Automate Notepad in 5 minutes**](docs/tutorials/01-automate-notepad.md) — see → click → type → save. The four verbs every naturo automation is built from.
+2. [**Automate Excel with naturo**](docs/tutorials/02-automate-excel.md) — open a workbook, read/write cells, inspect ranges, and build a chart over Excel's COM interface.
+3. [**Build an AI agent that uses naturo**](docs/tutorials/03-ai-agent-with-naturo.md) — run naturo as an MCP server for Claude Desktop/Code, plus a minimal Python tool-use loop that drives naturo.
+
 ## What You Get
 
 - 🖥️ **Screen Capture** — Screenshot any window or monitor
