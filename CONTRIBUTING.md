@@ -51,6 +51,7 @@ Request a fine-grained PAT from the maintainer with Issues read/write permission
 > **All development happens on `develop`.** Feature branches → PR → `develop`.
 > Only release merges go `develop` → `main`, and only version tags land on `main`
 > (which is what publishes to PyPI). **Never push directly to `main`.**
+> See [docs/RELEASING.md](docs/RELEASING.md) for the release cadence and checklist.
 
 ### Code Standards
 - All tests must pass on Ubuntu + macOS + Windows
