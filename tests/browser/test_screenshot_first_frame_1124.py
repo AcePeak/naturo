@@ -146,6 +146,8 @@ def test_first_screenshot_after_headless_launch_writes_png(tmp_path: Path) -> No
     import shutil
 
     from naturo.browser import launch_chrome
+    from tests._launch import kill_pid
+    from tests._teardown_registry import register
 
     fixture = (Path(__file__).parent / "fixtures" / "basic.html").resolve().as_uri()
     user_data_dir = tempfile.mkdtemp(prefix="naturo_first_frame_")
@@ -156,6 +158,7 @@ def test_first_screenshot_after_headless_launch_writes_png(tmp_path: Path) -> No
         user_data_dir=user_data_dir,
         timeout=30.0,
     )
+    register(chrome.pid)  # session-end safety-net sweeper (#1202)
     try:
         # Load content the way ``browser launch --url`` does, then drop the
         # connection — navigating does not warm the compositor (only a capture
@@ -180,4 +183,6 @@ def test_first_screenshot_after_headless_launch_writes_png(tmp_path: Path) -> No
             chrome.wait(timeout=10)
         except subprocess.TimeoutExpired:
             chrome.kill()
+        # Hard-kill the tracked PID + Chrome child tree, PID-scoped only (#1202).
+        kill_pid(chrome.pid)
         shutil.rmtree(user_data_dir, ignore_errors=True)

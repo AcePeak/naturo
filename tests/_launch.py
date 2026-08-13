@@ -139,4 +139,13 @@ def tracked_launch(cmd, image_names, settle: float = 0.0, pid_lister: PidLister 
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if settle:
         time.sleep(settle)
+    # Register the launcher PID with the session-end safety-net sweeper (#1202)
+    # so a test that crashes before its ``finally: proc.terminate()`` still gets
+    # reaped. Lazy import keeps this module dependency-light and Linux-safe.
+    try:
+        from tests._teardown_registry import register
+
+        register(proc.pid)
+    except Exception:
+        pass
     return TrackedProc(proc, image_names, baseline, pid_lister)
