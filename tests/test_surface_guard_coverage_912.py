@@ -214,6 +214,10 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         "help", "list permissions",
         # MCP / daemon management.
         "mcp install", "mcp start", "mcp tools",
+        # Script runner (#42): spawns a subprocess interpreter to run a user
+        # script; the command itself never acquires the desktop backend — any
+        # UI use is the child script's concern, not `naturo run`'s.
+        "run",
         # On-disk recording store management + replay setup.
         "record delete", "record export", "record list", "record play",
         "record show", "record start", "record stop",
