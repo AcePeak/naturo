@@ -52,6 +52,7 @@ from naturo.cli.recording_cmd import record
 from naturo.cli.config_cmd import config_cmd as _config_cmd_group
 from naturo.cli.doctor_cmd import doctor, info
 from naturo.cli.run_cmd import run_cmd
+from naturo.cli.hook_cmd import hook
 
 
 # Accept ``-h`` as the POSIX synonym for ``--help`` (#899). Declaring it on the
@@ -223,6 +224,9 @@ main.add_command(browser)
 
 # ── Scripting ──────────────────────────────────
 main.add_command(run_cmd)  # `naturo run script.py` / `naturo run -c` (#42)
+
+# ── Win32 API Hooking ──────────────────────────
+main.add_command(hook)  # `naturo hook install/list/remove/monitor` (#40)
 
 # ── Diagnostics ────────────────────────────────
 main.add_command(doctor)

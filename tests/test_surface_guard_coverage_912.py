@@ -201,6 +201,11 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         "clipboard clear", "clipboard get", "clipboard info", "clipboard set",
         # Pure on-disk config.
         "config clear", "config setup anthropic", "config show",
+        # Win32 API hooking (#40) -- drives the native MinHook hook engine in
+        # naturo_core (install/list/remove/monitor in-process hooks), not the
+        # desktop UI automation backend, so it never routes through
+        # require_desktop_session / the guarded _get_backend.
+        "hook install", "hook list", "hook monitor", "hook remove",
         # Diagnostic self-check -- probes session/DPI/deps defensively and
         # reports availability (e.g. "Desktop session: no") instead of
         # acquiring the desktop backend, so it never routes through

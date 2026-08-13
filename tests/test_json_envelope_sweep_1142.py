@@ -218,6 +218,7 @@ _REASON_DESKTOP = "needs naturo_core.dll + a live desktop window/UIA backend"
 _REASON_BROWSER = "needs a live CDP browser connection"
 _REASON_EXCEL = "needs Excel via COM automation"
 _REASON_SIDE_EFFECT = "mutating / subprocess / network / interactive action, or needs pre-seeded state or a live target arg"
+_REASON_HOOK = "needs naturo_core.dll with the MinHook Win32 hook engine (in-process API hooking)"
 
 REQUIRES_LIVE_ENV: dict[tuple[str, ...], str] = {
     # Desktop automation — native DLL + a real window.
@@ -300,6 +301,11 @@ REQUIRES_LIVE_ENV: dict[tuple[str, ...], str] = {
     ("excel", "read"): _REASON_EXCEL,
     ("excel", "run-macro"): _REASON_EXCEL,
     ("excel", "write"): _REASON_EXCEL,
+    # Win32 API hooking (#40) — success path drives the native hook engine.
+    ("hook", "install"): _REASON_HOOK,
+    ("hook", "list"): _REASON_HOOK,
+    ("hook", "monitor"): _REASON_HOOK,
+    ("hook", "remove"): _REASON_HOOK,
     # Side-effecting / stateful / arg-required success paths.
     ("config", "clear"): _REASON_SIDE_EFFECT,
     ("config", "setup", "anthropic"): _REASON_SIDE_EFFECT,

@@ -167,6 +167,26 @@
       "description": "Retrieve a previously created snapshot."
     },
     {
+      "name": "hook_install",
+      "description": "Install (or re-arm) an in-process hook on a supported Win32 API."
+    },
+    {
+      "name": "hook_list",
+      "description": "List the currently installed in-process hooks."
+    },
+    {
+      "name": "hook_monitor",
+      "description": "Drain and return the monitored-call log (clears the native buffer)."
+    },
+    {
+      "name": "hook_remove",
+      "description": "Remove a previously installed hook on MODULE!FUNCTION."
+    },
+    {
+      "name": "hook_supported",
+      "description": "List the Win32 APIs this build knows how to hook."
+    },
+    {
       "name": "hotkey",
       "description": "Press a keyboard shortcut (key combination)."
     },

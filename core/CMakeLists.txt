@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
-project(naturo_core VERSION 0.3.2 LANGUAGES CXX)
+# C is enabled alongside C++ so the vendored MinHook C sources (third_party/
+# minhook/src/*.c) compile with the C compiler instead of being treated as
+# non-build "None" items by the Visual Studio generator.
+project(naturo_core VERSION 0.3.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,12 +17,33 @@ add_library(naturo_core SHARED
     src/msaa.cpp
     src/ia2.cpp
     src/jab.cpp
+    # Win32 API hooking (MinHook). The C ABI + manager compile everywhere
+    # (Windows-only internals are guarded); the MinHook C sources and detours
+    # are Windows/x86-x64 only and added below.
+    src/hooks/minhook_wrapper.cpp
+    src/hooks/hook_manager.cpp
 )
 
 target_include_directories(naturo_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# ── MinHook (vendored, MIT) ───────────────────────────────────────────
+# MinHook is a small C trampoline-hooking library. Compile its sources
+# directly into naturo_core on Windows (it targets x86/x64 Windows only).
+if(WIN32)
+    set(MINHOOK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/minhook)
+    target_sources(naturo_core PRIVATE
+        ${MINHOOK_DIR}/src/buffer.c
+        ${MINHOOK_DIR}/src/hook.c
+        ${MINHOOK_DIR}/src/trampoline.c
+        ${MINHOOK_DIR}/src/hde/hde32.c
+        ${MINHOOK_DIR}/src/hde/hde64.c
+    )
+    target_include_directories(naturo_core PRIVATE ${MINHOOK_DIR}/include)
+    target_include_directories(naturo_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/hooks)
+endif()
 
 target_compile_definitions(naturo_core PRIVATE NATURO_BUILDING)
 

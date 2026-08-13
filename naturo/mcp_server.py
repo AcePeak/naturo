@@ -35,6 +35,7 @@ from naturo.mcp._dialog import register_dialog_tools
 from naturo.mcp._system import register_system_tools
 from naturo.mcp._excel import register_excel_tools
 from naturo.mcp._word import register_word_tools
+from naturo.mcp.hook_tools import register_hook_tools
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +437,7 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     register_system_tools(server, _get_backend, _safe_tool)
     register_excel_tools(server, _get_backend, _safe_tool)
     register_word_tools(server, _get_backend, _safe_tool)
+    register_hook_tools(server, _get_backend, _safe_tool)
 
     # Pydantic parameter-validation errors are sanitized by the
     # _SanitizingFastMCP.call_tool override, which is wired into the low-level
