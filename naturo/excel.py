@@ -247,6 +247,18 @@ def _cell_value_to_python(value: Any) -> Any:
     return str(value)
 
 
+# xlChartType constants (Excel VBA enum) keyed by friendly name. Values are the
+# stable numeric COM constants so we never need early-bound win32com typelibs.
+_CHART_TYPES: dict[str, int] = {
+    "column": 51,     # xlColumnClustered
+    "bar": 57,        # xlBarClustered
+    "line": 4,        # xlLine
+    "pie": 5,         # xlPie
+    "area": 1,        # xlArea
+    "scatter": -4169,  # xlXYScatter
+}
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 
@@ -609,6 +621,138 @@ def excel_get_range_info(
         raise
     except Exception as exc:
         raise ExcelError(f"Failed to get range info: {exc}", context={"path": abs_path})
+    finally:
+        try:
+            excel.Quit()
+        except Exception as exc:
+            logger.debug("COM cleanup failed: %s", exc)
+
+
+@_com_apartment
+def excel_create_chart(
+    path: str,
+    data_range: str,
+    chart_type: str = "column",
+    sheet: str | None = None,
+    title: str | None = None,
+    anchor: str | None = None,
+    create: bool = False,
+) -> dict[str, Any]:
+    """Create a chart from a data range on a worksheet.
+
+    Uses COM ``Worksheet.Shapes.AddChart2`` and ``Chart.SetSourceData``.
+
+    Args:
+        path: Path to the .xlsx/.xlsm file.
+        data_range: Source data range (e.g. 'A1:B10').
+        chart_type: One of bar/column/line/pie/area/scatter (default: column).
+        sheet: Sheet name that holds the data / hosts the chart
+            (default: active sheet).
+        title: Optional chart title.
+        anchor: Optional cell (e.g. 'D2') to move the chart's top-left corner to.
+        create: Create the workbook if it does not exist.
+
+    Returns:
+        Dict with chart name, chart_type, range, sheet, anchor, and position.
+
+    Raises:
+        ExcelError(INVALID_INPUT): Invalid chart type or missing range.
+        WorkbookNotFoundError: If the file does not exist and create is False.
+        SheetNotFoundError: If the sheet does not exist.
+        ExcelError: If chart creation fails.
+    """
+    # ── Validate inputs first (pure, host-independent → clear INVALID_INPUT) ──
+    type_key = (chart_type or "").strip().lower()
+    if type_key not in _CHART_TYPES:
+        raise ExcelError(
+            f"Invalid chart type: {chart_type!r}. "
+            f"Supported: {', '.join(sorted(_CHART_TYPES))}",
+            code=ErrorCode.INVALID_INPUT,
+            context={"chart_type": chart_type, "supported": sorted(_CHART_TYPES)},
+        )
+    if not data_range or not str(data_range).strip():
+        raise ExcelError(
+            "A source data range is required (e.g. 'A1:B10')",
+            code=ErrorCode.INVALID_INPUT,
+            context={"range": data_range},
+        )
+
+    _require_windows()
+    abs_path = _normalize_path(path)
+    if not os.path.isfile(abs_path) and not create:
+        raise WorkbookNotFoundError(path)
+
+    xl_type = _CHART_TYPES[type_key]
+    excel = _get_excel(visible=False)
+    try:
+        if os.path.isfile(abs_path):
+            wb = excel.Workbooks.Open(abs_path)
+        else:
+            wb = excel.Workbooks.Add()
+
+        ws = _get_worksheet(wb, sheet)
+
+        # AddChart2(Style, XlChartType, ...) — Style=-1 keeps the default style.
+        shape = ws.Shapes.AddChart2(-1, xl_type)
+        chart = shape.Chart
+        chart.SetSourceData(Source=ws.Range(data_range))
+
+        if title:
+            chart.HasTitle = True
+            chart.ChartTitle.Text = title
+
+        # Optionally re-anchor the chart's top-left corner to a target cell.
+        if anchor:
+            anchor_cell = ws.Range(anchor)
+            shape.Left = anchor_cell.Left
+            shape.Top = anchor_cell.Top
+
+        # Capture the chart's identity/geometry while the COM proxy is still
+        # live — after wb.Close the proxy is dead (see c9d070b4 / d5b99e54).
+        chart_name = shape.Name
+        position = {
+            "left": shape.Left,
+            "top": shape.Top,
+            "width": shape.Width,
+            "height": shape.Height,
+        }
+        try:
+            anchor_addr = shape.TopLeftCell.Address
+        except Exception as exc:
+            logger.debug("TopLeftCell resolve failed: %s", exc)
+            anchor_addr = None
+        sheet_name = ws.Name
+
+        # Persist the workbook so the chart round-trips on re-open.
+        if os.path.isfile(abs_path):
+            wb.Save()
+        else:
+            wb.SaveAs(abs_path)
+        wb.Close(SaveChanges=False)
+
+        return {
+            "path": abs_path,
+            "sheet": sheet_name,
+            "chart": chart_name,
+            "chart_type": type_key,
+            "range": data_range,
+            "title": title,
+            "anchor": anchor_addr,
+            "position": position,
+        }
+
+    except (WorkbookNotFoundError, SheetNotFoundError, ExcelError):
+        raise
+    except Exception as exc:
+        raise ExcelError(
+            f"Failed to create chart: {exc}",
+            context={"range": data_range, "chart_type": type_key},
+            suggested_action=(
+                "Excel COM automation failed. Ensure Microsoft Excel is installed "
+                "and activated, the sheet name is correct, and the range points at "
+                "real tabular data (e.g. 'A1:B10')."
+            ),
+        )
     finally:
         try:
             excel.Quit()

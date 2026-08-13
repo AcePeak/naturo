@@ -159,6 +159,93 @@ class TestExcelBackend:
         assert result["result"] == "Done"
 
     @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
+    @patch("naturo.excel._get_excel")
+    def test_excel_create_chart(self, mock_get_excel):
+        """excel_create_chart adds a chart with the right type/range/sheet."""
+        from naturo.excel import excel_create_chart
+
+        mock_excel = MagicMock()
+        mock_wb = MagicMock()
+        mock_ws = MagicMock()
+        mock_ws.Name = "Sheet1"
+        mock_shape = MagicMock()
+        mock_shape.Name = "Chart 1"
+        mock_shape.Left = 100
+        mock_shape.Top = 50
+        mock_shape.Width = 480
+        mock_shape.Height = 288
+        mock_shape.TopLeftCell.Address = "$D$1"
+        mock_ws.Shapes.AddChart2.return_value = mock_shape
+        mock_wb.ActiveSheet = mock_ws
+        mock_excel.Workbooks.Open.return_value = mock_wb
+        mock_get_excel.return_value = mock_excel
+
+        result = excel_create_chart(self.test_path, "A1:B10", chart_type="bar")
+
+        # xlBarClustered == 57; Style=-1 keeps the default style.
+        mock_ws.Shapes.AddChart2.assert_called_once_with(-1, 57)
+        # Source data range was set to the requested range.
+        mock_shape.Chart.SetSourceData.assert_called_once()
+        assert result["chart"] == "Chart 1"
+        assert result["chart_type"] == "bar"
+        assert result["range"] == "A1:B10"
+        assert result["sheet"] == "Sheet1"
+        assert result["anchor"] == "$D$1"
+
+    @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
+    @patch("naturo.excel._get_excel")
+    def test_excel_create_chart_resolves_sheet_and_title(self, mock_get_excel):
+        """excel_create_chart resolves a named sheet and sets the title."""
+        from naturo.excel import excel_create_chart
+
+        mock_excel = MagicMock()
+        mock_wb = MagicMock()
+        mock_wb.Sheets.Count = 2
+        target_ws = MagicMock()
+        target_ws.Name = "Data"
+        mock_shape = MagicMock()
+        mock_shape.Name = "Chart 5"
+        target_ws.Shapes.AddChart2.return_value = mock_shape
+
+        def _sheets(i):
+            return MagicMock(Name=["Summary", "Data"][i - 1])
+
+        mock_wb.Sheets.side_effect = lambda i: (
+            target_ws if isinstance(i, str) and i == "Data" else _sheets(i)
+        )
+        mock_excel.Workbooks.Open.return_value = mock_wb
+        mock_get_excel.return_value = mock_excel
+
+        result = excel_create_chart(
+            self.test_path, "A1:C20", chart_type="line",
+            sheet="Data", title="Revenue",
+        )
+
+        target_ws.Shapes.AddChart2.assert_called_once_with(-1, 4)  # xlLine == 4
+        assert mock_shape.Chart.HasTitle is True
+        mock_shape.Chart.ChartTitle.Text = "Revenue"
+        assert result["sheet"] == "Data"
+        assert result["title"] == "Revenue"
+
+    def test_excel_create_chart_invalid_type(self):
+        """excel_create_chart rejects an unknown chart type with INVALID_INPUT."""
+        from naturo.excel import excel_create_chart, ExcelError
+        from naturo.errors import ErrorCode
+
+        with pytest.raises(ExcelError) as exc_info:
+            excel_create_chart(self.test_path, "A1:B10", chart_type="donut")
+        assert exc_info.value.code == ErrorCode.INVALID_INPUT
+
+    def test_excel_create_chart_missing_range(self):
+        """excel_create_chart rejects an empty range with INVALID_INPUT."""
+        from naturo.excel import excel_create_chart, ExcelError
+        from naturo.errors import ErrorCode
+
+        with pytest.raises(ExcelError) as exc_info:
+            excel_create_chart(self.test_path, "  ", chart_type="bar")
+        assert exc_info.value.code == ErrorCode.INVALID_INPUT
+
+    @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
     def test_workbook_not_found(self):
         """excel_open raises WorkbookNotFoundError for missing file."""
         from naturo.excel import excel_open, WorkbookNotFoundError
@@ -319,6 +406,26 @@ class TestExcelCLI:
         assert result.exit_code == 0
         assert "used range" in result.output.lower()
 
+    def test_excel_create_chart_help(self, runner, cli):
+        """Excel create-chart shows help."""
+        result = runner.invoke(cli, ["excel", "create-chart", "--help"])
+        assert result.exit_code == 0
+        assert "chart" in result.output.lower()
+
+    def test_excel_create_chart_invalid_type_rejected(self, runner, cli):
+        """create-chart rejects a chart type outside the allowed choices."""
+        result = runner.invoke(
+            cli, ["excel", "create-chart", "x.xlsx", "--type", "donut", "--range", "A1:B2"]
+        )
+        assert result.exit_code != 0
+        assert "donut" in result.output or "Invalid value" in result.output
+
+    def test_excel_create_chart_missing_range_rejected(self, runner, cli):
+        """create-chart requires --range."""
+        result = runner.invoke(cli, ["excel", "create-chart", "x.xlsx", "--type", "bar"])
+        assert result.exit_code != 0
+        assert "range" in result.output.lower()
+
     @pytest.mark.skipif(not is_windows, reason="Excel COM requires Windows")
     def test_excel_read_nonexistent_file_json(self, runner, cli):
         """Excel read on missing file returns JSON error."""
@@ -340,7 +447,7 @@ class TestExcelCLI:
         """All expected Excel subcommands are registered."""
         result = runner.invoke(cli, ["excel", "--help"])
         assert result.exit_code == 0
-        for cmd in ["open", "read", "write", "list-sheets", "run-macro", "info"]:
+        for cmd in ["open", "read", "write", "list-sheets", "run-macro", "info", "create-chart"]:
             assert cmd in result.output, f"Missing subcommand: {cmd}"
 
 
@@ -363,7 +470,8 @@ class TestExcelMCP:
         # Check tool names include excel tools
         tool_names = [t.name for t in server._tool_manager.list_tools()]
         expected = ["excel_open", "excel_read", "excel_write",
-                     "excel_list_sheets", "excel_run_macro", "excel_info"]
+                     "excel_list_sheets", "excel_run_macro", "excel_info",
+                     "excel_create_chart"]
         for name in expected:
             assert name in tool_names, f"MCP tool '{name}' not registered"
 

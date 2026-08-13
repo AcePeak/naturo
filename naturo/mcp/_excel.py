@@ -122,6 +122,38 @@ def register_excel_tools(server, _get_backend, _safe_tool):
 
     @server.tool()
     @_safe_tool
+    def excel_create_chart(
+        path: str,
+        data_range: str,
+        chart_type: str = "column",
+        sheet: Optional[str] = None,
+        title: Optional[str] = None,
+        anchor: Optional[str] = None,
+        create: bool = False,
+    ) -> dict:
+        """Create a chart from a data range in an Excel workbook.
+
+        Args:
+            path: Path to the .xlsx/.xlsm file.
+            data_range: Source data range (e.g. 'A1:B10').
+            chart_type: bar/column/line/pie/area/scatter (default: column).
+            sheet: Sheet name (default: active sheet).
+            title: Optional chart title.
+            anchor: Optional cell to anchor the chart top-left (e.g. 'D2').
+            create: Create the workbook if it doesn't exist.
+
+        Returns:
+            Dict with chart name, chart_type, range, sheet, anchor, position.
+        """
+        from naturo.excel import excel_create_chart as _excel_create_chart
+        result = _excel_create_chart(
+            path, data_range, chart_type=chart_type, sheet=sheet,
+            title=title, anchor=anchor, create=create,
+        )
+        return {"success": True, **result}
+
+    @server.tool()
+    @_safe_tool
     def excel_info(
         path: str,
         sheet: Optional[str] = None,

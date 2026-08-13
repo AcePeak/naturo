@@ -208,8 +208,8 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         # hidden alias of ``doctor`` (#1048) sharing the same code path.
         "doctor", "info",
         # Excel COM automation -- its own backend, not desktop UIA.
-        "excel info", "excel list-sheets", "excel open", "excel read",
-        "excel run-macro", "excel write",
+        "excel create-chart", "excel info", "excel list-sheets", "excel open",
+        "excel read", "excel run-macro", "excel write",
         # Pure help; permissions listing is an unimplemented stub (no backend).
         "help", "list permissions",
         # MCP / daemon management.

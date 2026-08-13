@@ -119,6 +119,10 @@
       "description": "Drag from one point to another."
     },
     {
+      "name": "excel_create_chart",
+      "description": "Create a chart from a data range in an Excel workbook."
+    },
+    {
       "name": "excel_info",
       "description": "Get used range info for an Excel worksheet."
     },

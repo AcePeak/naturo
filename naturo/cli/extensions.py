@@ -205,6 +205,52 @@ def run_macro(path, macro_name, macro_args, json_output) -> None:
             click.echo(f"Result: {result['result']}")
 
 
+@excel.command("create-chart")
+@click.argument("path", type=click.Path())
+@click.option("--type", "chart_type", default="column", show_default=True,
+              type=click.Choice(["bar", "column", "line", "pie", "area", "scatter"]),
+              help="Chart type")
+@click.option("--range", "range_", required=True,
+              help="Source data range (e.g. A1:B10)")
+@click.option("--sheet", help="Sheet name (default: active sheet)")
+@click.option("--title", help="Chart title")
+@click.option("--anchor", help="Cell to anchor the chart's top-left corner (e.g. D2)")
+@click.option("--create", is_flag=True, help="Create workbook if it doesn't exist")
+@click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+def create_chart(path, chart_type, range_, sheet, title, anchor, create, json_output) -> None:
+    """Create a chart from a data range on a worksheet.
+
+    PATH is the workbook file. --range is the source data (e.g. A1:B10).
+
+    \b
+    Examples:
+
+      naturo excel create-chart report.xlsx --type bar --range "A1:B10"
+
+      naturo excel create-chart data.xlsx --type line --range "A1:C20" \\
+        --sheet Sales --title "Q1 Revenue" --json
+    """
+    from naturo.cli.error_helpers import emit_exception_error
+
+    try:
+        from naturo.excel import excel_create_chart
+        result = excel_create_chart(
+            path, range_, chart_type=chart_type, sheet=sheet,
+            title=title, anchor=anchor, create=create,
+        )
+    except Exception as exc:
+        emit_exception_error(exc, json_output, fallback_code="EXCEL_ERROR")
+        return
+
+    if json_output:
+        click.echo(json_dumps({"success": True, **result}))
+    else:
+        click.echo(f"Created {result['chart_type']} chart '{result['chart']}' "
+                   f"on sheet {result['sheet']} from {result['range']}")
+        if result.get("anchor"):
+            click.echo(f"Anchor: {result['anchor']}")
+
+
 @excel.command("info")
 @click.argument("path", type=click.Path())
 @click.option("--sheet", help="Sheet name (default: active sheet)")

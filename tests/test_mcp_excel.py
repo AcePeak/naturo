@@ -188,6 +188,47 @@ class TestExcelRunMacro:
         mock_macro.assert_called_once_with("macros.xlsm", "Calculate", args=["10", "20"])
 
 
+# ── excel_create_chart ───────────────────────────────────────────────
+
+
+class TestExcelCreateChart:
+
+    @patch("naturo.excel.excel_create_chart")
+    def test_create_chart(self, mock_chart, server):
+        mock_chart.return_value = {
+            "path": "data.xlsx", "sheet": "Sheet1", "chart": "Chart 1",
+            "chart_type": "bar", "range": "A1:B10", "title": None,
+            "anchor": "$A$1", "position": {"left": 0, "top": 0, "width": 480, "height": 288},
+        }
+        result = _call_tool(server, "excel_create_chart", {
+            "path": "data.xlsx", "data_range": "A1:B10", "chart_type": "bar",
+        })
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["chart"] == "Chart 1"
+        assert data["chart_type"] == "bar"
+        mock_chart.assert_called_once_with(
+            "data.xlsx", "A1:B10", chart_type="bar", sheet=None,
+            title=None, anchor=None, create=False,
+        )
+
+    @patch("naturo.excel.excel_create_chart")
+    def test_create_chart_full_options(self, mock_chart, server):
+        mock_chart.return_value = {
+            "path": "data.xlsx", "sheet": "Data", "chart": "Chart 2",
+            "chart_type": "line", "range": "A1:C20", "title": "Rev",
+            "anchor": "$D$2", "position": {},
+        }
+        _call_tool(server, "excel_create_chart", {
+            "path": "data.xlsx", "data_range": "A1:C20", "chart_type": "line",
+            "sheet": "Data", "title": "Rev", "anchor": "D2", "create": True,
+        })
+        mock_chart.assert_called_once_with(
+            "data.xlsx", "A1:C20", chart_type="line", sheet="Data",
+            title="Rev", anchor="D2", create=True,
+        )
+
+
 # ── excel_info ───────────────────────────────────────────────────────
 
 

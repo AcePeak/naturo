@@ -276,6 +276,7 @@ REQUIRES_LIVE_ENV: dict[tuple[str, ...], str] = {
     ("browser", "stealth"): _REASON_BROWSER,
     ("browser", "stealth-check"): _REASON_BROWSER,
     # Excel COM.
+    ("excel", "create-chart"): _REASON_EXCEL,
     ("excel", "info"): _REASON_EXCEL,
     ("excel", "list-sheets"): _REASON_EXCEL,
     ("excel", "open"): _REASON_EXCEL,
