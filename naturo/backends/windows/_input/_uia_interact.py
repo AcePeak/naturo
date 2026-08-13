@@ -526,6 +526,96 @@ class UIAInteractMixin:
         except (COMError, AttributeError, OSError, ValueError):
             return None
 
+    def _read_text_or_value_uia(self, elem, mod) -> Optional[str]:
+        """Read non-empty text from an element via TextPattern then ValuePattern.
+
+        Helper for the raw-view ScrollViewer fallback (#1213). Prefers
+        TextPattern (full document text) and falls back to ValuePattern; returns
+        the text, or ``None`` when neither pattern yields a non-empty string.
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        # TextPattern first (full document text for multi-line editors).
+        try:
+            tp = self._get_uia_pattern(
+                elem, mod.UIA_TextPatternId, mod.IUIAutomationTextPattern)
+            if tp is not None:
+                text = tp.DocumentRange.GetText(-1)
+                if text:
+                    return text
+        except (COMError, AttributeError):
+            pass
+        # ValuePattern next.
+        try:
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is not None:
+                val = vp.CurrentValue
+                if val:
+                    return val
+        except (COMError, AttributeError):
+            pass
+        return None
+
+    def _raw_view_find_inner_text(
+        self, uia, mod, elem, max_depth: int = 6, budget: int = 200,
+    ) -> Optional[str]:
+        """Bounded raw-view DFS for an inner Edit/Document with readable text.
+
+        Helper for the ScrollViewer fallback (#1213). Some multiline controls
+        expose only a ScrollViewer (Pane, 50033) at the text location in the UIA
+        CONTROL view; the inner Edit (50004) / Document (50030) that holds the
+        text is hidden from the control view but present in the RAW view. Walks
+        the RawViewWalker depth-first under ``elem`` for such a descendant whose
+        TextPattern/ValuePattern yields non-empty text.
+
+        Bounded so it cannot hang on a huge tree: descends at most ``max_depth``
+        levels and visits at most ``budget`` nodes total. Returns the text of the
+        first hit, or ``None``.
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        try:
+            walker = uia.RawViewWalker
+        except (COMError, AttributeError):
+            return None
+        if not walker:
+            return None
+
+        # Iterative DFS with an explicit (element, depth) stack so a deep tree
+        # cannot blow the Python recursion limit. ``budget`` is shared across the
+        # whole walk to cap total nodes visited.
+        remaining = budget
+        stack = [(elem, 0)]
+        while stack and remaining > 0:
+            node, depth = stack.pop()
+            if depth >= max_depth:
+                continue
+            try:
+                child = walker.GetFirstChildElement(node)
+            except (COMError, AttributeError):
+                child = None
+            while child and remaining > 0:
+                remaining -= 1
+                try:
+                    ct = child.CurrentControlType
+                except (COMError, AttributeError):
+                    ct = 0
+                if ct in (50004, 50030):  # Edit / Document
+                    text = self._read_text_or_value_uia(child, mod)
+                    if text:
+                        return text
+                stack.append((child, depth + 1))
+                try:
+                    child = walker.GetNextSiblingElement(child)
+                except (COMError, AttributeError):
+                    child = None
+        return None
+
     def set_element_value(
         self,
         text: str,
@@ -804,6 +894,32 @@ class UIAInteractMixin:
                         pattern = "TogglePattern"
                 except (COMError, AttributeError):
                     pass
+            # (#1213) Raw-view fallback for ScrollViewer-wrapped multiline edits.
+            # Some controls expose only a ScrollViewer (Pane, 50033) at the text
+            # location in the control view; it advertises Value/Text yet every
+            # pattern above reads empty, and the inner Edit/Document is hidden
+            # from the control view. ONLY when the control-view read is still
+            # empty AND the element advertises Value/Text (the ScrollViewer
+            # signature) walk the raw view for an inner Edit/Document descendant.
+            # Strictly additive: elements that already read a value never reach
+            # this branch, so their behavior is unchanged.
+            if not value:
+                try:
+                    advertises = bool(
+                        getattr(elem, "CurrentIsValuePatternAvailable", False)
+                    ) or bool(
+                        getattr(elem, "CurrentIsTextPatternAvailable", False)
+                    )
+                except (COMError, AttributeError):
+                    advertises = False
+                if advertises:
+                    try:
+                        inner = self._raw_view_find_inner_text(uia, mod, elem)
+                    except (COMError, AttributeError):
+                        inner = None
+                    if inner:
+                        value = inner
+                        pattern = "RawViewFallback"
             if not value and _name:
                 value = _name
                 pattern = "Name"
