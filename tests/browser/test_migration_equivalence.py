@@ -95,6 +95,12 @@ def _headless_chrome_page() -> Iterator[BrowserPage]:
         user_data_dir=user_data_dir,
         timeout=30.0,
     )
+    # Register with the session-end safety-net sweeper (#1202) so a crash before
+    # this ``finally`` still gets the browser reaped.
+    from tests._launch import kill_pid
+    from tests._teardown_registry import register
+
+    register(chrome.pid)
     page = BrowserPage(port=port)
     try:
         yield page
@@ -105,6 +111,9 @@ def _headless_chrome_page() -> Iterator[BrowserPage]:
             chrome.wait(timeout=10)
         except subprocess.TimeoutExpired:
             chrome.kill()
+        # Hard-kill the tracked PID + Chrome child tree (renderer/GPU procs that
+        # ``chrome.terminate()`` leaves running), PID-scoped only.
+        kill_pid(chrome.pid)
         shutil.rmtree(user_data_dir, ignore_errors=True)
 
 

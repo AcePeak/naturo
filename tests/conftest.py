@@ -234,6 +234,80 @@ def _assert_no_orphaned_processes():
     )
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _pid_registry_sweeper():
+    """Session-scoped safety-net sweeper + leak gate for launched apps (#1202).
+
+    The launch fixtures (``naturo_browser``, ``launched_app``, ``tracked_launch``)
+    append every PID they start to the shared ledger in
+    ``tests._teardown_registry``. At session end this fixture:
+
+    1. **Safety net** — kills any registered PID that is *still alive*, so a
+       fixture that crashed before its own ``finally`` teardown (or whose
+       ``app quit`` silently failed, #1197/#226-class) does not leave an orphan.
+       Only PIDs a fixture itself recorded are ever touched, so a window the
+       human already had open can never be killed (PID-scoped, never by name).
+    2. **Leak gate** — a still-alive registered PID *is* a test that failed to
+       clean up; the sweep returns that set and we assert it was empty, so a
+       leaking test fails the run instead of silently corrupting the next one.
+
+    Always-on and harmless in the default headless gate: no launch fixture runs
+    there, so the ledger is empty and the sweep is a no-op. The kill runs before
+    the assert (in ``finally``), so even a failed gate still leaves the machine
+    clean.
+    """
+    from tests import _teardown_registry as reg
+
+    yield
+    leaked = reg.sweep()
+    assert not leaked, (
+        f"Leaked test-launched processes survived teardown (#1202): {sorted(leaked)}. "
+        "A launch fixture registered these PIDs but they were still alive at "
+        "session end — the test's teardown crashed or its close/quit silently "
+        "failed. The sweeper has now killed them (PID-scoped); fix the offending "
+        "fixture/test so teardown is guaranteed."
+    )
+
+
+@pytest.fixture
+def launched_app():
+    """Factory for desktop tests: launch an app with guaranteed PID-scoped teardown.
+
+    Usage::
+
+        def test_x(launched_app):
+            from tests._launch import NOTEPAD_IMAGES
+            proc = launched_app(["notepad.exe"], NOTEPAD_IMAGES, settle=1.0)
+            ...  # proc.pid, proc.poll(), etc. proxy to the real Popen
+
+    Each launch goes through :func:`tests._launch.tracked_launch`, so teardown
+    reaps exactly the PIDs this launch introduced (the launcher plus any *new*
+    window-owner that appeared — e.g. a UWP broker child), never a pre-existing
+    window. The PID is also registered with the session sweeper, so a mid-test
+    crash before this fixture's own teardown still gets cleaned up. Teardown runs
+    even if the test raises.
+    """
+    from tests._launch import tracked_launch
+    from tests._teardown_registry import register
+
+    launched = []
+
+    def _launch(cmd, image_names=(), settle: float = 0.0):
+        proc = tracked_launch(cmd, image_names, settle=settle)
+        register(proc.pid)
+        launched.append(proc)
+        return proc
+
+    try:
+        yield _launch
+    finally:
+        for proc in launched:
+            try:
+                proc.terminate()  # PID-scoped reap (TrackedProc)
+            except Exception:
+                pass
+
+
 def cli_stdout(result):
     """Extract stdout-only text from a Click CliRunner result.
 
