@@ -411,6 +411,27 @@ class Backend(ABC):
 
     @abstractmethod
     def quit_app(self, name: str, force: bool = False) -> None:
+        """Quit an application, verifying it is actually gone before returning.
+
+        Contract (the Never-Lie guarantee, #1197): an implementation MUST
+        resolve the real target processes by **window ownership** — the distinct
+        set of PIDs that own the named app's top-level windows, matched by
+        process image name (case-insensitive) — not merely by the launched
+        name/PID, because a launcher/stub PID may have exited while the real
+        windows are owned by a different long-lived process. It MUST terminate
+        that full PID set (graceful first unless ``force``, then a hard kill),
+        then **re-enumerate and verify**. If any window of the app still exists
+        (including a crash-recovery instance respawned under a new PID), it MUST
+        raise (``QuitIncompleteError`` / ``QUIT_INCOMPLETE``) rather than return
+        — returning normally is a promise the app is truly gone.
+
+        Args:
+            name: Application name (friendly / localized names accepted).
+            force: Skip graceful shutdown and hard-kill immediately.
+
+        Raises:
+            QuitIncompleteError: If the app still owns a window after the kill.
+        """
         ...
 
     # === Menu ===

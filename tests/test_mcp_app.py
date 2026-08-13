@@ -216,6 +216,18 @@ class TestQuitApp:
         assert data["success"] is True
         mock_backend.quit_app.assert_called_once_with(name="chrome", force=True)
 
+    def test_quit_app_incomplete_surfaces_failure(self, server, mock_backend):
+        """#1197 Never-Lie: when the backend verifies the app is still running
+        and raises QuitIncompleteError, the MCP tool must report success:false
+        (not the old unconditional {"success": true})."""
+        from naturo.errors import QuitIncompleteError
+
+        mock_backend.quit_app.side_effect = QuitIncompleteError("notepad", [4242])
+        result = _call_tool(server, "quit_app", {"name": "notepad"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "QUIT_INCOMPLETE"
+
 
 # ── Menu Inspect ──────────────────────────────────────────────────────
 

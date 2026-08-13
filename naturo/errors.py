@@ -44,6 +44,11 @@ class ErrorCode:
     EXPAND_FAILED = "EXPAND_FAILED"
     COLLAPSE_FAILED = "COLLAPSE_FAILED"
 
+    # A quit that terminated its resolved targets but left the app's windows
+    # (or a respawned instance) still present — reported truthfully instead of
+    # a false success (#1197, the Never-Lie contract for ``quit_app``).
+    QUIT_INCOMPLETE = "QUIT_INCOMPLETE"
+
     # A process/PID lookup that matched nothing.
     PROCESS_NOT_FOUND = "PROCESS_NOT_FOUND"
     # A keyboard/mouse input rejected by the safe-input guard.
@@ -151,6 +156,8 @@ _ERROR_CATEGORIES: dict[str, str] = {
     ErrorCode.SELECT_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.EXPAND_FAILED: ErrorCategory.AUTOMATION,
     ErrorCode.COLLAPSE_FAILED: ErrorCategory.AUTOMATION,
+    # An incomplete quit is an automation operation fault, like INTERACTION_FAILED.
+    ErrorCode.QUIT_INCOMPLETE: ErrorCategory.AUTOMATION,
     # A process lookup is UI/automation target resolution, like APP_NOT_FOUND.
     ErrorCode.PROCESS_NOT_FOUND: ErrorCategory.AUTOMATION,
     # A guard-rejected input is a validation fault, like INVALID_INPUT.
@@ -445,6 +452,55 @@ class InteractionFailedError(NaturoError):
             code=ErrorCode.INTERACTION_FAILED,
             category=ErrorCategory.AUTOMATION,
             is_recoverable=True,
+            **kwargs,
+        )
+
+
+class QuitIncompleteError(NaturoError):
+    """A quit terminated its targets but the application is still present.
+
+    Raised by ``quit_app`` (process layer and Windows backend) when, after
+    terminating every resolved window-owning PID, the app still owns a
+    top-level window on re-enumeration — including the Win11 Notepad case where
+    a crash-recovery instance respawns under a fresh PID. Carries the surviving
+    PIDs in ``context['surviving_pids']`` so callers never see a false success
+    while the app is still running (#1197, the Never-Lie contract).
+    """
+
+    def __init__(
+        self,
+        name: str,
+        surviving_pids: list[int] | None = None,
+        *,
+        respawned: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        pids = surviving_pids or []
+        pid_str = ", ".join(str(p) for p in pids) if pids else "unknown"
+        detail = (
+            f"it is still running under a respawned (crash-recovery) PID ({pid_str})"
+            if respawned
+            else f"it is still running (PID {pid_str})"
+        )
+        ctx = kwargs.pop("context", {})
+        ctx.setdefault("app", name)
+        ctx.setdefault("surviving_pids", pids)
+        ctx.setdefault("respawned", respawned)
+        kwargs.setdefault(
+            "suggested_action",
+            f"Retry with force: 'naturo app quit {name} --force'"
+            + (
+                f", or target the survivor directly: 'naturo app quit --pid {pids[0]} --force'."
+                if pids
+                else "."
+            ),
+        )
+        kwargs.setdefault("is_recoverable", True)
+        super().__init__(
+            message=f"Failed to fully quit '{name}': {detail}.",
+            code=ErrorCode.QUIT_INCOMPLETE,
+            category=ErrorCategory.AUTOMATION,
+            context=ctx,
             **kwargs,
         )
 

@@ -734,6 +734,7 @@ def quit_app(
 
     Raises:
         AppNotFoundError: If no matching process is found.
+        QuitIncompleteError: If the app (or a respawn) survives the kill (#1197).
     """
     # (#505) For name-based lookup on Windows, first try the backend's
     # window list which has UWP child process resolution.  This avoids
@@ -810,9 +811,9 @@ def _verify_quit(
         timeout: Seconds to wait for process exit.
 
     Raises:
-        InteractionFailedError: If the process is still running.
+        QuitIncompleteError: If the process (or a respawn) is still running.
     """
-    from naturo.errors import InteractionFailedError
+    from naturo.errors import QuitIncompleteError
 
     identifier = name or str(pid or target_pid)
 
@@ -823,15 +824,8 @@ def _verify_quit(
             break
         time.sleep(0.3)
     else:
-        # Target PID survived the kill
-        raise InteractionFailedError(
-            message=(
-                f"Failed to quit '{identifier}' (PID {target_pid}): "
-                f"process is still running after force kill. "
-                f"Try: naturo app quit {identifier} --force, or "
-                f"naturo app quit --pid {target_pid} --force"
-            ),
-        )
+        # Target PID survived the kill — report the truth (#1197).
+        raise QuitIncompleteError(identifier, [target_pid])
 
     # Step 2: If we have a name, verify the app hasn't respawned (#496).
     # Brief settle time — respawns happen within a few hundred ms.
@@ -843,13 +837,10 @@ def _verify_quit(
             # (e.g. lingering ApplicationFrameHost).  The app is effectively
             # closed if no windows remain — only fail if windows exist.
             if _app_has_visible_windows(name, exclude_pid=target_pid):
-                raise InteractionFailedError(
-                    message=(
-                        f"Failed to quit '{name}': target process "
-                        f"(PID {target_pid}) was killed but the application "
-                        f"is still running under PID {surviving.pid}. "
-                        f"Try: naturo app quit --pid {surviving.pid} --force"
-                    ),
+                # The window-owning process differs from the one we killed —
+                # a Win11-Notepad-style crash-recovery respawn (#1197).
+                raise QuitIncompleteError(
+                    name, [surviving.pid], respawned=surviving.pid != target_pid
                 )
 
 
