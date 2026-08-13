@@ -938,6 +938,119 @@ static IUIAutomationElement* find_element_by_id_or_role(
 }
 
 /**
+ * @brief Read an element's text via TextPattern (preferred) then ValuePattern.
+ *
+ * Helper for the raw-view ScrollViewer fallback (#1213). Returns true and fills
+ * @p out (JSON-escaped) only when a pattern yields a NON-EMPTY string; an empty
+ * result leaves @p out untouched and returns false. All COM interfaces are
+ * released on every path.
+ */
+static bool read_element_text_or_value(IUIAutomationElement* el,
+                                       std::string& out) {
+    if (!el) return false;
+
+    // TextPattern first (full document text for multi-line editors).
+    IUnknown* pat_unk = NULL;
+    if (SUCCEEDED(el->GetCurrentPattern(UIA_TextPatternId, &pat_unk)) && pat_unk) {
+        IUIAutomationTextPattern* txp = NULL;
+        if (SUCCEEDED(pat_unk->QueryInterface(
+                __uuidof(IUIAutomationTextPattern), (void**)&txp)) && txp) {
+            IUIAutomationTextRange* range = NULL;
+            if (SUCCEEDED(txp->get_DocumentRange(&range)) && range) {
+                BSTR text = NULL;
+                if (SUCCEEDED(range->GetText(1048576, &text)) && text) {
+                    if (SysStringLen(text) > 0) {
+                        out = json_escape(text);
+                        SysFreeString(text);
+                        range->Release();
+                        txp->Release();
+                        pat_unk->Release();
+                        return true;
+                    }
+                    SysFreeString(text);
+                }
+                range->Release();
+            }
+            txp->Release();
+        }
+        pat_unk->Release();
+    }
+
+    // ValuePattern next.
+    pat_unk = NULL;
+    if (SUCCEEDED(el->GetCurrentPattern(UIA_ValuePatternId, &pat_unk)) && pat_unk) {
+        IUIAutomationValuePattern* vp = NULL;
+        if (SUCCEEDED(pat_unk->QueryInterface(
+                __uuidof(IUIAutomationValuePattern), (void**)&vp)) && vp) {
+            BSTR val = NULL;
+            if (SUCCEEDED(vp->get_CurrentValue(&val)) && val) {
+                if (SysStringLen(val) > 0) {
+                    out = json_escape(val);
+                    SysFreeString(val);
+                    vp->Release();
+                    pat_unk->Release();
+                    return true;
+                }
+                SysFreeString(val);
+            }
+            vp->Release();
+        }
+        pat_unk->Release();
+    }
+
+    return false;
+}
+
+/**
+ * @brief Bounded raw-view DFS for an inner Edit/Document with readable text.
+ *
+ * Helper for the ScrollViewer fallback (#1213). Some multiline controls expose
+ * only a ScrollViewer (Pane, 50033) at the text location in the UIA CONTROL
+ * view; the inner Edit/Document that actually holds the text is hidden from the
+ * control view but present in the RAW view. Walks @p walker (the RawViewWalker)
+ * depth-first under @p element looking for an Edit (50004) or Document (50030)
+ * descendant whose TextPattern/ValuePattern yields non-empty text.
+ *
+ * Bounded to avoid hanging on a huge tree: descends at most @p max_depth levels
+ * and visits at most @p budget nodes total (decremented across the recursion).
+ * Returns true and fills @p out on the first hit.
+ */
+static bool raw_view_find_inner_text(IUIAutomationTreeWalker* walker,
+                                     IUIAutomationElement* element,
+                                     int depth, int max_depth,
+                                     int& budget, std::string& out) {
+    if (!walker || !element || depth > max_depth || budget <= 0) return false;
+
+    IUIAutomationElement* child = NULL;
+    HRESULT hr = walker->GetFirstChildElement(element, &child);
+    while (SUCCEEDED(hr) && child && budget > 0) {
+        --budget;
+
+        CONTROLTYPEID ct = 0;
+        child->get_CurrentControlType(&ct);
+        if (ct == UIA_EditControlTypeId || ct == UIA_DocumentControlTypeId) {
+            if (read_element_text_or_value(child, out)) {
+                child->Release();
+                return true;
+            }
+        }
+
+        if (raw_view_find_inner_text(walker, child, depth + 1, max_depth,
+                                     budget, out)) {
+            child->Release();
+            return true;
+        }
+
+        IUIAutomationElement* next = NULL;
+        hr = walker->GetNextSiblingElement(child, &next);
+        child->Release();
+        child = next;
+    }
+    if (child) child->Release();
+    return false;
+}
+
+/**
  * @brief Query UIA patterns on an element and build a value JSON response.
  *
  * Tries patterns in priority order: Value, Text, Toggle, Selection, RangeValue.
@@ -1182,6 +1295,52 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                 txp->Release();
             }
             pat_unk->Release();
+        }
+    }
+
+    // 6) (#1213) Raw-view fallback for ScrollViewer-wrapped multiline edits.
+    //    Some multiline controls (e.g. SolidWorks Property Tab Builder) expose
+    //    only a ScrollViewer (Pane, 50033) at the text location in the UIA
+    //    CONTROL view; it advertises Value/Text yet every pattern above reads
+    //    empty, and the inner Edit/Document that holds the text is hidden from
+    //    the control view. ONLY when all control-view attempts returned empty
+    //    AND the element advertises Value/Text (the ScrollViewer signature),
+    //    walk the RAW view for an inner Edit/Document descendant and read its
+    //    text. Strictly additive: elements that already read a value never reach
+    //    this branch, so their behavior is unchanged.
+    if (!has_value) {
+        bool advertises = false;
+        VARIANT v_avail;
+        VariantInit(&v_avail);
+        if (SUCCEEDED(elem->GetCurrentPropertyValue(
+                UIA_IsValuePatternAvailablePropertyId, &v_avail)) &&
+            v_avail.vt == VT_BOOL && v_avail.boolVal == VARIANT_TRUE) {
+            advertises = true;
+        }
+        VariantClear(&v_avail);
+        if (!advertises) {
+            VariantInit(&v_avail);
+            if (SUCCEEDED(elem->GetCurrentPropertyValue(
+                    UIA_IsTextPatternAvailablePropertyId, &v_avail)) &&
+                v_avail.vt == VT_BOOL && v_avail.boolVal == VARIANT_TRUE) {
+                advertises = true;
+            }
+            VariantClear(&v_avail);
+        }
+        if (advertises) {
+            IUIAutomationTreeWalker* raw_walker = NULL;
+            hr = uia->get_RawViewWalker(&raw_walker);
+            if (SUCCEEDED(hr) && raw_walker) {
+                int budget = 200;   // cap total raw-view nodes visited
+                std::string inner;
+                if (raw_view_find_inner_text(raw_walker, elem, 0, 6,
+                                             budget, inner)) {
+                    value = inner;
+                    has_value = true;
+                    pattern_name = "\"RawViewFallback\"";
+                }
+                raw_walker->Release();
+            }
         }
     }
 
