@@ -14,6 +14,8 @@
 
 > **Automating Chinese desktop apps?** 钉钉 / 飞书 / 企业微信 / 同花顺 / WPS are built on the exact frameworks (CEF, 自绘/Duilib, hybrid, COM) that UIA-only engines can't see — and naturo can: [**CJK coverage & China-market wedge → docs/CJK_COVERAGE.md**](docs/CJK_COVERAGE.md).
 
+> **How it works (deep dive):** the architecture, cascade fusion, correctness tagging, and the native C++ core, with diagrams — [**How Naturo Works → docs/blog/how-naturo-works.md**](docs/blog/how-naturo-works.md).
+
 > **New here?** Get Claude to open, type into, and save a Notepad file in under five minutes: [**5-minute quickstart → docs/QUICKSTART.md**](docs/QUICKSTART.md).
 
 ## Tutorials
