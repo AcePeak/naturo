@@ -367,9 +367,34 @@ class ElementTreeMixin:
                 }.items() if v is not None
             }
 
+            # (#1212) see/get agreement: the native tree walk emits value=null
+            # for every node (element.cpp hardcodes it), so ``see`` showed no text
+            # for Edit/Document/Text controls while single ``get`` read them. Fill
+            # those roles here through the SAME consolidated reader that ``get``
+            # uses (:meth:`_read_element_value`) so ``see`` and ``get`` agree.
+            # Best-effort and non-fatal — any read failure leaves the value as the
+            # native tree reported it; only empty values on real (sized) nodes in
+            # a resolved window are probed, so it never overrides a value another
+            # backend (MSAA/IA2/JAB) already supplied.
+            _value = el.value
+            if (not _value and el.role in _PREVIEW_ROLES and handle
+                    and (el.width > 0 or el.height > 0)):
+                try:
+                    _read = self._read_element_value(
+                        hwnd=handle,
+                        automation_id=getattr(el, "automation_id", None) or None,
+                        role=el.role,
+                        name=el.name or None,
+                        coords=(el.x + el.width // 2, el.y + el.height // 2),
+                    )
+                except Exception:  # noqa: BLE001 — see must never fail on a read
+                    _read = None
+                if isinstance(_read, dict) and isinstance(_read.get("value"), str):
+                    _value = _read["value"]
+
             # (#372) Add value preview for Document/Edit/Text elements
-            if el.role in _PREVIEW_ROLES and el.value:
-                full_text = el.value
+            if el.role in _PREVIEW_ROLES and _value:
+                full_text = _value
                 preview = full_text[:_PREVIEW_LEN]
                 if len(full_text) > _PREVIEW_LEN:
                     preview += "…"
@@ -380,7 +405,7 @@ class ElementTreeMixin:
                 id=el.id,
                 role=el.role,
                 name=el.name,
-                value=el.value,
+                value=_value,
                 x=el.x,
                 y=el.y,
                 width=el.width,
@@ -463,7 +488,10 @@ class ElementTreeMixin:
         Raises:
             NaturoError: If the element cannot be found or queried.
         """
-        core = self._ensure_core()
+        # Guard: fail early if the native core is unavailable. The actual value
+        # read is delegated to the single reader (:meth:`_read_element_value`),
+        # which acquires the core itself.
+        self._ensure_core()
 
         # Resolve ref to element metadata via snapshot cache
         resolved_aid = automation_id
@@ -552,94 +580,28 @@ class ElementTreeMixin:
         if (app or window_title) and not target_hwnd:
             target_hwnd = self._resolve_hwnd(app=app, window_title=window_title)
 
-        # (#1208) Cached-point value read for an element with no AutomationId
-        # and no name: resolve it live inside its source window's UIA tree and
-        # read the value via ValuePattern/TextPattern. Mirrors the set-value
-        # resolution so naturo can READ anything it already located.
-        # NOTE: this is a Python/comtypes fallback layered on top of the C++
-        # core reader below; consolidating the two onto one layer is tracked
-        # as tech debt.
-        if coords is not None and not resolved_aid and not (
-                resolved_role and resolved_name):
-            if not target_hwnd and snap_hwnd:
-                target_hwnd = snap_hwnd
-            if hasattr(self, "get_element_value_uia"):
-                _uia_val = self.get_element_value_uia(
-                    hwnd=target_hwnd or 0, x=coords[0], y=coords[1],
-                )
-                if _uia_val is not None:
-                    return _uia_val
+        # (#1212) Single authoritative single-element value read. This method
+        # used to STACK two readers here: the Python/comtypes point reader
+        # (:meth:`get_element_value_uia`) layered on top of the native
+        # ``core.get_element_value``, with a failed comtypes point read then
+        # falling through to a native editable-role probe on the SAME element
+        # (organic drift out of #1208/#1211). Those tiers are now collapsed
+        # behind ONE reader, :meth:`_read_element_value`, which routes each
+        # resolution scenario to exactly one reader — no fallback-on-top-of-
+        # fallback — and is shared with the ``see``/snapshot tree walk so the two
+        # agree on an element's value. Native stays the authority for identity
+        # reads; the comtypes point/raw-view reader owns the located-but-unnamed
+        # case; every capability the two readers had is preserved.
+        if coords is not None and not target_hwnd and snap_hwnd:
+            target_hwnd = snap_hwnd
 
-        if not resolved_aid and not resolved_role and not resolved_name:
-            # (#242) Fallback: when no element identifiers are provided but
-            # we have a target HWND (e.g., from --app notepad), auto-probe
-            # common editable element roles in the window. This enables
-            # verification for the common `type --app X --verify` pattern.
-            if target_hwnd:
-                _editable_roles = ("Edit", "Document", "RichEdit20W")
-                for _probe_role in _editable_roles:
-                    _probe_result = core.get_element_value(
-                        hwnd=target_hwnd,
-                        automation_id=None,
-                        role=_probe_role,
-                        name=None,
-                    )
-                    if _probe_result is not None:
-                        _probe_result["probe_role"] = _probe_role
-                        return _probe_result
-                # All probes failed — still no identifiers available
-                raise NaturoError(
-                    "No editable element found in target window. "
-                    "Tried probing roles: Edit, Document, RichEdit20W. "
-                    "Use --on eN to specify the target element explicitly."
-                )
-            raise NaturoError(
-                "Must specify ref, automation_id, or role/name to get value"
-            )
-
-        result = core.get_element_value(
+        result = self._read_element_value(
             hwnd=target_hwnd,
             automation_id=resolved_aid,
             role=resolved_role,
             name=resolved_name,
-            hint_x=coords[0] if coords else None,
-            hint_y=coords[1] if coords else None,
+            coords=coords,
         )
-
-        # (#352) Role alias fallback: when an explicit role search fails,
-        # try common aliases.  Win11 Notepad uses "Document" for its text
-        # editor, but users naturally try "Edit".  This maps between roles
-        # that serve similar purposes in different app frameworks.
-        if result is None and resolved_role and not resolved_aid:
-            _ROLE_ALIASES: dict[str, list[str]] = {
-                "Edit": ["Document", "RichEdit20W"],
-                "Document": ["Edit", "RichEdit20W"],
-                "RichEdit20W": ["Edit", "Document"],
-                "Text": ["StaticText"],
-                "StaticText": ["Text"],
-            }
-            aliases = _ROLE_ALIASES.get(resolved_role, [])
-            for alias_role in aliases:
-                result = core.get_element_value(
-                    hwnd=target_hwnd,
-                    automation_id=resolved_aid,
-                    role=alias_role,
-                    name=resolved_name,
-                    hint_x=coords[0] if coords else None,
-                    hint_y=coords[1] if coords else None,
-                )
-                if result is not None:
-                    break
-
-        # (#521) NameProperty fallback: if the C++ core found the element but
-        # no UIA pattern returned a value, use the element's Name property.
-        # This handles Text/Static elements (e.g. Calculator display) where
-        # the value is embedded in the UIA Name (e.g. "显示为 579").
-        if isinstance(result, dict) and result.get("value") is None:
-            elem_name = result.get("name")
-            if elem_name:
-                result["value"] = elem_name
-                result["pattern"] = "NameProperty"
 
         # (#229) Fallback: if UIA lookup returned None but we have snapshot
         # data from the ref, return the snapshot metadata so the caller gets
@@ -668,6 +630,143 @@ class ElementTreeMixin:
         # lone carriage returns (Win11 Notepad uses \r as its line break), which
         # render as a mangled single line in a terminal. Convert \r\n and \r to \n
         # so multi-line content reads/splits as standard text.
+        if isinstance(result, dict) and isinstance(result.get("value"), str) \
+                and "\r" in result["value"]:
+            result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
+
+        return result
+
+    def _read_element_value(
+        self,
+        *,
+        hwnd: int,
+        automation_id: Optional[str],
+        role: Optional[str],
+        name: Optional[str],
+        coords: Optional[tuple[int, int]],
+    ) -> Optional[dict]:
+        """THE single authoritative single-element value reader (#1212).
+
+        Every single-element value read funnels through here — both ``get``
+        (:meth:`get_element_value`) and the ``see``/snapshot tree walk
+        (:meth:`get_element_tree`'s Edit/Document/Text population) — so the two
+        never disagree on an element's value. Each resolution scenario is served
+        by exactly ONE reader; there is no comtypes-then-native (or the reverse)
+        fallback stack:
+
+        * **Located-but-unnamed** — only a cached point, no AutomationId and not
+          a full role+name: the comtypes point reader
+          :meth:`get_element_value_uia`, which resolves the element inside its
+          own window's UIA tree at ``coords`` and owns the #1213 ScrollViewer
+          raw-view fallback. The native role-probe is NOT layered on top of it
+          (that fall-through was the #1212 stacking); if the point read finds
+          nothing the caller's snapshot-metadata fallback still returns the
+          last-known value, so no capability is lost.
+        * **No identity at all** — e.g. ``type --app notepad --verify``: the
+          native core reader probes the common editable roles (#242).
+        * **Identity read** — AutomationId, or role+name: the native core reader
+          is the authority, with the #352 role-alias fallback and the #521
+          NameProperty fallback applied *within* this one native path.
+
+        Args:
+            hwnd: Target window handle (0 = foreground / desktop root).
+            automation_id: Resolved AutomationId, or ``None``.
+            role: Resolved role, or ``None``.
+            name: Resolved name, or ``None``.
+            coords: ``(x, y)`` screen centre of the located element, or ``None``.
+
+        Returns:
+            The value dict (``value``/``pattern``/``role``/``name``/…), or
+            ``None`` when nothing readable was found.
+
+        Raises:
+            NaturoError: When neither identity nor a target window is available.
+        """
+        core = self._ensure_core()
+        hint_x = coords[0] if coords else None
+        hint_y = coords[1] if coords else None
+
+        # Located-but-unnamed: point read via the comtypes reader ONLY. #1208
+        # captured the element's point + source window precisely so naturo can
+        # READ anything it already located; the native role-probe is deliberately
+        # not stacked on top of it here (that was the #1212 layering).
+        if coords is not None and not automation_id and not (role and name):
+            if hasattr(self, "get_element_value_uia"):
+                return self.get_element_value_uia(
+                    hwnd=hwnd or 0, x=coords[0], y=coords[1],
+                )
+            return None
+
+        # No identity at all: probe common editable roles in the target window
+        # (#242) — the single reader for the ``--verify`` pattern.
+        if not automation_id and not role and not name:
+            if hwnd:
+                for _probe_role in ("Edit", "Document", "RichEdit20W"):
+                    _probe = core.get_element_value(
+                        hwnd=hwnd,
+                        automation_id=None,
+                        role=_probe_role,
+                        name=None,
+                    )
+                    if _probe is not None:
+                        _probe["probe_role"] = _probe_role
+                        return _probe
+                raise NaturoError(
+                    "No editable element found in target window. "
+                    "Tried probing roles: Edit, Document, RichEdit20W. "
+                    "Use --on eN to specify the target element explicitly."
+                )
+            raise NaturoError(
+                "Must specify ref, automation_id, or role/name to get value"
+            )
+
+        # Identity read: the native core reader is the authority.
+        result = core.get_element_value(
+            hwnd=hwnd,
+            automation_id=automation_id,
+            role=role,
+            name=name,
+            hint_x=hint_x,
+            hint_y=hint_y,
+        )
+
+        # (#352) Role-alias fallback: an explicit role search that fails retries
+        # common aliases. Win11 Notepad exposes its editor as "Document" where
+        # users naturally try "Edit"; this maps between roles that serve the same
+        # purpose across UI frameworks.
+        if result is None and role and not automation_id:
+            _ROLE_ALIASES: dict[str, list[str]] = {
+                "Edit": ["Document", "RichEdit20W"],
+                "Document": ["Edit", "RichEdit20W"],
+                "RichEdit20W": ["Edit", "Document"],
+                "Text": ["StaticText"],
+                "StaticText": ["Text"],
+            }
+            for _alias in _ROLE_ALIASES.get(role, []):
+                result = core.get_element_value(
+                    hwnd=hwnd,
+                    automation_id=automation_id,
+                    role=_alias,
+                    name=name,
+                    hint_x=hint_x,
+                    hint_y=hint_y,
+                )
+                if result is not None:
+                    break
+
+        # (#521) NameProperty fallback: the core found the element but no UIA
+        # pattern yielded a value (e.g. Calculator's Text display carries it in
+        # the Name, "显示为 579") — surface the Name as the value.
+        if isinstance(result, dict) and result.get("value") is None:
+            _elem_name = result.get("name")
+            if _elem_name:
+                result["value"] = _elem_name
+                result["pattern"] = "NameProperty"
+
+        # Normalize document line endings (\r\n and lone \r -> \n) at the single
+        # reader, so `see`-population and `get` — which both delegate here — agree
+        # byte-for-byte, not just on content (#1212). Win11 Notepad's TextPattern
+        # returns lone \r as its line break.
         if isinstance(result, dict) and isinstance(result.get("value"), str) \
                 and "\r" in result["value"]:
             result["value"] = result["value"].replace("\r\n", "\n").replace("\r", "\n")
