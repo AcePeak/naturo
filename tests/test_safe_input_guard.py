@@ -209,7 +209,9 @@ class TestCliTypeGuard:
         with mock.patch.dict("os.environ", {}, clear=True):
             result = self._invoke(["test$(rm -rf /)", "-j"], backend)
         assert result.exit_code == 0
-        backend.type_text.assert_called_once()
+        # Guard off → the text IS delivered (not blocked). Single-line text
+        # takes the default ValuePattern rung of the #1219 ladder.
+        backend.set_focused_element_value.assert_called_once()
 
     def test_allows_benign_when_enabled(self):
         from unittest.mock import MagicMock
@@ -218,7 +220,8 @@ class TestCliTypeGuard:
         with _enabled():
             result = self._invoke(["QA_PROBE", "-j"], backend)
         assert result.exit_code == 0
-        backend.type_text.assert_called_once()
+        # Benign text under the armed guard is delivered normally via the ladder.
+        backend.set_focused_element_value.assert_called_once()
 
     # ── #1160: the clipboard-only `--paste` path must honor the guard too ──
 

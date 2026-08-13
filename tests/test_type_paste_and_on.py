@@ -111,8 +111,10 @@ class TestTypeOnElement:
         assert data["data"]["target"] == "e5"
         # Should click the element coordinates first
         mock_backend.click.assert_called_once_with(100, 200, button="left", input_mode="normal")
-        # Then type
-        mock_backend.type_text.assert_called_once()
+        # Then deliver via the default IME-immune ladder — single-line text
+        # takes the ValuePattern rung, not raw keystrokes (#1219).
+        mock_backend.set_focused_element_value.assert_called_once()
+        mock_backend.type_text.assert_not_called()
 
     @_win_only
     def test_type_on_eref_not_found(self, runner):
@@ -273,7 +275,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
+        # Single-line text takes the default ValuePattern rung (#1219).
+        typed_text = mock_backend.set_focused_element_value.call_args[0][0]
         assert typed_text == r"C:\Users\test\report.txt"
         assert "\t" not in typed_text
         assert "\r" not in typed_text
@@ -291,8 +294,9 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        mock_backend.type_text.assert_called_once()
-        typed_text = mock_backend.type_text.call_args[0][0]
+        # A tab survives ValuePattern (no newline), so the default rung is used.
+        mock_backend.set_focused_element_value.assert_called_once()
+        typed_text = mock_backend.set_focused_element_value.call_args[0][0]
         assert typed_text == "A\tB"
 
     @_win_only
@@ -308,8 +312,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "Line1\nLine2"
+        # Newline text skips ValuePattern (#563) → atomic clipboard paste (#1219).
+        mock_backend.clipboard_set.assert_any_call("Line1\nLine2")
 
     @_win_only
     def test_type_carriage_return_escape_with_flag(self, runner):
@@ -324,8 +328,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "A\rB"
+        # CR text skips ValuePattern (#563) → atomic clipboard paste (#1219).
+        mock_backend.clipboard_set.assert_any_call("A\rB")
 
     @_win_only
     def test_type_literal_backslash_with_flag(self, runner):
@@ -340,7 +344,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
+        # Single-line text → default ValuePattern rung (#1219).
+        typed_text = mock_backend.set_focused_element_value.call_args[0][0]
         assert typed_text == "path\\file"
 
     @_win_only
@@ -356,8 +361,9 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "Col1\tCol2\nRow2"
+        # Mixed escapes include a newline → skips ValuePattern (#563), pasted
+        # atomically via clipboard (#1219).
+        mock_backend.clipboard_set.assert_any_call("Col1\tCol2\nRow2")
 
     @_win_only
     def test_type_paste_mode_escapes_with_flag(self, runner):
@@ -390,7 +396,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
+        # Single-line text → default ValuePattern rung (#1219).
+        typed_text = mock_backend.set_focused_element_value.call_args[0][0]
         assert typed_text == r"C:\Users\test\report.txt"
         assert "\t" not in typed_text
         assert "\r" not in typed_text
@@ -408,7 +415,8 @@ class TestTypeEscapeSequences:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        typed_text = mock_backend.type_text.call_args[0][0]
+        # No -E → literal backslash+t (no real newline) → default ValuePattern rung.
+        typed_text = mock_backend.set_focused_element_value.call_args[0][0]
         assert typed_text == r"A\tB"  # literal backslash+t, NOT tab
 
 
@@ -416,13 +424,15 @@ class TestTypeNewlineBypassesUIA:
     """When text contains \\n or \\r, type must bypass UIA SetValue (#563).
 
     UIA ValuePattern.SetValue() silently strips newline/CR characters,
-    causing a silent failure. The type command should detect this and
-    fall through to SendInput which handles them as Enter keypresses.
+    causing a silent failure. The type command detects this and, under the
+    #1219 ladder, delivers the multiline text via the atomic clipboard rung,
+    which preserves newlines exactly (no per-key keystroke splitting needed).
     """
 
     @_win_only
     def test_newline_text_skips_uia_uses_sendinput(self, runner):
-        """type -E 'Line1\\nLine2' with UIA route should bypass SetValue."""
+        """type -E 'Line1\\nLine2' with UIA route should bypass SetValue and
+        deliver via clipboard paste (newline-preserving)."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -436,16 +446,17 @@ class TestTypeNewlineBypassesUIA:
 
         data = json.loads(result.output)
         assert data["success"] is True
-        # SetValue should NOT have been called — newlines would be stripped
+        # Neither the routing UIA SetValue nor the ladder's ValuePattern rung is
+        # used — both strip newlines.
         mock_backend.set_element_value.assert_not_called()
-        # SendInput (type_text) should have been used instead
-        mock_backend.type_text.assert_called_once()
-        typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "Line1\nLine2"
+        mock_backend.set_focused_element_value.assert_not_called()
+        # The full multiline string is pasted atomically instead.
+        mock_backend.type_text.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("Line1\nLine2")
 
     @_win_only
     def test_cr_text_skips_uia_uses_sendinput(self, runner):
-        """type -E 'A\\rB' with UIA route should bypass SetValue."""
+        """type -E 'A\\rB' with UIA route should bypass SetValue and paste."""
         from naturo.cli.interaction import type_cmd
 
         mock_backend = MagicMock()
@@ -459,9 +470,9 @@ class TestTypeNewlineBypassesUIA:
         data = json.loads(result.output)
         assert data["success"] is True
         mock_backend.set_element_value.assert_not_called()
-        mock_backend.type_text.assert_called_once()
-        typed_text = mock_backend.type_text.call_args[0][0]
-        assert typed_text == "A\rB"
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.type_text.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("A\rB")
 
     @_win_only
     def test_tab_text_still_uses_uia(self, runner):

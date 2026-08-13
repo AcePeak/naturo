@@ -240,10 +240,12 @@ class TestToolFunctionsWithMockedBackend:
             data = json.loads(result[0].text)
             assert data["success"] is True
             mock_backend.type_text.assert_called_once()
-            call_kwargs = mock_backend.type_text.call_args.kwargs
-            assert call_kwargs["text"] == "hello"
-            assert call_kwargs["wpm"] == 60
-            assert call_kwargs["input_mode"] == "normal"
+            # The shared ladder (naturo.actions.smart_type_text) passes text as
+            # the positional arg; wpm/input_mode/profile ride as kwargs.
+            call = mock_backend.type_text.call_args
+            assert call.args[0] == "hello"
+            assert call.kwargs["wpm"] == 60
+            assert call.kwargs["input_mode"] == "normal"
 
     def test_type_text_invalid_wpm(self, mock_backend):
         """type_text with wpm=0 returns validation error."""

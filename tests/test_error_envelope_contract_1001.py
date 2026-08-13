@@ -232,7 +232,10 @@ def test_runtime_failure_is_canonical(argv, expected_code) -> None:
 # method name is the single backend call each command makes inside that try block.
 _INTERACTION_ACTION_FAILURES = [
     (["click", "--coords", "500", "300"], "click"),
-    (["type", "hello"], "type_text"),
+    # (#1219) type now climbs the value_pattern→clipboard→keystroke ladder;
+    # set_focused_element_value is the first backend call, so a real
+    # ElementNotFoundError raised while resolving the target surfaces there.
+    (["type", "hello"], "set_focused_element_value"),
     (["press", "enter"], "press_key"),
     (["scroll", "down"], "scroll"),
     (["drag", "--from-coords", "100", "100", "--to-coords", "500", "300"], "drag"),
