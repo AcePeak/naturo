@@ -56,7 +56,10 @@ _EXPECTED_WINDOW_TARGET_TOOLS = frozenset({
 # Tools that legitimately still declare a ``title`` parameter meaning something
 # other than a window selector, so the "no bare title selector" guard must not
 # flag them.
-_TITLE_MEANS_SOMETHING_ELSE: frozenset = frozenset()
+_TITLE_MEANS_SOMETHING_ELSE: frozenset = frozenset({
+    # excel_create_chart's ``title`` is the CHART title, not a window selector.
+    "excel_create_chart",
+})
 
 
 def _list_tools():
