@@ -105,6 +105,55 @@ class AppDiscoveryMixin:
         "Progman",   # Program Manager (desktop icons)
         "WorkerW",   # Desktop worker window (wallpaper layer)
     })
+
+    # UWP/WinUI host window classes. One running UWP app (Calculator, the Win11
+    # Notepad, Settings) can expose SEVERAL of these top-level windows at once —
+    # empty ghost frames plus the live one that actually holds the controls.
+    # Content-based tie-breaking (dropping the ghosts) is applied ONLY when the
+    # tied candidates are all one of these classes, so normal Win32 apps and the
+    # single-candidate hot path never pay for a content probe.
+    _UWP_CONTENT_CLASSES: ClassVar[frozenset[str]] = frozenset({
+        "ApplicationFrameWindow",
+        "Windows.UI.Core.CoreWindow",
+    })
+
+    def _refine_by_content(self, candidates: list) -> Optional["BaseWindowInfo"]:
+        """Break a tie between equally-ranked UWP frames by real on-screen content.
+
+        ``candidates`` are windows that already tied on every cheap signal
+        (match score, session, foreground) — passed in the caller's preferred
+        order (largest area first) so that order is preserved on a content tie.
+
+        A window's fitness for automation is fundamentally whether it contains
+        the visible UI you want to act on, so this prefers the candidate with the
+        most real on-screen content (:meth:`_window_content_probe`), which drops
+        the empty ``ApplicationFrameWindow`` ghosts UWP apps leave lying around
+        and keeps the live ``CoreWindow`` / live frame.
+
+        Guarded to stay off the hot path: with 0/1 candidate it returns
+        immediately (no probe), and it only probes when EVERY candidate is a UWP
+        host class — otherwise it returns the first candidate unchanged, so the
+        historical (area/foreground/session) resolution of normal Win32 apps is
+        bit-for-bit preserved.
+        """
+        if not candidates:
+            return None
+        if len(candidates) == 1:
+            return candidates[0]
+        try:
+            classes = [self._get_window_class_name(c.handle) for c in candidates]
+        except Exception:
+            return candidates[0]
+        if not all(cl in self._UWP_CONTENT_CLASSES for cl in classes):
+            return candidates[0]
+        best = candidates[0]
+        best_score = self._window_content_probe(best.handle)
+        for c in candidates[1:]:
+            sc = self._window_content_probe(c.handle)
+            if sc > best_score:
+                best, best_score = c, sc
+        return best
+
     def _resolve_hwnd(self, app: Optional[str] = None,
                       window_title: Optional[str] = None,
                       hwnd: Optional[int] = None,
@@ -233,6 +282,12 @@ class AppDiscoveryMixin:
         best_session_bonus = False  # True if best_window is in console session
         best_is_foreground = False  # True if best_window is the foreground window
         best_window = None
+        # Every scored candidate, recorded as (score, in_console, is_foreground,
+        # area, WindowInfo).  After the incremental pick below, the windows that
+        # tie with the winner on (score, session, foreground) are re-ranked by
+        # real on-screen content so an empty UWP ghost frame never beats the
+        # live window (see _refine_by_content).
+        scored: list = []
 
         for w in windows:
             score = 0
@@ -306,6 +361,9 @@ class AppDiscoveryMixin:
             # (#449) Check if this window is the foreground window
             is_foreground = (fg_hwnd != 0 and w.handle == fg_hwnd)
 
+            scored.append((score, in_console, is_foreground,
+                           w.width * w.height, w))
+
             # Decision: pick this window if it has a higher score, or if
             # scores are equal but this window is in the console session
             # while the current best is not.  Among equal score + session,
@@ -337,7 +395,46 @@ class AppDiscoveryMixin:
                             best_window = w
 
         if best_window is not None:
-            # UWP/WinUI apps: the real UI tree lives under
+            # Content-first tie-break: among the windows that tied with the
+            # winner on every cheap signal (score, session, foreground), prefer
+            # the one that actually holds on-screen UI.  This is what stops a
+            # UWP app's empty ApplicationFrameWindow ghost — same title, same
+            # score, same area as the live frame — from being resolved for
+            # click/type/capture/window-ops.  _refine_by_content only probes
+            # when the tied set is all UWP host windows, so normal apps and the
+            # single-candidate case are untouched (and stay fast).
+            tied = [
+                (area, w) for (s, c, f, area, w) in scored
+                if (s, c, f) == (best_score, best_session_bonus,
+                                 best_is_foreground)
+            ]
+            if len(tied) > 1:
+                tied.sort(key=lambda t: t[0], reverse=True)  # largest area first
+                # Class gate (membership-only, so a mocked class name never
+                # trips it): probe content ONLY when every tied window is a UWP
+                # host class. This keeps normal Win32 apps on the exact
+                # area/session/foreground path they had before — and, crucially,
+                # keeps the winner a real WindowInfo (never a probe result) for
+                # non-UWP ties.
+                try:
+                    all_uwp = all(
+                        self._get_window_class_name(w.handle)
+                        in self._UWP_CONTENT_CLASSES
+                        for _a, w in tied
+                    )
+                except Exception:
+                    all_uwp = False
+                if all_uwp:
+                    cands = [w for _a, w in tied]
+                    best_c = cands[0]
+                    best_probe = self._window_content_probe(best_c.handle)
+                    for w in cands[1:]:
+                        p = self._window_content_probe(w.handle)
+                        if p > best_probe:
+                            best_c, best_probe = w, p
+                    best_window = best_c
+
+            # UWP/WinUI apps: the real UI tree may live under
             # ApplicationFrameHost.exe, not the inner process window
             # (e.g. CalculatorApp.exe).  When we matched a non-frame
             # process, check for an ApplicationFrameHost window with the
@@ -350,10 +447,7 @@ class AppDiscoveryMixin:
                 best_proc = best_proc[:-4]
             if best_proc != "applicationframehost":
                 # (#394) Collect ALL AFH windows with matching title, then
-                # prefer one that actually has a CoreWindow child (live UI).
-                # Stale AFH windows (e.g., from schtasks-launched instances)
-                # may linger without a CoreWindow child, producing empty
-                # UIA trees.
+                # prefer one that actually has a *live* CoreWindow child.
                 afh_candidates = []
                 for w in windows:
                     frame_proc = _os.path.basename(w.process_name).lower()
@@ -367,30 +461,33 @@ class AppDiscoveryMixin:
                         afh_candidates.append(w)
 
                 if afh_candidates:
-                    # (#394 v2) Prefer AFH window with a CoreWindow or
-                    # DesktopWindowXamlSource child — these host the actual
-                    # app UI.  Stale AFH windows may have title bar and
-                    # input sink children but no content window, yielding
-                    # empty UIA trees.
-                    chosen_afh = None
-                    for afh_w in afh_candidates:
-                        if self._afh_has_content_window(afh_w.handle):
-                            chosen_afh = afh_w
-                            logger.debug(
-                                "UWP fixup: AFH hwnd=%s has content "
-                                "window (CoreWindow/XAML), selecting it",
-                                afh_w.handle,
-                            )
-                            break
-                    if chosen_afh is None:
-                        # No AFH has content children — fall back to first
-                        chosen_afh = afh_candidates[0]
-                        logger.debug(
-                            "UWP fixup: no AFH has content children, "
-                            "falling back to first AFH hwnd=%s",
-                            chosen_afh.handle,
+                    # (#394 v2 / calc-zombie) Only swap to an AFH frame that has
+                    # LIVE content (semantic _afh_has_content_window).  Stale
+                    # frames whose CoreWindow child is empty are rejected, and
+                    # when NONE is live we keep the originally-matched window
+                    # rather than falling back to a ghost frame (the old
+                    # `afh_candidates[0]` fallback was the bug — it happily
+                    # returned an empty frame over the live inner window).
+                    live_afh = [
+                        a for a in afh_candidates
+                        if self._afh_has_content_window(a.handle)
+                    ]
+                    if live_afh:
+                        live_afh.sort(
+                            key=lambda a: a.width * a.height, reverse=True,
                         )
-                    best_window = chosen_afh
+                        chosen_afh = self._refine_by_content(live_afh)
+                        if chosen_afh is not None:
+                            logger.debug(
+                                "UWP fixup: selecting live AFH hwnd=%s",
+                                chosen_afh.handle,
+                            )
+                            best_window = chosen_afh
+                    else:
+                        logger.debug(
+                            "UWP fixup: no AFH frame has live content, keeping "
+                            "matched window hwnd=%s", best_window.handle,
+                        )
 
             return best_window.handle
 
@@ -605,15 +702,24 @@ class AppDiscoveryMixin:
                         afh_candidates.append(w)
 
                 if afh_candidates:
-                    # Prefer AFH with content window (CoreWindow/XAML)
-                    chosen_afh = None
-                    for afh_w in afh_candidates:
-                        if self._afh_has_content_window(afh_w.handle):
-                            chosen_afh = afh_w
-                            break
-                    if chosen_afh is None:
-                        chosen_afh = afh_candidates[0]
-                    fixed_hwnds.append(chosen_afh.handle)
+                    # (calc-zombie) Only swap to an AFH frame with LIVE content
+                    # (semantic _afh_has_content_window). When none is live, keep
+                    # the originally-matched window instead of a ghost frame —
+                    # the old `afh_candidates[0]` fallback returned empty frames.
+                    live_afh = [
+                        a for a in afh_candidates
+                        if self._afh_has_content_window(a.handle)
+                    ]
+                    if live_afh:
+                        live_afh.sort(
+                            key=lambda a: a.width * a.height, reverse=True,
+                        )
+                        chosen_afh = self._refine_by_content(live_afh)
+                        fixed_hwnds.append(
+                            chosen_afh.handle if chosen_afh else hwnd,
+                        )
+                    else:
+                        fixed_hwnds.append(hwnd)
                 else:
                     fixed_hwnds.append(hwnd)
             else:
@@ -626,6 +732,33 @@ class AppDiscoveryMixin:
             if h not in seen:
                 seen.add(h)
                 result.append(h)
+
+        # Content-first ordering (see --app enumerates ALL of an app's windows):
+        # when several UWP frames of the same app survive, float the ones that
+        # actually hold on-screen UI to the front and sink the empty ghosts, so
+        # the live CoreWindow leads and downstream `see`/cascade sees content
+        # first. Only probes UWP host windows and only when >1 survived, so the
+        # common single-window / normal-Win32 case pays nothing.
+        if len(result) > 1:
+            uwp = [
+                h for h in result
+                if self._get_window_class_name(h) in self._UWP_CONTENT_CLASSES
+            ]
+            if len(uwp) > 1:
+                probed = [(self._window_content_probe(h), h) for h in uwp]
+                # Stable within equal content: preserve prior (score) order.
+                order = {h: i for i, h in enumerate(uwp)}
+                probed.sort(key=lambda t: (-t[0], order[t[1]]))
+                uwp = [h for _sc, h in probed]
+                # Reassemble preserving the relative position of non-UWP entries.
+                reordered = []
+                uwp_iter = iter(uwp)
+                for h in result:
+                    if h in order:
+                        reordered.append(next(uwp_iter))
+                    else:
+                        reordered.append(h)
+                result = reordered
 
         # (#569) UWP fallback: when no windows matched by process name,
         # probe AFH windows' content children for the real app process.

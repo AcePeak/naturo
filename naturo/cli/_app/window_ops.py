@@ -8,6 +8,7 @@ import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
 from naturo.cli.core._common import _enforce_desktop_session
+from naturo.cli._field import emit_projection, field_option, parse_fields, resolve_fields
 from naturo.cli._app._common import (
     _handle_generic_error,
     _handle_naturo_error,
@@ -388,12 +389,20 @@ def app_move(ctx, name, app_name, window_title, hwnd, pid, x, y, width, height, 
         _handle_generic_error(exc, json_output)
 
 
+# Row schema for `app windows` --field projection (#1206).
+_APP_WINDOWS_FIELDS = (
+    "handle", "title", "process_name", "pid",
+    "x", "y", "width", "height", "is_visible", "is_minimized",
+)
+
+
 @click.command("windows")
 @click.argument("name", required=False, default=None)
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def app_windows(ctx, name, pid, json_output) -> None:
+def app_windows(ctx, name, pid, json_output, field) -> None:
     """List open windows (optionally filtered by app name or PID).
 
     \b
@@ -431,22 +440,28 @@ def app_windows(ctx, name, pid, json_output) -> None:
         if pid is not None:
             windows = [w for w in windows if w.pid == pid]
 
-        if json_output:
+        window_rows = [
+            {
+                "handle": w.handle,
+                "title": w.title,
+                "process_name": w.process_name,
+                "pid": w.pid,
+                "x": w.x, "y": w.y,
+                "width": w.width, "height": w.height,
+                "is_visible": w.is_visible,
+                "is_minimized": w.is_minimized,
+            }
+            for w in windows
+        ]
+
+        fields = parse_fields(field)
+        if fields is not None:
+            resolve_fields(fields, _APP_WINDOWS_FIELDS, json_output)
+            emit_projection(window_rows, fields, "windows", json_output)
+        elif json_output:
             click.echo(json_dumps({
                 "success": True,
-                "windows": [
-                    {
-                        "handle": w.handle,
-                        "title": w.title,
-                        "process_name": w.process_name,
-                        "pid": w.pid,
-                        "x": w.x, "y": w.y,
-                        "width": w.width, "height": w.height,
-                        "is_visible": w.is_visible,
-                        "is_minimized": w.is_minimized,
-                    }
-                    for w in windows
-                ],
+                "windows": window_rows,
                 "count": len(windows),
             }, indent=2))
         else:

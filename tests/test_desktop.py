@@ -413,6 +413,13 @@ class TestDesktopMCP:
 
     def test_mcp_tools_exist(self):
         """Virtual desktop MCP tools are registered."""
+        # Guard on mcp.server.fastmcp (the canonical FastMCP path in every real
+        # mcp>=1.0,<2.0 install), not bare "mcp": a CI runner image can carry a
+        # partial mcp that is importable but has no FastMCP anywhere, which passes
+        # importorskip("mcp") yet cannot build the server. Skipping on the exact
+        # dependency keeps the mcp-less ubuntu/macos jobs green while the Windows
+        # job (full mcp install) exercises the server — without masking a real
+        # break, since a genuine mcp install always provides this module.
         pytest.importorskip("mcp.server.fastmcp")
         from naturo.mcp_server import create_server
 

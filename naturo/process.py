@@ -264,7 +264,46 @@ _LAUNCH_ALIASES: dict[str, list[str]] = {
     "命令提示符": ["cmd"],
     "terminal": ["windowsterminal"],
     "终端": ["windowsterminal"],
+    # Office — friendly names → exe basenames. Not on PATH, so launch resolves
+    # them to a full path via the App Paths registry (see _resolve_via_app_paths).
+    "word": ["winword"],
+    "microsoft word": ["winword"],
+    "文字": ["winword"],
+    "excel": ["excel"],
+    "microsoft excel": ["excel"],
+    "powerpoint": ["powerpnt"],
+    "ppt": ["powerpnt"],
+    "microsoft powerpoint": ["powerpnt"],
+    "演示文稿": ["powerpnt"],
 }
+
+
+def _resolve_via_app_paths(name: str) -> "str | None":
+    """Resolve an executable name to a full path via the Windows App Paths
+    registry (``HKLM/HKCU\\...\\App Paths\\<exe>``).
+
+    Covers apps that are registered but not on ``PATH`` — notably Office
+    (winword / excel / powerpnt), which cannot be launched by bare name via
+    ``where`` / ``start`` here. Returns the full path if found and the file
+    exists, else ``None``.
+    """
+    if platform.system() != "Windows":
+        return None
+    exe = name if name.lower().endswith(".exe") else name + ".exe"
+    try:
+        import winreg
+    except Exception:
+        return None
+    subkey = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\\" + exe
+    for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(hive, subkey) as key:
+                path, _ = winreg.QueryValueEx(key, None)
+            if path and os.path.isfile(path):
+                return path
+        except OSError:
+            continue
+    return None
 
 
 def _resolve_launch_name(name: str) -> str:
@@ -346,6 +385,15 @@ def launch_app(
     if not launch_target:
         raise AppNotFoundError("(no name or path provided)")
 
+    # Agents commonly pass a full executable path as `name` (the prompt gave a
+    # path, not a friendly name). Treat a path-like name pointing at a real file
+    # as `path` so it launches directly (non-blocking Popen) instead of falling
+    # through where/start to a `cmd /c start /wait` that BLOCKS on a GUI app until
+    # it closes — that hang froze a real agent run mid-task.
+    if not path and name and ("\\" in name or "/" in name):
+        if os.path.isfile(name):
+            path = name
+
     # Guard: prevent launching GUI apps in non-interactive sessions (#351).
     # SSH sessions spawn processes in session 0 (invisible on the desktop),
     # creating orphaned processes that accumulate over time.
@@ -386,34 +434,44 @@ def launch_app(
                 except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError):
                     where_result = type("R", (), {"returncode": 1})()
                 if where_result.returncode != 0:
-                    # Also check if it's a known app via start — run synchronously to check
-                    try:
-                        result = subprocess.run(
-                            ["cmd", "/c", "start", "/wait", "", resolved_name] + cmd_args,
-                            capture_output=True, text=True, timeout=10,
-                        )
-                    except subprocess.TimeoutExpired:
-                        # Windows shows an error dialog for unknown apps; timeout is expected
-                        raise AppNotFoundError(
-                            launch_target,
-                            suggested_action="Application not found or failed to launch",
-                        )
-                    if result.returncode != 0:
-                        raise AppNotFoundError(launch_target)
-                    # start /wait succeeded but we need to find the PID now
-                    found = find_process(name=resolved_name)
-                    if not found and resolved_name != (name or ""):
-                        found = find_process(name=name)
-                    if found:
-                        return found
-                    # Launched but already exited — report success with a dummy PID
-                    return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
-                proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
-                # cmd.exe exits quickly after launching the target app.
-                # Mark for real PID resolution below — proc.pid is cmd.exe,
-                # not the actual application (#785).
-                _resolve_real_pid = resolved_name
-                _resolve_real_alias = name
+                    # Not on PATH — try the App Paths registry, which maps an exe
+                    # name to its full path. This covers Office (winword / excel /
+                    # powerpnt), which cannot be launched by bare name via
+                    # where/start in this environment, so agents otherwise had to
+                    # hunt for the full path themselves.
+                    app_path = _resolve_via_app_paths(resolved_name)
+                    if app_path is not None:
+                        proc = subprocess.Popen([app_path] + cmd_args)
+                    else:
+                        # Also check if it's a known app via start — run synchronously to check
+                        try:
+                            result = subprocess.run(
+                                ["cmd", "/c", "start", "/wait", "", resolved_name] + cmd_args,
+                                capture_output=True, text=True, timeout=10,
+                            )
+                        except subprocess.TimeoutExpired:
+                            # Windows shows an error dialog for unknown apps; timeout is expected
+                            raise AppNotFoundError(
+                                launch_target,
+                                suggested_action="Application not found or failed to launch",
+                            )
+                        if result.returncode != 0:
+                            raise AppNotFoundError(launch_target)
+                        # start /wait succeeded but we need to find the PID now
+                        found = find_process(name=resolved_name)
+                        if not found and resolved_name != (name or ""):
+                            found = find_process(name=name)
+                        if found:
+                            return found
+                        # Launched but already exited — report success with a dummy PID
+                        return ProcessInfo(pid=0, name=name or "", path="", is_running=False)
+                else:
+                    proc = subprocess.Popen(["cmd", "/c", "start", "", resolved_name] + cmd_args)
+                    # cmd.exe exits quickly after launching the target app.
+                    # Mark for real PID resolution below — proc.pid is cmd.exe,
+                    # not the actual application (#785).
+                    _resolve_real_pid = resolved_name
+                    _resolve_real_alias = name
         elif system == "Darwin":
             if path:
                 proc = subprocess.Popen([path] + cmd_args)
@@ -464,11 +522,15 @@ def launch_app(
     real_path = path or ""
     if _resolve_real_pid is not None:
         try:
-            proc.wait(timeout=5)
+            proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
             pass
-        # Poll for the real process — give UWP apps time to start
-        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 3.0)
+        # Poll for the real process — break as soon as it appears. The give-up
+        # window is short (1.2s, not 3s) because a UWP process name that will
+        # never match find_process() otherwise wastes the full window on every
+        # launch — the single biggest MCP-latency source; callers that need the
+        # real window resolve it from list_windows anyway.
+        poll_deadline = time.monotonic() + (timeout if wait_until_ready else 1.2)
         while time.monotonic() < poll_deadline:
             found = find_process(name=_resolve_real_pid)
             if not found and _resolve_real_alias and _resolve_real_alias != _resolve_real_pid:
@@ -478,7 +540,7 @@ def launch_app(
                 real_name = found.name
                 real_path = found.path or ""
                 break
-            time.sleep(0.3)
+            time.sleep(0.1)
 
     info = ProcessInfo(
         pid=real_pid,
@@ -672,6 +734,7 @@ def quit_app(
 
     Raises:
         AppNotFoundError: If no matching process is found.
+        QuitIncompleteError: If the app (or a respawn) survives the kill (#1197).
     """
     # (#505) For name-based lookup on Windows, first try the backend's
     # window list which has UWP child process resolution.  This avoids
@@ -748,9 +811,9 @@ def _verify_quit(
         timeout: Seconds to wait for process exit.
 
     Raises:
-        InteractionFailedError: If the process is still running.
+        QuitIncompleteError: If the process (or a respawn) is still running.
     """
-    from naturo.errors import InteractionFailedError
+    from naturo.errors import QuitIncompleteError
 
     identifier = name or str(pid or target_pid)
 
@@ -761,15 +824,8 @@ def _verify_quit(
             break
         time.sleep(0.3)
     else:
-        # Target PID survived the kill
-        raise InteractionFailedError(
-            message=(
-                f"Failed to quit '{identifier}' (PID {target_pid}): "
-                f"process is still running after force kill. "
-                f"Try: naturo app quit {identifier} --force, or "
-                f"naturo app quit --pid {target_pid} --force"
-            ),
-        )
+        # Target PID survived the kill — report the truth (#1197).
+        raise QuitIncompleteError(identifier, [target_pid])
 
     # Step 2: If we have a name, verify the app hasn't respawned (#496).
     # Brief settle time — respawns happen within a few hundred ms.
@@ -781,13 +837,10 @@ def _verify_quit(
             # (e.g. lingering ApplicationFrameHost).  The app is effectively
             # closed if no windows remain — only fail if windows exist.
             if _app_has_visible_windows(name, exclude_pid=target_pid):
-                raise InteractionFailedError(
-                    message=(
-                        f"Failed to quit '{name}': target process "
-                        f"(PID {target_pid}) was killed but the application "
-                        f"is still running under PID {surviving.pid}. "
-                        f"Try: naturo app quit --pid {surviving.pid} --force"
-                    ),
+                # The window-owning process differs from the one we killed —
+                # a Win11-Notepad-style crash-recovery respawn (#1197).
+                raise QuitIncompleteError(
+                    name, [surviving.pid], respawned=surviving.pid != target_pid
                 )
 
 

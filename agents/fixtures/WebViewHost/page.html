@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NaturoWebTest</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; padding: 24px; }
+    button, a, input { display: block; margin: 12px 0; font-size: 16px; }
+    h1 { color: #036; }
+  </style>
+</head>
+<body>
+  <h1 id="hdr">Naturo WebView Test Page</h1>
+  <p id="para">Epsilon paragraph — text content rendered by Chromium.</p>
+  <button id="btnAlpha" onclick="document.getElementById('out').textContent='Alpha clicked'">Alpha Button</button>
+  <button id="btnBeta">Beta Button</button>
+  <a href="#" id="lnkGamma">Gamma Link</a>
+  <label for="txtDelta">Delta Label</label>
+  <input id="txtDelta" type="text" placeholder="Delta Input">
+  <input id="chkZeta" type="checkbox"> <label for="chkZeta">Zeta Checkbox</label>
+  <div id="out" role="status">out: (nothing yet)</div>
+</body>
+</html>

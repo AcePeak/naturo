@@ -165,7 +165,6 @@ class TestRealCliIntentAliases:
         [
             ("launch", "app launch"),
             ("open", "app launch"),
-            ("run", "app launch"),
             ("start", "app launch"),
             ("screenshot", "capture"),
         ],

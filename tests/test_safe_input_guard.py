@@ -209,7 +209,9 @@ class TestCliTypeGuard:
         with mock.patch.dict("os.environ", {}, clear=True):
             result = self._invoke(["test$(rm -rf /)", "-j"], backend)
         assert result.exit_code == 0
-        backend.type_text.assert_called_once()
+        # Guard off → the text IS delivered (not blocked). Single-line text
+        # takes the default ValuePattern rung of the #1219 ladder.
+        backend.set_focused_element_value.assert_called_once()
 
     def test_allows_benign_when_enabled(self):
         from unittest.mock import MagicMock
@@ -218,7 +220,63 @@ class TestCliTypeGuard:
         with _enabled():
             result = self._invoke(["QA_PROBE", "-j"], backend)
         assert result.exit_code == 0
-        backend.type_text.assert_called_once()
+        # Benign text under the armed guard is delivered normally via the ladder.
+        backend.set_focused_element_value.assert_called_once()
+
+    # ── #1160: the clipboard-only `--paste` path must honor the guard too ──
+
+    def test_paste_with_text_blocks_dangerous(self):
+        """`type "<dangerous>" --paste` is blocked (text-argument paste path)."""
+        from unittest.mock import MagicMock
+
+        backend = MagicMock()
+        with _enabled():
+            result = self._invoke(["test$(rm -rf /)", "--paste", "-j"], backend)
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["error"]["code"] == "UNSAFE_INPUT_BLOCKED"
+        backend.hotkey.assert_not_called()
+        backend.clipboard_set.assert_not_called()
+
+    def test_bare_paste_blocks_dangerous_clipboard(self):
+        """(#1160) bare `type --paste` reads the clipboard and refuses to
+        Ctrl+V destructive content when the guard is armed — the bypass the
+        issue reported."""
+        from unittest.mock import MagicMock
+
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "$(rm -rf /)"
+        with _enabled():
+            result = self._invoke(["--paste", "-j"], backend)
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "UNSAFE_INPUT_BLOCKED"
+        # Nothing was pasted.
+        backend.hotkey.assert_not_called()
+
+    def test_bare_paste_allows_benign_clipboard(self):
+        """A benign clipboard still pastes normally under the armed guard."""
+        from unittest.mock import MagicMock
+
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "hello world"
+        with _enabled():
+            result = self._invoke(["--paste", "-j"], backend)
+        assert result.exit_code == 0
+        backend.hotkey.assert_any_call("ctrl", "v")
+
+    def test_bare_paste_unaffected_when_guard_off(self):
+        """Guard off: bare paste injects whatever is on the clipboard, as before
+        (and does not even need to read it for the guard)."""
+        from unittest.mock import MagicMock
+
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "$(rm -rf /)"
+        with mock.patch.dict("os.environ", {}, clear=True):
+            result = self._invoke(["--paste", "-j"], backend)
+        assert result.exit_code == 0
+        backend.hotkey.assert_any_call("ctrl", "v")
 
 
 # ── Integration: MCP `type` tool ─────────────────────────────────────
@@ -262,6 +320,12 @@ class TestMcpTypeGuard:
         from unittest.mock import MagicMock
 
         backend = MagicMock()
+        # #1219/#1239: type_text prefers ValuePattern → clipboard paste before the
+        # keystroke rung. Steer to keystroke (no writable ValuePattern, no paste)
+        # so backend.type_text is the delivery proof that the content was NOT
+        # blocked when NATURO_SAFE_INPUT is unset.
+        backend.set_focused_element_value.return_value = False
+        backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with self._server(backend):
             server = create_server()
             with mock.patch.dict("os.environ", {}, clear=True):
@@ -269,3 +333,45 @@ class TestMcpTypeGuard:
         data = json.loads(result[0].text)
         assert data["success"] is True
         backend.type_text.assert_called_once()
+
+
+class TestMcpPasteHelperGuard:
+    """(#1160) The MCP clipboard-paste helper honors the guard at the paste
+    boundary itself — belt-and-suspenders behind ``type_text``'s up-front check,
+    so no future caller can reintroduce a paste bypass."""
+
+    def test_paste_helper_refuses_dangerous_when_enabled(self):
+        from unittest.mock import MagicMock
+
+        from naturo.mcp._input import _paste_text
+
+        backend = MagicMock()
+        with _enabled():
+            delivered = _paste_text(backend, "$(rm -rf /)")
+        assert delivered is False
+        backend.clipboard_set.assert_not_called()
+        backend.hotkey.assert_not_called()
+
+    def test_paste_helper_delivers_benign_when_enabled(self):
+        from unittest.mock import MagicMock
+
+        from naturo.mcp._input import _paste_text
+
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "prior"
+        with _enabled():
+            delivered = _paste_text(backend, "hello world")
+        assert delivered is True
+        backend.hotkey.assert_any_call("ctrl", "v")
+
+    def test_paste_helper_delivers_dangerous_when_guard_off(self):
+        from unittest.mock import MagicMock
+
+        from naturo.mcp._input import _paste_text
+
+        backend = MagicMock()
+        backend.clipboard_get.return_value = "prior"
+        with mock.patch.dict("os.environ", {}, clear=True):
+            delivered = _paste_text(backend, "$(rm -rf /)")
+        assert delivered is True
+        backend.hotkey.assert_any_call("ctrl", "v")

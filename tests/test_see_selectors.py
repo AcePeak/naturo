@@ -71,7 +71,7 @@ class TestSeeSelectorsJSON:
     def test_json_output_has_selector_field(self, runner, mock_backend):
         result = _invoke_see(runner, mock_backend, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         assert "selector" in data
         assert data["selector"].startswith("app://")
 
@@ -81,7 +81,7 @@ class TestSeeSelectorsJSON:
         result = _invoke_see(runner, mock_backend,
                              ["--json", "--no-snapshot", "--app", "notepad"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         # Root is the virtual "Application" node wrapping per-window trees
         # when --app resolves multiple HWNDs; check children
         assert "notepad" in data["selector"]
@@ -89,13 +89,13 @@ class TestSeeSelectorsJSON:
     def test_json_selector_defaults_to_wildcard(self, runner, mock_backend):
         result = _invoke_see(runner, mock_backend, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         assert data["selector"].startswith("app://*/")
 
     def test_json_children_have_selectors(self, runner, mock_backend):
         result = _invoke_see(runner, mock_backend, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         children = data["children"]
         assert len(children) == 3
 
@@ -113,7 +113,7 @@ class TestSeeSelectorsJSON:
         """Selectors for children include discriminating ancestors."""
         result = _invoke_see(runner, mock_backend, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         btn = data["children"][0]
         # Child selector should reference ancestor Window in path
         assert "Window" in btn["selector"]
@@ -123,7 +123,7 @@ class TestSeeSelectorsJSON:
         """Elements without automationid use name in selector."""
         result = _invoke_see(runner, mock_backend, ["--json", "--no-snapshot"])
         assert result.exit_code == 0, result.output
-        data = json.loads(result.output.strip())
+        data = json.loads(result.output.strip())["tree"]  # (#865) unwrap envelope
         text_el = data["children"][2]  # Text "Status Bar" with id=""
         assert "selector" in text_el
         assert "Status Bar" in text_el["selector"]

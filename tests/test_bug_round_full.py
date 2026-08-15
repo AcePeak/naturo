@@ -157,26 +157,32 @@ class TestBUG027MenuInspectExitCode:
 class TestBUG028DepthValidation:
     """BUG-028: see/find --depth should validate range 1-10."""
 
-    def test_see_depth_zero(self, runner):
+    # Depth is now caller-driven (#1289): 0 = unlimited (the default), any
+    # positive value is honored (native-bounded), and only a negative value is
+    # rejected — no 1-50 / 1-10 clamp that would defeat the parameter.
+
+    def test_see_depth_zero_is_valid(self, runner):
+        # 0 = unlimited must NOT be rejected as invalid input (it proceeds and
+        # then fails for lack of a window on headless CI).
         result = runner.invoke(main, ["see", "--depth", "0"])
-        assert result.exit_code != 0
-        assert "must be between 1 and 10" in result.output or "error" in result.output.lower()
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
     def test_see_depth_negative(self, runner):
         result = runner.invoke(main, ["see", "--depth", "-1"])
         assert result.exit_code != 0
 
-    def test_see_depth_zero_json(self, runner):
+    def test_see_depth_zero_json_not_invalid_input(self, runner):
         result = runner.invoke(main, ["see", "--depth", "0", "--json"])
-        assert result.exit_code != 0
         data = json.loads(result.output)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        # 0 is valid — it must not surface as an INVALID_INPUT depth error.
+        assert not (
+            data.get("success") is False
+            and data.get("error", {}).get("code") == "INVALID_INPUT"
+        )
 
-    def test_find_depth_zero(self, runner):
+    def test_find_depth_zero_is_valid(self, runner):
         result = runner.invoke(main, ["find", "Save", "--depth", "0"])
-        assert result.exit_code != 0
-        assert "must be between 1 and 50" in result.output or "error" in result.output.lower()
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
     def test_find_depth_negative_json(self, runner):
         result = runner.invoke(main, ["find", "Save", "--depth", "-1", "--json"])
@@ -185,28 +191,22 @@ class TestBUG028DepthValidation:
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    def test_see_depth_11(self, runner):
-        """Depth 11 is now accepted (limit raised to 50 for VB6/ActiveX)."""
+    def test_see_depth_11_accepted(self, runner):
         result = runner.invoke(main, ["see", "--depth", "11"])
-        assert result.exit_code == 0 or "must be between" not in (result.output or "")
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
-    def test_see_depth_51_rejected(self, runner):
-        """Depth > 50 should be rejected."""
+    def test_see_depth_beyond_old_ceiling_accepted(self, runner):
+        # Depth > 50 is now honored (native-bounded), not rejected.
         result = runner.invoke(main, ["see", "--depth", "51"])
-        assert result.exit_code != 0
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
     def test_find_depth_20_accepted(self, runner):
-        """Issue #284: find should accept depth > 10 (default is 20)."""
-        # depth=20 should be accepted (not rejected as out-of-range)
         result = runner.invoke(main, ["find", "Save", "--depth", "20"])
-        # Should not fail with INVALID_INPUT for depth
-        assert "must be between" not in (result.output or "")
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
-    def test_find_depth_51_rejected(self, runner):
-        """Issue #284: find depth max is 50."""
+    def test_find_depth_beyond_old_ceiling_accepted(self, runner):
         result = runner.invoke(main, ["find", "Save", "--depth", "51"])
-        assert result.exit_code != 0
-        assert "must be between 1 and 50" in result.output or "error" in result.output.lower()
+        assert "must be 0 (unlimited) or a positive number" not in (result.output or "")
 
 
 class TestBUG032TypeWpmValidation:

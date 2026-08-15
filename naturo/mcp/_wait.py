@@ -68,22 +68,29 @@ def register_wait_tools(server, _get_backend, _safe_tool):
     @server.tool()
     @_safe_tool
     def wait_for_window(
-        title: str,
+        window_title: Optional[str] = None,
         timeout: float = 10.0,
         interval: float = 0.5,
+        title: Optional[str] = None,
     ) -> dict:
         """Wait for a window to appear.
 
         Polls until a window matching the title is found or timeout.
 
         Args:
-            title: Window title to wait for (partial match).
+            window_title: Window title to wait for (partial match). Canonical
+                selector name, consistent across all MCP window tools (#900).
             timeout: Maximum wait time in seconds (default 10).
             interval: Poll interval in seconds (default 0.5).
+            title: Deprecated alias for ``window_title`` (kept for back-compat);
+                ``window_title`` wins if both are given.
 
         Returns:
             Dict with success flag and wait_time.
         """
+        target = window_title if window_title is not None else title
+        if not target:
+            return {"success": False, "error": {"code": "INVALID_INPUT", "message": "window_title is required"}}
         if timeout < 0:
             return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"timeout must be >= 0, got {timeout}"}}
         if interval <= 0:
@@ -92,7 +99,7 @@ def register_wait_tools(server, _get_backend, _safe_tool):
         from naturo.wait import wait_for_window as _wait_window
         backend = _get_backend()
         result = _wait_window(
-            title=title,
+            title=target,
             timeout=timeout,
             poll_interval=interval,
             backend=backend,
@@ -107,7 +114,7 @@ def register_wait_tools(server, _get_backend, _safe_tool):
             "success": False,
             "found": False,
             "wait_time": round(result.wait_time, 3),
-            "error": {"code": "TIMEOUT", "message": f"Window '{title}' not found within {timeout}s"},
+            "error": {"code": "TIMEOUT", "message": f"Window '{target}' not found within {timeout}s"},
         }
 
     @server.tool()

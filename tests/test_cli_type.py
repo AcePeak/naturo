@@ -61,12 +61,13 @@ def _patch_auto_route(route=None):
 class TestBasicType:
 
     def test_type_text(self, runner, mock_backend):
+        # (#1219) Default now climbs the IME-immune ladder: a focused control
+        # with a writable ValuePattern is written directly — no keystroke.
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["Hello World"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "Hello World", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        mock_backend.set_focused_element_value.assert_called_once_with("Hello World", append=True)
+        mock_backend.type_text.assert_not_called()
 
     def test_type_json_output(self, runner, mock_backend):
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
@@ -85,6 +86,11 @@ class TestBasicType:
         assert "INVALID_INPUT" in result.output
 
     def test_custom_delay_and_profile(self, runner, mock_backend):
+        # delay/profile/wpm apply only to the keystroke fallback rung; force the
+        # ladder down to it (no ValuePattern, no clipboard) and confirm they
+        # reach backend.type_text.
+        mock_backend.set_focused_element_value.return_value = False
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, [
                 "test", "--delay", "10", "--profile", "human", "--wpm", "60",
@@ -223,26 +229,28 @@ class TestInterpretEscapes:
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["hello\\tworld\\n", "-E"], catch_exceptions=False)
         assert result.exit_code == 0
-        # (#840) Newline handling lives in the backend, not the CLI layer.
-        # The CLI passes the full interpreted string (including \n) to backend.type_text.
-        mock_backend.type_text.assert_called_once_with(
-            "hello\tworld\n", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        # (#840/#1219) Escape interpretation happens in the CLI layer; the fully
+        # interpreted string (including the \n) is handed to the delivery ladder.
+        # Because it contains a newline, the ValuePattern rung is skipped (UIA
+        # SetValue collapses newlines, #563) and the atomic clipboard rung
+        # delivers the exact string.
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("hello\tworld\n")
 
     def test_literal_backslash_preserved_without_flag(self, runner, mock_backend):
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["C:\\Users\\test"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "C:\\Users\\test", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        mock_backend.set_focused_element_value.assert_called_once_with(
+            "C:\\Users\\test", append=True,
         )
 
     def test_double_backslash_becomes_single_with_flag(self, runner, mock_backend):
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["path\\\\file", "-E"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "path\\file", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
+        mock_backend.set_focused_element_value.assert_called_once_with(
+            "path\\file", append=True,
         )
 
 
@@ -261,8 +269,9 @@ class TestOnElement:
         assert result.exit_code == 0
         # First: click on element to focus
         mock_backend.click.assert_called_once_with(100, 200, button="left", input_mode="normal")
-        # Then: type text
-        mock_backend.type_text.assert_called_once()
+        # Then: deliver text via the default ladder (ValuePattern rung here).
+        mock_backend.set_focused_element_value.assert_called_once_with("hello", append=True)
+        mock_backend.type_text.assert_not_called()
 
     def test_on_ref_not_found(self, runner, mock_backend):
         mock_mgr = MagicMock()
@@ -324,7 +333,9 @@ class TestAppFocus:
 class TestBackendError:
 
     def test_type_exception_shows_error(self, runner, mock_backend):
-        mock_backend.type_text.side_effect = Exception("input failed")
+        # A backend fault on the delivery path (here the default ValuePattern
+        # rung) must surface as an error envelope, not a false success.
+        mock_backend.set_focused_element_value.side_effect = Exception("input failed")
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["hello", "--json"], catch_exceptions=False)
         assert result.exit_code != 0
@@ -337,9 +348,13 @@ class TestBackendError:
 class TestInputMode:
 
     def test_hardware_input_mode(self, runner, mock_backend):
+        # (#1219) --input-mode hardware is an explicit raw-injection escape
+        # hatch: it bypasses the ValuePattern/clipboard ladder entirely and
+        # goes straight to the keystroke backend.
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["test", "--input-mode", "hardware"], catch_exceptions=False)
         assert result.exit_code == 0
+        mock_backend.set_focused_element_value.assert_not_called()
         mock_backend.type_text.assert_called_once_with(
             "test", delay_ms=5, profile="linear", wpm=120, input_mode="hardware",
         )
@@ -374,9 +389,10 @@ class TestUiaValueSet:
         )
 
     def test_uia_fallback_passes_newlines_to_backend(self, runner, mock_backend):
-        """UIA fallback path must pass the full text (with newlines) to
-        backend.type_text — newline splitting happens inside the backend,
-        not the CLI layer (#840)."""
+        """The CLI must hand the full multiline string to the delivery path
+        as-is — it never splits newlines itself (#840). Multiline text skips
+        the newline-collapsing ValuePattern rung (#563) and is delivered
+        atomically via clipboard, preserving the exact string (#1219)."""
         mock_backend.set_element_value.return_value = False
         route = {"method": "uia"}
 
@@ -386,11 +402,11 @@ class TestUiaValueSet:
                 catch_exceptions=False,
             )
         assert result.exit_code == 0
-        # The CLI must hand the full multiline string to the backend as-is.
-        # The backend is responsible for splitting on newlines (#840).
-        mock_backend.type_text.assert_called_once_with(
-            "line1\nline2", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        # Newline text → no ValuePattern, no per-key keystroke splitting:
+        # the whole string is pasted intact.
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("line1\nline2")
+        mock_backend.type_text.assert_not_called()
 
 
 # ── --ref alias for --on ─────────────────────────────────────────────
@@ -416,48 +432,60 @@ class TestRefAlias:
 
 
 class TestTypeWithNewlines:
-    """#840: newline handling belongs in the backend, not the CLI layer.
-
-    The CLI must pass the full text (including newlines) directly to
-    backend.type_text().  The backend is responsible for converting
-    newlines to Enter keypresses.  These tests verify the CLI passes
-    the correct string; the backend-level splitting is tested in
-    test_type_newline_840.py.
+    """#840/#1219: the CLI never splits newlines itself — it hands the full
+    string to the delivery ladder. Single-line text prefers the instant
+    ValuePattern rung; multiline text SKIPS ValuePattern (UIA SetValue
+    collapses newlines, #563) and is pasted atomically via clipboard, which
+    preserves the exact string. The backend-level keystroke splitting is
+    tested in test_type_newline_840.py.
     """
 
     def test_cli_passes_text_without_newline_to_backend(self, runner, mock_backend):
-        """Text without newlines is passed straight to backend.type_text."""
+        """Single-line text prefers the IME-immune ValuePattern rung (#1219)."""
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(type_cmd, ["hello"], catch_exceptions=False)
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "hello", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        mock_backend.set_focused_element_value.assert_called_once_with("hello", append=True)
+        mock_backend.type_text.assert_not_called()
 
     def test_cli_passes_newline_text_to_backend(self, runner, mock_backend):
-        """CLI passes the full multiline string to backend.type_text as-is.
-
-        The backend owns the newline-splitting logic (#840); the CLI must
-        not split before calling type_text.
-        """
+        """Multiline text skips ValuePattern (#563) and is pasted atomically —
+        the CLI hands the full string over without splitting (#840)."""
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(
                 type_cmd, ["line1\\nline2", "-E"],
                 catch_exceptions=False,
             )
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "line1\nline2", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("line1\nline2")
+        mock_backend.type_text.assert_not_called()
 
     def test_cli_passes_crlf_text_to_backend(self, runner, mock_backend):
-        """CRLF text is passed intact to backend.type_text."""
+        """CRLF text likewise skips ValuePattern and is pasted intact."""
         with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
             result = runner.invoke(
                 type_cmd, ["a\r\nb"],
                 catch_exceptions=False,
             )
         assert result.exit_code == 0
-        mock_backend.type_text.assert_called_once_with(
-            "a\r\nb", delay_ms=5, profile="linear", wpm=120, input_mode="normal",
-        )
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("a\r\nb")
+        mock_backend.type_text.assert_not_called()
+
+    def test_multiline_skips_value_pattern_uses_clipboard(self, runner, mock_backend):
+        """(#1219/#563) Explicit guard: multiline text must NEVER touch the
+        ValuePattern rung (UIA SetValue collapses newlines); it is delivered
+        via the atomic, newline-preserving clipboard rung, reported as such."""
+        with _patch_resolve_app_id(), _patch_backend(mock_backend), _patch_auto_route():
+            result = runner.invoke(
+                type_cmd, ["alpha\\nbeta\\ngamma", "-E", "--json"],
+                catch_exceptions=False,
+            )
+        assert result.exit_code == 0
+        mock_backend.set_focused_element_value.assert_not_called()
+        mock_backend.clipboard_set.assert_any_call("alpha\nbeta\ngamma")
+        mock_backend.hotkey.assert_any_call("ctrl", "v")
+        mock_backend.type_text.assert_not_called()
+        data = json.loads(result.output)
+        assert data["data"]["input_method"] == "clipboard_paste"

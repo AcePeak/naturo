@@ -2,6 +2,10 @@
 
 Only AcePeak org members and authorized Dev agents may publish releases.
 
+> For the full process — release **cadence policy**, CHANGELOG / release-notes
+> handling, and the complete step-by-step checklist — see
+> [docs/RELEASING.md](RELEASING.md). This page is the terse crib sheet.
+
 ## Version Locations (ALL 4 must stay in sync)
 
 1. `pyproject.toml` → `version = "x.y.z"`

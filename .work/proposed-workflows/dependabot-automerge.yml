@@ -1,0 +1,51 @@
+# PROPOSED — dependabot auto-merge via the built-in GITHUB_TOKEN.
+#
+# WHY THIS EXISTS (#1302): the loop's gh OAuth token lacks `workflow` scope, so it
+# cannot merge (or enable auto-merge on) any dependabot PR that edits
+# `.github/workflows/build.yml`. Most of naturo's CI action pins live in build.yml,
+# so the majority of what #1295 was built to keep fresh silently ages, stuck open
+# (currently #1298 action-gh-release 2→3, #1299 codecov 6→7).
+#
+# WHY GITHUB_TOKEN FIXES IT: the `workflow`-scope restriction only applies to OAuth
+# Apps and PATs. The Actions-native GITHUB_TOKEN, when granted `contents: write`,
+# is permitted to update workflow files — so a workflow-hosted merge succeeds where
+# the loop token is refused. This closes the #1302 class one level up from #1295.
+#
+# BOOTSTRAP (one Ace/PAT push — this file's own path is scope-blocked for the loop):
+#   cp .work/proposed-workflows/dependabot-automerge.yml .github/workflows/
+#   git add .github/workflows/dependabot-automerge.yml
+#   git commit -m "ci: auto-merge dependabot minor/patch via GITHUB_TOKEN (#1302)"
+#   git push origin HEAD:main        # must land on the DEFAULT branch to be active
+# Also enable, once, in repo settings: Settings → General → "Allow auto-merge".
+# After this lands, #1302 can be closed and the loop no longer needs Ace to hand-
+# merge build.yml dependabot PRs.
+#
+# SCOPE GUARD: only auto-merges semver-minor/patch. Major bumps stay manual (they
+# are the ones that historically broke CI, e.g. the 6→7 action jumps).
+
+name: dependabot-automerge
+
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    # Only dependabot PRs.
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for minor/patch updates
+        if: ${{ steps.meta.outputs.update-type == 'version-update:semver-minor' || steps.meta.outputs.update-type == 'version-update:semver-patch' }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

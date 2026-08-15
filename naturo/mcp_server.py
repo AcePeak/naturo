@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import io
+import json
 import logging
 import sys
 from collections.abc import Sequence
@@ -33,6 +34,8 @@ from naturo.mcp._clipboard import register_clipboard_tools
 from naturo.mcp._dialog import register_dialog_tools
 from naturo.mcp._system import register_system_tools
 from naturo.mcp._excel import register_excel_tools
+from naturo.mcp._word import register_word_tools
+from naturo.mcp.hook_tools import register_hook_tools
 
 logger = logging.getLogger(__name__)
 
@@ -75,22 +78,132 @@ def _core_error_envelope(exc: NaturoCoreError) -> dict[str, Any]:
     return {"success": False, "error": {"code": code, "message": message}}
 
 
+# A default recovery hint per error code, so every error an agent sees carries a
+# concrete "what to do next" even when the raise site did not supply one. A raise
+# site that sets its own suggested_action always wins.
+_DEFAULT_SUGGESTED_ACTION = {
+    ErrorCode.ELEMENT_NOT_FOUND: "Call see_ui_tree (cascade=true) to list the window's current elements, then retry with an exact Role:Name selector or a fresh element id.",
+    ErrorCode.SELECTOR_NOT_FOUND: "Call see_ui_tree to inspect the window, then use a selector that matches an element that is actually present.",
+    ErrorCode.WINDOW_NOT_FOUND: "Call list_windows to see open windows and pass the exact hwnd, or launch the app first with launch_app.",
+    ErrorCode.APP_NOT_FOUND: "Check the app name/path; use list_apps for running apps or launch_app to start it.",
+    ErrorCode.PROCESS_NOT_FOUND: "Call list_apps to see running processes, or start the app with launch_app first.",
+    ErrorCode.MENU_NOT_FOUND: "Call menu_inspect to list the app's menus, then use an exact menu path.",
+    ErrorCode.SNAPSHOT_NOT_FOUND: "Call create_snapshot (or see_ui_tree) first, then use the returned snapshot id.",
+    ErrorCode.STALE_SNAPSHOT_CACHE: "Call see_ui_tree/create_snapshot to capture a fresh snapshot, then retry with the new element ids.",
+    ErrorCode.DIALOG_NOT_FOUND: "Call dialog_detect to confirm a dialog is present before acting on it.",
+    ErrorCode.SET_VALUE_FAILED: "The control has no writable ValuePattern. Use type_text (it falls back to paste/keystroke) with the window's hwnd, or click the field first.",
+    ErrorCode.TOGGLE_FAILED: "The element does not support TogglePattern; confirm it is a checkbox/toggle via see_ui_tree, or click it instead.",
+    ErrorCode.SELECT_FAILED: "The element does not support SelectionItemPattern; confirm it is a selectable item via see_ui_tree, or click it instead.",
+    ErrorCode.EXPAND_FAILED: "The element does not support ExpandCollapsePattern; confirm it is expandable via see_ui_tree, or click it instead.",
+    ErrorCode.COLLAPSE_FAILED: "The element does not support ExpandCollapsePattern; confirm it is collapsible via see_ui_tree, or click it instead.",
+    ErrorCode.TIMEOUT: "Increase the timeout, or verify the expected window/element actually appears (list_windows / see_ui_tree).",
+    ErrorCode.INVALID_COORDINATES: "Use coordinates within a monitor's bounds (list_monitors), or target an element id instead of raw x/y.",
+    ErrorCode.TASKBAR_ITEM_NOT_FOUND: "Call taskbar_list to see current taskbar items, then use an exact label.",
+    ErrorCode.TRAY_ICON_NOT_FOUND: "Call tray_list to see current tray icons, then use an exact label.",
+    ErrorCode.CAPTURE_FAILED: "Verify the target window is visible and not minimized (list_windows), then retry.",
+    ErrorCode.SCREENSHOT_FAILED: "Verify the target window is visible and not minimized (list_windows), then retry.",
+}
+
+
 def _finalize_error_envelope(result: Any) -> Any:
     """Guarantee any tool error envelope carries the full self-correcting contract.
 
     Tools may build ``{"success": False, "error": {"code", "message"}}`` inline;
-    this backfills ``category`` (derived from the registered code via
-    :func:`category_for_code`) and ensures a ``suggested_action`` key is present,
-    so every MCP error an agent sees is ``code + category + recovery-hint``
-    regardless of how the tool constructed it (M3). Non-error results and
-    non-dict errors pass through untouched.
+    this backfills ``category`` (from the registered code) and a
+    ``suggested_action`` recovery hint (from ``_DEFAULT_SUGGESTED_ACTION`` when
+    the raise site left it empty), so every MCP error an agent sees is
+    ``code + category + recovery-hint`` regardless of how the tool built it (M3).
+    Non-error results and non-dict errors pass through untouched.
     """
     if isinstance(result, dict) and result.get("success") is False:
         err = result.get("error")
         if isinstance(err, dict) and isinstance(err.get("code"), str):
             err.setdefault("category", category_for_code(err["code"]))
-            err.setdefault("suggested_action", None)
+            if err.get("suggested_action") is None:
+                err["suggested_action"] = _DEFAULT_SUGGESTED_ACTION.get(err["code"])
     return result
+
+
+# ── isError ↔ success reconciliation (#882) ──────────────────────────────────
+# FastMCP renders a tool that *returns normally* with ``isError: false`` even
+# when the returned payload is ``{"success": false, ...}`` — so an agent had to
+# check both the transport ``isError`` flag AND the payload ``success`` field.
+# ``_install_iserror_success_sync`` wraps the low-level ``CallToolRequest``
+# handler so the transport-level ``isError`` is derived from the payload:
+# ``isError == not success`` for every naturo-originated result. (Genuine
+# protocol failures — unknown tool, malformed args, no desktop session — still
+# raise and surface as ``isError: true`` with no ``success`` payload, which
+# remains correct.)
+
+
+def _payload_reports_failure(payload: Any) -> bool:
+    """True only when a decoded payload positively reports ``success: false``."""
+    return isinstance(payload, dict) and payload.get("success") is False
+
+
+def _content_reports_failure(
+    content: Any, structured_content: Any = None,
+) -> bool:
+    """True when a CallToolResult's body positively reports ``success: false``.
+
+    Prefers ``structuredContent`` when it carries the ``success`` flag; else
+    parses the first ``TextContent`` block's JSON text — the shape naturo's
+    ``-> dict`` tools produce (a single JSON text block, no structured content).
+    Non-JSON / non-``success`` bodies yield ``False`` so only a positive failure
+    signal ever flips ``isError``.
+    """
+    if _payload_reports_failure(structured_content):
+        return True
+    try:
+        iterator = iter(content)
+    except TypeError:
+        return False
+    for block in iterator:
+        text = getattr(block, "text", None)
+        if isinstance(text, str):
+            try:
+                payload = json.loads(text)
+            except (ValueError, TypeError):
+                continue
+            if _payload_reports_failure(payload):
+                return True
+    return False
+
+
+def _install_iserror_success_sync(server: FastMCP) -> None:
+    """Make the transport ``isError`` track the payload ``success`` flag (#882).
+
+    Wraps the low-level ``CallToolRequest`` handler FastMCP registers at
+    construction. That handler returns a :class:`~mcp.types.ServerResult`
+    wrapping a :class:`~mcp.types.CallToolResult` with ``isError=False`` for any
+    tool that returned normally — including naturo's ``{"success": false, ...}``
+    failure envelopes. The wrapper flips ``isError`` to ``True`` when (and only
+    when) the result body reports ``success: false``, giving MCP clients a single
+    discriminator (``isError``) that always agrees with ``payload.success``.
+
+    Intercepting the transport handler (rather than ``FastMCP.call_tool``) keeps
+    the in-process ``call_tool`` return type unchanged for direct callers/tests.
+    """
+    from mcp import types as _mcp_types
+
+    handlers = server._mcp_server.request_handlers
+    original = handlers.get(_mcp_types.CallToolRequest)
+    if original is None:  # pragma: no cover - handler is always registered
+        return
+
+    @functools.wraps(original)
+    async def _handler(req: _mcp_types.CallToolRequest) -> _mcp_types.ServerResult:
+        result = await original(req)
+        root = getattr(result, "root", None)
+        if (
+            isinstance(root, _mcp_types.CallToolResult)
+            and not root.isError
+            and _content_reports_failure(root.content, root.structuredContent)
+        ):
+            root.isError = True
+        return result
+
+    handlers[_mcp_types.CallToolRequest] = _handler
 
 
 class _SanitizingFastMCP(FastMCP):
@@ -196,11 +309,30 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
         host=host,
         port=port,
         instructions=(
-            "Naturo — Windows desktop automation engine. "
-            "Use these tools to see, click, type, and automate Windows applications. "
-            "Start with capture_screen or list_windows to understand the current state, "
-            "then use find_element or see_ui_tree to locate UI elements, "
-            "and interact with click, type_text, press_key, etc."
+            "Naturo — Windows desktop & application automation. It sees and "
+            "drives the real screen: native Windows apps, dialogs, menus, the "
+            "tray, and — its moat — content other tools cannot reach: Java/Swing "
+            "(JAB), Excel cells (COM), and a real, JS-rendered or logged-in "
+            "browser (CDP). "
+            "Prefer naturo whenever a task means operating an actual application "
+            "or the user's real browser, reading on-screen / rendered / "
+            "behind-login state, or acting on the UI (click, type, select). "
+            "It is NOT a web fetcher: for plain public web text a direct web "
+            "fetch is faster and better — do not drive a browser for that. "
+            "Typical flow: list_windows / see_ui_tree to observe (pass "
+            "cascade=true to fuse desktop + web + Java + Excel into one "
+            "correctness-tagged tree), then click / type_text / press_key to "
+            "act; launch_browser opens a CDP-wired browser for reading rendered "
+            "or logged-in pages. "
+            "Work token-lean (this is the fast, cheap path): see_ui_tree already "
+            "returns COMPACT text — 'eN <role> \"<name>\"' lines you read directly "
+            "(never screenshot to read UI; capture only when you truly need "
+            "pixels). When you know your target, pass match='<intent>' (e.g. "
+            "match='save') to get back ONLY the matching elements — often one line "
+            "instead of the whole tree, the fewest tokens and turns. Act by the eN "
+            "ref (click eN / type_text). Read document/web text with word_read / "
+            "excel_read / read_web_text, not screenshots. Only pass format='json' "
+            "when you actually need bounds or raw properties."
         ),
     )
     # (#873) Advertise naturo's own version in the MCP ``serverInfo`` handshake.
@@ -304,10 +436,16 @@ def create_server(host: str = "localhost", port: int = 3100) -> FastMCP:
     register_dialog_tools(server, _get_backend, _safe_tool)
     register_system_tools(server, _get_backend, _safe_tool)
     register_excel_tools(server, _get_backend, _safe_tool)
+    register_word_tools(server, _get_backend, _safe_tool)
+    register_hook_tools(server, _get_backend, _safe_tool)
 
     # Pydantic parameter-validation errors are sanitized by the
     # _SanitizingFastMCP.call_tool override, which is wired into the low-level
     # JSON-RPC handler at construction time (see the class docstring, #844).
+
+    # (#882) Make the transport ``isError`` flag track the payload's ``success``
+    # flag for every registered tool, so agents need only one discriminator.
+    _install_iserror_success_sync(server)
     return server
 
 

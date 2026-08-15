@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "naturo",
   "display_name": "Naturo Desktop Automation",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Windows desktop automation engine — see, click, type, and automate any app through UIA, MSAA, IA2, Java Access Bridge, Electron/CDP, and AI vision.",
   "long_description": "Naturo exposes Windows desktop automation as MCP tools so AI agents can inspect the accessibility tree, capture screenshots, click, type, manage windows and apps, and drive dialogs. This bundle launches the installed `naturo` CLI via `naturo mcp start`; run `pip install naturo` first.",
   "author": {
@@ -95,10 +95,6 @@
       "description": "Write text to the system clipboard."
     },
     {
-      "name": "create_snapshot",
-      "description": "Create a snapshot of the current UI state (screenshot + element tree)."
-    },
-    {
       "name": "dialog_accept",
       "description": "Accept (confirm) the active dialog by clicking OK/Yes/Open/Save."
     },
@@ -121,6 +117,10 @@
     {
       "name": "drag",
       "description": "Drag from one point to another."
+    },
+    {
+      "name": "excel_create_chart",
+      "description": "Create a chart from a data range in an Excel workbook."
     },
     {
       "name": "excel_info",
@@ -167,12 +167,36 @@
       "description": "Retrieve a previously created snapshot."
     },
     {
+      "name": "hook_install",
+      "description": "Install (or re-arm) an in-process hook on a supported Win32 API."
+    },
+    {
+      "name": "hook_list",
+      "description": "List the currently installed in-process hooks."
+    },
+    {
+      "name": "hook_monitor",
+      "description": "Drain and return the monitored-call log (clears the native buffer)."
+    },
+    {
+      "name": "hook_remove",
+      "description": "Remove a previously installed hook on MODULE!FUNCTION."
+    },
+    {
+      "name": "hook_supported",
+      "description": "List the Win32 APIs this build knows how to hook."
+    },
+    {
       "name": "hotkey",
       "description": "Press a keyboard shortcut (key combination)."
     },
     {
       "name": "launch_app",
       "description": "Launch an application by name."
+    },
+    {
+      "name": "launch_browser",
+      "description": "Launch a CDP-wired Chrome/Edge to read rendered or logged-in web pages."
     },
     {
       "name": "list_apps",
@@ -199,6 +223,10 @@
       "description": "Move the mouse cursor to a position."
     },
     {
+      "name": "office_dismiss_startup",
+      "description": "Get an Office app past its start screen into a ready, editable document."
+    },
+    {
       "name": "press_key",
       "description": "Press a key or key combination."
     },
@@ -207,12 +235,16 @@
       "description": "Quit an application."
     },
     {
+      "name": "read_web_text",
+      "description": "Read rendered text from a browser page via CDP — the static text that"
+    },
+    {
       "name": "scroll",
       "description": "Scroll the mouse wheel."
     },
     {
       "name": "see_ui_tree",
-      "description": "Inspect the UI accessibility tree of a window."
+      "description": "Read a window's UI as a structured element tree — naturo's core \"see\" tool."
     },
     {
       "name": "select_element",
@@ -244,7 +276,7 @@
     },
     {
       "name": "type_text",
-      "description": "Type text using keyboard input."
+      "description": "Type text into a target window (or the focused window)."
     },
     {
       "name": "virtual_desktop_close",
@@ -305,6 +337,14 @@
     {
       "name": "window_set_bounds",
       "description": "Set window position and size in one call."
+    },
+    {
+      "name": "word_read",
+      "description": "Read the full text of a Word document programmatically (COM)."
+    },
+    {
+      "name": "word_write",
+      "description": "Write text to a Word document programmatically (COM) — no UI needed."
     }
   ]
 }

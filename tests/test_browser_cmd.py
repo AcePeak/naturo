@@ -56,7 +56,7 @@ class TestNavigate:
         result = _invoke(runner, ["navigate", "https://example.com", "--json"], mock_page)
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["url"] == "https://example.com"
 
     def test_navigate_wait_until(self, runner: click.testing.CliRunner,
@@ -186,7 +186,7 @@ class TestClick:
         mock_page.find.return_value = MagicMock()
         result = _invoke(runner, ["click", "#btn", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
 
     def test_click_error(self, runner: click.testing.CliRunner,
                          mock_page: MagicMock) -> None:
@@ -223,7 +223,7 @@ class TestType:
         mock_page.find.return_value = MagicMock()
         result = _invoke(runner, ["type", "#in", "txt", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["text"] == "txt"
 
 
@@ -327,7 +327,7 @@ class TestScreenshot:
         mock_page.screenshot.return_value = "out.png"
         result = _invoke(runner, ["screenshot", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["path"] == "out.png"
 
     def test_screenshot_error_json(self, runner: click.testing.CliRunner,
@@ -422,7 +422,7 @@ class TestWait:
                        mock_page: MagicMock) -> None:
         result = _invoke(runner, ["wait", ".done", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
 
 
 # ── tabs ─────────────────────────────────────────────────────────────────────
@@ -445,12 +445,25 @@ class TestTabs:
         mock_page.tabs.return_value = [{"id": "a1", "title": "T", "url": "u"}]
         result = _invoke(runner, ["tabs", "--json"], mock_page)
         data = json.loads(result.output)
-        assert len(data) == 1
+        assert data["success"] is True
+        assert data["count"] == 1
+        assert len(data["tabs"]) == 1
 
     def test_tab_switch(self, runner: click.testing.CliRunner,
                         mock_page: MagicMock) -> None:
         result = _invoke(runner, ["tab", "ABC123"], mock_page)
         assert result.exit_code == 0
+        mock_page.switch_tab.assert_called_once_with("ABC123")
+
+    def test_tab_switch_json(self, runner: click.testing.CliRunner,
+                             mock_page: MagicMock) -> None:
+        # (#1152) `browser tab` now accepts --json and emits the success envelope.
+        result = _invoke(runner, ["tab", "ABC123", "--json"], mock_page)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["action"] == "browser_tab"
+        assert data["tab_id"] == "ABC123"
         mock_page.switch_tab.assert_called_once_with("ABC123")
 
 
@@ -491,7 +504,7 @@ class TestScroll:
                          mock_page: MagicMock) -> None:
         result = _invoke(runner, ["scroll", "--to-top", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
 
 
 # ── hover ────────────────────────────────────────────────────────────────────
@@ -512,7 +525,7 @@ class TestHover:
         mock_page.find.return_value = MagicMock()
         result = _invoke(runner, ["hover", "#menu", "--json"], mock_page)
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
 
 
 # ── close ────────────────────────────────────────────────────────────────────
@@ -524,6 +537,18 @@ class TestClose:
         result = _invoke(runner, ["close"], mock_page)
         assert result.exit_code == 0
         assert "closed" in result.output.lower()
+        mock_page.close.assert_called()
+
+    def test_close_json(self, runner: click.testing.CliRunner,
+                        mock_page: MagicMock) -> None:
+        # (#1152) `browser close` now accepts --json and emits the success
+        # envelope instead of bare prose — it is on every scripted session's
+        # teardown path.
+        result = _invoke(runner, ["close", "--json"], mock_page)
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["success"] is True
+        assert data["action"] == "browser_close"
         mock_page.close.assert_called()
 
 

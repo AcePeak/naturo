@@ -138,6 +138,51 @@ def test_jab_recognizes_swing_controls(swing_app):
     assert not missing, f"JAB did not recognize controls: {sorted(missing)}"
 
 
+def _find_by_name(tree, name: str):
+    """Return the first element in ``tree`` whose name matches ``name``.
+
+    Args:
+        tree: Root :class:`~naturo.backends.base.ElementInfo`, or ``None``.
+        name: Exact (stripped) accessible name to look for.
+
+    Returns:
+        The matching :class:`ElementInfo`, or ``None`` if not found.
+    """
+    stack = [tree]
+    while stack:
+        node = stack.pop()
+        if node is None:
+            continue
+        if node.name and node.name.strip() == name:
+            return node
+        stack.extend(node.children or [])
+    return None
+
+
+@requires_fixture
+def test_jab_exposes_control_states(swing_app):
+    """The JAB backend surfaces accessibility ``states`` to the Python layer (#1200).
+
+    ``core/src/jab.cpp`` computes a ``states`` string for every element, but the
+    Python parser used to discard it, so a Swing ``JCheckBox``'s checked/unchecked
+    state never reached any consumer — blocking honest verify-after-action for
+    JAB-driven checkbox/toggle automation. This proves the field now round-trips
+    natively: the fixture's checkbox exposes a non-empty states string.
+    """
+    _app, window = swing_app
+    backend = get_backend()
+    tree = backend.get_element_tree(hwnd=window.hwnd, depth=15, backend="jab")
+    assert tree is not None, "JAB returned no tree for a live Swing window"
+
+    checkbox = _find_by_name(tree, "Express Shipping")
+    assert checkbox is not None, "JAB did not recognize the 'Express Shipping' checkbox"
+    states = checkbox.properties.get("states")
+    assert states is not None and states.strip(), (
+        "JAB checkbox exposed no accessibility states — the native 'states' field "
+        f"was dropped before reaching the backend element (got {states!r})"
+    )
+
+
 @requires_fixture
 def test_cascade_shows_positive_jab_delta(swing_app):
     """The full cascade recognizes more than UIA alone, with JAB as the source."""

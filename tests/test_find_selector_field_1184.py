@@ -148,7 +148,8 @@ class TestFindSeeSelectorParity:
         # the selector app to "*" and walk the identical ancestor chain.
         see_result = runner.invoke(see, ["--hwnd", "12345", "--json", "--no-snapshot"])
         assert see_result.exit_code == 0, see_result.output
-        see_tree = json.loads(see_result.output)
+        # (#865) see -j now wraps the element tree in a success envelope.
+        see_tree = json.loads(see_result.output)["tree"]
         document_nodes = [
             n for n in _walk(see_tree)
             if n.get("role") == "Document" and n.get("name") == "文本编辑器"

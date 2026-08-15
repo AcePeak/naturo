@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import functools
 import http.server
+import shutil
+import socket
+import tempfile
 import threading
 from pathlib import Path
 from typing import Iterator
@@ -18,6 +21,65 @@ from typing import Iterator
 import pytest
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def _free_tcp_port() -> int:
+    """Return a currently-free loopback TCP port for the CDP endpoint."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+@pytest.fixture
+def naturo_browser() -> Iterator["object"]:
+    """Launch a headless browser via naturo with GUARANTEED teardown (#1202).
+
+    Every browser test that needs a real browser must take this fixture instead
+    of calling ``launch_chrome`` / ``naturo browser launch`` raw. It:
+
+    * launches headless Chrome in its **own throwaway ``user_data_dir`` on a free
+      debug port**, so it never touches the real Chrome profile and concurrent
+      desktop runs (Dev + QA) never share a profile;
+    * **registers the launched PID** with the session-end safety-net sweeper
+      (``tests._teardown_registry``), so a crash before this fixture's own
+      teardown still gets the browser reaped; and
+    * in ``finally`` (runs even when the test fails/raises) **quits then
+      hard-kills the tracked PID and its child tree** via ``kill_pid``
+      (``taskkill /F /T``) — force-close so a beforeunload/prompt cannot strand
+      it — and removes the temp profile dir.
+
+    Teardown is strictly PID-scoped: it only ever kills the exact PID this
+    fixture launched, never by image name, so the human's real Chrome/Edge
+    windows are untouched.
+
+    Yields:
+        The :class:`naturo.browser.ChromeProcess` handle. ``.port`` is the CDP
+        port — build a ``BrowserPage(port=browser.port)`` to drive it.
+    """
+    from naturo.browser import launch_chrome
+    from tests._launch import kill_pid
+    from tests._teardown_registry import register
+
+    user_data_dir = tempfile.mkdtemp(prefix="naturo_browser_1202_")
+    port = _free_tcp_port()
+    chrome = launch_chrome(
+        port=port,
+        headless=True,
+        user_data_dir=user_data_dir,
+        timeout=30.0,
+    )
+    register(chrome.pid)
+    try:
+        yield chrome
+    finally:
+        try:
+            chrome.terminate()
+            chrome.wait(timeout=10)
+        except Exception:
+            pass
+        # Hard-kill the tracked PID + its Chrome child tree, PID-scoped only.
+        kill_pid(chrome.pid)
+        shutil.rmtree(user_data_dir, ignore_errors=True)
 
 
 class _QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):

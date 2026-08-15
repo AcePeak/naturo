@@ -44,6 +44,16 @@ class TestServerCreation:
     def test_server_name(self, server):
         assert server.name == "naturo"
 
+    def test_instructions_teach_the_token_lean_pattern(self, server):
+        # The instructions are the first thing a fresh agent reads — they must
+        # steer it to the optimal path: compact returns, match= for intent, and
+        # reading text (not screenshots) for UI/content.
+        instr = (server.instructions or "").lower()
+        assert "match=" in instr
+        assert "compact" in instr
+        assert "never screenshot to read" in instr
+        assert "not a web fetcher" in instr
+
     def test_server_version_is_naturo_version(self, server):
         """#873: serverInfo.version must be naturo's version, not the mcp SDK's.
 
@@ -69,9 +79,9 @@ class TestServerCreation:
             "list_windows", "focus_window",
             "window_close", "window_minimize", "window_maximize",
             "window_restore", "window_move", "window_resize", "window_set_bounds",
-            "app_hide", "app_unhide", "app_switch",
+            "app_switch",
             "see_ui_tree", "find_element",
-            "click", "type_text", "press_key", "hotkey",
+            "click", "type_text", "press_key",
             "scroll", "drag", "move_mouse",
             "list_apps", "launch_app", "quit_app",
             "menu_inspect",
@@ -212,13 +222,30 @@ class TestToolFunctionsWithMockedBackend:
             mock_backend.click.assert_called_once()
 
     def test_type_text_valid(self, mock_backend):
-        """type_text with valid wpm."""
+        """type_text reaches the backend on the keystroke path with the given wpm.
+
+        #1219/#1239 introduced a reliability ladder — writable ValuePattern →
+        clipboard paste → keystroke — so keystroke injection (the rung this test
+        asserts) only runs when the earlier rungs cannot apply: the fixture
+        already returns no writable ValuePattern (set_focused_element_value=False),
+        and we make clipboard paste unavailable here. wpm/input_mode reach the
+        backend; profile="human" is also passed (#1239, so wpm is honored), so we
+        assert the relevant kwargs rather than an exact call. The full ladder is
+        covered in tests/test_mcp_input.py.
+        """
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "type_text", {"text": "hello", "wpm": 60})
             data = json.loads(result[0].text)
             assert data["success"] is True
-            mock_backend.type_text.assert_called_once_with(text="hello", wpm=60, input_mode="normal")
+            mock_backend.type_text.assert_called_once()
+            # The shared ladder (naturo.actions.smart_type_text) passes text as
+            # the positional arg; wpm/input_mode/profile ride as kwargs.
+            call = mock_backend.type_text.call_args
+            assert call.args[0] == "hello"
+            assert call.kwargs["wpm"] == 60
+            assert call.kwargs["input_mode"] == "normal"
 
     def test_type_text_invalid_wpm(self, mock_backend):
         """type_text with wpm=0 returns validation error."""
@@ -311,23 +338,28 @@ class TestToolFunctionsWithMockedBackend:
             assert data["success"] is False
             assert "duration" in data["error"]["message"]
 
-    def test_see_ui_tree_invalid_depth_zero(self, mock_backend):
-        """see_ui_tree with depth=0 returns validation error."""
+    def test_see_ui_tree_depth_zero_is_unlimited(self, mock_backend):
+        """#1289: depth=0 means unlimited (the default), not an invalid value —
+        it must be accepted, never rejected as INVALID_INPUT."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 0})
             data = json.loads(result[0].text)
+            # mock_backend.get_element_tree returns None → WINDOW_NOT_FOUND, which
+            # proves depth=0 passed validation (a rejected depth would short-circuit
+            # to INVALID_INPUT before ever reaching the backend).
             assert data["success"] is False
-            assert data["error"]["code"] == "INVALID_INPUT"
-            assert "depth" in data["error"]["message"]
+            assert data["error"]["code"] != "INVALID_INPUT"
 
-    def test_see_ui_tree_invalid_depth_eleven(self, mock_backend):
-        """see_ui_tree with depth=11 returns validation error."""
+    def test_see_ui_tree_large_depth_is_valid(self, mock_backend):
+        """#1289: depth has no upper clamp — a large positive depth is valid and
+        passed through verbatim (was rejected as >10 under the old 1-10 rule)."""
         with patch("naturo.mcp_server.get_backend", return_value=mock_backend):
             srv = create_server()
             result = self._call_tool(srv, "see_ui_tree", {"depth": 11})
             data = json.loads(result[0].text)
             assert data["success"] is False
+            assert data["error"]["code"] != "INVALID_INPUT"
 
     def test_see_ui_tree_no_window(self, mock_backend):
         """see_ui_tree returns WINDOW_NOT_FOUND when no matching window."""

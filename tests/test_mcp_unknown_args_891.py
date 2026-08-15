@@ -2,11 +2,16 @@
 
 FastMCP generates each tool's argument model from the function signature with
 Pydantic's default config, which *silently discards* arguments not declared in
-the schema.  A client that mistypes a parameter name (e.g. ``window_title``
-instead of ``title`` for ``focus_window``) — or one targeting a schema that
-drifted between naturo versions — then gets a call that runs with default
-behaviour instead of a validation error.  That is a silent failure: the wrong
-window is focused, the wrong text is typed, and the agent has no signal.
+the schema.  A client that mistypes a parameter name (e.g. ``winndow_title``
+for ``focus_window``) — or one targeting a schema that drifted between naturo
+versions — then gets a call that runs with default behaviour instead of a
+validation error.  That is a silent failure: the wrong window is focused, the
+wrong text is typed, and the agent has no signal.
+
+(Note: ``window_title`` itself is now the *canonical* selector accepted on
+``focus_window`` and every other window-targeting tool (#900); ``title`` is
+kept as a deprecated alias.  The repro below therefore uses a clearly-bogus
+name, not ``window_title``.)
 
 These tests pin the fix: unknown arguments are rejected before dispatch with a
 clean ``Invalid parameters for <tool>`` message (``isError: true``), consistent
@@ -58,11 +63,11 @@ class TestFormatUnknownArgumentsError:
 
     def test_single_unknown_argument(self):
         msg = _format_unknown_arguments_error(
-            "focus_window", ["window_title"], ["app", "hwnd", "title"],
+            "focus_window", ["winndow_title"], ["app", "hwnd", "title", "window_title"],
         )
         assert msg == (
             "Invalid parameters for focus_window: unexpected argument "
-            "'window_title'. Valid arguments: app, hwnd, title."
+            "'winndow_title'. Valid arguments: app, hwnd, title, window_title."
         )
         assert "pydantic" not in msg.lower()
 
@@ -92,8 +97,10 @@ class TestAllowedArgumentNames:
     def test_known_tool_allows_declared_params_only(self):
         allowed = self._server()._allowed_argument_names("focus_window")
         assert allowed is not None
-        assert {"title", "app", "hwnd"} <= allowed
-        assert "window_title" not in allowed
+        # #900: window_title is now the canonical selector; title kept as a
+        # deprecated alias, so both are declared and accepted.
+        assert {"title", "app", "hwnd", "window_title"} <= allowed
+        assert "winndow_title" not in allowed
 
     def test_unknown_tool_returns_none(self):
         # None signals "no enforceable allow-list" so dispatch surfaces the
@@ -105,18 +112,19 @@ class TestDispatchRejection:
     """End-to-end rejection through the real JSON-RPC dispatch path."""
 
     def test_mistyped_param_name_rejected(self):
-        """The #891 repro: focus_window with ``window_title`` must fail loudly.
+        """The #891 repro: focus_window with a mistyped selector must fail loudly.
 
-        Previously this silently dropped ``window_title``, fell back to the
+        Previously an undeclared arg was silently dropped, fell back to the
         foreground window, and leaked the ``foreground`` sentinel in a
-        downstream WINDOW_NOT_FOUND message.
+        downstream WINDOW_NOT_FOUND message.  ``window_title`` is now a *valid*
+        selector (#900), so the mistype here is a genuinely-bogus name.
         """
-        result = _dispatch("focus_window", {"window_title": "claude"})
+        result = _dispatch("focus_window", {"winndow_title": "claude"})
 
         assert result.isError is True
         text = result.content[0].text
         assert "Invalid parameters for focus_window" in text
-        assert "window_title" in text
+        assert "winndow_title" in text
         # No silent success and no Pydantic leakage.
         assert '"success": true' not in text.lower()
         assert "pydantic" not in text.lower()

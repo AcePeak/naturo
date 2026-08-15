@@ -55,7 +55,9 @@ def _detect_query_strategy(query: str) -> str | None:
               help="Find all elements (equivalent to query \"*\"). Safe from shell glob expansion.")
 @click.option("--role", help="Filter by element role (e.g., Button, Edit)")
 @click.option("--actionable", is_flag=True, help="Only show actionable elements")
-@click.option("--depth", "-d", type=int, default=20, help="Maximum tree depth (default 20; use lower values for performance)")
+@click.option("--depth", "-d", type=int, default=0,
+              help="Maximum tree depth (0 = unlimited, the default; "
+                   "pass a positive N to cap traversal at N levels for performance)")
 @click.option("--limit", type=int, default=50, help="Maximum number of results")
 @click.option("--ai", is_flag=True, help="Use AI vision to find element by natural language")
 @click.option("--image", "image_template", type=click.Path(), default=None,
@@ -69,6 +71,10 @@ def _detect_query_strategy(query: str) -> str | None:
                    'URI: app://notepad.exe/Button[@name="Save"]. '
                    'Short: //Edit[@name="Search"] (any app, descendant search). '
                    "Saved: @app/name. App names are flexible: chrome, chrome.exe, Chrome.")
+@click.option("--ocr", is_flag=True,
+              help="Find on-screen text by OCR (for Canvas/game/custom-drawn "
+                   "controls UIA can't see). The positional QUERY is the text to "
+                   "locate; returns bounding boxes. Requires 'pip install naturo[ocr]'.")
 @click.option("--screenshot", type=click.Path(), default=None,
               help="Match against this existing screenshot instead of capturing "
                    "live (for --ai and --image modes). With --image the screenshot "
@@ -98,7 +104,7 @@ def _detect_query_strategy(query: str) -> str | None:
 def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str | None,
              actionable: bool, depth: int, limit: int, ai: bool,
              image_template: str | None, threshold: float, selector: str | None,
-             ai_provider: str, ai_model: str | None, ai_api_key: str | None,
+             ocr: bool, ai_provider: str, ai_model: str | None, ai_api_key: str | None,
              screenshot: str | None, app: str | None, app_id: str | None,
              window_title: str | None, hwnd: int | None, pid: int | None,
              json_output: bool, backend: str) -> None:
@@ -106,6 +112,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
 
     Supports fuzzy name matching, role filtering, and combined queries.
     Use --ai for natural language element finding powered by AI vision.
+    Use --ocr to locate on-screen text the accessibility tree cannot see
+    (Canvas/game/custom-drawn controls); requires 'pip install naturo[ocr]'.
     Use --backend msaa for legacy applications that lack UIA support.
     Use --backend ia2 for IA2-enabled apps (Firefox, Thunderbird, LibreOffice).
 
@@ -133,6 +141,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         naturo find 'app://notepad.exe/Edit'     # auto-detected selector resolution
         naturo find @notepad/save-btn            # auto-detected saved selector (@app/name)
         naturo find --selector '//Button[@name="Save"]'   # resolve a selector path
+        naturo find --ocr "Start" --app game.exe          # OCR text on a window
+        naturo find --ocr "Score" --screenshot shot.png   # OCR text in a saved image
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -179,7 +189,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     # detected query is moved into the matching strategy flag so the existing
     # dispatch (and its conflict checks) handle it unchanged.
     _auto_query = query if query is not None else query_opt
-    if (selector is None and image_template is None and not ai
+    if (selector is None and image_template is None and not ai and not ocr
             and not find_all and _auto_query is not None):
         detected = _detect_query_strategy(_auto_query)
         if detected == "selector":
@@ -199,6 +209,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
             conflict = "--selector and --ai are mutually exclusive; choose one find strategy."
         elif image_template is not None:
             conflict = "--selector and --image are mutually exclusive; choose one find strategy."
+        elif ocr:
+            conflict = "--selector and --ocr are mutually exclusive; choose one find strategy."
         elif query is not None or query_opt is not None:
             conflict = ("--selector takes no text query; it resolves a selector path, "
                         "not a named element.")
@@ -222,6 +234,13 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
     if image_template is not None:
         if ai:
             msg = "--image and --ai are mutually exclusive; choose one find strategy."
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        if ocr:
+            msg = "--image and --ocr are mutually exclusive; choose one find strategy."
             if json_output:
                 click.echo(_common._json_error_str("INVALID_INPUT", msg))
             else:
@@ -255,6 +274,61 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         query = None
     if query_opt is not None and not query_opt.strip():
         query_opt = None
+    # OCR text-finding mode — recognise on-screen text and return the bounding
+    # boxes of regions matching the query (#1060).  Dispatched before query
+    # resolution because, like --image, it owns its own targeting and treats
+    # --all as "every match" rather than a wildcard text query.
+    if ocr:
+        if ai:
+            msg = "--ocr and --ai are mutually exclusive; choose one find strategy."
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        ocr_query = query if query is not None else query_opt
+        if ocr_query is None or not ocr_query.strip():
+            msg = ("--ocr needs the text to find. Provide it as the positional "
+                   "QUERY or via --query/-q (e.g. naturo find --ocr \"Start\").")
+            if json_output:
+                click.echo(_common._json_error_str("INVALID_INPUT", msg))
+            else:
+                click.echo(f"Error: {msg}", err=True)
+            raise SystemExit(1)
+        _find_with_ocr(
+            ocr_query, find_all,
+            app=app, window_title=window_title, hwnd=hwnd, pid=pid,
+            screenshot=screenshot, limit=limit, json_output=json_output,
+        )
+        return
+
+    # (#1198 / #1201) Conflict-guard the text-query sources. The positional
+    # QUERY, --query/-q and --all each supply the text-search target, and they
+    # are mutually exclusive: silently letting one win (the old precedence —
+    # --all over a query, -q over the positional) returns a confidently-wrong
+    # result set under success:true (the silent-wrong class #1193 closed for the
+    # empty query). Reject more than one text source with the same INVALID_INPUT
+    # envelope the --image/--selector conflicts already use. (--role/--actionable
+    # legitimately combine with --all, and --all still means "every match" for
+    # the image/selector/ocr strategies dispatched above — this guard is only the
+    # default text path.)
+    _text_sources: list[str] = []
+    if query is not None:
+        _text_sources.append("positional QUERY")
+    if query_opt is not None:
+        _text_sources.append("--query/-q")
+    if find_all:
+        _text_sources.append("--all")
+    if len(_text_sources) > 1:
+        msg = (f"Multiple query sources supplied ({', '.join(_text_sources)}); "
+               "use exactly one. --all matches every element, while a positional "
+               "QUERY or --query/-q searches for that text — combining them is "
+               "ambiguous, so the query is not silently dropped.")
+        if json_output:
+            click.echo(_common._json_error_str("INVALID_INPUT", msg))
+        else:
+            click.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
 
     # Resolve query: --all flag → wildcard, --query option → override positional
     if find_all:
@@ -269,14 +343,13 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
         if actionable or role:
             query = "*"
         else:
+            # Missing required positional → usage error, exit 2 (#897). Envelope
+            # code stays INVALID_INPUT; only the exit code differs from a fault.
+            from naturo.cli.error_helpers import emit_usage_error
             msg = ("Missing or empty argument 'QUERY'. Provide a non-empty query "
                    "as a positional arg or --query/-q option, or use --all to "
                    "match every element.")
-            if json_output:
-                click.echo(_common._json_error_str("INVALID_INPUT", msg))
-            else:
-                click.echo(f"Error: {msg}", err=True)
-            raise SystemExit(1)
+            emit_usage_error(msg, json_output)
 
     # Auto-enable AI mode when --provider or --model is explicitly set (#287)
     if not ai and (ai_provider != "auto" or ai_model is not None or ai_api_key is not None):
@@ -300,9 +373,10 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                       model=ai_model, api_key=ai_api_key)
         return
 
-    # Validate --depth range (find supports deeper traversal than see)
-    if depth < 1 or depth > 50:
-        msg = f"--depth must be between 1 and 50, got {depth}"
+    # Validate --depth: 0 = unlimited (default), positive caps traversal, only
+    # negative is invalid. No upper bound — the native layer bounds the total.
+    if depth < 0:
+        msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         if json_output:
             click.echo(_common._json_error_str("INVALID_INPUT", msg))
         else:
@@ -406,6 +480,13 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 _el_to_selector_dict(r.element), ancestors_dicts, app=_selector_app)
 
         if json_output:
+            # (#1195) Emit the SAME per-element schema the --image/--ocr/--selector
+            # strategies do: populate center_x/center_y (from bounds) and a
+            # non-null coordinate_frame. A live UIA find reports screen-absolute
+            # x,y — identical to the frame --image labels "screen" — so consumers
+            # of `find -j` read one stable schema regardless of resolving strategy
+            # instead of branching on it (computing the center / guessing the
+            # frame for UIA, reading the fields for --image).
             data = [
                 {
                     "ref": _element_id_to_ref.get(id(r.element), r.element.id),
@@ -417,6 +498,8 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                     "y": r.element.y,
                     "width": r.element.width,
                     "height": r.element.height,
+                    "center_x": r.element.x + r.element.width // 2,
+                    "center_y": r.element.y + r.element.height // 2,
                     "selector": _build_result_selector(r),
                     "breadcrumb": r.breadcrumb_str,
                     "keyboard_shortcut": r.element.keyboard_shortcut,
@@ -428,6 +511,7 @@ def find_cmd(query: str | None, query_opt: str | None, find_all: bool, role: str
                 "elements": data,
                 "count": len(data),
                 "snapshot_id": snapshot_id,
+                "coordinate_frame": "screen",
             }, indent=2))
         else:
             if not results:
@@ -882,6 +966,243 @@ def _find_with_image(
         click.echo("Tip: use 'naturo click e<N>' to interact with a match.")
 
 
+def _find_with_ocr(
+    text: str,
+    find_all: bool,
+    *,
+    app: str | None,
+    window_title: str | None,
+    hwnd: int | None,
+    pid: int | None,
+    screenshot: str | None,
+    limit: int,
+    json_output: bool,
+) -> None:
+    """Locate on-screen text by OCR (naturo find --ocr).
+
+    Recognises text on the target window, screen, or a supplied screenshot via
+    the optional RapidOCR engine and reports each region whose text matches
+    ``text`` as a snapshot element with a stable ``eN`` ref, so matches can be
+    acted on with ``naturo click eN`` — the contract the text/image/selector
+    strategies share.
+
+    The haystack is, in order of precedence:
+
+    * the image at ``screenshot`` when given (offline/deterministic matching —
+      coordinates are relative to the screenshot's top-left, origin ``(0, 0)``);
+    * a specific window when any of app/window/hwnd/pid is given;
+    * otherwise the primary screen.
+
+    Each distinct failure source carries its own error code: a missing OCR engine
+    → ``OCR_NOT_AVAILABLE`` (recoverable, with the install hint); a
+    ``--screenshot`` combined with window-targeting flags → ``INVALID_INPUT``; a
+    missing screenshot → ``FILE_NOT_FOUND``; a live-capture fault →
+    ``CAPTURE_FAILED``; an OCR engine fault → ``OCR_FAILED``.
+
+    Validation that does not depend on a live desktop (the ``--screenshot``
+    conflict and existence checks) runs *before* the GUI-platform gate so a given
+    bad input yields the same error code on every OS (#1072), and the offline
+    ``--screenshot`` path is exempt from the gate entirely.
+
+    Args:
+        text: The text to locate (case-insensitive substring match).
+        find_all: When True, report every matching region; otherwise the single
+            highest-confidence match.
+        app: Target app name/partial match.
+        window_title: Target window title substring.
+        hwnd: Target window handle.
+        pid: Target process ID.
+        screenshot: Optional path to an existing screenshot to OCR instead of
+            capturing live. Incompatible with the window-targeting flags
+            (app/window/hwnd/pid), which are rejected rather than silently
+            ignored, since the screenshot is the haystack.
+        limit: Maximum number of matches to return.
+        json_output: Whether to emit JSON.
+
+    Raises:
+        SystemExit: With status 1 on any of the failure sources above or on a
+            platform without GUI support (live path only).
+    """
+    import os
+
+    def _emit(code: str, message: str) -> NoReturn:
+        if json_output:
+            click.echo(_common._json_error_str(code, message))
+        else:
+            click.echo(f"Error: {message}", err=True)
+        raise SystemExit(1)
+
+    # Offline-input validation first, so the bad-input → code contract is the same
+    # on every OS; the offline path needs no live capture and skips the GUI gate.
+    if screenshot is not None:
+        if hwnd or app or window_title or pid:
+            _emit(
+                "INVALID_INPUT",
+                "--screenshot matches against the supplied image, so "
+                "--app/--window/--hwnd/--pid do not apply; drop those flags to "
+                "OCR the screenshot, or drop --screenshot to capture a live window.",
+            )
+        if not os.path.exists(screenshot):
+            _emit("FILE_NOT_FOUND", f"Screenshot file not found: {screenshot}")
+    elif not _common._platform_supports_gui():
+        _emit("PLATFORM_ERROR", _common._platform_error_msg("OCR text finding"))
+
+    # Acquire the haystack image path and its coordinate origin. The supplied
+    # screenshot is used directly (origin 0,0); otherwise a live window/screen
+    # capture is written to a temp file that is removed once OCR has read it.
+    from naturo.ocr_match import OCRNotAvailableError, find_text
+
+    target_hwnd = hwnd
+    temp_path: str | None = None
+    if screenshot is not None:
+        haystack_path = screenshot
+        origin_x, origin_y = 0, 0
+        target_hwnd = None
+    else:
+        backend = _common._get_backend(json_output)
+        targeted = bool(hwnd or app or window_title or pid)
+        import tempfile
+        fd, temp_path = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        try:
+            if targeted:
+                if not target_hwnd and hasattr(backend, "_resolve_hwnd"):
+                    target_hwnd = backend._resolve_hwnd(
+                        app=app, window_title=window_title, pid=pid)
+                if not target_hwnd:
+                    target = app or window_title or (f"pid={pid}" if pid else "target")
+                    _cleanup_temp(temp_path)
+                    _emit("WINDOW_NOT_FOUND", f"Window not found: {target}")
+                backend.capture_window(hwnd=target_hwnd, output_path=temp_path)
+                origin_x, origin_y = _window_origin(target_hwnd)
+            else:
+                backend.capture_screen(screen_index=0, output_path=temp_path)
+                origin_x, origin_y = _monitor_origin(backend, 0)
+        except SystemExit:
+            raise
+        except Exception as e:
+            _cleanup_temp(temp_path)
+            _emit("CAPTURE_FAILED", f"Screen capture failed: {e}")
+        haystack_path = temp_path
+
+    # Read haystack dimensions for the snapshot root (best-effort).
+    haystack_width, haystack_height = 0, 0
+    try:
+        from PIL import Image
+        with Image.open(haystack_path) as hay:
+            haystack_width, haystack_height = hay.width, hay.height
+    except Exception as exc:
+        _common.logger.debug("Haystack dimension read failed for %s: %s",
+                             haystack_path, exc)
+
+    try:
+        matches = find_text(haystack_path, text, find_all=find_all, max_results=limit)
+    except OCRNotAvailableError as exc:
+        _emit("OCR_NOT_AVAILABLE", str(exc))
+    except Exception as exc:
+        _emit("OCR_FAILED", f"OCR text recognition failed: {exc}")
+    finally:
+        # Remove the temp capture once OCR has read it (no-op for --screenshot).
+        _cleanup_temp(temp_path)
+
+    # Register matches as snapshot elements so `naturo click eN` works, mirroring
+    # the image strategy's ref bookkeeping.
+    from naturo.bridge import ElementInfo as BridgeElementInfo
+    from naturo.snapshot import get_snapshot_manager
+    from naturo.models.snapshot import UIElement
+    from naturo.refs import assign_stable_refs
+
+    children = [
+        BridgeElementInfo(
+            id=str(i),
+            role="Text",
+            name=m.text,
+            value=f"{m.score:.4f}",
+            x=origin_x + m.x,
+            y=origin_y + m.y,
+            width=m.width,
+            height=m.height,
+            parent_id="0",
+            hwnd=target_hwnd or 0,
+        )
+        for i, m in enumerate(matches, start=1)
+    ]
+    root = BridgeElementInfo(
+        id="0",
+        role="Pane",
+        name="ocr-match",
+        value=None,
+        x=origin_x,
+        y=origin_y,
+        width=haystack_width,
+        height=haystack_height,
+        children=children,
+        hwnd=target_hwnd or 0,
+    )
+
+    mgr = get_snapshot_manager()
+    snapshot_id = mgr.create_snapshot()
+    element_id_to_ref: dict[int, str] = {}
+    ui_map, ref_map = assign_stable_refs(root, UIElement, element_obj_to_ref=element_id_to_ref)
+    mgr.store_detection_result(snapshot_id, ui_map)
+    mgr.store_ref_map(snapshot_id, ref_map)
+
+    if json_output:
+        data = [
+            {
+                "ref": element_id_to_ref.get(id(child), child.id),
+                "role": child.role,
+                "text": child.name,
+                "x": child.x,
+                "y": child.y,
+                "width": child.width,
+                "height": child.height,
+                "center_x": child.x + child.width // 2,
+                "center_y": child.y + child.height // 2,
+                "score": round(m.score, 4),
+            }
+            for child, m in zip(children, matches)
+        ]
+        click.echo(json_dumps({
+            "success": True,
+            "elements": data,
+            "count": len(data),
+            "snapshot_id": snapshot_id,
+            "coordinate_frame": "screenshot" if screenshot is not None else "screen",
+        }, indent=2))
+    else:
+        if not matches:
+            click.echo(f"No on-screen text matching: {text}")
+            return
+        for child, m in zip(children, matches):
+            ref = element_id_to_ref.get(id(child), "?")
+            click.echo(
+                f"  {ref}. [Text] \"{child.name}\" "
+                f"({child.x},{child.y} {child.width}x{child.height}) score={m.score:.3f}"
+            )
+        click.echo(f"\n{len(matches)} match(es) found.")
+        click.echo(f"Snapshot: {snapshot_id}")
+        if screenshot is not None:
+            click.echo("Coordinates are relative to the supplied screenshot "
+                       "(not screen-absolute).")
+        click.echo("Tip: use 'naturo click e<N>' to interact with a match.")
+
+
+def _cleanup_temp(path: str | None) -> None:
+    """Remove a temporary capture file, ignoring a missing/locked file.
+
+    Args:
+        path: Path to the temp file, or None when no temp capture was made.
+    """
+    if not path:
+        return
+    try:
+        import os
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def _find_with_selector(
     selector_str: str,
     find_all: bool,
@@ -936,12 +1257,20 @@ def _find_with_selector(
         parse, SelectorParseError, SelectorResolver, normalize_app_name,
     )
 
-    def _emit_error(code: str, message: str) -> None:
+    def _emit_error(code: str, message: str, *,
+                    suggested_action: str | None = None) -> None:
         if json_output:
-            click.echo(_common._json_error_str(code, message))
+            click.echo(_common._json_error_str(
+                code, message, suggested_action=suggested_action))
         else:
             click.echo(f"Error: {message}", err=True)
         raise SystemExit(1)
+
+    # (#1189) Remember whether the caller reached us via a *saved* @app/name ref
+    # or a *structural* path (app://… URI or //Role short-form): the two need
+    # different SELECTOR_NOT_FOUND recovery hints, and the @name is rewritten to
+    # its stored structural path just below, erasing the distinction.
+    _is_saved_ref = selector_str.startswith("@")
 
     # Dereference a saved @name selector to its stored path (#105), matching the
     # click family's behavior exactly.
@@ -1013,7 +1342,21 @@ def _find_with_selector(
         resolved = [result.element] if result is not None else []
 
     if not resolved:
-        _emit_error("SELECTOR_NOT_FOUND", f"Selector matched no elements: {selector_str}")
+        # (#1189) A structural path (app://… / //Role) matched no element: the
+        # actionable recovery is tree inspection, NOT the saved-selector registry
+        # (the caller never used a saved selector). Mirror ELEMENT_NOT_FOUND's
+        # guidance. A genuine saved @app/name ref keeps the saved-selector hint
+        # (the registry default) — its own entry point.
+        structural_hint = (
+            "Element not found. Use 'naturo see' to inspect the current UI tree, "
+            "verify the selector path (e.g. Role:Name against what 'see' shows), "
+            "or 'naturo wait --element' to wait for it to appear."
+        )
+        _emit_error(
+            "SELECTOR_NOT_FOUND",
+            f"Selector matched no elements: {selector_str}",
+            suggested_action=None if _is_saved_ref else structural_hint,
+        )
 
     from naturo.bridge import ElementInfo as BridgeElementInfo
     from naturo.snapshot import get_snapshot_manager
@@ -1076,6 +1419,10 @@ def _find_with_selector(
             "elements": data,
             "count": len(data),
             "snapshot_id": snapshot_id,
+            # (#1195) One element/envelope schema across strategies: the selector
+            # path resolves a live UIA tree, so its coordinates are screen-absolute
+            # — labelled identically to the text and --image strategies.
+            "coordinate_frame": "screen",
         }, indent=2))
     else:
         for child in children:

@@ -215,24 +215,118 @@ class UWPDiscoveryMixin:
         except Exception as exc:
             logger.debug("Win32 exe path resolution failed for pid %s: %s", pid, exc)
         return None
-    @staticmethod
-    def _afh_has_content_window(afh_hwnd: int) -> bool:
-        """Check if an ApplicationFrameHost window has a content child.
+    # On-screen roles that mark real, interactive content (not window chrome).
+    # Kept in the same spirit as ``naturo.cascade._appwindows._CONTENT_ROLES``
+    # (the post-cascade scorer used by ``see``): the two must agree on "is this
+    # window alive", but this cheap structural probe is what runs on the hot
+    # path during window resolution, so it is deliberately duplicated (no import
+    # of the cascade layer from the backend) and depth-bounded.
+    _PROBE_CONTENT_ROLES = frozenset({
+        "button", "menuitem", "checkbox", "radiobutton", "edit", "text",
+        "listitem", "tab", "tabitem", "combobox", "link", "hyperlink",
+        "treeitem", "cell", "slider", "spinbutton", "spinner", "document",
+        "image",
+    })
 
-        A "content child" is a ``Windows.UI.Core.CoreWindow`` (classic UWP)
-        or ``DesktopWindowXamlSource`` (WinUI 3) — these host the actual
-        app UI.  Stale AFH windows may only have title bar and input sink
-        children, which do NOT contain actionable UI elements.
+    def _raw_content_count(self, hwnd: int, depth: int, cap: int) -> int:
+        """Count on-screen interactive nodes in ``hwnd``'s own UIA subtree.
+
+        Low-level helper for :meth:`_window_content_probe` — it does NOT drill
+        into UWP content children (the caller decides that), so it never
+        recurses through :meth:`_afh_has_content_window`.  Bounded by ``depth``
+        and short-circuited at ``cap`` matches so a rich window is cheap.
+
+        Returns 0 on any failure (invalid handle, non-Windows, core error).
+        """
+        try:
+            core = self._ensure_core()
+            tree = core.get_element_tree(hwnd=hwnd, depth=depth)
+        except Exception:
+            return 0
+        if tree is None:
+            return 0
+        n = 0
+        stack = [tree]
+        roles = self._PROBE_CONTENT_ROLES
+        while stack:
+            el = stack.pop()
+            try:
+                w = getattr(el, "width", 0) or 0
+                h = getattr(el, "height", 0) or 0
+                role = (getattr(el, "role", "") or "").lower()
+                if w > 0 and h > 0 and role in roles:
+                    n += 1
+                    if n >= cap:
+                        return n
+                kids = getattr(el, "children", None) or []
+            except Exception:
+                continue
+            stack.extend(kids)
+        return n
+
+    def _window_content_probe(self, hwnd: int, *, depth: int = 4,
+                              cap: int = 8) -> int:
+        """Cheap semantic content signal for window resolution.
+
+        Returns an (approximate, capped) count of real on-screen interactive
+        nodes for ``hwnd`` — the first-class signal that distinguishes a LIVE
+        window (buttons/text with non-zero bounds) from a zombie/ghost frame
+        (empty, or only off-screen 0x0 chrome).
+
+        For UWP/WinUI host frames the app UI lives in a child
+        ``Windows.UI.Core.CoreWindow`` / ``DesktopWindowXamlSource`` window that
+        the frame's own shallow UIA tree does not span, so when the frame itself
+        looks thin this drills into its content children (mirroring how
+        ``get_element_tree`` recovers UWP content) and keeps the richest count.
+
+        Best-effort and bounded: shallow ``depth`` + early ``cap`` keep it on the
+        hot path; returns 0 on any failure.  Only ever invoked to break a tie
+        between competing candidates, never for a single/unambiguous window.
+        """
+        import sys
+        if sys.platform != "win32":
+            return 0
+        best = self._raw_content_count(hwnd, depth, cap)
+        if best >= cap:
+            return best
+        # Thin own-tree: this may be a UWP host frame whose content sits in a
+        # child CoreWindow/XamlSource. Probe those children and keep the max.
+        try:
+            children = self._find_uwp_content_hwnd(hwnd)
+        except Exception:
+            children = []
+        for child in children:
+            best = max(best, self._raw_content_count(child, depth, cap))
+            if best >= cap:
+                break
+        return best
+
+    def _afh_has_content_window(self, afh_hwnd: int) -> bool:
+        """Check if an ApplicationFrameHost window has a *live* content child.
+
+        A "content child" is a ``Windows.UI.Core.CoreWindow`` (classic UWP) or
+        ``DesktopWindowXamlSource`` (WinUI 3) — these host the actual app UI.
+        Historically this only checked that such a child EXISTS by class name
+        (structural), so a zombie frame whose CoreWindow child is EMPTY passed
+        and got picked as the resolved window — ``see --app calc`` then returned
+        only off-screen chrome (the calc-zombie bug).
+
+        This is now SEMANTIC: a content child must exist AND actually contain
+        real UI (a non-empty shallow UIA subtree).  The class-name scan is kept
+        as a cheap pre-filter so non-UWP / childless frames short-circuit before
+        any UIA probe.
 
         Args:
             afh_hwnd: Handle of the ApplicationFrameHost top-level window.
 
         Returns:
-            True if the AFH has at least one content window child.
+            True only if the AFH has at least one content child that holds
+            actual UI.
         """
         import sys
         if sys.platform != "win32":
             return False
+        content_children = []
         try:
             import ctypes
             from ctypes import wintypes
@@ -249,8 +343,6 @@ class UWPDiscoveryMixin:
                 "desktopwindowxamlsource",
             }
 
-            found = [False]
-
             WNDENUMPROC = ctypes.WINFUNCTYPE(
                 wintypes.BOOL, wintypes.HWND, wintypes.LPARAM,
             )
@@ -259,16 +351,26 @@ class UWPDiscoveryMixin:
                 cls_buf = ctypes.create_unicode_buffer(256)
                 GetClassNameW(hwnd, cls_buf, 256)
                 if cls_buf.value.lower() in _CONTENT_CLASSES:
-                    found[0] = True
-                    return False  # stop enumeration
+                    content_children.append(int(hwnd))
                 return True
 
             user32.EnumChildWindows(
                 wintypes.HWND(afh_hwnd), WNDENUMPROC(_enum_cb), 0,
             )
-            return found[0]
         except Exception:
             return False
+
+        # Structural pre-filter: no CoreWindow/XamlSource child at all → dead.
+        if not content_children:
+            return False
+
+        # Semantic check: at least one content child must hold real UI.  A
+        # single shallow probe per child is cheap and, crucially, rejects the
+        # empty-CoreWindow zombie frames the old structural check let through.
+        for child in content_children:
+            if self._raw_content_count(child, depth=3, cap=1) > 0:
+                return True
+        return False
     def _is_afh_window(self, handle: int) -> bool:
         """Check if a window handle belongs to ApplicationFrameHost.exe.
 

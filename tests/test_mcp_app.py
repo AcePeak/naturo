@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -113,6 +115,10 @@ class TestListApps:
 class TestLaunchApp:
 
     def test_launch_app(self, server, mock_backend, mock_launch_app):
+        win = SimpleNamespace(handle=222, title="Untitled - Notepad")
+        # The window-diff needs the new window absent before and present after,
+        # so it is reported as the freshly launched window.
+        mock_backend.list_windows.side_effect = [[], [win], [win], [win]]
         result = _call_tool(server, "launch_app", {"name": "notepad"})
         data = json.loads(result[0].text)
         assert data["success"] is True
@@ -120,6 +126,77 @@ class TestLaunchApp:
         assert data["name"] == "notepad.exe"
         assert data["is_running"] is True
         assert data["window_count"] == 1
+        assert data["hwnd"] == 222
+
+
+# ── Launch Browser (CDP) ──────────────────────────────────────────────
+
+
+class TestLaunchBrowser:
+
+    def test_returns_hwnd_and_wires_cdp(self, server, mock_backend):
+        win = SimpleNamespace(handle=888, title="Baidu - Google Chrome")
+        mock_backend.list_windows.side_effect = [[], [win], [win], [win]]
+        fake_chrome = SimpleNamespace(port=9222, pid=4321)
+        with patch(
+            "naturo.browser._launcher.launch_chrome", return_value=fake_chrome
+        ) as m:
+            result = _call_tool(
+                server, "launch_browser", {"url": "https://example.com"}
+            )
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["hwnd"] == 888
+        assert data["debug_port"] == 9222
+        assert data["pid"] == 4321
+        assert data["url"] == "https://example.com"
+        # Reuses the browser subsystem: opens the URL, waits for CDP, and uses a
+        # throwaway profile so a fresh *debuggable* instance starts by default.
+        _, kwargs = m.call_args
+        assert kwargs["url"] == "https://example.com"
+        assert kwargs["wait_ready"] is True
+        assert kwargs["user_data_dir"] is not None
+        # First-run suppression: a fresh profile must not open the welcome /
+        # sign-in / search-engine-choice screen over the page (it steals the
+        # active tab and CDP then reads an empty interstitial).
+        assert "--no-first-run" in kwargs["extra_args"]
+        assert "--disable-search-engine-choice-screen" in kwargs["extra_args"]
+
+    def test_profile_uses_real_session_not_throwaway(self, server, mock_backend):
+        win = SimpleNamespace(handle=999, title="Chrome")
+        mock_backend.list_windows.side_effect = [[], [win], [win]]
+        fake_chrome = SimpleNamespace(port=9222, pid=1)
+        with patch(
+            "naturo.browser._launcher.launch_chrome", return_value=fake_chrome
+        ) as m:
+            _call_tool(server, "launch_browser", {"profile": "Work"})
+        _, kwargs = m.call_args
+        assert kwargs["profile"] == "Work"
+        # A named profile means the real user-data dir, not a throwaway one.
+        assert kwargs["user_data_dir"] is None
+
+
+class TestFreeDebugPort:
+
+    def test_returns_preferred_when_free(self):
+        from naturo.mcp._app import _free_debug_port
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            free = s.getsockname()[1]
+        # released above — the preferred port is bindable again
+        assert _free_debug_port(free) == free
+
+    def test_falls_back_when_preferred_taken(self):
+        from naturo.mcp._app import _free_debug_port
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            taken = s.getsockname()[1]
+            # socket held open for the duration → preferred port is unbindable
+            got = _free_debug_port(taken)
+        assert got != taken
+        assert got > 0
 
 
 # ── Quit App ──────────────────────────────────────────────────────────
@@ -138,6 +215,18 @@ class TestQuitApp:
         data = json.loads(result[0].text)
         assert data["success"] is True
         mock_backend.quit_app.assert_called_once_with(name="chrome", force=True)
+
+    def test_quit_app_incomplete_surfaces_failure(self, server, mock_backend):
+        """#1197 Never-Lie: when the backend verifies the app is still running
+        and raises QuitIncompleteError, the MCP tool must report success:false
+        (not the old unconditional {"success": true})."""
+        from naturo.errors import QuitIncompleteError
+
+        mock_backend.quit_app.side_effect = QuitIncompleteError("notepad", [4242])
+        result = _call_tool(server, "quit_app", {"name": "notepad"})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "QUIT_INCOMPLETE"
 
 
 # ── Menu Inspect ──────────────────────────────────────────────────────
@@ -174,3 +263,35 @@ class TestMenuInspect:
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert data["menu_items"] == []
+
+
+class TestOfficeDismissStartup:
+
+    def test_clicks_blank_template(self, server, mock_backend):
+        blank = SimpleNamespace(role="ListItem", name="空白文档",
+                                x=200, y=200, width=40, height=20, children=[])
+        root = SimpleNamespace(role="Window", name="Word",
+                               x=0, y=0, width=100, height=100, children=[blank])
+        mock_backend._resolve_hwnd.return_value = 123
+        mock_backend.get_element_tree.return_value = root
+        result = _call_tool(server, "office_dismiss_startup", {"window_title": "Word"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["clicked"] == "空白文档"
+        assert data["already_ready"] is False
+        _, kwargs = mock_backend.click.call_args
+        assert kwargs.get("x") == 220 and kwargs.get("y") == 210  # element center
+
+    def test_already_ready_when_no_start_screen(self, server, mock_backend):
+        root = SimpleNamespace(
+            role="Window", name="文档1 - Word", x=0, y=0, width=100, height=100,
+            children=[SimpleNamespace(role="Edit", name="", x=0, y=0,
+                                      width=100, height=100, children=[])],
+        )
+        mock_backend._resolve_hwnd.return_value = 123
+        mock_backend.get_element_tree.return_value = root
+        result = _call_tool(server, "office_dismiss_startup", {"window_title": "Word"})
+        data = json.loads(result[0].text)
+        assert data["already_ready"] is True
+        assert data["clicked"] is None
+        assert not mock_backend.click.called

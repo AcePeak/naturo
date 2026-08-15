@@ -66,8 +66,35 @@ class TestJABBackend:
         backend = WindowsBackend.__new__(WindowsBackend)
         result = backend.get_element_tree(backend="jab")
 
-        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=3)
+        # Depth is passed through with no per-backend offset. The default is 0 =
+        # unlimited, so Java/Swing's deep structural nesting (JConsole's MBean
+        # tree/tables at ~24 levels) is reached by walking the whole tree rather
+        # than by a magic "+N". The native layer treats <= 0 as unlimited.
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=0)
         assert result is None
+
+    @patch("naturo.backends.windows.WindowsBackend._ensure_core")
+    @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)
+    def test_jab_depth_is_passed_through_unmodified(self, mock_resolve, mock_core_fn):
+        """Depth reaches JAB verbatim — no offset, no Python-side clamp.
+
+        A positive depth is honored as raw tree levels (the native layer bounds
+        the total), and 0 propagates as the 'unlimited' sentinel.
+        """
+        from naturo.backends.windows import WindowsBackend
+
+        mock_core = MagicMock()
+        mock_core.jab_get_element_tree.return_value = None
+        mock_core_fn.return_value = mock_core
+
+        backend = WindowsBackend.__new__(WindowsBackend)
+
+        backend.get_element_tree(backend="jab", depth=48)
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=48)
+
+        mock_core.jab_get_element_tree.reset_mock()
+        backend.get_element_tree(backend="jab", depth=0)  # 0 = unlimited
+        mock_core.jab_get_element_tree.assert_called_once_with(hwnd=0, depth=0)
 
     @patch("naturo.backends.windows.WindowsBackend._ensure_core")
     @patch("naturo.backends.windows.WindowsBackend._resolve_hwnd", return_value=0)
@@ -160,6 +187,9 @@ class TestJABMCP:
 
     def test_mcp_see_ui_tree_accepts_jab(self):
         """see_ui_tree MCP tool is created and accepts 'jab' backend."""
+        # Guard on mcp.server.fastmcp, not bare "mcp" — see test_desktop.py for
+        # why (a partial mcp on the runner passes importorskip("mcp") but has no
+        # FastMCP, so it can't build the server).
         pytest.importorskip("mcp.server.fastmcp")
         from naturo.mcp_server import create_server
 
@@ -211,6 +241,22 @@ class TestJABRoleMapping:
         assert '"combo box") return "ComboBox"' in content
         assert '"tree") return "Tree"' in content
         assert '"table") return "Table"' in content
+
+    def test_reads_accessible_text_for_content(self):
+        """Text components' real content is pulled via the AccessibleText
+        interface, not just the context description (JConsole's HTML VM Summary
+        reports description='text/html')."""
+        import os
+        jab_cpp = os.path.join(os.path.dirname(__file__), "..", "core", "src", "jab.cpp")
+        if not os.path.exists(jab_cpp):
+            pytest.skip("jab.cpp not found")
+        with open(jab_cpp, "r", encoding="utf-8") as f:
+            content = f.read()
+        # The AccessibleText API is bound and used, gated on info.accessibleText.
+        assert "getAccessibleTextInfo" in content
+        assert "getAccessibleTextRange" in content
+        assert "jab_read_accessible_text" in content
+        assert "info.accessibleText" in content
 
 
 # ── Exports Header Tests ─────────────────────────────

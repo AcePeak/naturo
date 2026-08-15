@@ -11,7 +11,9 @@ from naturo.process import (
     _resolve_launch_name, _resolve_pid_from_backend, _LAUNCH_ALIASES,
     _matches_app_by_process_name,
 )
-from naturo.errors import AppNotFoundError, InteractionFailedError, TimeoutError
+from naturo.errors import (
+    AppNotFoundError, InteractionFailedError, QuitIncompleteError, TimeoutError,
+)
 
 
 class TestProcessInfo:
@@ -635,15 +637,20 @@ class TestResolveLaunchName:
 
 
 class TestQuitApp:
+    # Patch _resolve_pid_from_backend so name-based quit on a Windows host does
+    # NOT enumerate the live desktop's windows — keeps these unit tests hermetic
+    # and deterministic regardless of what is actually running.
+    @patch("naturo.process._resolve_pid_from_backend", return_value=None)
     @patch("naturo.process.find_process")
-    def test_quit_not_found(self, mock_find):
+    def test_quit_not_found(self, mock_find, mock_resolve):
         mock_find.return_value = None
         with pytest.raises(AppNotFoundError):
             quit_app(name="nonexistent")
 
+    @patch("naturo.process._resolve_pid_from_backend", return_value=None)
     @patch("naturo.process._force_kill")
     @patch("naturo.process.find_process")
-    def test_quit_force(self, mock_find, mock_kill):
+    def test_quit_force(self, mock_find, mock_kill, mock_resolve):
         # First call finds the process; subsequent calls return None (killed)
         mock_find.side_effect = [ProcessInfo(pid=123, name="app"), None, None]
         quit_app(name="app", force=True)
@@ -674,12 +681,17 @@ class TestQuitApp:
         with pytest.raises(InteractionFailedError):
             quit_app(name="notepad", timeout=0.1)
 
+    # Hermetic: patch _app_has_visible_windows so the by-name respawn check does
+    # NOT query the live desktop for a real Notepad window (that made this test
+    # flaky — green only when a Notepad window happened to be visible). Here we
+    # simulate "the respawned app DOES have visible windows" → must fail.
+    @patch("naturo.process._app_has_visible_windows", return_value=True)
     @patch("naturo.process.find_process")
-    def test_verify_quit_app_still_running_by_name(self, mock_find):
+    def test_verify_quit_app_still_running_by_name(self, mock_find, mock_has_windows):
         """#496: _verify_quit must check by name, not just PID.
 
         After force-killing PID 100, if 'notepad' is still running under
-        PID 200 (respawned), verification must fail.
+        PID 200 (respawned) with visible windows, verification must fail.
         """
         # First call: PID lookup returns None (target PID is dead)
         # Second call: name lookup returns a new process (respawned)
@@ -690,7 +702,7 @@ class TestQuitApp:
                 return ProcessInfo(pid=200, name="notepad.exe")
             return None
         mock_find.side_effect = find_side_effect
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
     @patch("naturo.process.find_process")
@@ -737,7 +749,7 @@ class TestQuitApp:
                 return ProcessInfo(pid=200, name="notepad.exe")
             return None
         mock_find.side_effect = find_side_effect
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("notepad", None, target_pid=100, timeout=0.5)
 
 
@@ -1192,5 +1204,87 @@ class TestUWPQuitResolution:
             ProcessInfo(pid=3000, name="calculatorapp.exe"),  # respawn check
         ]
 
-        with pytest.raises(InteractionFailedError, match="still running"):
+        with pytest.raises(QuitIncompleteError, match="still running"):
             _verify_quit("计算器", None, target_pid=1000, timeout=0.5)
+
+
+class TestPathLikeNameLaunch:
+    """A full path passed as ``name`` (agents do this — the prompt gives a path)
+    must launch directly, never fall through to a ``start /wait`` that blocks on a
+    GUI app until it closes. That hang froze a real agent run mid-task."""
+
+    def test_path_like_name_launches_directly_not_via_start_wait(self):
+        import naturo.process as P
+        from unittest.mock import patch, MagicMock
+        fake = MagicMock(pid=4321)
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.cli.interaction._is_current_session_interactive", return_value=True), \
+             patch("os.path.isfile", return_value=True), \
+             patch("naturo.process.subprocess.Popen", return_value=fake) as popen, \
+             patch("naturo.process.subprocess.run") as run:
+            info = P.launch_app(name=r"C:\tools\jconsole.exe")
+        assert popen.call_args_list[0][0][0] == [r"C:\tools\jconsole.exe"]
+        assert info.pid == 4321
+        for c in run.call_args_list:
+            argv = c.args[0] if c.args else []
+            assert "/wait" not in argv, f"blocking start/wait used: {argv}"
+
+    def test_bare_name_still_resolves_normally(self):
+        """A friendly name (no separator) must NOT be treated as a path."""
+        import naturo.process as P
+        from unittest.mock import patch, MagicMock
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch("naturo.cli.interaction._is_current_session_interactive", return_value=True), \
+             patch("os.path.isfile", return_value=False), \
+             patch("naturo.process.subprocess.run",
+                   return_value=MagicMock(returncode=0)) as run, \
+             patch("naturo.process.subprocess.Popen", return_value=MagicMock(pid=7)):
+            P.launch_app(name="notepad")
+        assert any("where" in (c.args[0] if c.args else []) for c in run.call_args_list)
+
+
+class TestOfficeLaunchResolution:
+    """Office apps aren't on PATH; launch resolves friendly names to exe
+    basenames, then to a full path via the App Paths registry."""
+
+    def test_office_aliases_resolve_to_exe(self):
+        from unittest.mock import patch
+        from naturo.process import _resolve_launch_name
+        # _resolve_launch_name short-circuits to the raw name off-Windows, so the
+        # alias table only applies on Windows — mock it for the assertion.
+        with patch("naturo.process.platform.system", return_value="Windows"):
+            assert _resolve_launch_name("word") == "winword"
+            assert _resolve_launch_name("ppt") == "powerpnt"
+            assert _resolve_launch_name("powerpoint") == "powerpnt"
+            assert _resolve_launch_name("microsoft word") == "winword"
+            assert _resolve_launch_name("演示文稿") == "powerpnt"
+
+    def test_app_paths_resolver_returns_full_path(self):
+        import sys
+        import types
+        from unittest.mock import patch, MagicMock
+        import naturo.process as P
+        fake = types.SimpleNamespace(
+            HKEY_CURRENT_USER=1, HKEY_LOCAL_MACHINE=2,
+            OpenKey=MagicMock(),
+            QueryValueEx=MagicMock(return_value=(r"C:\O\WINWORD.EXE", 1)),
+        )
+        fake.OpenKey.return_value.__enter__ = MagicMock()
+        fake.OpenKey.return_value.__exit__ = MagicMock(return_value=False)
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch.dict(sys.modules, {"winreg": fake}), \
+             patch("os.path.isfile", return_value=True):
+            assert P._resolve_via_app_paths("winword") == r"C:\O\WINWORD.EXE"
+
+    def test_app_paths_resolver_none_when_absent(self):
+        import sys
+        import types
+        from unittest.mock import patch, MagicMock
+        import naturo.process as P
+        fake = types.SimpleNamespace(
+            HKEY_CURRENT_USER=1, HKEY_LOCAL_MACHINE=2,
+            OpenKey=MagicMock(side_effect=OSError), QueryValueEx=MagicMock(),
+        )
+        with patch("naturo.process.platform.system", return_value="Windows"), \
+             patch.dict(sys.modules, {"winreg": fake}):
+            assert P._resolve_via_app_paths("nonesuch") is None

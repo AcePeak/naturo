@@ -481,6 +481,141 @@ class UIAInteractMixin:
                     best, best_area = el, area
         return best
 
+    @staticmethod
+    def _get_uia_pattern(elem, pattern_id, iface):
+        """Acquire a UIA pattern interface off ``elem``, or ``None`` if unsupported.
+
+        The single gate shared by the value READ
+        (:meth:`get_element_value_uia`) and WRITE (:meth:`set_element_value`)
+        paths — plus :meth:`toggle_element`, :meth:`select_element` and
+        :meth:`expand_collapse_element` — so the directions can never drift on
+        the one subtlety that already bit them (#1212).
+
+        comtypes returns a **non-None NULL COM pointer** for a pattern the
+        element does not support (e.g. a Slider has no ValuePattern). This must
+        be gated on *truthiness* — ``if not ptr`` is ``True`` for a NULL pointer
+        — because ``ptr is not None`` is ``True`` for it and then
+        ``QueryInterface`` raises ``ValueError: NULL COM pointer access``.
+        Before this gate was centralised the write side used the correct
+        ``if ptr`` check while the read side used ``is not None`` and bailed the
+        whole read to ``None`` on any element lacking ValuePattern, never
+        reaching its TextPattern / TogglePattern / Name fallbacks.
+
+        Args:
+            elem: The resolved UIA element.
+            pattern_id: The ``UIA_*PatternId`` to request.
+            iface: The ``IUIAutomation*Pattern`` interface to query for.
+
+        Returns:
+            The queried pattern interface, or ``None`` when the element does
+            not support it (or the query errored).
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        try:
+            ptr = elem.GetCurrentPattern(pattern_id)
+        except (COMError, AttributeError, OSError):
+            return None
+        # NULL COM pointer for an unsupported pattern is non-None but falsy.
+        if not ptr:
+            return None
+        try:
+            return ptr.QueryInterface(iface)
+        except (COMError, AttributeError, OSError, ValueError):
+            return None
+
+    def _read_text_or_value_uia(self, elem, mod) -> Optional[str]:
+        """Read non-empty text from an element via TextPattern then ValuePattern.
+
+        Helper for the raw-view ScrollViewer fallback (#1213). Prefers
+        TextPattern (full document text) and falls back to ValuePattern; returns
+        the text, or ``None`` when neither pattern yields a non-empty string.
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        # TextPattern first (full document text for multi-line editors).
+        try:
+            tp = self._get_uia_pattern(
+                elem, mod.UIA_TextPatternId, mod.IUIAutomationTextPattern)
+            if tp is not None:
+                text = tp.DocumentRange.GetText(-1)
+                if text:
+                    return text
+        except (COMError, AttributeError):
+            pass
+        # ValuePattern next.
+        try:
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is not None:
+                val = vp.CurrentValue
+                if val:
+                    return val
+        except (COMError, AttributeError):
+            pass
+        return None
+
+    def _raw_view_find_inner_text(
+        self, uia, mod, elem, max_depth: int = 6, budget: int = 200,
+    ) -> Optional[str]:
+        """Bounded raw-view DFS for an inner Edit/Document with readable text.
+
+        Helper for the ScrollViewer fallback (#1213). Some multiline controls
+        expose only a ScrollViewer (Pane, 50033) at the text location in the UIA
+        CONTROL view; the inner Edit (50004) / Document (50030) that holds the
+        text is hidden from the control view but present in the RAW view. Walks
+        the RawViewWalker depth-first under ``elem`` for such a descendant whose
+        TextPattern/ValuePattern yields non-empty text.
+
+        Bounded so it cannot hang on a huge tree: descends at most ``max_depth``
+        levels and visits at most ``budget`` nodes total. Returns the text of the
+        first hit, or ``None``.
+        """
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+        except ImportError:  # pragma: no cover - comtypes always present here
+            COMError = Exception  # type: ignore[assignment,misc]
+        try:
+            walker = uia.RawViewWalker
+        except (COMError, AttributeError):
+            return None
+        if not walker:
+            return None
+
+        # Iterative DFS with an explicit (element, depth) stack so a deep tree
+        # cannot blow the Python recursion limit. ``budget`` is shared across the
+        # whole walk to cap total nodes visited.
+        remaining = budget
+        stack = [(elem, 0)]
+        while stack and remaining > 0:
+            node, depth = stack.pop()
+            if depth >= max_depth:
+                continue
+            try:
+                child = walker.GetFirstChildElement(node)
+            except (COMError, AttributeError):
+                child = None
+            while child and remaining > 0:
+                remaining -= 1
+                try:
+                    ct = child.CurrentControlType
+                except (COMError, AttributeError):
+                    ct = 0
+                if ct in (50004, 50030):  # Edit / Document
+                    text = self._read_text_or_value_uia(child, mod)
+                    if text:
+                        return text
+                stack.append((child, depth + 1))
+                try:
+                    child = walker.GetNextSiblingElement(child)
+                except (COMError, AttributeError):
+                    child = None
+        return None
+
     def set_element_value(
         self,
         text: str,
@@ -509,6 +644,23 @@ class UIAInteractMixin:
         Returns:
             True if SetValue succeeded, False otherwise.
         """
+        # Scintilla editors (Notepad++/SciTE) are synthetic cascade nodes with no
+        # live UIA element, carrying identifier "scintilla_<child_hwnd>". A normal
+        # SetValue would fail the UIA lookup, so write the document live via the
+        # provider's cross-process SCI_SETTEXT — the write-side mirror of the
+        # get eN live read. Returns False for a read-only editor (never a phantom
+        # success), letting the caller report SET_VALUE_FAILED.
+        if automation_id and automation_id.startswith("scintilla_"):
+            try:
+                sci_hwnd = int(automation_id.split("_", 1)[1])
+            except (ValueError, IndexError):
+                return False
+            from naturo.cascade._scintilla import set_scintilla_text
+            ok = set_scintilla_text(sci_hwnd, text)
+            if ok:
+                logger.info("SetValue: wrote Scintilla document (len=%d)", len(text))
+            return ok
+
         try:
             uia, mod = self._init_comtypes_uia()
         except (ImportError, Exception):
@@ -541,23 +693,43 @@ class UIAInteractMixin:
                                  name, automation_id, role)
                     return False
 
-            # Try ValuePattern
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-            if pat_unk is None:
-                logger.debug("SetValue: element does not support ValuePattern")
-                return False
+            # 1) ValuePattern — text/edit controls. The NULL-COM-pointer gate for
+            #    an unsupported pattern lives in the shared ``_get_uia_pattern``
+            #    helper, so read and write can't drift on it (#1212).
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is not None:
+                if not vp.CurrentIsReadOnly:
+                    vp.SetValue(text)
+                    logger.info("SetValue: set via ValuePattern (name=%r, len=%d)",
+                                name, len(text))
+                    return True
+                logger.debug("SetValue: ValuePattern read-only; trying RangeValue")
 
-            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
+            # 2) RangeValuePattern — Slider/Spinner/ProgressBar carry a numeric
+            #    value and do NOT support ValuePattern. Parse the number and clamp
+            #    to the control's [min, max] so an out-of-range request still lands.
+            rv = self._get_uia_pattern(
+                elem, mod.UIA_RangeValuePatternId,
+                mod.IUIAutomationRangeValuePattern)
+            if rv is not None:
+                if rv.CurrentIsReadOnly:
+                    logger.debug("SetValue: RangeValuePattern is read-only")
+                    return False
+                try:
+                    num = float(text)
+                except (TypeError, ValueError):
+                    logger.debug("SetValue: RangeValue needs a number, got %r", text)
+                    return False
+                num = max(rv.CurrentMinimum, min(rv.CurrentMaximum, num))
+                rv.SetValue(num)
+                logger.info("SetValue: set via RangeValuePattern (name=%r, value=%s)",
+                            name, num)
+                return True
 
-            # Check if the value is read-only
-            if vp.CurrentIsReadOnly:
-                logger.debug("SetValue: element's ValuePattern is read-only")
-                return False
-
-            vp.SetValue(text)
-            logger.info("SetValue: successfully set text on element (name=%r, len=%d)",
-                        name, len(text))
-            return True
+            logger.debug("SetValue: element supports neither writable Value nor "
+                         "RangeValue pattern")
+            return False
 
         except (OSError, AttributeError) as exc:
             logger.debug("SetValue failed: %s", exc)
@@ -593,10 +765,10 @@ class UIAInteractMixin:
             elem = uia.GetFocusedElement()
             if elem is None:
                 return False
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-            if pat_unk is None:
+            vp = self._get_uia_pattern(
+                elem, mod.UIA_ValuePatternId, mod.IUIAutomationValuePattern)
+            if vp is None:
                 return False
-            vp = pat_unk.QueryInterface(mod.IUIAutomationValuePattern)
             if vp.CurrentIsReadOnly:
                 return False
             new_value = ((vp.CurrentValue or "") + text) if append else text
@@ -679,11 +851,19 @@ class UIAInteractMixin:
 
             value = None
             pattern = None
+            # Pattern acquisition uses the same NULL-COM-pointer-safe gate as
+            # the WRITE path (:meth:`set_element_value`) via ``_get_uia_pattern``
+            # (#1212). Previously this read used ``if pat is not None`` — the
+            # exact trap the write side documents against — so an element that
+            # lacked ValuePattern raised "NULL COM pointer access" and the whole
+            # read bailed to None instead of falling through to TextPattern /
+            # TogglePattern / Name.
             try:
-                pat = elem.GetCurrentPattern(mod.UIA_ValuePatternId)
-                if pat is not None:
-                    value = pat.QueryInterface(
-                        mod.IUIAutomationValuePattern).CurrentValue
+                vp = self._get_uia_pattern(
+                    elem, mod.UIA_ValuePatternId,
+                    mod.IUIAutomationValuePattern)
+                if vp is not None:
+                    value = vp.CurrentValue
                     pattern = "ValuePattern"
             except (COMError, AttributeError):
                 pass
@@ -692,11 +872,11 @@ class UIAInteractMixin:
             # (not just None) value. (#1208)
             if not value:
                 try:
-                    pat = elem.GetCurrentPattern(mod.UIA_TextPatternId)
-                    if pat is not None:
-                        rng = pat.QueryInterface(
-                            mod.IUIAutomationTextPattern).DocumentRange
-                        _text = rng.GetText(-1)
+                    tp = self._get_uia_pattern(
+                        elem, mod.UIA_TextPatternId,
+                        mod.IUIAutomationTextPattern)
+                    if tp is not None:
+                        _text = tp.DocumentRange.GetText(-1)
                         if _text:
                             value = _text
                             pattern = "TextPattern"
@@ -704,15 +884,42 @@ class UIAInteractMixin:
                     pass
             if not value:
                 try:
-                    pat = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
-                    if pat is not None:
-                        state = pat.QueryInterface(
-                            mod.IUIAutomationTogglePattern).CurrentToggleState
+                    tg = self._get_uia_pattern(
+                        elem, mod.UIA_TogglePatternId,
+                        mod.IUIAutomationTogglePattern)
+                    if tg is not None:
+                        state = tg.CurrentToggleState
                         value = {0: "Off", 1: "On", 2: "Indeterminate"}.get(
                             state, "Unknown")
                         pattern = "TogglePattern"
                 except (COMError, AttributeError):
                     pass
+            # (#1213) Raw-view fallback for ScrollViewer-wrapped multiline edits.
+            # Some controls expose only a ScrollViewer (Pane, 50033) at the text
+            # location in the control view; it advertises Value/Text yet every
+            # pattern above reads empty, and the inner Edit/Document is hidden
+            # from the control view. ONLY when the control-view read is still
+            # empty AND the element advertises Value/Text (the ScrollViewer
+            # signature) walk the raw view for an inner Edit/Document descendant.
+            # Strictly additive: elements that already read a value never reach
+            # this branch, so their behavior is unchanged.
+            if not value:
+                try:
+                    advertises = bool(
+                        getattr(elem, "CurrentIsValuePatternAvailable", False)
+                    ) or bool(
+                        getattr(elem, "CurrentIsTextPatternAvailable", False)
+                    )
+                except (COMError, AttributeError):
+                    advertises = False
+                if advertises:
+                    try:
+                        inner = self._raw_view_find_inner_text(uia, mod, elem)
+                    except (COMError, AttributeError):
+                        inner = None
+                    if inner:
+                        value = inner
+                        pattern = "RawViewFallback"
             if not value and _name:
                 value = _name
                 pattern = "Name"
@@ -728,6 +935,86 @@ class UIAInteractMixin:
             }
         except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
             logger.debug("get_element_value_uia failed: %s", exc)
+            return None
+
+    def get_element_a11y_uia(
+        self,
+        hwnd: int = 0,
+        name: Optional[str] = None,
+        automation_id: Optional[str] = None,
+        role: Optional[str] = None,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Read a single element's UIA accessibility properties (Python/comtypes).
+
+        Resolves a live UIA element (by identity, then cached point, then role —
+        the same order as :meth:`get_element_value_uia`) and reads the six
+        accessibility properties that the ``see`` snapshot schema exposes (#896):
+        ``is_enabled`` (IsEnabled), ``is_offscreen`` (IsOffscreen), ``help_text``
+        (HelpText), ``localized_control_type`` (LocalizedControlType),
+        ``is_keyboard_focusable`` (IsKeyboardFocusable) and ``has_keyboard_focus``
+        (HasKeyboardFocus).
+
+        This is the working Python-layer path for a *targeted* element even
+        before the native UIA traversal is taught to emit these properties for
+        every node in ``see`` (which needs a native-core rebuild). Each property
+        is read independently so one unsupported/erroring property does not drop
+        the rest; a property that cannot be read comes back ``None``.
+
+        Args:
+            hwnd: Window handle to scope identity/tree search. 0 = desktop root.
+            name: Accessible name of the target element.
+            automation_id: UIA AutomationId of the target element.
+            role: UIA control type (e.g. ``"Edit"``).
+            x: Screen X of the cached element centre (point fallback).
+            y: Screen Y of the cached element centre (point fallback).
+
+        Returns:
+            A dict with the six keys above, or ``None`` if no element resolved
+            or comtypes/UIA is unavailable.
+        """
+        try:
+            uia, mod = self._init_comtypes_uia()
+        except (ImportError, Exception):
+            logger.debug("comtypes not available — cannot read UIA a11y props")
+            return None
+
+        try:
+            from comtypes import COMError  # type: ignore[import-untyped]
+
+            elem = self._resolve_interaction_element(
+                uia, mod, hwnd=hwnd, name=name,
+                automation_id=automation_id, role=role, x=x, y=y,
+            )
+            if elem is None:
+                return None
+
+            def _read_bool(attr: str) -> Optional[bool]:
+                try:
+                    return bool(getattr(elem, attr))
+                except (COMError, AttributeError, OSError):
+                    return None
+
+            def _read_str(attr: str) -> Optional[str]:
+                try:
+                    val = getattr(elem, attr)
+                except (COMError, AttributeError, OSError):
+                    return None
+                return val or None
+
+            return {
+                "is_enabled": _read_bool("CurrentIsEnabled"),
+                "is_offscreen": _read_bool("CurrentIsOffscreen"),
+                "help_text": _read_str("CurrentHelpText"),
+                "localized_control_type": _read_str(
+                    "CurrentLocalizedControlType"),
+                "is_keyboard_focusable": _read_bool(
+                    "CurrentIsKeyboardFocusable"),
+                "has_keyboard_focus": _read_bool("CurrentHasKeyboardFocus"),
+            }
+        except Exception as exc:  # noqa: BLE001 — COM/OS errors vary
+            logger.debug("get_element_a11y_uia failed: %s", exc)
             return None
 
     def toggle_element(
@@ -769,12 +1056,12 @@ class UIAInteractMixin:
                 logger.debug("Toggle: target element not found")
                 return None
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_TogglePatternId)
-            if pat_unk is None:
+            tp = self._get_uia_pattern(
+                elem, mod.UIA_TogglePatternId, mod.IUIAutomationTogglePattern)
+            if tp is None:
                 logger.debug("Toggle: element does not support TogglePattern")
                 return None
 
-            tp = pat_unk.QueryInterface(mod.IUIAutomationTogglePattern)
             tp.Toggle()
 
             # Read new state: 0=Off, 1=On, 2=Indeterminate
@@ -827,12 +1114,13 @@ class UIAInteractMixin:
                 logger.debug("Select: target element not found")
                 return False
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_SelectionItemPatternId)
-            if pat_unk is None:
+            sp = self._get_uia_pattern(
+                elem, mod.UIA_SelectionItemPatternId,
+                mod.IUIAutomationSelectionItemPattern)
+            if sp is None:
                 logger.debug("Select: element does not support SelectionItemPattern")
                 return False
 
-            sp = pat_unk.QueryInterface(mod.IUIAutomationSelectionItemPattern)
             sp.Select()
             logger.info("Select: selected element (name=%r)", name)
             return True
@@ -883,12 +1171,13 @@ class UIAInteractMixin:
                 logger.debug("ExpandCollapse: target element not found")
                 return False
 
-            pat_unk = elem.GetCurrentPattern(mod.UIA_ExpandCollapsePatternId)
-            if pat_unk is None:
+            ecp = self._get_uia_pattern(
+                elem, mod.UIA_ExpandCollapsePatternId,
+                mod.IUIAutomationExpandCollapsePattern)
+            if ecp is None:
                 logger.debug("ExpandCollapse: element does not support ExpandCollapsePattern")
                 return False
 
-            ecp = pat_unk.QueryInterface(mod.IUIAutomationExpandCollapsePattern)
             if expand:
                 ecp.Expand()
                 logger.info("ExpandCollapse: expanded element (name=%r)", name)

@@ -8,11 +8,19 @@ import sys
 import click
 
 from naturo.cli.error_helpers import json_error as _json_error_str
+from naturo.cli._field import emit_projection, field_option, parse_fields, resolve_fields
 from naturo.cli._app._common import (
     _APP_ID_RE,
     _resolve_app_id,
     _safe_echo,
 )
+
+# Row schemas for --field projection (#1206), kept beside the emitters below.
+_APP_LIST_FIELDS = (
+    "id", "handle", "hwnd", "pid", "process_name", "title",
+    "x", "y", "width", "height", "is_visible", "is_minimized",
+)
+_FIND_FIELDS = ("pid", "name", "path", "is_running", "window_count")
 
 
 @click.command("launch")
@@ -31,12 +39,10 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
     if not name and app_name:
         name = app_name
     if not name and not path:
-        msg = "Specify application name or --path"
-        if json_output:
-            click.echo(_json_error_str("INVALID_INPUT", msg))
-        else:
-            click.echo(f"Error: {msg}", err=True)
-        sys.exit(1)
+        # No app name or --path → missing required arg → usage error, exit 2 (#897).
+        # Envelope code stays INVALID_INPUT; only the exit code differs.
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("Specify application name or --path", json_output)
         return
 
     # (#776) Reject app IDs — launch requires an app name/path, not a running-app ID
@@ -82,16 +88,74 @@ def app_launch(ctx, name, app_name, path, wait_until_ready, timeout, no_focus, a
         sys.exit(1)
 
 
+def _resolve_pid_from_window(window_title, hwnd, json_output):
+    """Resolve a ``--window``/``--hwnd`` target to its owning process ID (#871).
+
+    ``quit`` terminates a process, so a window target is first resolved to a
+    concrete handle through the backend's canonical ``_resolve_hwnd`` (the same
+    resolver the gold-standard commands use), then mapped to the PID that owns
+    that handle via the backend's window list.
+
+    Args:
+        window_title: ``--window`` value, or ``None``.
+        hwnd: ``--hwnd`` value, or ``None``.
+        json_output: Whether to emit a JSON error envelope on failure.
+
+    Returns:
+        The owning process ID, or ``None`` when resolution failed (an error
+        envelope has already been emitted and the process has exited via
+        :func:`sys.exit`).
+    """
+    from naturo.backends.base import get_backend
+    from naturo.errors import NaturoError
+
+    try:
+        backend = get_backend()
+        resolved_hwnd = backend._resolve_hwnd(window_title=window_title, hwnd=hwnd)
+        pid = next(
+            (w.pid for w in backend.list_windows() if w.handle == resolved_hwnd),
+            None,
+        )
+    except NaturoError as exc:
+        if json_output:
+            click.echo(json_dumps(exc.to_json_response(), indent=2))
+        else:
+            _safe_echo(f"Error: {exc.message}", err=True)
+        sys.exit(1)
+        return None
+    except Exception as exc:
+        if json_output:
+            click.echo(_json_error_str("UNKNOWN_ERROR", str(exc)))
+        else:
+            _safe_echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+        return None
+
+    if pid is None:
+        target = window_title or f"hwnd {hwnd}"
+        msg = f"No running window matched '{target}'."
+        if json_output:
+            click.echo(_json_error_str("WINDOW_NOT_FOUND", msg))
+        else:
+            _safe_echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+        return None
+    return pid
+
+
 @click.command("quit")
 @click.argument("name", required=False, default=None)
 @click.option("--name", "name_option", hidden=True, help="Application name (deprecated, use positional)")
 @click.option("--app", "app_name", default=None, help="Application name (alternative to positional NAME)")
+@click.option("--window", "window_title", default=None, help="Window title pattern (substring match)")
+@click.option("--hwnd", type=int, default=None, help="Window handle (HWND)")
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--force", is_flag=True, help="Force kill immediately")
 @click.option("--timeout", type=float, default=10.0, help="Graceful shutdown timeout")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
 @click.pass_context
-def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output) -> None:
+def app_quit(ctx, name, name_option, app_name, window_title, hwnd, pid, force,
+             timeout, json_output) -> None:
     """Quit an application gracefully (or force kill).
 
     NAME is the application name to quit.
@@ -101,6 +165,8 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
       naturo app quit notepad
       naturo app quit chrome --force
       naturo app quit --pid 12345
+      naturo app quit --window "Untitled - Notepad"
+      naturo app quit --hwnd 12345
     """
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
@@ -120,8 +186,21 @@ def app_quit(ctx, name, name_option, app_name, pid, force, timeout, json_output)
         if pid is None:
             pid = entry.pid
 
+    # (#871) Accept the window-targeting family (--window/--hwnd) that the
+    # gold-standard commands expose. ``quit`` acts on a *process*, so a window
+    # target is resolved to its owning PID via the canonical ``_resolve_hwnd``
+    # resolver — the same path see/capture/click use — rather than a
+    # signature change. An explicit NAME/--pid still wins; a window target that
+    # matches no window fails loudly (WINDOW_NOT_FOUND) instead of silently
+    # quitting nothing.
+    if not name and pid is None and (hwnd is not None or window_title):
+        resolved_pid = _resolve_pid_from_window(window_title, hwnd, json_output)
+        if resolved_pid is None:
+            return  # error already emitted
+        pid = resolved_pid
+
     if not name and pid is None:
-        msg = "Specify application name or --pid"
+        msg = "Specify application name, --pid, --window, or --hwnd"
         if json_output:
             click.echo(_json_error_str("INVALID_INPUT", msg))
         else:
@@ -205,8 +284,9 @@ def app_relaunch(ctx, name, app_name, wait_until_ready, timeout, json_output) ->
 @click.command("list")
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def app_list(ctx, show_all, json_output) -> None:
+def app_list(ctx, show_all, json_output, field) -> None:
     """List running applications with visible windows.
 
     By default, shows user-facing applications with visible windows
@@ -311,26 +391,36 @@ def app_list(ctx, show_all, json_output) -> None:
         window_pids = {w.pid for w in windows}
         background_apps = [a for a in all_procs if a.pid not in window_pids]
 
+    # Canonical per-window row schema, built once and shared by the `-j`
+    # payload and `--field` projection so their keys never drift (#1206).
+    window_rows = [
+        {
+            "id": f"a{i}",
+            "handle": w.handle,
+            # `hwnd` alias mirrors `list windows` so the two commands
+            # share one interchangeable window schema (#952).
+            "hwnd": w.handle,
+            "pid": w.pid,
+            "process_name": w.process_name,
+            "title": w.title,
+            "x": w.x, "y": w.y,
+            "width": w.width, "height": w.height,
+            "is_visible": w.is_visible,
+            "is_minimized": w.is_minimized,
+        }
+        for i, w in enumerate(windows, start=1)
+    ]
+
+    fields = parse_fields(field)
+    if fields is not None:
+        resolve_fields(fields, _APP_LIST_FIELDS, json_output)
+        emit_projection(window_rows, fields, "windows", json_output)
+        return
+
     if json_output:
         result = {
             "success": True,
-            "windows": [
-                {
-                    "id": f"a{i}",
-                    "handle": w.handle,
-                    # `hwnd` alias mirrors `list windows` so the two commands
-                    # share one interchangeable window schema (#952).
-                    "hwnd": w.handle,
-                    "pid": w.pid,
-                    "process_name": w.process_name,
-                    "title": w.title,
-                    "x": w.x, "y": w.y,
-                    "width": w.width, "height": w.height,
-                    "is_visible": w.is_visible,
-                    "is_minimized": w.is_minimized,
-                }
-                for i, w in enumerate(windows, start=1)
-            ],
+            "windows": window_rows,
             "count": len(windows),
         }
         if show_all:
@@ -368,8 +458,9 @@ def app_list(ctx, show_all, json_output) -> None:
 @click.argument("name")
 @click.option("--pid", type=int, help="Search by PID instead of name")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def app_find(ctx, name, pid, json_output) -> None:
+def app_find(ctx, name, pid, json_output, field) -> None:
     """Find a running application by name or PID."""
     json_output = json_output or (ctx.obj or {}).get("json", False)
 
@@ -397,16 +488,32 @@ def app_find(ctx, name, pid, json_output) -> None:
 
     proc = find_process(name=name, pid=pid)
     if proc:
+        # `find` resolves a single process; `--field` projects that one row —
+        # under -j into the `process` object, in text mode to a bare tab-joined
+        # value line so a lookup like `--field pid` is $(...)-capturable (#1206).
+        proc_row = {
+            "pid": proc.pid,
+            "name": proc.name,
+            "path": proc.path,
+            "is_running": proc.is_running,
+            "window_count": proc.window_count,
+        }
+        fields = parse_fields(field)
+        if fields is not None:
+            resolve_fields(fields, _FIND_FIELDS, json_output)
+            if json_output:
+                click.echo(json_dumps(
+                    {"success": True, "process": {f: proc_row[f] for f in fields}},
+                    indent=2,
+                ))
+            else:
+                from naturo.cli._field import format_value
+                click.echo("\t".join(format_value(proc_row[f]) for f in fields))
+            return
         if json_output:
             click.echo(json_dumps({
                 "success": True,
-                "process": {
-                    "pid": proc.pid,
-                    "name": proc.name,
-                    "path": proc.path,
-                    "is_running": proc.is_running,
-                    "window_count": proc.window_count,
-                },
+                "process": proc_row,
             }, indent=2))
         else:
             _safe_echo(f"Found: {proc.name} (PID: {proc.pid})")

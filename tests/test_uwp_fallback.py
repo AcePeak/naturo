@@ -209,7 +209,10 @@ class TestUwpElementTreeFallback:
         child_empty = _make_element(role="Pane", name="", children=[])
         child_empty_deeper = _make_element(role="Pane", name="", children=[])
 
-        # 3 calls: AFH(depth=3), child@depth=3, child@depth=6 (deeper retry)
+        # 3 calls: AFH(depth=3), child@depth=3, child@depth=6 (deeper retry).
+        # Pin an explicit shallow depth — the default is now 0 = unlimited, which
+        # skips the deeper-retry (the first pass already went as deep as possible),
+        # and this test specifically exercises that retry path.
         backend._core.get_element_tree = MagicMock(
             side_effect=[empty_root, child_empty, child_empty_deeper],
         )
@@ -219,7 +222,7 @@ class TestUwpElementTreeFallback:
         with patch.object(type(backend), "_find_uwp_content_hwnd",
                           return_value=[200]):
             with patch("naturo.backends.windows.populate_hierarchy"):
-                result = backend.get_element_tree(app="calc", backend="uia")
+                result = backend.get_element_tree(app="calc", depth=3, backend="uia")
 
         # Should return original empty result (post-processed)
         assert result is not None

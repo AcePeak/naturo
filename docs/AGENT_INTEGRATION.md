@@ -33,6 +33,26 @@ Any client that reads an MCP server config works — point it at the same comman
 No separate API key is needed for naturo itself — it drives the local desktop.
 (Your *agent* uses its own model credentials as usual.)
 
+## Use naturo's tools in any framework (not just MCP)
+
+Prefer to wire naturo directly into an agent framework's function-calling loop?
+naturo re-emits its **whole tool surface** in the two shapes every framework
+speaks — no naturo-specific glue, and the specs are derived from the same
+registry the MCP server serves, so they never drift:
+
+```python
+from naturo.agent_tools import to_openai_tools, to_anthropic_tools
+
+tools = to_openai_tools()      # OpenAI SDK / OpenAI Agents SDK / LangChain / LiteLLM
+tools = to_anthropic_tools()   # Anthropic Messages API
+```
+
+Pass `tools` straight to `client.chat.completions.create(tools=...)` or
+`client.messages.create(tools=...)`, then route each tool call the model
+returns back to naturo (via the CLI or an MCP client). A complete copy-paste
+wiring for OpenAI, Anthropic, and LangChain — including the dispatcher — is in
+[`examples/agent_frameworks.py`](../examples/agent_frameworks.py).
+
 ## The moat: one fused, correctness-tagged tree
 
 The `see_ui_tree` tool takes `cascade: true` to return the **Unified Auto Element

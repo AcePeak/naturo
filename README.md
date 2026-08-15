@@ -12,7 +12,19 @@
 
 > **Why naturo?** It is the only open-source Windows automation engine with **commercial-RPA-grade multi-framework recognition** — UIA + MSAA/IA2 + Java Access Bridge + Electron/CDP + vision fusion. UIA-only rivals (UFO², Windows-MCP, Terminator) are blind to Electron and Java app content. See the reproducible proof: [**Recognition coverage benchmark → docs/RECOGNITION.md**](docs/RECOGNITION.md).
 
+> **Automating Chinese desktop apps?** 钉钉 / 飞书 / 企业微信 / 同花顺 / WPS are built on the exact frameworks (CEF, 自绘/Duilib, hybrid, COM) that UIA-only engines can't see — and naturo can: [**CJK coverage & China-market wedge → docs/CJK_COVERAGE.md**](docs/CJK_COVERAGE.md).
+
+> **How it works (deep dive):** the architecture, cascade fusion, correctness tagging, and the native C++ core, with diagrams — [**How Naturo Works → docs/blog/how-naturo-works.md**](docs/blog/how-naturo-works.md).
+
 > **New here?** Get Claude to open, type into, and save a Notepad file in under five minutes: [**5-minute quickstart → docs/QUICKSTART.md**](docs/QUICKSTART.md).
+
+## Tutorials
+
+Guided, end-to-end walkthroughs — each with complete, runnable examples (CLI + the Python SDK), and every command checked against the code:
+
+1. [**Automate Notepad in 5 minutes**](docs/tutorials/01-automate-notepad.md) — see → click → type → save. The four verbs every naturo automation is built from.
+2. [**Automate Excel with naturo**](docs/tutorials/02-automate-excel.md) — open a workbook, read/write cells, inspect ranges, and build a chart over Excel's COM interface.
+3. [**Build an AI agent that uses naturo**](docs/tutorials/03-ai-agent-with-naturo.md) — run naturo as an MCP server for Claude Desktop/Code, plus a minimal Python tool-use loop that drives naturo.
 
 ## What You Get
 
@@ -219,6 +231,46 @@ naturo highlight --app notepad --all       # Show all elements
 naturo highlight e11 --app notepad         # Highlight specific ref
 naturo highlight --app notepad -A out.png  # Save annotated screenshot
 ```
+
+## Python SDK
+
+Prefer to stay in Python? `import naturo` gives you an ergonomic, in-process API
+over the same engine the CLI and MCP server use — no subprocess, no output
+parsing. Import-and-go in under 10 lines:
+
+```python
+import naturo
+
+app = naturo.launch("notepad")           # App handle; waits until ready
+naturo.type("hello", window="Notepad")   # IME-immune type ladder (ValuePattern→clipboard→keystroke)
+tree = naturo.see(window="Notepad")      # root Element; walk .children / .descendants / .find
+el = naturo.find("Button:Save", window="Notepad")
+if el:
+    el.click()                           # elements act on themselves
+naturo.capture("shot.png", window="Notepad")
+app.quit()
+```
+
+Core verbs are available both as module-level functions and as methods on a
+reusable `Desktop` / `Session` session (or a launched `App`):
+`see`, `find`, `click`, `type`, `press`, `get_value`, `set_value`, `capture`,
+`launch`, `quit`, `wait`, `windows`.
+
+```python
+import naturo
+
+# Context-managed app quits on exit; the fused cascade tree is one flag away.
+with naturo.launch("calculator") as app:
+    for key in ("4", "2", "multiply", "7", "enter"):
+        app.press(key)
+    tree = app.see()                      # or app.see(cascade=True) for UIA+CDP+JAB+COM
+    for el in tree.descendants():
+        if el.role == "Text" and el.name:
+            print(el.name)
+```
+
+Runnable scripts live in [`examples/`](examples/) (`notepad_hello.py`,
+`form_filler.py`, `ui_inspector.py`, `window_capture.py`).
 
 ## Cascade Recognition
 

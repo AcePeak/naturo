@@ -8,6 +8,7 @@ from typing import Any
 import click
 
 import naturo.cli.core._common as _common
+from naturo.value_preview import bounded_value
 
 
 @click.command()
@@ -22,19 +23,32 @@ import naturo.cli.core._common as _common
     default="full",
     help="Analysis mode: full (all elements), interactive (clickable only), fast (quick scan)",
 )
-@click.option("--depth", "-d", type=int, default=7, help="Maximum tree depth (1-50)")
+@click.option("--depth", "-d", type=int, default=0,
+              help="Maximum tree depth (0 = unlimited, the default; "
+                   "pass a positive N to cap traversal at N levels)")
 @click.option("--path", "-p", help="Save screenshot to path")
 @click.option("--annotate", is_flag=True, help="Annotate screenshot with element labels")
 @click.option("--snapshot/--no-snapshot", "store_snapshot", default=True, help="Store result in snapshot (default: on)")
 @click.option("--session", default=None, envvar="NATURO_SESSION",
               help="Snapshot session name for isolation (default: NATURO_SESSION env or 'default')")
 @click.option("--cascade", is_flag=True,
-              help="Progressive recognition: try UIA, then CDP (Electron/CEF), then AI vision")
+              help="Add an AI-vision fallback (captures a screenshot) for regions no "
+                   "structural technique reached. NOTE: the fused multi-technique tree "
+                   "— UIA + MSAA + JAB/IA2 + CDP web content + Excel COM — is ALREADY "
+                   "the default under --backend auto; this flag only adds the vision layer.")
 @click.option("--fill-gaps", "fill_gaps", is_flag=True,
               help="Use AI vision to fill uncovered UI regions (requires AI provider)")
 @click.option("--ocr", "run_ocr", is_flag=True,
               help="Run local OCR (rapidocr) to recover text baked into images/canvas; "
                    "nodes are tagged 'ocr' (uncertain) and warned")
+@click.option("--excel-max-cells", "excel_max_cells", type=int, default=None,
+              help="Cascade Excel: max non-empty cells to emit (default 500). "
+                   "Raise for large sheets; per-invocation, so concurrent runs "
+                   "can differ.")
+@click.option("--excel-max-rows", "excel_max_rows", type=int, default=None,
+              help="Cascade Excel: max rows of the used range to scan (default 400)")
+@click.option("--excel-max-cols", "excel_max_cols", type=int, default=None,
+              help="Cascade Excel: max cols of the used range to scan (default 100)")
 @click.option("--stats", "show_stats", is_flag=True,
               help="Show per-provider recognition statistics after output")
 @click.option("--coverage", "coverage_target", type=float, default=0.0,
@@ -43,6 +57,14 @@ import naturo.cli.core._common as _common
 @click.option("--selectors", "show_selectors", is_flag=True,
               help="Show unified selectors alongside eN refs (always included in JSON mode)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@click.option("--compact", "compact", is_flag=True,
+              help='Compact agent-friendly text: one line per element as '
+                   '\'eN [role] "name" [=value]\' — no bounds/props/selectors '
+                   '(fewest tokens; refs still work with \'naturo click eN\')')
+@click.option("--full-text", "full_text", is_flag=True,
+              help="Inline the COMPLETE text of each Document/Edit/Text element "
+                   "instead of a truncated preview (for dumping + searching all "
+                   "visible content in one call)")
 @click.option(
     "--backend", "--method", "-b", "-m",
     type=click.Choice(["uia", "msaa", "ia2", "jab", "cdp", "win32", "win32hybrid", "auto", "hybrid"]),
@@ -63,7 +85,8 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         mode: str, depth: int, path: str | None, annotate: bool, store_snapshot: bool,
         session: str | None, cascade: bool, fill_gaps: bool, run_ocr: bool, show_stats: bool,
         coverage_target: float, visible_only: bool, show_selectors: bool,
-        json_output: bool, backend: str, app_id: str | None,
+        excel_max_cells: int | None, excel_max_rows: int | None, excel_max_cols: int | None,
+        json_output: bool, compact: bool, full_text: bool, backend: str, app_id: str | None,
         ai_provider: str, ai_model: str | None, ai_api_key: str | None) -> None:
     """Capture screenshot and analyze UI elements.
 
@@ -84,18 +107,20 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
     tree picks the optimal backend based on its Win32 class (Electron\u2192CDP,
     Java\u2192JAB, Mozilla\u2192IA2, default\u2192UIA).
 
-    Use --cascade to progressively try multiple providers (UIA \u2192 CDP \u2192 AI vision).
-    This maximizes coverage for Electron apps (Feishu, Slack, VS Code, etc.)
-    that render content in a WebView.
+    With the default --backend auto, `see` already returns the FUSED tree from every
+    structural technique (UIA + MSAA + JAB/IA2 + CDP web content + Excel COM), each
+    node tagged with the technique that found it \u2014 no flag needed. --cascade only ADDS
+    a screenshot-based AI-vision fallback for regions no structural technique reached.
+    Pass an explicit --backend (uia/msaa/jab/\u2026) to use a single technique with no fusion.
 
     \b
     Examples:
-        naturo see --app feishu --cascade      # UIA + CDP for Electron content
-        naturo see --app feishu --cascade --fill-gaps  # Also use AI vision
-        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # Use specific AI model
-        naturo see --app feishu --cascade --stats      # Show provider breakdown
-        naturo see --app feishu --backend auto         # Try all A11y backends
-        naturo see --app feishu --backend hybrid       # Per-node backend selection
+        naturo see --app feishu                # fused tree (UIA + CDP + \u2026) \u2014 auto is default
+        naturo see --app feishu --cascade      # also add the AI-vision fallback
+        naturo see --app feishu --cascade --fill-gaps --ai-model opus  # force vision + model
+        naturo see --app feishu --stats        # show which technique found each region
+        naturo see --app feishu --backend uia  # single technique only (no fusion)
+        naturo see --app feishu --backend hybrid       # per-node backend selection
     """
     # (#752) Auto-detect app ID pattern (a1, a2, ...) in --app flag
     from naturo.cli.options import maybe_promote_app_to_app_id
@@ -118,9 +143,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
         hwnd = entry.handle
         pid = entry.pid
 
-    # BUG-028: Validate --depth range (before platform check — input validation first)
-    if depth < 1 or depth > 50:
-        msg = f"--depth must be between 1 and 50, got {depth}"
+    # BUG-028: Validate --depth (before platform check — input validation first).
+    # 0 = unlimited (walk the whole tree); any positive value caps traversal.
+    # Negative is the only invalid input now — the native layer bounds the total.
+    if depth < 0:
+        msg = f"--depth must be 0 (unlimited) or a positive number, got {depth}"
         if json_output:
             click.echo(_common._json_error_str("INVALID_INPUT", msg))
         else:
@@ -184,28 +211,46 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     cascade_screenshot = None
 
             from naturo.cascade import run_cascade
-            cascade_result = run_cascade(
-                be,
-                app=app,
-                window_title=window_title,
-                hwnd=hwnd,
-                pid=pid,
-                depth=depth,
-                backend_name=backend,
-                coverage_target=coverage_target,
-                fill_gaps_ai=fill_gaps,
-                ai_provider=ai_provider,
-                ai_model=ai_model,
-                ai_api_key=ai_api_key,
-                screenshot_path=cascade_screenshot,
-                screenshot_scale_factor=(
-                    cascade_capture_result.scale_factor
-                    if cascade_capture_result else 1.0
-                ),
-                run_ocr=run_ocr,
-            )
-            tree = cascade_result.tree
-            cascade_stats = cascade_result.stats
+            tree = None
+
+            # (calc-zombie) --app can resolve to several UWP windows at once —
+            # empty ApplicationFrameWindow ghosts + the live CoreWindow that holds
+            # the buttons — and a single _resolve_hwnd can pick a ghost, emitting
+            # chrome-only garbage. Gather all the app's windows, cascade each, keep
+            # only the content-bearing ones. Shared with MCP see_ui_tree.
+            if app and hwnd is None and not window_title and pid is None:
+                from naturo.cascade._appwindows import app_content_tree
+                tree, cascade_stats = app_content_tree(
+                    be, app, depth=depth, backend_name=backend,
+                    coverage_target=coverage_target,
+                )
+
+            if tree is None:
+                cascade_result = run_cascade(
+                    be,
+                    app=app,
+                    window_title=window_title,
+                    hwnd=hwnd,
+                    pid=pid,
+                    depth=depth,
+                    backend_name=backend,
+                    coverage_target=coverage_target,
+                    fill_gaps_ai=fill_gaps,
+                    ai_provider=ai_provider,
+                    ai_model=ai_model,
+                    ai_api_key=ai_api_key,
+                    screenshot_path=cascade_screenshot,
+                    screenshot_scale_factor=(
+                        cascade_capture_result.scale_factor
+                        if cascade_capture_result else 1.0
+                    ),
+                    run_ocr=run_ocr,
+                    excel_max_cells=excel_max_cells,
+                    excel_max_rows=excel_max_rows,
+                    excel_max_cols=excel_max_cols,
+                )
+                tree = cascade_result.tree
+                cascade_stats = cascade_result.stats
         else:
             # (#304) When --app is used without --hwnd, enumerate ALL windows
             # of the application and merge their UI trees.
@@ -226,6 +271,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     subtree = be.get_element_tree(
                         hwnd=h, depth=depth, backend=backend,
                     )
+                    # Keep every window with a real tree; ghost-frame dropping
+                    # is the job of the cascade path (app_content_tree via
+                    # content_score), not this explicit --backend override, and
+                    # content_score can't tell a legit childless window from a
+                    # ghost anyway (both score 0).
                     if subtree:
                         window_trees.append((h, subtree))
 
@@ -436,9 +486,12 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 if _is_offscreen:
                     d["offscreen"] = True
 
-                # (#372) Value preview for Document/Edit/Text elements
+                # (#372) Value preview for Document/Edit/Text elements. The full
+                # value is already in d["value"]; preview + length let a consumer
+                # decide whether to read more without re-fetching.
                 if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    d["value_preview"] = el.value[:100]
+                    _pv, _ = bounded_value(el.value, full=full_text)
+                    d["value_preview"] = _pv
                     d["value_length"] = len(el.value)
 
                 # (#295) Always use naturo ref for parent, never raw
@@ -453,6 +506,21 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["keyboard_shortcut"] = props["keyboard_shortcut"]
                 if props.get("source"):
                     d["source"] = props["source"]
+                # (#896) UIA accessibility properties. Emitted only when the
+                # backend reported the property (value is not None) — a bool
+                # False (e.g. is_enabled=False for a disabled control) is a
+                # real, meaningful signal and IS emitted. Absent otherwise so a
+                # backend that never reads them adds no noise to the tree.
+                for _prop_key, _out_key in (
+                    ("is_enabled", "is_enabled"),
+                    ("is_offscreen", "is_offscreen"),
+                    ("help_text", "help_text"),
+                    ("localized_control_type", "localized_control_type"),
+                    ("is_keyboard_focusable", "is_keyboard_focusable"),
+                    ("has_keyboard_focus", "has_keyboard_focus"),
+                ):
+                    if props.get(_prop_key) is not None:
+                        d[_out_key] = props[_prop_key]
                 # (M1) Correctness-tagged fusion: every cascade node carries
                 # techniques[] + correctness + confidence; deterministic first.
                 _fusion = _fusion_annotate(props)
@@ -461,8 +529,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     d["correctness"] = _fusion["correctness"]
                     d["confidence"] = _fusion["confidence"]
                 return d
-            out = to_dict(tree)
-            assert out is not None, "Root element should never be filtered"
+            tree_dict = to_dict(tree)
+            assert tree_dict is not None, "Root element should never be filtered"
+
+            # (#865) Wrap the tree in the canonical success envelope so ``see -j``
+            # emits ``{"success": true, ...}`` on success — matching its own error
+            # path and every other command (``list windows -j`` etc.). The element
+            # tree lives under ``"tree"``; the run-level metadata (snapshot_id,
+            # cascade_stats, recognition_summary, dpi_context) sits alongside it at
+            # the envelope top level, so a scripter can branch on ``.success``.
+            out: dict[str, Any] = {"success": True, "tree": tree_dict}
             if snapshot_id:
                 out["snapshot_id"] = snapshot_id
             if cascade_stats:
@@ -495,6 +571,11 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
             # BUG-071: include short element IDs (e1, e2, ...) that can be
             # passed to ``naturo click e3`` for quick interaction.
             _ref_counter = [0]
+            _CLI_ACTIONABLE = {
+                "button", "hyperlink", "link", "edit", "text", "checkbox",
+                "radiobutton", "combobox", "menuitem", "listitem", "tab",
+                "tabitem", "treeitem", "slider", "spinner", "document",
+            }
 
             def print_tree(el, indent=0, ancestors_dicts=None) -> None:
                 """Print element tree with short element refs."""
@@ -524,6 +605,31 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                     return
 
                 prefix = "  " * indent
+
+                # (goal) --compact: agent-friendly minimal line — eN [role] "name"
+                # [=value], no bounds/props/selectors. Refs still assigned for all
+                # nodes so `naturo click eN` resolves; only meaningful nodes print.
+                # True per-node capabilities: [r]eadable/[a]ctionable/[e]ditable
+                _cp = getattr(el, "properties", {}) or {}
+                _caps = "".join(c for c, k in (("r", "readable"), ("a", "actionable"),
+                                               ("e", "editable")) if _cp.get(k))
+                _caps_str = f" [{_caps}]" if _caps else ""
+
+                if compact:
+                    _name = f' "{el.name}"' if el.name else ""
+                    _val = getattr(el, "value", None)
+                    _val_str = ""
+                    if _val:
+                        _shown, _elided = bounded_value(_val, full=full_text)
+                        _val_str = f" ={_shown!r}"
+                        if _elided:
+                            _val_str += f" …(+{_elided} chars)"
+                    if el.name or (el.role or "").lower() in _CLI_ACTIONABLE or _val:
+                        click.echo(f"{prefix}{ref} [{el.role}]{_name}{_val_str}{_caps_str}")
+                    for child in el.children:
+                        print_tree(child, indent + 1, child_ancestors)
+                    return
+
                 name_str = f' "{el.name}"' if el.name else ""
                 pos_str = f" ({el.x},{el.y} {el.width}x{el.height})"
                 props = getattr(el, "properties", {})
@@ -534,16 +640,16 @@ def see(app: str | None, window_title: str | None, hwnd: int | None, pid: int | 
                 if show_selectors:
                     selector_uri = _build_selector(el, ancestors_dicts)
                     selector_str = f"  {selector_uri}"
-                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{selector_str}")
+                click.echo(f"{prefix}[{el.role}]{name_str}{pos_str} {ref}{source_str}{offscreen_str}{_caps_str}{selector_str}")
 
-                # (#372) Show text preview for Document/Edit elements
-                _vp = props.get("value_preview")
-                if _vp:
-                    click.echo(f"{prefix}  \u00bb {_vp}")
-                elif el.role and el.role.lower() in ("document", "edit", "text") and el.value:
-                    preview = el.value[:100].replace("\n", "\\n").replace("\r", "")
-                    suffix = "\u2026" if len(el.value) > 100 else ""
-                    click.echo(f"{prefix}  \u00bb {preview}{suffix}")
+                # (#372) Show text content for Document/Edit/Text elements: full
+                # when --full-text, otherwise a bounded preview with a marker for
+                # how much was elided (read it all with `naturo get eN`).
+                if el.role and el.role.lower() in ("document", "edit", "text") and el.value:
+                    _shown, _elided = bounded_value(el.value, full=full_text)
+                    disp = _shown.replace("\n", "\\n").replace("\r", "")
+                    suffix = f" \u2026(+{_elided} chars)" if _elided else ""
+                    click.echo(f"{prefix}  \u00bb {disp}{suffix}")
 
                 for child in el.children:
                     print_tree(child, indent + 1, child_ancestors)

@@ -112,8 +112,11 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     if paste_mode and not text:
         text = None  # Signal clipboard-only paste (no text to set)
     elif not text:
-        _common._json_err("TEXT argument is required (or use --paste to paste clipboard)",
-                  json_output, code="INVALID_INPUT")
+        # Missing required positional → usage error, exit 2 (#897). The envelope
+        # code stays INVALID_INPUT; only the exit code differs from a runtime fault.
+        from naturo.cli.error_helpers import emit_usage_error
+        emit_usage_error("TEXT argument is required (or use --paste to paste clipboard)",
+                         json_output)
         return
 
     # (#661) Text is typed literally by default — Windows paths like
@@ -153,6 +156,35 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
             return
 
     backend = _common._get_backend(json_output)
+
+    # (#1160) Close the clipboard-only paste bypass. A bare `type --paste`
+    # (text is None) injects the current clipboard via Ctrl+V — subject to the
+    # exact same SendInput/focus-race threat the #960 guard neutralizes — yet
+    # the text-argument guard above never ran because there was no text. When
+    # the guard is armed, read the clipboard now and run it through the SAME
+    # unsafe_input_reason() check, refusing with UNSAFE_INPUT_BLOCKED (and
+    # injecting nothing) if the pending content is dangerous. Normal users
+    # (guard off) are unaffected: unsafe_input_reason() short-circuits and the
+    # clipboard is not even read.
+    if paste_mode and text is None:
+        from naturo.safety import is_safe_input_enabled, unsafe_input_reason
+        if is_safe_input_enabled():
+            try:
+                _clip = backend.clipboard_get()
+            except Exception as exc:
+                logger.debug("Clipboard read for safety guard failed: %s", exc)
+                _clip = None
+            # Only a real string is inspectable content; anything else
+            # (None / unknown clipboard type) is treated as nothing to check.
+            _unsafe = unsafe_input_reason(_clip if isinstance(_clip, str) else None)
+            if _unsafe:
+                _common._json_err(
+                    f"Refusing to paste unsafe clipboard content ({_unsafe}) "
+                    f"because NATURO_SAFE_INPUT=1 is set. Nothing was pasted.",
+                    json_output,
+                    code="UNSAFE_INPUT_BLOCKED",
+                )
+                return
 
     # Auto-routing: detect best interaction method for target app
     route_info = _common._auto_route(app, None, method, json_output)
@@ -311,6 +343,9 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         # silently.
         _uia_method = route_info.get("method") == "uia" if route_info else False
         _used_uia = False
+        # (#1219) Delivery method of the default reliability ladder (below), so
+        # it is observable in the result the same way MCP reports ``method``.
+        _ladder_method = None
 
         if paste_mode:
             if text is not None:
@@ -378,8 +413,24 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
                 backend.type_text(text, delay_ms=int(delay), profile=profile,
                                   wpm=wpm, input_mode=input_mode)
         else:
-            backend.type_text(text, delay_ms=int(delay), profile=profile,
-                              wpm=wpm, input_mode=input_mode)
+            # (#1219) DEFAULT path — route through the shared IME-immune ladder
+            # (ValuePattern → clipboard paste → keystroke), the SAME helper MCP
+            # ``type_text`` uses. This is the fix: the CLI used to call the raw
+            # keystroke backend here, which CJK/TSF IMEs corrupt ("naturo" ->
+            # "nature"). Explicit escape hatches keep their raw behavior:
+            # ``--paste`` handled above; ``--input-mode hardware|hook`` flows in
+            # as input_mode and smart_type_text sends those straight to the
+            # keystroke rung, bypassing the ladder. ``--restore`` gates the
+            # clipboard rung's save/restore of the user's prior clipboard.
+            from naturo.actions import smart_type_text
+            _ladder_method = smart_type_text(
+                backend, text,
+                input_mode=input_mode,
+                wpm=wpm,
+                delay_ms=int(delay),
+                profile=profile,
+                restore=restore,
+            )
 
         if press_return:
             backend.press_key("enter")
@@ -419,6 +470,10 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
     result_data = {"action": action, "text": display_text, "length": display_len}
     if _used_uia:
         result_data["input_method"] = "uia_set_value"
+    elif _ladder_method:
+        # (#1219) Surface which ladder rung delivered the text
+        # (value_pattern | clipboard_paste | keystroke) — observable like MCP.
+        result_data["input_method"] = _ladder_method
     if on_element:
         result_data["target"] = on_element
     if route_info:
@@ -471,6 +526,12 @@ def type_cmd(text, delay, profile, wpm, press_return, tab_count, escape,
         and _verification.verified is False
         and not paste_mode
         and not _used_uia
+        # (#1219) Don't paste-fallback when the ladder already delivered via
+        # clipboard paste — re-pasting the same way is redundant and risks
+        # double-inserting the text. A keystroke or ValuePattern delivery that
+        # still failed verification is worth retrying via the clipboard, a
+        # genuinely different mechanism.
+        and _ladder_method != "clipboard_paste"
         and text is not None
     ):
         logger.debug("Type verification failed — retrying with paste mode (#425)")

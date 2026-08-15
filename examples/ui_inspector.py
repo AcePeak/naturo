@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Interactive UI tree exploration for a target application.
 
-Lists the UI element tree, lets you inspect elements by reference,
-and demonstrates the see → find → click workflow.
+Reads the UI element tree with the in-process SDK, prints it, and lets you
+inspect elements interactively — demonstrating the see -> find -> click
+workflow without any subprocess.
 
 Requirements:
     - Windows 10/11 with a desktop session
@@ -11,83 +12,68 @@ Requirements:
 Usage:
     python ui_inspector.py notepad
     python ui_inspector.py calculator --depth 3
+    python ui_inspector.py chrome --cascade      # fused UIA+CDP+JAB+COM tree
 """
 
 import argparse
-import json
-import subprocess
 import sys
 
-
-def run(cmd: str) -> str:
-    """Run a naturo CLI command and return stdout."""
-    result = subprocess.run(
-        ["naturo"] + cmd.split(),
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip()
+import naturo
 
 
-def run_json(cmd: str) -> dict:
-    """Run a naturo CLI command with --json and parse the output."""
-    result = subprocess.run(
-        ["naturo"] + cmd.split() + ["--json"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        return {"success": False, "error": result.stderr.strip()}
-    return json.loads(result.stdout)
+def print_tree(element: naturo.Element, depth: int = 0) -> int:
+    """Print an element and its descendants; return the node count."""
+    indent = "  " * depth
+    name = element.name or ""
+    print(f"{indent}[{element.role}]  {name}")
+    count = 1
+    for child in element.children:
+        count += print_tree(child, depth + 1)
+    return count
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Explore UI element tree")
     parser.add_argument("app", help="Application name (e.g. notepad, calculator)")
-    parser.add_argument("--depth", type=int, default=5,
-                        help="Maximum tree depth to display (default: 5)")
+    parser.add_argument("--depth", type=int, default=0,
+                        help="Maximum tree depth (0 = unlimited, the default)")
+    parser.add_argument("--cascade", action="store_true",
+                        help="Fuse UIA + web (CDP) + Java (JAB) + Excel (COM)")
     args = parser.parse_args()
 
     print(f"Inspecting UI tree for '{args.app}'...\n")
 
-    # Get the UI element tree
-    data = run_json(f"see --app {args.app} --depth {args.depth}")
-    if not data.get("success"):
+    desktop = naturo.Desktop()
+    root = desktop.see(app=args.app, depth=args.depth, cascade=args.cascade)
+    if root is None:
         print(f"Failed to inspect {args.app}. Is it running?", file=sys.stderr)
         sys.exit(1)
 
-    elements = data.get("elements", [])
-    print(f"Found {len(elements)} UI elements:\n")
+    total = print_tree(root)
+    print(f"\nFound {total} UI elements.")
 
-    for elem in elements:
-        ref = elem.get("ref", "")
-        role = elem.get("role", "")
-        name = elem.get("name", "")
-        indent = "  " * elem.get("depth", 0)
-        print(f"{indent}{ref:>4}  [{role}]  {name}")
-
-    # Interactive exploration loop
+    # Interactive exploration: search for elements by "Role:Name" selector.
     print("\n--- Interactive Mode ---")
-    print("Enter an element ref (e.g. e1) to inspect, or 'q' to quit.\n")
+    print("Enter a selector (e.g. Button:Save) to find an element, or 'q' to quit.\n")
 
     while True:
         try:
-            ref = input("Inspect ref> ").strip()
+            query = input("Find> ").strip()
         except (EOFError, KeyboardInterrupt):
             break
 
-        if ref.lower() in ("q", "quit", "exit"):
+        if query.lower() in ("q", "quit", "exit"):
             break
-
-        if not ref:
+        if not query:
             continue
 
-        info = run_json(f"find --on {ref} --app {args.app}")
-        if info.get("success"):
-            elem = info.get("element", info)
-            print(json.dumps(elem, indent=2))
+        match = root.find(query)
+        if match is not None:
+            x, y, w, h = match.bounds
+            print(f"  [{match.role}] {match.name!r}  "
+                  f"bounds=({x},{y},{w},{h})  value={match.value!r}")
         else:
-            print(f"Element {ref} not found.")
+            print(f"  No element matching {query!r}.")
 
     print("Done.")
 

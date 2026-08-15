@@ -9,7 +9,7 @@ import click
 
 from naturo.cli import browser_cmd
 from naturo.cli._browser._group import browser
-from naturo.cli.error_helpers import emit_error, emit_exception_error
+from naturo.cli.error_helpers import emit_error, emit_exception_error, success_envelope
 
 
 @browser.command("captcha-detect")
@@ -33,7 +33,7 @@ def captcha_detect(ctx: click.Context, json_output: bool) -> None:
     captchas = manager.detect()
 
     if json_output:
-        click.echo(json_dumps({"captchas": captchas, "count": len(captchas)}))
+        click.echo(json_dumps(success_envelope("captchas", captchas)))
     elif not captchas:
         click.echo("No captchas detected on this page.")
     else:

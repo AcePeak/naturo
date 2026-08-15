@@ -224,7 +224,10 @@ class TestRunCascade:
         be = MagicMock()
         be.get_element_tree.side_effect = get_tree
 
-        result = run_cascade(be, backend_name="auto")
+        # Isolate from any real debuggable browser on a common CDP port — this
+        # test asserts provider fallback, not CDP grafting.
+        with patch("naturo.cascade.find_cdp_port", return_value=None):
+            result = run_cascade(be, backend_name="auto")
 
         assert result.tree is not None
         assert len(result.tree.children) == 1
@@ -240,7 +243,9 @@ class TestRunCascade:
         be = MagicMock()
         be.get_element_tree.return_value = empty_root
 
-        result = run_cascade(be, backend_name="auto")
+        # Isolate from any real debuggable browser on a common CDP port.
+        with patch("naturo.cascade.find_cdp_port", return_value=None):
+            result = run_cascade(be, backend_name="auto")
 
         # Should still return the root (as fallback), not None
         assert result.tree is not None

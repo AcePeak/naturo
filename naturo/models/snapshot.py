@@ -32,6 +32,18 @@ class UIElement:
         parent_id: Parent element's ``id``, or ``None`` for root elements.
         children: Ordered list of child element ``id`` values.
         keyboard_shortcut: Associated keyboard shortcut string (e.g. ``"Ctrl+S"``).
+        is_enabled: UIA ``IsEnabled`` — whether the element is currently
+            interactable (a disabled button is in the tree but not invokable).
+        is_offscreen: UIA ``IsOffscreen`` — element is in the tree but scrolled
+            off-screen; clicking by coords would miss until scrolled into view.
+        help_text: UIA ``HelpText`` — the tooltip/extended description a screen
+            reader announces alongside the name.
+        localized_control_type: UIA ``LocalizedControlType`` — the role name a
+            screen reader announces in the user's locale (e.g. "按钮").
+        is_keyboard_focusable: UIA ``IsKeyboardFocusable`` — can Tab/Shift+Tab
+            reach this element.
+        has_keyboard_focus: UIA ``HasKeyboardFocus`` — element currently holds
+            keyboard focus. (#896)
     """
 
     id: str
@@ -47,6 +59,14 @@ class UIElement:
     parent_id: Optional[str] = None
     children: List[str] = field(default_factory=list)
     keyboard_shortcut: Optional[str] = None
+    # (#896) UIA accessibility properties (all Optional — None when the backend
+    # that produced this element did not report the property).
+    is_enabled: Optional[bool] = None
+    is_offscreen: Optional[bool] = None
+    help_text: Optional[str] = None
+    localized_control_type: Optional[str] = None
+    is_keyboard_focusable: Optional[bool] = None
+    has_keyboard_focus: Optional[bool] = None
 
     # ── Serialisation ────────────────────────────────────────────────────────
 
@@ -66,6 +86,13 @@ class UIElement:
             "parentId": self.parent_id,
             "children": self.children,
             "keyboardShortcut": self.keyboard_shortcut,
+            # (#896) UIA accessibility properties
+            "isEnabled": self.is_enabled,
+            "isOffscreen": self.is_offscreen,
+            "helpText": self.help_text,
+            "localizedControlType": self.localized_control_type,
+            "isKeyboardFocusable": self.is_keyboard_focusable,
+            "hasKeyboardFocus": self.has_keyboard_focus,
         }
 
     @classmethod
@@ -86,6 +113,16 @@ class UIElement:
             parent_id=data.get("parentId", data.get("parent_id")),
             children=data.get("children", []),
             keyboard_shortcut=data.get("keyboardShortcut", data.get("keyboard_shortcut")),
+            # (#896) UIA accessibility properties — accept camelCase or snake_case.
+            is_enabled=data.get("isEnabled", data.get("is_enabled")),
+            is_offscreen=data.get("isOffscreen", data.get("is_offscreen")),
+            help_text=data.get("helpText", data.get("help_text")),
+            localized_control_type=data.get(
+                "localizedControlType", data.get("localized_control_type")),
+            is_keyboard_focusable=data.get(
+                "isKeyboardFocusable", data.get("is_keyboard_focusable")),
+            has_keyboard_focus=data.get(
+                "hasKeyboardFocus", data.get("has_keyboard_focus")),
         )
 
 

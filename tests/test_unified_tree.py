@@ -233,10 +233,13 @@ def test_see_json_emits_fused_correctness_tree(monkeypatch):
     assert res.exit_code == 0, (res.output, res.exception)
 
     data = json.loads(res.stdout)
+    # (#865) Success envelope: tree body under "tree", metadata at top level.
+    assert data["success"] is True
+    tree = data["tree"]
     # Every fused node carries techniques[] + correctness.
-    assert data["techniques"] == ["uia"]
-    assert data["correctness"] == "deterministic"
-    child_techs = {tuple(c["techniques"]) for c in data["children"]}
+    assert tree["techniques"] == ["uia"]
+    assert tree["correctness"] == "deterministic"
+    child_techs = {tuple(c["techniques"]) for c in tree["children"]}
     assert ("uia",) in child_techs and ("vision",) in child_techs
     # Structured summary present and flags the AI-only node.
     assert data["recognition_summary"]["has_uncertain"] is True

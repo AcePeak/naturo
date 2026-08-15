@@ -307,7 +307,7 @@ def run_agent(
 
     executor = ToolExecutor(backend)
     result = AgentResult(instruction=instruction)
-    start_time = time.monotonic()
+    start_time = time.perf_counter()
 
     if capture_dir is None:
         import tempfile
@@ -384,7 +384,7 @@ def run_agent(
         # Reached max steps
         result.error = f"Reached maximum steps ({max_steps}) without completion"
 
-    result.total_time = time.monotonic() - start_time
+    result.total_time = time.perf_counter() - start_time
     return result
 
 

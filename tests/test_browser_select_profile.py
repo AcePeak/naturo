@@ -90,7 +90,7 @@ class TestSelectCli:
         result = runner.invoke(browser, ["select", "#lang", "en", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["status"] == "ok"
+        assert data["success"] is True
         assert data["value"] == "en"
 
     @patch("naturo.cli.browser_cmd._get_page")

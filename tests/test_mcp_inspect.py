@@ -114,7 +114,7 @@ class TestSeeUiTreeCascade:
         result = CascadeResult(tree=root, stats=CascadeStats(), primary_provider="uia")
 
         with patch("naturo.cascade.run_cascade", return_value=result) as mock_cascade:
-            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123})
+            out = _call_tool(server, "see_ui_tree", {"cascade": True, "hwnd": 123, "format": "json"})
 
         mock_cascade.assert_called_once()
         data = json.loads(out[0].text)
@@ -133,9 +133,35 @@ class TestSeeUiTreeCascade:
         assert data["recognition_summary"]["by_technique"].get("cdp") == 1
         assert data["recognition_summary"]["has_uncertain"] is False
 
+    def test_cascade_with_app_routes_through_app_content_tree(self, server, mock_backend):
+        # (calc-zombie) cascade + --app + no hwnd must gather ALL of the app's
+        # windows via app_content_tree (dropping empty UWP ghost frames), mirroring
+        # `see --app --cascade`, instead of a single run_cascade that can land on a
+        # chrome-only ghost.
+        from naturo.backends.base import ElementInfo
+
+        root = ElementInfo(
+            id="w", role="Window", name="Live", value=None,
+            x=0, y=0, width=200, height=200, children=[],
+            properties={"source": "uia"},
+        )
+        with (
+            patch("naturo.cascade._appwindows.app_content_tree",
+                  return_value=(root, None)) as mock_act,
+            patch("naturo.cascade.run_cascade") as mock_cascade,
+        ):
+            out = _call_tool(server, "see_ui_tree",
+                             {"cascade": True, "app": "calc", "format": "json"})
+
+        mock_act.assert_called_once()
+        mock_cascade.assert_not_called()
+        data = json.loads(out[0].text)
+        assert data["success"] is True
+        assert data["tree"]["name"] == "Live"
+
     def test_non_cascade_tree_has_no_fusion_tags(self, server, mock_backend):
         # plain (single-backend) path stays unchanged — no techniques/correctness.
-        out = _call_tool(server, "see_ui_tree", {})
+        out = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(out[0].text)
         assert "techniques" not in data["tree"]
         assert "recognition_summary" not in data
@@ -144,7 +170,7 @@ class TestSeeUiTreeCascade:
 class TestSeeUiTree:
 
     def test_returns_tree_structure(self, server, mock_backend):
-        result = _call_tool(server, "see_ui_tree", {})
+        result = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert "tree" in data
@@ -156,33 +182,162 @@ class TestSeeUiTree:
         assert tree["name"] == "OK"
         assert tree["bounds"] == {"x": 100, "y": 200, "width": 80, "height": 30}
 
+    def test_compact_is_default_and_token_lean(self, server, mock_backend):
+        # Default = compact text: one line per actionable/named node, no bounds/
+        # nulls/raw properties → far fewer tokens, and the LLM reads it directly.
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["format"] == "compact"
+        assert "tree_text" in data and "tree" not in data
+        assert "snapshot_id" in data
+        # the OK button shows up as `eN Button "OK"`, and no bounds/properties leak
+        assert 'Button "OK"' in data["tree_text"]
+        assert "bounds" not in data["tree_text"]
+        assert "properties" not in data["tree_text"]
+        # compact must be much smaller than the JSON tree for the same window
+        js = json.loads(_call_tool(server, "see_ui_tree", {"format": "json"})[0].text)
+        assert len(data["tree_text"]) < len(json.dumps(js["tree"]))
+
+    def test_compact_refs_stay_resolvable_for_click(self, server, mock_backend):
+        # eN refs in compact output must be stored so click/type still resolve.
+        result = _call_tool(server, "see_ui_tree", {})
+        data = json.loads(result[0].text)
+        import re
+        refs = re.findall(r"\be\d+\b", data["tree_text"])
+        assert refs, "compact output must expose eN refs"
+        from naturo.snapshot import get_snapshot_manager
+        mgr = get_snapshot_manager()
+        assert mgr.resolve_ref_element(refs[0], None) is not None
+
+    def test_match_filters_to_intent(self, server, mock_backend):
+        # match="<intent>" returns only matching elements, with resolvable refs.
+        result = _call_tool(server, "see_ui_tree", {"match": "OK"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["match"] == "OK"
+        assert data["matched"] >= 1
+        assert 'Button "OK"' in data["tree_text"]
+        import re
+        refs = re.findall(r"\be\d+\b", data["tree_text"])
+        from naturo.snapshot import get_snapshot_manager
+        assert get_snapshot_manager().resolve_ref_element(refs[0], None) is not None
+
+    def test_match_no_hits_is_empty_but_ok(self, server, mock_backend):
+        result = _call_tool(server, "see_ui_tree", {"match": "zzznotpresent"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["matched"] == 0
+        assert data["tree_text"] == ""
+
+    def test_auto_jab_fallback_when_uia_is_opaque(self, server, mock_backend):
+        # UIA renders Java/Swing as an opaque frame (sparse); see_ui_tree must
+        # transparently re-read via JAB so the agent gets the real controls
+        # instead of screenshotting.
+        uia_frame = _make_element(id="frame", role="Window", name="Java App", children=[])
+        swing = _make_element(id="root", role="Window", name="Java App", children=[
+            _make_element(id="b", role="Button", name="Local Process"),
+            _make_element(id="c", role="RadioButton", name="Remote Process"),
+        ])
+
+        def _by_backend(**kw):
+            return swing if kw.get("backend") == "jab" else uia_frame
+
+        mock_backend.get_element_tree.side_effect = _by_backend
+        result = _call_tool(server, "see_ui_tree", {"hwnd": 1})
+        data = json.loads(result[0].text)
+        # the compact output now carries the JAB-recovered Swing controls
+        assert 'Button "Local Process"' in data["tree_text"]
+        assert 'RadioButton "Remote Process"' in data["tree_text"]
+
+    def test_no_jab_fallback_when_uia_already_rich(self, server, mock_backend):
+        # A normal window with a rich UIA tree must NOT trigger a JAB re-read.
+        rich = _make_element(id="w", role="Window", name="App", children=[
+            _make_element(id=f"n{i}", role="Button", name=f"Btn{i}") for i in range(15)
+        ])
+        calls = []
+
+        def _track(**kw):
+            calls.append(kw.get("backend"))
+            return rich
+
+        mock_backend.get_element_tree.side_effect = _track
+        _call_tool(server, "see_ui_tree", {"hwnd": 1})
+        assert "jab" not in calls  # rich UIA tree → no JAB fallback
+
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"window_title": "Notepad"})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title="Notepad", hwnd=None, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
     def test_custom_depth_and_backend(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"depth": 3, "accessibility_backend": "msaa"})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=None, pid=None,
             depth=3, backend="msaa",
         )
 
     def test_with_hwnd(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"hwnd": 12345})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=12345, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
     def test_with_pid(self, server, mock_backend):
         _call_tool(server, "see_ui_tree", {"pid": 9999})
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app=None, window_title=None, hwnd=None, pid=9999,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
+
+    def test_long_value_bounded_by_default(self, server, mock_backend):
+        # A big Document value must NOT be dumped in full (token-lean); it is
+        # truncated to a preview with a marker for how much was elided.
+        long_text = "".join(f"line{i} " for i in range(200))  # ~1.7k chars
+        doc = _make_element(id="doc", role="Document", name="Editor", value=long_text)
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {})
+        text = json.loads(result[0].text)["tree_text"]
+        assert "chars)" in text          # "…(+N chars)" elision marker
+        assert long_text not in text     # full body not inlined
+        assert len(text) < len(long_text)
+
+    def test_full_text_inlines_complete_value(self, server, mock_backend):
+        long_text = "".join(f"line{i} " for i in range(200))
+        doc = _make_element(id="doc", role="Document", name="Editor", value=long_text)
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {"full_text": True})
+        text = json.loads(result[0].text)["tree_text"]
+        assert long_text in text         # complete value present
+        assert "chars)" not in text      # no truncation marker
+
+    def test_short_value_shown_in_full_by_default(self, server, mock_backend):
+        doc = _make_element(id="e", role="Edit", name="Search", value="hello world")
+        mock_backend.get_element_tree.return_value = doc
+        result = _call_tool(server, "see_ui_tree", {})
+        text = json.loads(result[0].text)["tree_text"]
+        assert "hello world" in text
+        assert "chars)" not in text
+
+    def test_capability_flags_rendered(self, server, mock_backend):
+        # readable/actionable/editable from the backend surface as [rae] so the
+        # agent targets the real interactive node, not a role guess.
+        edit = _make_element(id="in", role="Edit", name="用户名",
+                             properties={"readable": True, "actionable": True,
+                                         "editable": True})
+        btn = _make_element(id="ok", role="Button", name="连接",
+                            properties={"actionable": True})
+        root = _make_element(id="w", role="Window", name="Dlg", children=[edit, btn])
+        mock_backend.get_element_tree.return_value = root
+        text = json.loads(_call_tool(server, "see_ui_tree", {})[0].text)["tree_text"]
+        # the input carries all three; the button only actionable
+        assert any('"用户名"' in ln and ln.rstrip().endswith("[rae]")
+                   for ln in text.splitlines())
+        assert any('"连接"' in ln and ln.rstrip().endswith("[a]")
+                   for ln in text.splitlines())
 
     def test_app_param_triggers_multi_window_enumeration(self, server, mock_backend):
         """When app is provided without hwnd, _resolve_hwnds is used (#737)."""
@@ -194,8 +349,8 @@ class TestSeeUiTree:
         data = json.loads(result[0].text)
         assert data["success"] is True
         mock_backend._resolve_hwnds.assert_called_once_with(app="MyApp")
-        mock_backend.get_element_tree.assert_called_once_with(
-            hwnd=100, depth=7, backend="uia",
+        mock_backend.get_element_tree.assert_any_call(
+            hwnd=100, depth=0, backend="uia",
         )
 
     def test_app_with_multiple_windows_merges_trees(self, server, mock_backend):
@@ -204,7 +359,7 @@ class TestSeeUiTree:
         tree2 = _make_element(id="w2", role="Window", name="Win 2")
         mock_backend._resolve_hwnds.return_value = [100, 200]
         mock_backend.get_element_tree.side_effect = [tree1, tree2]
-        result = _call_tool(server, "see_ui_tree", {"app": "MultiWin"})
+        result = _call_tool(server, "see_ui_tree", {"app": "MultiWin", "format": "json"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         tree = data["tree"]
@@ -227,22 +382,36 @@ class TestSeeUiTree:
         _call_tool(server, "see_ui_tree", {"app": "MyApp", "hwnd": 12345})
         # Should NOT call _resolve_hwnds — hwnd takes priority
         mock_backend._resolve_hwnds.assert_not_called()
-        mock_backend.get_element_tree.assert_called_once_with(
+        mock_backend.get_element_tree.assert_any_call(
             app="MyApp", window_title=None, hwnd=12345, pid=None,
-            depth=7, backend="uia",
+            depth=0, backend="uia",
         )
 
-    def test_depth_below_range_returns_error(self, server):
-        result = _call_tool(server, "see_ui_tree", {"depth": 0})
+    def test_negative_depth_returns_error(self, server):
+        # Only a negative depth is invalid now — 0 = unlimited, positive = honored.
+        result = _call_tool(server, "see_ui_tree", {"depth": -1})
         data = json.loads(result[0].text)
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_INPUT"
 
-    def test_depth_above_range_returns_error(self, server):
-        result = _call_tool(server, "see_ui_tree", {"depth": 11})
+    def test_zero_depth_is_valid_unlimited(self, server):
+        # 0 (unlimited, the default) must NOT be rejected as invalid input.
+        result = _call_tool(server, "see_ui_tree", {"depth": 0})
         data = json.loads(result[0].text)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
+        assert not (
+            data.get("success") is False
+            and data.get("error", {}).get("code") == "INVALID_INPUT"
+        )
+
+    def test_large_depth_is_valid(self, server):
+        # A depth beyond the old 10 ceiling is accepted (native-bounded), so
+        # setting the parameter is never silently useless.
+        result = _call_tool(server, "see_ui_tree", {"depth": 40})
+        data = json.loads(result[0].text)
+        assert not (
+            data.get("success") is False
+            and data.get("error", {}).get("code") == "INVALID_INPUT"
+        )
 
     def test_invalid_backend_returns_error(self, server):
         result = _call_tool(server, "see_ui_tree", {"accessibility_backend": "invalid"})
@@ -261,7 +430,7 @@ class TestSeeUiTree:
         child = _make_element(id="child1", role="Text", name="Hello", children=[])
         parent = _make_element(id="root", role="Window", name="Main", children=[child])
         mock_backend.get_element_tree.return_value = parent
-        result = _call_tool(server, "see_ui_tree", {})
+        result = _call_tool(server, "see_ui_tree", {"format": "json"})
         data = json.loads(result[0].text)
         tree = data["tree"]
         assert len(tree["children"]) == 1
@@ -287,14 +456,16 @@ class TestFindElement:
         assert data["success"] is True
         assert data["element"]["role"] == "Button"
         assert data["element"]["name"] == "OK"
+        # #1246 added hwnd to find_element for uniform window targeting, so the
+        # MCP tool now forwards hwnd (None when unspecified) to the backend.
         mock_backend.find_element.assert_called_once_with(
-            selector="Button:OK", window_title=None,
+            selector="Button:OK", window_title=None, hwnd=None,
         )
 
     def test_with_window_title(self, server, mock_backend):
         _call_tool(server, "find_element", {"selector": "Edit:*search*", "window_title": "Firefox"})
         mock_backend.find_element.assert_called_once_with(
-            selector="Edit:*search*", window_title="Firefox",
+            selector="Edit:*search*", window_title="Firefox", hwnd=None,
         )
 
     def test_element_not_found(self, server, mock_backend):
@@ -490,3 +661,70 @@ class TestExpandCollapseElement:
             "expand": True, "name": "Tree", "window_title": "Explorer",
         })
         mock_backend._resolve_hwnd.assert_called_once_with(window_title="Explorer")
+
+
+# ── read_web_text ────────────────────────────────────────────────────
+
+
+class TestReadWebText:
+
+    def test_reads_rendered_text_via_cdp(self, server, mock_backend):
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = (
+            "Artificial intelligence is transforming the world"
+        )
+        with patch("naturo.cascade.find_cdp_port", return_value=9222), \
+             patch("naturo.cdp.CDPClient", return_value=fake_client):
+            result = _call_tool(server, "read_web_text", {"hwnd": 4332842})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert "Artificial intelligence" in data["text"]
+        assert data["char_count"] == len(fake_client.evaluate.return_value)
+        fake_client.connect.assert_called_once()
+
+    def test_selector_targets_element(self, server, mock_backend):
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = "42"
+        with patch("naturo.cascade.find_cdp_port", return_value=9222), \
+             patch("naturo.cdp.CDPClient", return_value=fake_client):
+            result = _call_tool(
+                server, "read_web_text", {"hwnd": 1, "selector": ".result"}
+            )
+        data = json.loads(result[0].text)
+        assert data["text"] == "42"
+        assert data["selector"] == ".result"
+        expr = fake_client.evaluate.call_args[0][0]
+        assert "querySelector" in expr and ".result" in expr
+
+    def test_no_cdp_endpoint_returns_actionable_error(self, server, mock_backend):
+        with patch("naturo.cascade.find_cdp_port", return_value=None):
+            result = _call_tool(server, "read_web_text", {"hwnd": 1})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "CDP_NOT_AVAILABLE"
+
+    def test_requires_a_target_window(self, server, mock_backend):
+        result = _call_tool(server, "read_web_text", {})
+        data = json.loads(result[0].text)
+        assert data["success"] is False
+        assert data["error"]["code"] == "INVALID_INPUT"
+
+    def test_uses_recorded_port_not_probe(self, server, mock_backend):
+        # launch_browser records hwnd -> port; read_web_text must use that exact
+        # port and NOT blind-probe (which cross-talks when several debuggable
+        # browsers are alive).
+        from naturo.browser import _registry
+        _registry.record(777, 9250)
+        fake_client = MagicMock()
+        fake_client.evaluate.return_value = "this-window's-own-text"
+        try:
+            with patch("naturo.cascade.find_cdp_port", return_value=None) as fcp, \
+                 patch("naturo.cdp.CDPClient", return_value=fake_client) as cc:
+                result = _call_tool(server, "read_web_text", {"hwnd": 777})
+            data = json.loads(result[0].text)
+            assert data["success"] is True
+            assert data["text"] == "this-window's-own-text"
+            fcp.assert_not_called()
+            cc.assert_called_once_with(port=9250)
+        finally:
+            _registry.forget(777)

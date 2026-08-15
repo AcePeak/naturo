@@ -9,7 +9,7 @@ import click
 
 from naturo.cli import browser_cmd
 from naturo.cli._browser._group import browser
-from naturo.cli.error_helpers import emit_exception_error
+from naturo.cli.error_helpers import emit_exception_error, success_envelope
 
 
 # ── Find ──────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
                         "tag": el.tag_name,
                         "text": el.text[:200],
                     })
-                click.echo(json_dumps({"elements": items, "count": len(items)}, indent=2))
+                click.echo(json_dumps(success_envelope("elements", items), indent=2))
             else:
                 if not elements:
                     click.echo("No elements found.")
@@ -72,6 +72,7 @@ def find_cmd(ctx: click.Context, selector: str, by: Optional[str],
             el = page.find(selector)
             if json_output:
                 click.echo(json_dumps({
+                    "success": True,
                     "ref": "e1",
                     "tag": el.tag_name,
                     "text": el.text[:200],
@@ -117,7 +118,7 @@ def click_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         el.click(offset_x=offset_x, offset_y=offset_y)
         if json_output:
-            click.echo(json_dumps({"status": "ok", "selector": selector}))
+            click.echo(json_dumps({"success": True, "selector": selector}))
         else:
             click.echo(f"Clicked: {selector}")
     except RuntimeError as exc:
@@ -154,7 +155,7 @@ def type_cmd(ctx: click.Context, selector: str, text: str, by: Optional[str],
         el = page.find(selector)
         el.type(text, clear_first=clear_first)
         if json_output:
-            click.echo(json_dumps({"status": "ok", "selector": selector, "text": text}))
+            click.echo(json_dumps({"success": True, "selector": selector, "text": text}))
         else:
             click.echo(f"Typed into: {selector}")
     except RuntimeError as exc:
@@ -193,7 +194,7 @@ def select_cmd(ctx: click.Context, selector: str, value: str,
         el.select(value)
         if json_output:
             click.echo(json_dumps({
-                "status": "ok", "selector": selector, "value": value,
+                "success": True, "selector": selector, "value": value,
             }))
         else:
             click.echo(f"Selected '{value}' in: {selector}")
@@ -228,7 +229,7 @@ def text_cmd(ctx: click.Context, selector: str, by: Optional[str], json_output: 
         el = page.find(selector)
         content = el.text
         if json_output:
-            click.echo(json_dumps({"text": content, "selector": selector}))
+            click.echo(json_dumps({"success": True, "text": content, "selector": selector}))
         else:
             click.echo(content)
     except RuntimeError as exc:
@@ -262,7 +263,7 @@ def attr_cmd(ctx: click.Context, selector: str, attribute: str,
         value = el.attr(attribute)
         if json_output:
             click.echo(json_dumps({
-                "attribute": attribute, "value": value, "selector": selector,
+                "success": True, "attribute": attribute, "value": value, "selector": selector,
             }))
         else:
             click.echo(value if value is not None else "(null)")
@@ -296,7 +297,7 @@ def html_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         content = el.outer_html if outer else el.inner_html
         if json_output:
-            click.echo(json_dumps({"html": content, "selector": selector}))
+            click.echo(json_dumps({"success": True, "html": content, "selector": selector}))
         else:
             click.echo(content)
     except RuntimeError as exc:
@@ -331,7 +332,7 @@ def hover_cmd(ctx: click.Context, selector: str, by: Optional[str],
         el = page.find(selector)
         el.hover()
         if json_output:
-            click.echo(json_dumps({"status": "ok", "selector": selector}))
+            click.echo(json_dumps({"success": True, "selector": selector}))
         else:
             click.echo(f"Hovered: {selector}")
     except RuntimeError as exc:

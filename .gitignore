@@ -48,6 +48,18 @@ naturo/bin/*.so
 naturo/bin/*.dylib
 naturo-screen-*.png
 
+# Embedded Python runtime — a ~40MB build artifact assembled by
+# scripts/bundle_python.py (#41). Never committed; rebuilt on demand.
+dist/runtime/
+get-pip.py
+
+# Standalone naturo.exe (#43) — a PyInstaller onefile build artifact, rebuilt on
+# demand via scripts/build_exe.py / naturo.spec. build/ and dist/ are already
+# ignored above; these cover PyInstaller's onefile outputs explicitly.
+*.exe
+*.toc
+*.pkg
+
 # Working directory debug artifacts
 .work/*.png
 .work/*.log

@@ -498,25 +498,30 @@ def _resolve_wildcard_host_forest(
 ) -> Optional[list[dict]]:
     """Build a window-tree forest for an emitted wildcard-host selector (#1190).
 
-    A selector that ``see``/``find`` emit leads with a concrete
-    ``Window[@name="…"]`` segment under the portable wildcard host ``app://*``
-    (e.g. ``app://*/Window[@name="无标题 - Notepad"]/Document[@name="…"]``). For
-    that emitted selector to round-trip without an extra ``--hwnd``/``--app``
-    flag, the named window must be located across ALL top-level windows — not
-    just the foreground window ``get_element_tree`` returns when no target is
-    given (which is usually NOT the window the selector names, hence the
-    ``SELECTOR_NOT_FOUND`` reported in #1190).
+    The wildcard host ``app://*`` with no ``--hwnd``/``--app``/``--window``/
+    ``--pid`` scope means "any app" — a desktop-wide descendant search. Two
+    emitted / hand-written shapes reach here:
 
-    The leading ``Window`` title narrows the search via ``_resolve_hwnds`` so
-    only the matching window's tree is fetched. The function deliberately acts
-    ONLY on this concrete-leading-window shape: it returns ``None`` for any other
-    selector (a bare ``//Role`` short-form, a wildcard/empty leading title, a
-    non-wildcard host), leaving the caller's normal single-window resolution path
-    — and its existing behavior — entirely untouched.
+    * a concrete leading ``Window[@name="…"]`` (what ``see``/``find`` emit, e.g.
+      ``app://*/Window[@name="无标题 - Notepad"]/Document[@name="…"]``) — the
+      named window is located across ALL top-level windows via ``_resolve_hwnds``
+      so only the matching window's tree is fetched (#1190);
+    * a bare ``//Role`` short-form (``app://*/Document``, ``//Button``) — the
+      documented *"any app, descendant search"*: with no leading window title to
+      narrow on, EVERY top-level window is enumerated (via ``list_windows``) and
+      its tree added to the forest, so the role resolves against the whole
+      desktop instead of only the foreground window ``get_element_tree`` returns
+      when no target is given (the #1169 facet-2 no-op).
+
+    Without a wildcard host, or when any scope flag is supplied, the caller does
+    NOT invoke this helper (it resolves the single targeted window directly), so
+    this function only ever runs for the genuinely target-less wildcard host and
+    returns ``None`` when the shape does not apply or no window matched — leaving
+    the caller's normal single-window resolution path untouched.
 
     Args:
-        backend: Platform backend exposing ``_resolve_hwnds`` and
-            ``get_element_tree``.
+        backend: Platform backend exposing ``get_element_tree`` and, for the
+            titled-window shape, ``_resolve_hwnds`` / ``list_windows``.
         ast: Parsed selector AST.
         depth: Maximum tree depth to fetch per window.
         method: Accessibility backend to forward to ``get_element_tree``
@@ -524,22 +529,31 @@ def _resolve_wildcard_host_forest(
 
     Returns:
         A list of window element dicts (a forest the resolver can walk), or
-        ``None`` when this narrow shape does not apply or no window matched.
+        ``None`` when this shape does not apply or no window matched.
     """
     if ast.app != "*" or not ast.nodes:
         return None
-    leading = ast.nodes[0]
-    if leading.role.lower() != "window":
-        return None
-    title = leading.name
-    if not title or "*" in title or "?" in title:
-        return None
-    if not (hasattr(backend, "_resolve_hwnds")
-            and hasattr(backend, "get_element_tree")):
+    if not hasattr(backend, "get_element_tree"):
         return None
 
+    leading = ast.nodes[0]
+    title = leading.name if leading.role.lower() == "window" else None
+    concrete_title = bool(title and "*" not in title and "?" not in title)
+
     try:
-        hwnds = backend._resolve_hwnds(window_title=title)
+        if concrete_title:
+            # Titled-window shape: narrow to the window(s) whose title matches.
+            if not hasattr(backend, "_resolve_hwnds"):
+                return None
+            hwnds = list(backend._resolve_hwnds(window_title=title))
+        else:
+            # Bare //Role short-form (or wildcard/empty leading title): the
+            # documented desktop-wide "any app" search — enumerate every
+            # top-level window and let the resolver walk each tree.
+            if not hasattr(backend, "list_windows"):
+                return None
+            hwnds = [w.handle for w in backend.list_windows()
+                     if getattr(w, "handle", None)]
     except Exception:
         # A window-enumeration fault must not escape uncaught — fall through to
         # the caller's normal single-window path, which attributes its own tree
@@ -595,6 +609,11 @@ def _resolve_selector_target(
     from naturo.selector import (
         parse, SelectorParseError, SelectorResolver, normalize_app_name,
     )
+
+    # (#1189) Track saved-ref vs structural path before the @name is rewritten
+    # to its stored path, so a no-match hint can point a structural selector at
+    # tree inspection instead of the saved-selector registry it never used.
+    _is_saved_ref = selector_str.startswith("@")
 
     # Resolve @app/name references to stored selector strings (#105)
     if selector_str.startswith("@"):
@@ -673,10 +692,19 @@ def _resolve_selector_target(
     result = resolver.resolve(ast, tree_dict)
 
     if result is None:
+        # (#1189) Structural path (app://… / //Role) no-match → point at tree
+        # inspection, not the saved-selector registry; a real saved @app/name ref
+        # keeps the registry's saved-selector guidance.
+        structural_hint = (
+            "Element not found. Use 'naturo see' to inspect the current UI tree, "
+            "verify the selector path (e.g. Role:Name against what 'see' shows), "
+            "or 'naturo wait --element' to wait for it to appear."
+        )
         _json_err(
             f"Selector matched no elements: {selector_str}",
             json_output,
             code="SELECTOR_NOT_FOUND",
+            suggested_action=None if _is_saved_ref else structural_hint,
         )
         return None
 
@@ -966,7 +994,8 @@ def _json_ok(data: dict, json_output: bool) -> None:
 def _json_err(msg: str, json_output: bool, exit_code: int = 1,
               code: str = "ACTION_ERROR", *,
               exc: Optional[BaseException] = None,
-              context: Optional[dict] = None) -> NoReturn:
+              context: Optional[dict] = None,
+              suggested_action: Optional[str] = None) -> NoReturn:
     """Emit error result as JSON or plain text, then exit.
 
     Includes agent-friendly recovery hints from the error_helpers registry.
@@ -1002,7 +1031,8 @@ def _json_err(msg: str, json_output: bool, exit_code: int = 1,
                              exit_code=exit_code)
     if json_output:
         from naturo.cli.error_helpers import json_error
-        click.echo(json_error(code, msg, context=context))
+        click.echo(json_error(code, msg, context=context,
+                              suggested_action=suggested_action))
     else:
         click.echo(f"Error: {msg}", err=True)
     sys.exit(exit_code)

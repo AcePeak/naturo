@@ -17,6 +17,7 @@
 #include <uiautomation.h>
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <string>
 #include <atomic>
 
@@ -184,6 +185,91 @@ static void append_keyboard_shortcut_field(const std::string& shortcut,
  * @param element Element with cached properties.
  * @param out Output string to append JSON to.
  */
+// Read a cached VT_BOOL property (pattern-availability etc.); false if absent.
+static bool cached_bool(IUIAutomationElement* element, PROPERTYID pid) {
+    VARIANT v;
+    VariantInit(&v);
+    bool result = false;
+    if (SUCCEEDED(element->GetCachedPropertyValue(pid, &v)) && v.vt == VT_BOOL) {
+        result = (v.boolVal != VARIANT_FALSE);
+    }
+    VariantClear(&v);
+    return result;
+}
+
+// (#896) Read a VT_BOOL property from the cache (use_cache) or live Current
+// tree; false if absent or not a boolean.
+static bool read_bool_prop(IUIAutomationElement* element, PROPERTYID pid,
+                           bool use_cache) {
+    VARIANT v;
+    VariantInit(&v);
+    bool result = false;
+    HRESULT hr = use_cache ? element->GetCachedPropertyValue(pid, &v)
+                           : element->GetCurrentPropertyValue(pid, &v);
+    if (SUCCEEDED(hr) && v.vt == VT_BOOL) {
+        result = (v.boolVal != VARIANT_FALSE);
+    }
+    VariantClear(&v);
+    return result;
+}
+
+// (#896) Read a VT_BSTR property from the cache (use_cache) or live Current
+// tree; returns JSON-escaped text, or "" when absent/empty.
+static std::string read_string_prop(IUIAutomationElement* element,
+                                    PROPERTYID pid, bool use_cache) {
+    VARIANT v;
+    VariantInit(&v);
+    std::string result;
+    HRESULT hr = use_cache ? element->GetCachedPropertyValue(pid, &v)
+                           : element->GetCurrentPropertyValue(pid, &v);
+    if (SUCCEEDED(hr) && v.vt == VT_BSTR && v.bstrVal &&
+        SysStringLen(v.bstrVal) > 0) {
+        result = json_escape(v.bstrVal);
+    }
+    VariantClear(&v);
+    return result;
+}
+
+// (#896) Append the six UIA accessibility properties as JSON fields, matching
+// the snake_case keys the Python bridge (_models._parse_element) reads:
+// is_enabled, is_offscreen, is_keyboard_focusable, has_keyboard_focus (bools),
+// help_text, localized_control_type (strings, null when empty/absent). Reads
+// from the batched cache when use_cache is true, else the live Current tree.
+static void append_uia_a11y_props(IUIAutomationElement* element, bool use_cache,
+                                  std::string& out) {
+    out += read_bool_prop(element, UIA_IsEnabledPropertyId, use_cache)
+               ? ",\"is_enabled\":true" : ",\"is_enabled\":false";
+    out += read_bool_prop(element, UIA_IsOffscreenPropertyId, use_cache)
+               ? ",\"is_offscreen\":true" : ",\"is_offscreen\":false";
+    out += read_bool_prop(element, UIA_IsKeyboardFocusablePropertyId, use_cache)
+               ? ",\"is_keyboard_focusable\":true"
+               : ",\"is_keyboard_focusable\":false";
+    out += read_bool_prop(element, UIA_HasKeyboardFocusPropertyId, use_cache)
+               ? ",\"has_keyboard_focus\":true" : ",\"has_keyboard_focus\":false";
+
+    std::string help = read_string_prop(element, UIA_HelpTextPropertyId,
+                                        use_cache);
+    out += ",\"help_text\":";
+    if (help.empty()) {
+        out += "null";
+    } else {
+        out += "\"";
+        out += help;
+        out += "\"";
+    }
+
+    std::string lct = read_string_prop(
+        element, UIA_LocalizedControlTypePropertyId, use_cache);
+    out += ",\"localized_control_type\":";
+    if (lct.empty()) {
+        out += "null";
+    } else {
+        out += "\"";
+        out += lct;
+        out += "\"";
+    }
+}
+
 static void append_element_json_cached(IUIAutomationElement* element,
                                         std::string& out) {
     // Read from cache (no IPC — properties already fetched in batch)
@@ -227,6 +313,22 @@ static void append_element_json_cached(IUIAutomationElement* element,
     // (#886) Emit the keyboard shortcut so UIA elements expose the same
     // accessibility metadata as the MSAA/IA2 backends instead of always null.
     append_keyboard_shortcut_field(read_keyboard_shortcut(element, true), out);
+
+    // True per-node capabilities from UIA pattern availability (faithful, not
+    // role-guessed): readable = Value or Text pattern; editable = a writable
+    // ValuePattern; actionable = Invoke or Toggle pattern.
+    bool has_value = cached_bool(element, UIA_IsValuePatternAvailablePropertyId);
+    bool has_text = cached_bool(element, UIA_IsTextPatternAvailablePropertyId);
+    bool readonly = cached_bool(element, UIA_ValueIsReadOnlyPropertyId);
+    bool has_invoke = cached_bool(element, UIA_IsInvokePatternAvailablePropertyId);
+    bool has_toggle = cached_bool(element, UIA_IsTogglePatternAvailablePropertyId);
+    out += (has_value || has_text) ? ",\"readable\":true" : ",\"readable\":false";
+    out += (has_value && !readonly) ? ",\"editable\":true" : ",\"editable\":false";
+    out += (has_invoke || has_toggle) ? ",\"actionable\":true" : ",\"actionable\":false";
+
+    // (#896) Screen-reader accessibility metadata (enabled/offscreen/help/
+    // localized role/keyboard focusability) from the batched cache.
+    append_uia_a11y_props(element, true, out);
 }
 
 /**
@@ -320,6 +422,9 @@ static void build_element_json_current(IUIAutomationTreeWalker* walker,
     // fallback path used when the cache request could not be created).
     append_keyboard_shortcut_field(read_keyboard_shortcut(element, false), out);
 
+    // (#896) Accessibility metadata from live Current properties (fallback path).
+    append_uia_a11y_props(element, false, out);
+
     out += ",\"children\":[";
     if (depth > 1) {
         IUIAutomationElement* child = NULL;
@@ -366,6 +471,24 @@ static HRESULT create_element_cache_request(
     // get_CachedAccessKey resolve without extra cross-process COM calls.
     (*cache_request)->AddProperty(UIA_AcceleratorKeyPropertyId);
     (*cache_request)->AddProperty(UIA_AccessKeyPropertyId);
+    // Per-node capability truth (readable/actionable/editable) — pattern
+    // availability + ValuePattern read-only, batched into the cache so each node
+    // reports what it actually supports without extra COM round-trips.
+    (*cache_request)->AddProperty(UIA_IsValuePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsTextPatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsInvokePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_IsTogglePatternAvailablePropertyId);
+    (*cache_request)->AddProperty(UIA_ValueIsReadOnlyPropertyId);
+    // (#896) UIA accessibility properties surfaced per-element (see
+    // append_uia_a11y_props): enabled/offscreen/keyboard-focusable/has-focus
+    // and help text / localized role. Batched here so the cached reads resolve
+    // without extra cross-process COM calls.
+    (*cache_request)->AddProperty(UIA_IsEnabledPropertyId);
+    (*cache_request)->AddProperty(UIA_IsOffscreenPropertyId);
+    (*cache_request)->AddProperty(UIA_HelpTextPropertyId);
+    (*cache_request)->AddProperty(UIA_LocalizedControlTypePropertyId);
+    (*cache_request)->AddProperty(UIA_IsKeyboardFocusablePropertyId);
+    (*cache_request)->AddProperty(UIA_HasKeyboardFocusPropertyId);
 
     // Fetch direct children scope for tree walking
     (*cache_request)->put_TreeScope(TreeScope_Element);
@@ -376,8 +499,12 @@ static HRESULT create_element_cache_request(
 NATURO_API int naturo_get_element_tree(uintptr_t hwnd, int depth,
                                        char* result_json, int buf_size) {
     if (!result_json || buf_size <= 0) return -1;
-    if (depth < 1) depth = 1;
-    if (depth > 10) depth = 10;
+    // Honor the caller's depth up to a generous bound (matches the CLI's
+    // --depth max). The old cap of 10 silently ignored any larger --depth, so
+    // deeply-nested UIA trees (Electron/WebView DOM-as-UIA, complex WPF/WinForms,
+    // UWP frames) were truncated with no signal. depth <= 0 means "unlimited";
+    // NATURO_MAX_TREE_DEPTH is a stack-safety backstop, not a content limit.
+    if (depth <= 0 || depth > NATURO_MAX_TREE_DEPTH) depth = NATURO_MAX_TREE_DEPTH;
 
     HWND target = (HWND)hwnd;
     if (!target) {
@@ -667,6 +794,8 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
     // (#886) Surface the keyboard shortcut on find results too, so
     // `naturo find` exposes the same accessibility metadata as `see`.
     append_keyboard_shortcut_field(read_keyboard_shortcut(found, use_cache), json);
+    // (#896) Surface the same UIA accessibility metadata on find results.
+    append_uia_a11y_props(found, use_cache, json);
     json += ",\"children\":[]}";
 
     found->Release();
@@ -698,9 +827,16 @@ NATURO_API int naturo_find_element(uintptr_t hwnd, const char* role,
  */
 static IUIAutomationElement* find_element_by_id_or_role(
     IUIAutomation* uia, IUIAutomationElement* root,
-    const char* automation_id, const char* role, const char* name)
+    const char* automation_id, const char* role, const char* name,
+    int hint_x, int hint_y)
 {
     IUIAutomationElement* found = NULL;
+    // A snapshot ref carries the exact element's screen point. When several
+    // elements share the same role+name and no AutomationId (e.g. Windows
+    // Terminal exposes two "命令提示符" Text peers — a tiny label and the full
+    // buffer), a bare FindFirst grabs the wrong one. If a hint point is given,
+    // prefer the match whose bounds contain it; fall back to the first match.
+    const bool have_hint = (hint_x != INT_MIN && hint_y != INT_MIN);
 
     if (automation_id && automation_id[0]) {
         // Search by AutomationId
@@ -772,8 +908,25 @@ static IUIAutomationElement* find_element_by_id_or_role(
                 }
 
                 if (match) {
-                    found = elem;
-                    break;
+                    if (!have_hint) {
+                        found = elem;       // no hint: first match wins (legacy)
+                        break;
+                    }
+                    // With a hint, keep the first match as a fallback but prefer
+                    // the one whose bounds contain the hint point.
+                    RECT r = {0, 0, 0, 0};
+                    elem->get_CurrentBoundingRectangle(&r);
+                    bool contains = (hint_x >= r.left && hint_x < r.right &&
+                                     hint_y >= r.top && hint_y < r.bottom);
+                    if (contains) {
+                        if (found) found->Release();
+                        found = elem;       // exact hit — done
+                        break;
+                    }
+                    if (!found) {
+                        found = elem;       // remember first match, keep scanning
+                        continue;           // (don't Release the one we kept)
+                    }
                 }
                 elem->Release();
             }
@@ -785,6 +938,119 @@ static IUIAutomationElement* find_element_by_id_or_role(
 }
 
 /**
+ * @brief Read an element's text via TextPattern (preferred) then ValuePattern.
+ *
+ * Helper for the raw-view ScrollViewer fallback (#1213). Returns true and fills
+ * @p out (JSON-escaped) only when a pattern yields a NON-EMPTY string; an empty
+ * result leaves @p out untouched and returns false. All COM interfaces are
+ * released on every path.
+ */
+static bool read_element_text_or_value(IUIAutomationElement* el,
+                                       std::string& out) {
+    if (!el) return false;
+
+    // TextPattern first (full document text for multi-line editors).
+    IUnknown* pat_unk = NULL;
+    if (SUCCEEDED(el->GetCurrentPattern(UIA_TextPatternId, &pat_unk)) && pat_unk) {
+        IUIAutomationTextPattern* txp = NULL;
+        if (SUCCEEDED(pat_unk->QueryInterface(
+                __uuidof(IUIAutomationTextPattern), (void**)&txp)) && txp) {
+            IUIAutomationTextRange* range = NULL;
+            if (SUCCEEDED(txp->get_DocumentRange(&range)) && range) {
+                BSTR text = NULL;
+                if (SUCCEEDED(range->GetText(1048576, &text)) && text) {
+                    if (SysStringLen(text) > 0) {
+                        out = json_escape(text);
+                        SysFreeString(text);
+                        range->Release();
+                        txp->Release();
+                        pat_unk->Release();
+                        return true;
+                    }
+                    SysFreeString(text);
+                }
+                range->Release();
+            }
+            txp->Release();
+        }
+        pat_unk->Release();
+    }
+
+    // ValuePattern next.
+    pat_unk = NULL;
+    if (SUCCEEDED(el->GetCurrentPattern(UIA_ValuePatternId, &pat_unk)) && pat_unk) {
+        IUIAutomationValuePattern* vp = NULL;
+        if (SUCCEEDED(pat_unk->QueryInterface(
+                __uuidof(IUIAutomationValuePattern), (void**)&vp)) && vp) {
+            BSTR val = NULL;
+            if (SUCCEEDED(vp->get_CurrentValue(&val)) && val) {
+                if (SysStringLen(val) > 0) {
+                    out = json_escape(val);
+                    SysFreeString(val);
+                    vp->Release();
+                    pat_unk->Release();
+                    return true;
+                }
+                SysFreeString(val);
+            }
+            vp->Release();
+        }
+        pat_unk->Release();
+    }
+
+    return false;
+}
+
+/**
+ * @brief Bounded raw-view DFS for an inner Edit/Document with readable text.
+ *
+ * Helper for the ScrollViewer fallback (#1213). Some multiline controls expose
+ * only a ScrollViewer (Pane, 50033) at the text location in the UIA CONTROL
+ * view; the inner Edit/Document that actually holds the text is hidden from the
+ * control view but present in the RAW view. Walks @p walker (the RawViewWalker)
+ * depth-first under @p element looking for an Edit (50004) or Document (50030)
+ * descendant whose TextPattern/ValuePattern yields non-empty text.
+ *
+ * Bounded to avoid hanging on a huge tree: descends at most @p max_depth levels
+ * and visits at most @p budget nodes total (decremented across the recursion).
+ * Returns true and fills @p out on the first hit.
+ */
+static bool raw_view_find_inner_text(IUIAutomationTreeWalker* walker,
+                                     IUIAutomationElement* element,
+                                     int depth, int max_depth,
+                                     int& budget, std::string& out) {
+    if (!walker || !element || depth > max_depth || budget <= 0) return false;
+
+    IUIAutomationElement* child = NULL;
+    HRESULT hr = walker->GetFirstChildElement(element, &child);
+    while (SUCCEEDED(hr) && child && budget > 0) {
+        --budget;
+
+        CONTROLTYPEID ct = 0;
+        child->get_CurrentControlType(&ct);
+        if (ct == UIA_EditControlTypeId || ct == UIA_DocumentControlTypeId) {
+            if (read_element_text_or_value(child, out)) {
+                child->Release();
+                return true;
+            }
+        }
+
+        if (raw_view_find_inner_text(walker, child, depth + 1, max_depth,
+                                     budget, out)) {
+            child->Release();
+            return true;
+        }
+
+        IUIAutomationElement* next = NULL;
+        hr = walker->GetNextSiblingElement(child, &next);
+        child->Release();
+        child = next;
+    }
+    if (child) child->Release();
+    return false;
+}
+
+/**
  * @brief Query UIA patterns on an element and build a value JSON response.
  *
  * Tries patterns in priority order: Value, Text, Toggle, Selection, RangeValue.
@@ -793,6 +1059,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                                          const char* automation_id,
                                          const char* role_filter,
                                          const char* name_filter,
+                                         int hint_x, int hint_y,
                                          char* result_json, int buf_size) {
     if (!result_json || buf_size <= 0) return -1;
     if (!automation_id && !role_filter && !name_filter) return -1;
@@ -817,7 +1084,7 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
     }
 
     IUIAutomationElement* elem = find_element_by_id_or_role(
-        uia, root, automation_id, role_filter, name_filter);
+        uia, root, automation_id, role_filter, name_filter, hint_x, hint_y);
 
     if (!elem) {
         root->Release();
@@ -847,6 +1114,40 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
     std::string value;
     std::string pattern_name = "null";
     bool has_value = false;
+
+    // 0) TextPattern FIRST for text editors (Document/Edit). ValuePattern on a
+    //    rich multi-line editor (Win11 Notepad's Document) returns only a partial,
+    //    order-scrambled fragment, so read the FULL document text via TextPattern
+    //    when the control is a text editor that supports it. Non-editor controls
+    //    skip this (control-type gate); a plain Win32 Edit with no TextPattern
+    //    falls through to ValuePattern unchanged.
+    if (!has_value &&
+        (elem_ct == UIA_DocumentControlTypeId || elem_ct == UIA_EditControlTypeId)) {
+        IUnknown* pat_unk = NULL;
+        hr = elem->GetCurrentPattern(UIA_TextPatternId, &pat_unk);
+        if (SUCCEEDED(hr) && pat_unk) {
+            IUIAutomationTextPattern* txp = NULL;
+            hr = pat_unk->QueryInterface(
+                __uuidof(IUIAutomationTextPattern), (void**)&txp);
+            if (SUCCEEDED(hr) && txp) {
+                IUIAutomationTextRange* range = NULL;
+                hr = txp->get_DocumentRange(&range);
+                if (SUCCEEDED(hr) && range) {
+                    BSTR text = NULL;
+                    hr = range->GetText(1048576, &text);  // 1MB for large docs (#374)
+                    if (SUCCEEDED(hr) && text) {
+                        value = json_escape(text);
+                        SysFreeString(text);
+                        has_value = true;
+                        pattern_name = "\"TextPattern\"";
+                    }
+                    range->Release();
+                }
+                txp->Release();
+            }
+            pat_unk->Release();
+        }
+    }
 
     // 1) ValuePattern
     if (!has_value) {
@@ -997,6 +1298,52 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
         }
     }
 
+    // 6) (#1213) Raw-view fallback for ScrollViewer-wrapped multiline edits.
+    //    Some multiline controls (e.g. SolidWorks Property Tab Builder) expose
+    //    only a ScrollViewer (Pane, 50033) at the text location in the UIA
+    //    CONTROL view; it advertises Value/Text yet every pattern above reads
+    //    empty, and the inner Edit/Document that holds the text is hidden from
+    //    the control view. ONLY when all control-view attempts returned empty
+    //    AND the element advertises Value/Text (the ScrollViewer signature),
+    //    walk the RAW view for an inner Edit/Document descendant and read its
+    //    text. Strictly additive: elements that already read a value never reach
+    //    this branch, so their behavior is unchanged.
+    if (!has_value) {
+        bool advertises = false;
+        VARIANT v_avail;
+        VariantInit(&v_avail);
+        if (SUCCEEDED(elem->GetCurrentPropertyValue(
+                UIA_IsValuePatternAvailablePropertyId, &v_avail)) &&
+            v_avail.vt == VT_BOOL && v_avail.boolVal == VARIANT_TRUE) {
+            advertises = true;
+        }
+        VariantClear(&v_avail);
+        if (!advertises) {
+            VariantInit(&v_avail);
+            if (SUCCEEDED(elem->GetCurrentPropertyValue(
+                    UIA_IsTextPatternAvailablePropertyId, &v_avail)) &&
+                v_avail.vt == VT_BOOL && v_avail.boolVal == VARIANT_TRUE) {
+                advertises = true;
+            }
+            VariantClear(&v_avail);
+        }
+        if (advertises) {
+            IUIAutomationTreeWalker* raw_walker = NULL;
+            hr = uia->get_RawViewWalker(&raw_walker);
+            if (SUCCEEDED(hr) && raw_walker) {
+                int budget = 200;   // cap total raw-view nodes visited
+                std::string inner;
+                if (raw_view_find_inner_text(raw_walker, elem, 0, 6,
+                                             budget, inner)) {
+                    value = inner;
+                    has_value = true;
+                    pattern_name = "\"RawViewFallback\"";
+                }
+                raw_walker->Release();
+            }
+        }
+    }
+
     // Build JSON response
     std::string json;
     json.reserve(1024);
@@ -1071,11 +1418,14 @@ NATURO_API int naturo_get_element_value(uintptr_t hwnd,
                                          const char* automation_id,
                                          const char* role,
                                          const char* name,
+                                         int hint_x, int hint_y,
                                          char* result_json, int buf_size) {
     (void)hwnd;
     (void)automation_id;
     (void)role;
     (void)name;
+    (void)hint_x;
+    (void)hint_y;
     (void)result_json;
     (void)buf_size;
     return -2;  // Not supported on this platform

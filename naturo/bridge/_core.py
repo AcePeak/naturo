@@ -204,7 +204,8 @@ class NaturoCore:
             self._lib.naturo_get_element_value.restype = ctypes.c_int
             self._lib.naturo_get_element_value.argtypes = [
                 ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p,
-                ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int
+                ctypes.c_char_p, ctypes.c_int, ctypes.c_int,
+                ctypes.c_char_p, ctypes.c_int
             ]
         except AttributeError:
             pass  # DLL lacks this export; get_element_value() will raise
@@ -218,6 +219,20 @@ class NaturoCore:
 
         self._lib.naturo_phys_key_hotkey.restype = ctypes.c_int
         self._lib.naturo_phys_key_hotkey.argtypes = [ctypes.c_int, ctypes.c_char_p]
+
+        # Win32 API hooking (MinHook). Bound defensively — a DLL built before
+        # the hooks feature simply lacks these exports, and the hook_* methods
+        # raise a clear error at call time (see _require_hook_export).
+        self._bind("naturo_hook_install", ctypes.c_int,
+                   [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int])
+        self._bind("naturo_hook_list", ctypes.c_int, [ctypes.c_char_p, ctypes.c_int])
+        self._bind("naturo_hook_remove", ctypes.c_int,
+                   [ctypes.c_char_p, ctypes.c_char_p])
+        self._bind("naturo_hook_drain_log", ctypes.c_int,
+                   [ctypes.c_char_p, ctypes.c_int])
+        self._bind("naturo_hook_clear", ctypes.c_int, [])
+        self._bind("naturo_hook_supported", ctypes.c_int,
+                   [ctypes.c_char_p, ctypes.c_int])
 
     def _load(self, lib_path: str | None) -> ctypes.CDLL:
         """Load the native library from the given path or search standard locations.
@@ -556,6 +571,8 @@ class NaturoCore:
         automation_id: Optional[str] = None,
         role: Optional[str] = None,
         name: Optional[str] = None,
+        hint_x: Optional[int] = None,
+        hint_y: Optional[int] = None,
     ) -> Optional[dict]:
         """Read the current value of a UI element using UIA patterns.
 
@@ -568,6 +585,9 @@ class NaturoCore:
             automation_id: AutomationId of the target element.
             role: Element role filter (used when automation_id is None).
             name: Element name filter (used when automation_id is None).
+            hint_x, hint_y: Optional screen point disambiguating a role+name
+                search when several elements share them (no AutomationId). The
+                match whose bounds contain the point wins; else the first match.
 
         Returns:
             Dict with keys: value, pattern, role, name, automation_id,
@@ -592,7 +612,11 @@ class NaturoCore:
                 "(recompile the DLL with the latest source)",
             )
 
-        rc = fn(hwnd, aid_bytes, role_bytes, name_bytes, buf, buf_size)
+        # INT_MIN sentinel = "no hint" (matches the native have_hint check).
+        _NO_HINT = -2147483648
+        hx = hint_x if hint_x is not None else _NO_HINT
+        hy = hint_y if hint_y is not None else _NO_HINT
+        rc = fn(hwnd, aid_bytes, role_bytes, name_bytes, hx, hy, buf, buf_size)
 
         if rc == 1:
             return None  # Not found
@@ -819,6 +843,127 @@ class NaturoCore:
         rc = self._lib.naturo_phys_key_hotkey(modifiers, key_bytes)
         if rc != 0:
             raise NaturoCoreError(rc, f"phys_key_hotkey({keys!r})")
+
+    # ── Win32 API Hooking (MinHook) ──────────────────
+
+    _HOOK_ACTIONS = {"log": 0, "block": 1}
+
+    def _require_hook_export(self, name: str):
+        """Return a bound hook export, or raise a clear error if the DLL lacks it.
+
+        A ``naturo_core`` built before the hooks feature simply does not export
+        these symbols; surface that as an actionable error rather than a bare
+        ``AttributeError`` from ctypes.
+        """
+        try:
+            return getattr(self._lib, name)
+        except AttributeError:
+            raise NaturoCoreError(
+                -1,
+                f"{name}: this naturo_core build does not export the Win32 hook "
+                f"API (rebuild the DLL from the latest source)",
+            )
+
+    def hook_install(self, module: str, function: str, action: str = "log") -> None:
+        """Install (or re-arm) an in-process hook on a supported Win32 API.
+
+        Args:
+            module: Module/DLL name (e.g. "user32" or "user32.dll").
+            function: Exported function name (e.g. "MessageBoxW").
+            action: "log" to record and forward the call, or "block" to record
+                and return a per-API sentinel without calling the original.
+
+        Raises:
+            NaturoCoreError: On invalid/unsupported API or a MinHook error.
+        """
+        if not module or not function:
+            raise NaturoCoreError(-1, "hook_install")
+        act = self._HOOK_ACTIONS.get(action.lower())
+        if act is None:
+            raise NaturoCoreError(-1, f"hook_install: unknown action {action!r} (use 'log' or 'block')")
+        fn = self._require_hook_export("naturo_hook_install")
+        rc = fn(module.encode("utf-8"), function.encode("utf-8"), act)
+        if rc != 0:
+            raise NaturoCoreError(rc, f"hook_install({module}!{function})")
+
+    def hook_remove(self, module: str, function: str) -> bool:
+        """Remove a previously installed hook.
+
+        Args:
+            module: Module/DLL name (as accepted by :meth:`hook_install`).
+            function: Exported function name.
+
+        Returns:
+            True if a hook was removed, False if none was installed.
+
+        Raises:
+            NaturoCoreError: On invalid argument or a MinHook error.
+        """
+        if not module or not function:
+            raise NaturoCoreError(-1, "hook_remove")
+        fn = self._require_hook_export("naturo_hook_remove")
+        rc = fn(module.encode("utf-8"), function.encode("utf-8"))
+        if rc == 1:
+            return False  # Not installed.
+        if rc != 0:
+            raise NaturoCoreError(rc, f"hook_remove({module}!{function})")
+        return True
+
+    def hook_list(self) -> list[dict]:
+        """List the currently installed hooks.
+
+        Returns:
+            A list of dicts: ``{"module", "function", "action", "call_count"}``.
+
+        Raises:
+            NaturoCoreError: On a buffer or native error.
+        """
+        return self._hook_read_array("naturo_hook_list", "hook_list")
+
+    def hook_drain_log(self) -> list[dict]:
+        """Drain (return and clear) the monitored-call log.
+
+        Returns:
+            A list of dicts: ``{"seq", "module", "function", "action", "detail"}``
+            ordered oldest-first. The native log buffer is cleared by this call.
+
+        Raises:
+            NaturoCoreError: On a buffer or native error.
+        """
+        return self._hook_read_array("naturo_hook_drain_log", "hook_drain_log")
+
+    def hook_supported(self) -> list[dict]:
+        """List the Win32 APIs this DLL build knows how to hook.
+
+        Returns:
+            A list of dicts: ``{"module", "function"}``.
+
+        Raises:
+            NaturoCoreError: On a buffer or native error.
+        """
+        return self._hook_read_array("naturo_hook_supported", "hook_supported")
+
+    def hook_clear(self) -> None:
+        """Remove every installed hook and clear the monitored-call log."""
+        fn = self._require_hook_export("naturo_hook_clear")
+        rc = fn()
+        if rc != 0:
+            raise NaturoCoreError(rc, "hook_clear")
+
+    def _hook_read_array(self, export: str, op_name: str) -> list[dict]:
+        """Call a JSON-array-returning hook export with buffer-growth retry."""
+        fn = self._require_hook_export(export)
+        buf_size = 1 << 16  # 64 KB
+        buf = ctypes.create_string_buffer(buf_size)
+        count = fn(buf, buf_size)
+        if count == -4:
+            buf_size = 1 << 20  # 1 MB retry
+            buf = ctypes.create_string_buffer(buf_size)
+            count = fn(buf, buf_size)
+        if count < 0:
+            raise NaturoCoreError(count, op_name)
+        data = _safe_json_loads(_decode_native(buf.value))
+        return data if isinstance(data, list) else []
 
     # ── Phase 5B: MSAA / IAccessible ─────────────────
 

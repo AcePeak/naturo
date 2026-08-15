@@ -11,7 +11,7 @@ GUARDRAILS_PATH = Path(__file__).resolve().parent.parent / "agents" / "config" /
 @pytest.fixture(scope="module")
 def config():
     assert GUARDRAILS_PATH.exists(), f"Missing {GUARDRAILS_PATH}"
-    with open(GUARDRAILS_PATH) as fh:
+    with open(GUARDRAILS_PATH, encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 

@@ -71,6 +71,55 @@ def test_every_tool_has_a_description() -> None:
         assert tool.get("description"), f"tool '{tool['name']}' has no description"
 
 
+def test_selfcontained_manifest_points_at_bundled_python() -> None:
+    """The self-contained manifest launches the vendored interpreter via ${__dirname}."""
+    manifest = build_mcpb.assemble_selfcontained_manifest()
+    config = manifest["server"]["mcp_config"]
+    assert config["command"] == "${__dirname}/server/runtime/python/python.exe"
+    assert config["args"] == ["-m", "naturo", "mcp", "start"]
+    # No stale `pip install naturo` prerequisite text in the self-contained blurb.
+    assert "pip install naturo" not in manifest["long_description"]
+
+
+def test_selfcontained_manifest_is_valid_json_and_consistent() -> None:
+    """It round-trips through JSON and keeps the required fields + tool surface."""
+    manifest = build_mcpb.assemble_selfcontained_manifest()
+    reloaded = json.loads(json.dumps(manifest))  # must be JSON-serialisable
+    for field in build_mcpb._REQUIRED_FIELDS:
+        assert field in reloaded, f"self-contained manifest missing required field '{field}'"
+    thin = build_mcpb.assemble_manifest()
+    assert reloaded["version"] == thin["version"] == __version__
+    assert reloaded["tools"] == thin["tools"], "tool surface must match the thin bundle"
+    assert reloaded["compatibility"]["platforms"] == ["win32"]
+
+
+def test_ensure_core_dll_vendors_when_wheel_lacks_it(tmp_path: Path) -> None:
+    """A missing native core is vendored from the fallback source and verified."""
+    runtime = tmp_path / "runtime"
+    (runtime / "Lib" / "site-packages" / "naturo").mkdir(parents=True)
+    source = tmp_path / "naturo_core.dll"
+    source.write_bytes(b"MZ-fake-native-core")
+
+    dll_path, label = build_mcpb.ensure_core_dll(runtime, source)
+
+    assert dll_path.is_file()
+    assert dll_path.name == "naturo_core.dll"
+    assert label == "vendored from naturo/bin"
+
+
+def test_ensure_core_dll_keeps_wheel_provided_dll(tmp_path: Path) -> None:
+    """A DLL already shipped by the wheel is kept and reported as such."""
+    runtime = tmp_path / "runtime"
+    bin_dir = runtime / "Lib" / "site-packages" / "naturo" / "bin"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "naturo_core.dll").write_bytes(b"MZ-wheel-native-core")
+
+    dll_path, label = build_mcpb.ensure_core_dll(runtime, tmp_path / "does-not-exist.dll")
+
+    assert dll_path.is_file()
+    assert label == "published wheel"
+
+
 def test_build_produces_valid_bundle(tmp_path: Path) -> None:
     """build_bundle writes a zip with manifest.json at its root."""
     output = tmp_path / "naturo.mcpb"

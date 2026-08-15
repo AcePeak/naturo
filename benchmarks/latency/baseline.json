@@ -1,0 +1,15 @@
+{
+  "_comment": "Latency regression baseline for issue #418. p90_ms values are PLACEHOLDER-but-plausible millisecond budgets for a full-cascade see/find over the offline Chromium fixture. Regenerate on a known-good runner with `python -m benchmarks.latency.run_latency` and copy the measured p90 for each operation here; do NOT hand-tune. tolerance_pct is the allowed p90 slowdown before CI fails. run_latency.py --baseline consumes the `operations` map.",
+  "fixture": "benchmarks/recognition/fixtures/webapp.html",
+  "default_tolerance_pct": 25.0,
+  "operations": {
+    "see": {
+      "p90_ms": 450.0,
+      "tolerance_pct": 25.0
+    },
+    "find": {
+      "p90_ms": 480.0,
+      "tolerance_pct": 25.0
+    }
+  }
+}

@@ -201,6 +201,11 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         "clipboard clear", "clipboard get", "clipboard info", "clipboard set",
         # Pure on-disk config.
         "config clear", "config setup anthropic", "config show",
+        # Win32 API hooking (#40) -- drives the native MinHook hook engine in
+        # naturo_core (install/list/remove/monitor in-process hooks), not the
+        # desktop UI automation backend, so it never routes through
+        # require_desktop_session / the guarded _get_backend.
+        "hook install", "hook list", "hook monitor", "hook remove",
         # Diagnostic self-check -- probes session/DPI/deps defensively and
         # reports availability (e.g. "Desktop session: no") instead of
         # acquiring the desktop backend, so it never routes through
@@ -208,12 +213,16 @@ _CLI_SESSION_INDEPENDENT = frozenset(
         # hidden alias of ``doctor`` (#1048) sharing the same code path.
         "doctor", "info",
         # Excel COM automation -- its own backend, not desktop UIA.
-        "excel info", "excel list-sheets", "excel open", "excel read",
-        "excel run-macro", "excel write",
+        "excel create-chart", "excel info", "excel list-sheets", "excel open",
+        "excel read", "excel run-macro", "excel write",
         # Pure help; permissions listing is an unimplemented stub (no backend).
         "help", "list permissions",
         # MCP / daemon management.
         "mcp install", "mcp start", "mcp tools",
+        # Script runner (#42): spawns a subprocess interpreter to run a user
+        # script; the command itself never acquires the desktop backend — any
+        # UI use is the child script's concern, not `naturo run`'s.
+        "run",
         # On-disk recording store management + replay setup.
         "record delete", "record export", "record list", "record play",
         "record show", "record start", "record stop",

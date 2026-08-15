@@ -8,6 +8,59 @@ import platform
 import click
 
 import naturo.cli.core._common as _common
+from naturo.cli._field import emit_projection, field_option, parse_fields, resolve_fields
+
+# Row schemas for --field projection (#1206). Kept next to the emitters below so
+# the valid-field set stays in lockstep with the dicts those emitters build.
+_WINDOW_FIELDS = (
+    "id", "handle", "hwnd", "title", "process_name", "pid",
+    "x", "y", "width", "height", "is_visible", "is_minimized",
+)
+_SCREEN_FIELDS = (
+    "index", "name", "device_path", "x", "y", "width", "height",
+    "is_primary", "scale_factor", "dpi", "work_area",
+)
+
+
+def _window_state(w) -> str:
+    """Reliable OS-level usability label: "min" (minimized), "hidden" (not
+    visible), or "live". Kept to hard OS facts on purpose — per-handle content
+    probing is unreliable for UWP (the app UI lives in a CoreWindow child and
+    which frame handle "sees" it varies run to run), so this does NOT guess
+    content; the duplicate-handle collapse below is what removes the noise."""
+    if getattr(w, "is_minimized", False):
+        return "min"
+    if not getattr(w, "is_visible", True):
+        return "hidden"
+    return "live"
+
+
+def _dedup_windows(win_list):
+    """Collapse duplicate handles of the SAME window to one usable representative.
+
+    A single window often has SEVERAL top-level HWNDs sharing one (pid, title) —
+    UWP frames, off-screen helper strips, ghost handles — so a raw list gives the
+    caller a pile of interchangeable/unusable handles for one window. Group by
+    (pid, title) and keep the most-usable handle in each group (prefer visible,
+    non-minimized, largest). Genuinely different windows (different titles, or
+    different processes) are never merged.
+    """
+    def _rank(w):
+        return (
+            1 if not getattr(w, "is_minimized", False) else 0,
+            1 if getattr(w, "is_visible", True) else 0,
+            (getattr(w, "width", 0) or 0) * (getattr(w, "height", 0) or 0),
+        )
+    groups: dict = {}
+    order: list = []
+    for w in win_list:
+        key = (w.pid, w.title)
+        if key not in groups:
+            groups[key] = w
+            order.append(key)
+        elif _rank(w) > _rank(groups[key]):
+            groups[key] = w
+    return [groups[k] for k in order]
 
 
 @click.group("list", cls=_common.FuzzyGroup)
@@ -19,11 +72,12 @@ def list_cmd() -> None:
 @list_cmd.command()
 @click.option("--all", "show_all", is_flag=True, help="Show all processes (not just apps with windows)")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
+@field_option
 @click.pass_context
-def apps(ctx, show_all, json_output) -> None:
+def apps(ctx, show_all, json_output, field) -> None:
     """List running applications (delegates to 'app list')."""
     from naturo.cli.app_cmd import app_list
-    ctx.invoke(app_list, show_all=show_all, json_output=json_output)
+    ctx.invoke(app_list, show_all=show_all, json_output=json_output, field=field)
 
 
 @list_cmd.command()
@@ -36,7 +90,12 @@ def apps(ctx, show_all, json_output) -> None:
               help='Stable app/window ID from "naturo app list" output (e.g. a1)')
 @click.option("--pid", type=int, help="Process ID")
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
+@click.option("--all", "-a", "show_all", is_flag=True,
+              help="Show every raw HWND. By default, duplicate handles of the "
+                   "same window (UWP frames/helper strips sharing one pid+title) "
+                   "are collapsed to one usable handle per window.")
+@field_option
+def windows(app, window_title, hwnd, app_id, pid, json_output, show_all, field) -> None:
     """List open windows.
 
     Shows all visible top-level windows with their handles, titles,
@@ -116,6 +175,14 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
         if pid:
             win_list = [w for w in win_list if w.pid == pid]
 
+        # Collapse duplicate handles of the same window (see _dedup_windows) so
+        # the list shows one usable handle per real window instead of a pile of
+        # UWP frame/helper dupes. --all keeps every handle. An explicit --hwnd/
+        # --app-id filter is never collapsed: return exactly the handle asked for.
+        if not show_all and hwnd is None and app_id_handle is None:
+            win_list = _dedup_windows(win_list)
+        _states = {w.handle: _window_state(w) for w in win_list}
+
         # Warn only when an empty result genuinely indicates no interactive
         # desktop session — i.e. the *raw* enumeration found nothing and the
         # canonical WTS check confirms this process has no desktop (#1010).
@@ -130,7 +197,11 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
                     err=True,
                 )
 
-        if json_output:
+        # Build the canonical row schema whenever it is needed — for the `-j`
+        # payload or for `--field` projection (which reuses these exact rows so
+        # the projected keys never drift from the emitted schema, #1206).
+        fields = parse_fields(field)
+        if json_output or fields is not None:
             # Assign stable session-scoped IDs (a1, a2, ...) on the listed
             # windows so each entry is directly targetable with --app-id, matching
             # `list apps` / `app list` (#952). Without this the emitted `id` would
@@ -157,19 +228,26 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
                 }
                 for i, w in enumerate(win_list, start=1)
             ]
+
+        if fields is not None:
+            resolve_fields(fields, _WINDOW_FIELDS, json_output)
+            emit_projection(data, fields, "windows", json_output)
+        elif json_output:
             click.echo(json_dumps({"success": True, "windows": data, "count": len(data)}, indent=2))
         else:
             if not win_list:
                 click.echo("No windows found.")
                 return
             # Table-like output
-            click.echo(f"{'HWND':<16} {'PID':<8} {'SIZE':<14} {'TITLE'}")
-            click.echo("-" * 70)
+            click.echo(f"{'HWND':<16} {'PID':<8} {'SIZE':<14} {'STATE':<8} {'TITLE'}")
+            click.echo("-" * 78)
             for w in win_list:
                 size = f"{w.width}x{w.height}"
+                state = _states.get(w.handle, "") or "live"
                 title = w.title[:40] if len(w.title) > 40 else w.title
-                click.echo(f"{w.handle:<16} {w.pid:<8} {size:<14} {title}")
-            click.echo(f"\n{len(win_list)} windows found.")
+                click.echo(f"{w.handle:<16} {w.pid:<8} {size:<14} {state:<8} {title}")
+            _hidden = "" if show_all else "  (duplicate handles collapsed; --all to show every handle)"
+            click.echo(f"\n{len(win_list)} windows found.{_hidden}")
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -177,7 +255,8 @@ def windows(app, window_title, hwnd, app_id, pid, json_output) -> None:
 
 @list_cmd.command()
 @click.option("--json", "-j", "json_output", is_flag=True, help="JSON output")
-def screens(json_output) -> None:
+@field_option
+def screens(json_output, field) -> None:
     """List connected screens/monitors.
 
     Shows monitor index, resolution, position, DPI scale factor, and
@@ -188,7 +267,8 @@ def screens(json_output) -> None:
         backend = _common._get_backend(json_output)
         monitors = backend.list_monitors()
 
-        if json_output:
+        fields = parse_fields(field)
+        if json_output or fields is not None:
             items = []
             for m in monitors:
                 # (#359) Use model_name as 'name', keep device path separate
@@ -208,6 +288,11 @@ def screens(json_output) -> None:
                 if m.work_area:
                     item["work_area"] = m.work_area
                 items.append(item)
+
+        if fields is not None:
+            resolve_fields(fields, _SCREEN_FIELDS, json_output)
+            emit_projection(items, fields, "monitors", json_output)
+        elif json_output:
             click.echo(json_dumps({"success": True, "monitors": items, "count": len(items)}, indent=2))
         else:
             from naturo.cli.table import print_table

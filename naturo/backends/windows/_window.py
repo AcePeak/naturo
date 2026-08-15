@@ -152,31 +152,50 @@ class WindowMixin:
         if self._is_iconic(handle):
             ctypes.windll.user32.ShowWindow(handle, SW_RESTORE)
 
-        # SetForegroundWindow fails silently when caller is not the foreground
-        # process. Use AttachThreadInput trick to work around this Windows
-        # restriction: attach to the target window's thread, set foreground,
-        # then detach.
-        foreground_hwnd = ctypes.windll.user32.GetForegroundWindow()
+        # SetForegroundWindow is silently ignored when the caller is a
+        # background process (the MCP server never holds the foreground): the
+        # old single-shot attempt returned while the window did NOT come
+        # forward, so subsequent keystroke/paste landed in the WRONG window.
+        # Harden it: clear the foreground-lock timeout, then retry
+        # AttachThreadInput + foreground + activate + focus, VERIFYING
+        # GetForegroundWindow each round until the switch actually sticks.
+        import time
+        u = ctypes.windll.user32
         current_tid = ctypes.windll.kernel32.GetCurrentThreadId()
-        target_tid = ctypes.windll.user32.GetWindowThreadProcessId(handle, None)
-        fg_tid = ctypes.windll.user32.GetWindowThreadProcessId(foreground_hwnd, None)
-
-        attached_target = False
-        attached_fg = False
+        target_tid = u.GetWindowThreadProcessId(handle, None)
+        # Clear SPI_SETFOREGROUNDLOCKTIMEOUT (0x2000) so a background process is
+        # allowed to steal the foreground; SPIF_SENDCHANGE (0x2) broadcasts it.
         try:
-            if current_tid != target_tid:
-                attached_target = bool(ctypes.windll.user32.AttachThreadInput(current_tid, target_tid, True))
-            if current_tid != fg_tid and fg_tid != target_tid:
-                attached_fg = bool(ctypes.windll.user32.AttachThreadInput(current_tid, fg_tid, True))
+            u.SystemParametersInfoW(0x2000, 0, 0, 0x2)
+        except Exception:
+            pass
+        for _attempt in range(6):
+            if u.GetForegroundWindow() == handle:
+                return
+            foreground_hwnd = u.GetForegroundWindow()
+            fg_tid = u.GetWindowThreadProcessId(foreground_hwnd, None)
+            attached_target = False
+            attached_fg = False
+            try:
+                if current_tid != target_tid:
+                    attached_target = bool(u.AttachThreadInput(current_tid, target_tid, True))
+                if current_tid != fg_tid and fg_tid != target_tid:
+                    attached_fg = bool(u.AttachThreadInput(current_tid, fg_tid, True))
 
-            ctypes.windll.user32.ShowWindow(handle, SW_SHOW)
-            ctypes.windll.user32.BringWindowToTop(handle)
-            ctypes.windll.user32.SetForegroundWindow(handle)
-        finally:
-            if attached_target:
-                ctypes.windll.user32.AttachThreadInput(current_tid, target_tid, False)
-            if attached_fg:
-                ctypes.windll.user32.AttachThreadInput(current_tid, fg_tid, False)
+                u.ShowWindow(handle, SW_SHOW)
+                u.BringWindowToTop(handle)
+                u.SetForegroundWindow(handle)
+                u.SetActiveWindow(handle)
+                u.SetFocus(handle)
+            finally:
+                if attached_target:
+                    u.AttachThreadInput(current_tid, target_tid, False)
+                if attached_fg:
+                    u.AttachThreadInput(current_tid, fg_tid, False)
+
+            if u.GetForegroundWindow() == handle:
+                return
+            time.sleep(0.04)
 
     def close_window(self, title: Optional[str] = None, hwnd: Optional[int] = None,
                      force: bool = False) -> None:

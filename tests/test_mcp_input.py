@@ -128,11 +128,14 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "hello world"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        mock_backend.type_text.assert_called_once_with(
-            text="hello world", wpm=120, input_mode="normal",
-        )
+        # Normal mode with no writable ValuePattern → atomic clipboard paste.
+        assert data["method"] == "clipboard_paste"
+        mock_backend.clipboard_set.assert_any_call("hello world")
 
     def test_type_text_custom_wpm(self, server, mock_backend):
+        # wpm only applies to the keystroke fallback; force it by making paste
+        # unavailable, then confirm wpm reaches the backend.
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         result = _call_tool(server, "type_text", {"text": "fast", "wpm": 300})
         data = json.loads(result[0].text)
         assert data["success"] is True
@@ -150,8 +153,7 @@ class TestTypeText:
         result = _call_tool(server, "type_text", {"text": "日本語テスト 🎉"})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        call_kwargs = mock_backend.type_text.call_args[1]
-        assert call_kwargs["text"] == "日本語テスト 🎉"
+        mock_backend.clipboard_set.assert_any_call("日本語テスト 🎉")
 
     def test_type_text_hardware_mode(self, server, mock_backend):
         result = _call_tool(server, "type_text", {"text": "hw", "input_mode": "hardware"})
@@ -171,13 +173,25 @@ class TestTypeText:
         mock_backend.set_focused_element_value.assert_called_once_with("naturo", append=True)
         mock_backend.type_text.assert_not_called()
 
-    def test_type_text_falls_back_to_keystroke_without_value_pattern(self, server, mock_backend):
-        """No focused ValuePattern control (default) → keystroke injection."""
+    def test_type_text_falls_back_to_clipboard_paste_without_value_pattern(self, server, mock_backend):
+        """No writable ValuePattern (default) → clipboard paste: atomic and
+        IME-immune. A fast per-key SendInput drops chars on heavy controls like
+        Win11 Notepad ("hello from naturo" -> "hello      turo")."""
+        result = _call_tool(server, "type_text", {"text": "naturo"})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        assert data["method"] == "clipboard_paste"
+        mock_backend.set_focused_element_value.assert_called_once()
+        # paste path used → no per-key keystroke injection
+        mock_backend.type_text.assert_not_called()
+
+    def test_type_text_falls_back_to_keystroke_when_paste_unavailable(self, server, mock_backend):
+        """Neither ValuePattern nor clipboard paste can apply → keystroke."""
+        mock_backend.clipboard_set.side_effect = RuntimeError("no clipboard")
         result = _call_tool(server, "type_text", {"text": "naturo"})
         data = json.loads(result[0].text)
         assert data["success"] is True
         assert data["method"] == "keystroke"
-        mock_backend.set_focused_element_value.assert_called_once()
         mock_backend.type_text.assert_called_once()
 
     def test_type_text_hardware_mode_skips_value_pattern(self, server, mock_backend):
@@ -190,6 +204,20 @@ class TestTypeText:
         assert data["method"] == "keystroke"
         mock_backend.set_focused_element_value.assert_not_called()
         mock_backend.type_text.assert_called_once()
+
+    def test_type_text_with_hwnd_focuses_target_first(self, server, mock_backend):
+        """A target hwnd focuses that window first (atomic focus+type), so the
+        agent doesn't need a separate focus_window call and there's no
+        cross-call focus race."""
+        result = _call_tool(server, "type_text", {"text": "naturo", "hwnd": 4242})
+        data = json.loads(result[0].text)
+        assert data["success"] is True
+        mock_backend.focus_window.assert_called_once_with(hwnd=4242, title=None)
+
+    def test_type_text_without_target_does_not_focus(self, server, mock_backend):
+        """No target → type into the focused window; focus_window is not called."""
+        _call_tool(server, "type_text", {"text": "naturo"})
+        mock_backend.focus_window.assert_not_called()
 
 
 # ── Press Key ─────────────────────────────────────────────────────────
@@ -237,30 +265,18 @@ class TestPressKey:
         assert data["error"]["code"] == "INVALID_INPUT"
         mock_backend.press_key.assert_not_called()
 
-
-# ── Hotkey ────────────────────────────────────────────────────────────
-
-
-class TestHotkey:
-
-    def test_hotkey_basic(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": ["ctrl", "s"]})
+    def test_press_key_with_hwnd_focuses_target_first(self, server, mock_backend):
+        """A target hwnd focuses that window first, so the keys land there —
+        no separate focus_window call and no foreground race."""
+        result = _call_tool(server, "press_key", {"key": "enter", "hwnd": 4242})
         data = json.loads(result[0].text)
         assert data["success"] is True
-        mock_backend.hotkey.assert_called_once_with("ctrl", "s", input_mode="normal")
+        mock_backend.focus_window.assert_called_once_with(hwnd=4242, title=None)
+        mock_backend.press_key.assert_called_once()
 
-    def test_hotkey_empty_list(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": []})
-        data = json.loads(result[0].text)
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_INPUT"
-        mock_backend.hotkey.assert_not_called()
-
-    def test_hotkey_single_key(self, server, mock_backend):
-        result = _call_tool(server, "hotkey", {"keys": ["escape"]})
-        data = json.loads(result[0].text)
-        assert data["success"] is True
-        mock_backend.hotkey.assert_called_once_with("escape", input_mode="normal")
+    def test_press_key_without_target_does_not_focus(self, server, mock_backend):
+        _call_tool(server, "press_key", {"key": "enter"})
+        mock_backend.focus_window.assert_not_called()
 
 
 # ── Scroll ────────────────────────────────────────────────────────────
