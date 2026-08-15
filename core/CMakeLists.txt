@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 # C is enabled alongside C++ so the vendored MinHook C sources (third_party/
 # minhook/src/*.c) compile with the C compiler instead of being treated as
 # non-build "None" items by the Visual Studio generator.
-project(naturo_core VERSION 0.3.2 LANGUAGES C CXX)
+project(naturo_core VERSION 0.3.3 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
