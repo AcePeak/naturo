@@ -68,7 +68,7 @@ dev = [
 ]
 ai = [
     "anthropic>=0.20,<2.0",
-    "openai>=1.0,<3.0",
+    "openai>=1.0,<4.0",
 ]
 mcp = [
     # Revert #1312's widening to <3.0: naturo's MCP server is built on mcp 1.x's
