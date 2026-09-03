@@ -14,6 +14,14 @@ updates:
     commit-message:
       prefix: "deps"
     open-pull-requests-limit: 10
+    ignore:
+      # naturo's MCP server is built on the mcp 1.x API (`mcp.server.fastmcp`),
+      # which mcp 2.0 removed/renamed. Adopting mcp 2.x is a deliberate code
+      # migration tracked in #1317 (target: standalone fastmcp v2), not a pin
+      # bump — the cap-widening PR fails CI. Ignore the major until #1317 lands;
+      # patch/minor updates within 1.x are still allowed.
+      - dependency-name: "mcp"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
