@@ -76,7 +76,7 @@ mcp = [
     # mcp-2.x compatible, so 2.x must stay excluded. (CI resilience to a
     # fastmcp-less mcp is handled separately by the importorskip guards already on
     # develop.) Lift the cap only with a proper mcp-2.x FastMCP migration.
-    "mcp>=1.0,<2.0",
+    "mcp>=1.0,<3.0",
 ]
 cdp = [
     "websocket-client>=1.0,<2.0",
