@@ -67,7 +67,7 @@ dev = [
     "naturo[mcp]; python_version >= '3.10'",
 ]
 ai = [
-    "anthropic>=0.20,<2.0",
+    "anthropic>=0.20,<3.0",
     "openai>=1.0,<3.0",
 ]
 mcp = [
